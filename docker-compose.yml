@@ -1,0 +1,101 @@
+version: '3.8'
+services:
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+
+  # Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: erp_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # API Gateway
+  api-gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - rabbitmq
+      - redis
+
+  # Financial Management Service
+  fm-service:
+    build: ./services/fm-service
+    environment:
+      - DB_HOST=postgres
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+      - REDIS_URL=redis:6379
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  # Human Resources Service
+  hr-service:
+    build: ./services/hr-service
+    environment:
+      - DB_HOST=postgres
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Supply Chain Management Service
+  scm-service:
+    build: ./services/scm-service
+    environment:
+      - DB_HOST=postgres
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Manufacturing Service
+  m-service:
+    build: ./services/m-service
+    environment:
+      - DB_HOST=postgres
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Customer Relationship Management Service
+  crm-service:
+    build: ./services/crm-service
+    environment:
+      - DB_HOST=postgres
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  # Project Management Service
+  pm-service:
+    build: ./services/pm-service
+    environment:
+      - DB_HOST=postgres
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
+volumes:
+  postgres_data:
