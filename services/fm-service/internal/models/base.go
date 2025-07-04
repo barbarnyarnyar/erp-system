@@ -1,64 +1,64 @@
+// File: services/financial-management/models/base.go
 package models
 
 import (
 	"time"
-	"fmt"
 	"gorm.io/gorm"
 )
 
-
-// Database table names (following convention)
-func (Account) TableName() string          { return "accounts" }
-func (Customer) TableName() string         { return "customers" }
-func (Vendor) TableName() string           { return "vendors" }
-func (Invoice) TableName() string          { return "invoices" }
-func (JournalEntry) TableName() string     { return "journal_entries" }
-func (JournalLineItem) TableName() string  { return "journal_line_items" }
-
-// Standard Chart of Accounts Seeder (can be used for initial setup)
-func GetStandardChartOfAccounts() []Account {
-	return []Account{
-		// Assets (1000-1999)
-		{Code: "1000", Name: "Cash", Type: AccountTypeAsset},
-		{Code: "1010", Name: "Checking Account", Type: AccountTypeAsset, ParentCode: stringPtr("1000")},
-		{Code: "1020", Name: "Savings Account", Type: AccountTypeAsset, ParentCode: stringPtr("1000")},
-		{Code: "1100", Name: "Accounts Receivable", Type: AccountTypeAsset},
-		{Code: "1200", Name: "Inventory", Type: AccountTypeAsset},
-		{Code: "1300", Name: "Prepaid Expenses", Type: AccountTypeAsset},
-		{Code: "1500", Name: "Equipment", Type: AccountTypeAsset},
-		{Code: "1600", Name: "Accumulated Depreciation", Type: AccountTypeAsset},
-
-		// Liabilities (2000-2999)
-		{Code: "2000", Name: "Accounts Payable", Type: AccountTypeLiability},
-		{Code: "2100", Name: "Short-term Loans", Type: AccountTypeLiability},
-		{Code: "2200", Name: "Accrued Expenses", Type: AccountTypeLiability},
-		{Code: "2300", Name: "Salaries Payable", Type: AccountTypeLiability},
-		{Code: "2500", Name: "Long-term Debt", Type: AccountTypeLiability},
-
-		// Equity (3000-3999)
-		{Code: "3000", Name: "Owner's Equity", Type: AccountTypeEquity},
-		{Code: "3100", Name: "Retained Earnings", Type: AccountTypeEquity},
-
-		// Revenue (4000-4999)
-		{Code: "4000", Name: "Sales Revenue", Type: AccountTypeRevenue},
-		{Code: "4100", Name: "Service Revenue", Type: AccountTypeRevenue},
-		{Code: "4200", Name: "Interest Income", Type: AccountTypeRevenue},
-
-		// Expenses (5000-5999)
-		{Code: "5000", Name: "Cost of Goods Sold", Type: AccountTypeExpense},
-		{Code: "5100", Name: "Salary Expense", Type: AccountTypeExpense},
-		{Code: "5200", Name: "Rent Expense", Type: AccountTypeExpense},
-		{Code: "5300", Name: "Utilities Expense", Type: AccountTypeExpense},
-		{Code: "5400", Name: "Office Supplies", Type: AccountTypeExpense},
-		{Code: "5500", Name: "Depreciation Expense", Type: AccountTypeExpense},
-
-		// Other (6000-6999)
-		{Code: "6000", Name: "Interest Expense", Type: AccountTypeOther},
-		{Code: "6100", Name: "Tax Expense", Type: AccountTypeOther},
-	}
+// BaseModel provides common fields for all entities
+type BaseModel struct {
+	ID        uint           `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// Helper function for string pointers
-func stringPtr(s string) *string {
+// Auditable adds audit trail fields
+type Auditable struct {
+	CreatedBy string `json:"created_by" gorm:"size:50"`
+	UpdatedBy string `json:"updated_by" gorm:"size:50"`
+}
+
+// Trackable adds source tracking for integrations
+type Trackable struct {
+	SourceService string `json:"source_service" gorm:"size:20"` // HR, SCM, CRM, PM, M
+	SourceID      string `json:"source_id" gorm:"size:50"`      // External service ID
+	Reference     string `json:"reference" gorm:"size:100"`     // External reference
+}
+
+// Helper functions for pointer types
+func StringPtr(s string) *string {
 	return &s
 }
+
+func UintPtr(u uint) *uint {
+	return &u
+}
+
+func Float64Ptr(f float64) *float64 {
+	return &f
+}
+
+func IntPtr(i int) *int {
+	return &i
+}
+
+// Common interfaces for extensibility
+type Validator interface {
+	Validate() error
+}
+
+type Calculator interface {
+	Calculate()
+}
+
+type Balancer interface {
+	UpdateBalance()
+}
+
+// Common constants
+const (
+	DefaultCurrency = "USD"
+	DefaultExchangeRate = 1.0
+)

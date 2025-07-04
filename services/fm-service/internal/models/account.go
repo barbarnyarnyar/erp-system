@@ -1,30 +1,31 @@
 // File: services/financial-management/models/account.go
 package models
 
-import (
-	"fmt"
-	"time"
-	"gorm.io/gorm"
-)
+import "fmt"
 
-// Account represents the chart of accounts with standardized numbering
+// Account represents the chart of accounts
 type Account struct {
-	ID          uint           `json:"id" gorm:"primaryKey"`
-	Code        string         `json:"code" gorm:"unique;not null;size:10" validate:"required,min=4,max=10"`
-	Name        string         `json:"name" gorm:"not null;size:100" validate:"required,min=3,max=100"`
-	Type        AccountType    `json:"type" gorm:"not null" validate:"required"`
-	ParentCode  *string        `json:"parent_code,omitempty" gorm:"size:10"` // For sub-accounts
-	Balance     float64        `json:"balance" gorm:"default:0"`
-	IsActive    bool           `json:"is_active" gorm:"default:true"`
-	Description string         `json:"description" gorm:"size:255"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	BaseModel
+	Code        string      `json:"code" gorm:"unique;not null;size:10" validate:"required"`
+	Name        string      `json:"name" gorm:"not null;size:100" validate:"required"`
+	Type        AccountType `json:"type" gorm:"not null" validate:"required"`
+	ParentCode  *string     `json:"parent_code,omitempty" gorm:"size:10"`
+	Balance     float64     `json:"balance" gorm:"default:0"`
+	IsActive    bool        `json:"is_active" gorm:"default:true"`
+	Description string      `json:"description" gorm:"size:255"`
+
+	// Future extension points
+	CurrencyCode *string `json:"currency_code,omitempty" gorm:"size:3;default:'USD'"`
+	TaxCode      *string `json:"tax_code,omitempty" gorm:"size:10"`
+	
+	// Optional fields for advanced accounting
+	BankAccountNumber *string `json:"bank_account_number,omitempty" gorm:"size:50"`
+	BankName          *string `json:"bank_name,omitempty" gorm:"size:100"`
 
 	// Relationships
-	JournalLineItems []JournalLineItem `json:"-" gorm:"foreignKey:AccountID"`
-	ParentAccount    *Account          `json:"parent_account,omitempty" gorm:"foreignKey:ParentCode;references:Code"`
-	SubAccounts      []Account         `json:"sub_accounts,omitempty" gorm:"foreignKey:ParentCode;references:Code"`
+	LineItems    []JournalLineItem `json:"-" gorm:"foreignKey:AccountID"`
+	Parent       *Account          `json:"parent,omitempty" gorm:"foreignKey:ParentCode;references:Code"`
+	SubAccounts  []Account         `json:"sub_accounts,omitempty" gorm:"foreignKey:ParentCode;references:Code"`
 }
 
 // AccountType enum following standard accounting categories
@@ -36,14 +37,9 @@ const (
 	AccountTypeEquity    AccountType = "equity"    // 3000-3999
 	AccountTypeRevenue   AccountType = "revenue"   // 4000-4999
 	AccountTypeExpense   AccountType = "expense"   // 5000-5999
-	AccountTypeOther     AccountType = "other"     // 6000-6999
 )
 
-// Business logic methods for Account
-func (a *Account) GetBalance() float64 {
-	return a.Balance
-}
-
+// Business methods
 func (a *Account) IsDebitAccount() bool {
 	return a.Type == AccountTypeAsset || a.Type == AccountTypeExpense
 }
@@ -69,8 +65,8 @@ func (a *Account) GetAccountCategory() string {
 	}
 }
 
-// ValidateAccountCode ensures account code follows standard numbering
-func (a *Account) ValidateAccountCode() error {
+// ValidateCode ensures account code follows standard numbering
+func (a *Account) ValidateCode() error {
 	if len(a.Code) < 4 {
 		return fmt.Errorf("account code must be at least 4 digits")
 	}
@@ -98,15 +94,52 @@ func (a *Account) ValidateAccountCode() error {
 		if firstDigit != '5' {
 			return fmt.Errorf("expense accounts must start with 5 (5000-5999)")
 		}
-	case AccountTypeOther:
-		if firstDigit != '6' {
-			return fmt.Errorf("other accounts must start with 6 (6000-6999)")
-		}
 	}
 	return nil
 }
 
-// Database table name
+func (a *Account) IsParent() bool {
+	return len(a.SubAccounts) > 0
+}
+
+func (a *Account) IsSubAccount() bool {
+	return a.ParentCode != nil
+}
+
+func (a *Account) GetFullPath() string {
+	if a.Parent != nil {
+		return fmt.Sprintf("%s > %s", a.Parent.Name, a.Name)
+	}
+	return a.Name
+}
+
+func (a *Account) UpdateBalance(amount float64, isDebit bool) {
+	if a.IsDebitAccount() {
+		if isDebit {
+			a.Balance += amount
+		} else {
+			a.Balance -= amount
+		}
+	} else {
+		if isDebit {
+			a.Balance -= amount
+		} else {
+			a.Balance += amount
+		}
+	}
+}
+
+// Implement Validator interface
+func (a *Account) Validate() error {
+	if a.Code == "" {
+		return fmt.Errorf("account code is required")
+	}
+	if a.Name == "" {
+		return fmt.Errorf("account name is required")
+	}
+	return a.ValidateCode()
+}
+
 func (Account) TableName() string {
 	return "accounts"
 }
@@ -116,8 +149,8 @@ func GetStandardChartOfAccounts() []Account {
 	return []Account{
 		// Assets (1000-1999)
 		{Code: "1000", Name: "Cash", Type: AccountTypeAsset},
-		{Code: "1010", Name: "Checking Account", Type: AccountTypeAsset, ParentCode: stringPtr("1000")},
-		{Code: "1020", Name: "Savings Account", Type: AccountTypeAsset, ParentCode: stringPtr("1000")},
+		{Code: "1010", Name: "Checking Account", Type: AccountTypeAsset, ParentCode: StringPtr("1000")},
+		{Code: "1020", Name: "Savings Account", Type: AccountTypeAsset, ParentCode: StringPtr("1000")},
 		{Code: "1100", Name: "Accounts Receivable", Type: AccountTypeAsset},
 		{Code: "1200", Name: "Inventory", Type: AccountTypeAsset},
 		{Code: "1300", Name: "Prepaid Expenses", Type: AccountTypeAsset},
@@ -147,14 +180,5 @@ func GetStandardChartOfAccounts() []Account {
 		{Code: "5300", Name: "Utilities Expense", Type: AccountTypeExpense},
 		{Code: "5400", Name: "Office Supplies", Type: AccountTypeExpense},
 		{Code: "5500", Name: "Depreciation Expense", Type: AccountTypeExpense},
-
-		// Other (6000-6999)
-		{Code: "6000", Name: "Interest Expense", Type: AccountTypeOther},
-		{Code: "6100", Name: "Tax Expense", Type: AccountTypeOther},
 	}
-}
-
-// Helper function for string pointers
-func stringPtr(s string) *string {
-	return &s
 }
