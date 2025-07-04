@@ -1,13 +1,11 @@
+// File: services/financial-management/models/invoice.go
 package models
 
 import (
-	"time"
 	"fmt"
+	"time"
 	"gorm.io/gorm"
 )
-import Customer "services/fm-service/internal/models/customer"
-import Vendor "services/fm-service/internal/models/vendor"
-import JournalEntry "services/fm-service/internal/models/journal_entry"
 
 // Invoice represents both customer invoices (AR) and vendor bills (AP)
 type Invoice struct {
@@ -105,4 +103,40 @@ func (i *Invoice) ApplyPayment(amount float64) error {
 func (i *Invoice) CalculateTotalAmount() {
 	i.TotalAmount = i.Amount + i.TaxAmount
 	i.Balance = i.TotalAmount - i.PaidAmount
+}
+
+func (i *Invoice) GetAgingCategory() string {
+	if !i.IsOverdue() {
+		return "Current"
+	}
+	
+	daysOverdue := i.CalculateDaysOverdue()
+	if daysOverdue <= 30 {
+		return "1-30 Days"
+	} else if daysOverdue <= 60 {
+		return "31-60 Days"
+	} else if daysOverdue <= 90 {
+		return "61-90 Days"
+	}
+	return "Over 90 Days"
+}
+
+func (i *Invoice) GetPaymentPercentage() float64 {
+	if i.TotalAmount <= 0 {
+		return 0
+	}
+	return (i.PaidAmount / i.TotalAmount) * 100
+}
+
+func (i *Invoice) IsReceivable() bool {
+	return i.Type == InvoiceTypeReceivable
+}
+
+func (i *Invoice) IsPayable() bool {
+	return i.Type == InvoiceTypePayable
+}
+
+// Database table name
+func (Invoice) TableName() string {
+	return "invoices"
 }

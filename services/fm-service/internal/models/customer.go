@@ -1,8 +1,9 @@
+// File: services/financial-management/models/customer.go
 package models
 
 import (
-	"time"
 	"fmt"
+	"time"
 	"gorm.io/gorm"
 )
 
@@ -58,4 +59,27 @@ func (c *Customer) GetPaymentTermsDescription() string {
 		return "Due on Receipt"
 	}
 	return fmt.Sprintf("Net %d days", c.PaymentTerms)
+}
+
+func (c *Customer) GetCreditStatus() string {
+	if c.CreditLimit <= 0 {
+		return "No Limit"
+	}
+	if c.IsOverCreditLimit() {
+		return "Over Limit"
+	}
+	utilization := c.GetCreditUtilization()
+	if utilization >= 90 {
+		return "Near Limit"
+	} else if utilization >= 75 {
+		return "High Usage"
+	} else if utilization >= 50 {
+		return "Moderate Usage"
+	}
+	return "Good Standing"
+}
+
+// Database table name
+func (Customer) TableName() string {
+	return "customers"
 }

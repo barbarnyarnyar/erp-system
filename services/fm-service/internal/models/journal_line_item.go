@@ -1,10 +1,10 @@
+// File: services/financial-management/models/journal_line_item.go
 package models
 
-import JournalEntry "services/fm-service/internal/models/journal_entry"	
-import Account "services/fm-service/internal/models/account"	
-import "fmt"	
-import "time"	
-import "gorm.io/gorm"	
+import (
+	"fmt"
+	"gorm.io/gorm"
+)
 
 // JournalLineItem represents individual debit/credit lines
 type JournalLineItem struct {
@@ -51,4 +51,66 @@ func (jli *JournalLineItem) GetAmount() float64 {
 		return jli.Debit
 	}
 	return jli.Credit
+}
+
+func (jli *JournalLineItem) GetType() string {
+	if jli.IsDebit() {
+		return "Debit"
+	}
+	return "Credit"
+}
+
+func (jli *JournalLineItem) GetFormattedAmount() string {
+	amount := jli.GetAmount()
+	if jli.IsDebit() {
+		return fmt.Sprintf("Dr. %.2f", amount)
+	}
+	return fmt.Sprintf("Cr. %.2f", amount)
+}
+
+func (jli *JournalLineItem) SetDebit(amount float64) error {
+	if amount < 0 {
+		return fmt.Errorf("debit amount cannot be negative")
+	}
+	jli.Debit = amount
+	jli.Credit = 0 // Clear credit when setting debit
+	return nil
+}
+
+func (jli *JournalLineItem) SetCredit(amount float64) error {
+	if amount < 0 {
+		return fmt.Errorf("credit amount cannot be negative")
+	}
+	jli.Credit = amount
+	jli.Debit = 0 // Clear debit when setting credit
+	return nil
+}
+
+func (jli *JournalLineItem) HasDimensions() bool {
+	return jli.CostCenterID != nil || jli.ProjectID != nil || jli.DepartmentID != ""
+}
+
+func (jli *JournalLineItem) GetDimensionInfo() string {
+	var dimensions []string
+	
+	if jli.CostCenterID != nil {
+		dimensions = append(dimensions, fmt.Sprintf("CC:%d", *jli.CostCenterID))
+	}
+	if jli.ProjectID != nil {
+		dimensions = append(dimensions, fmt.Sprintf("Proj:%d", *jli.ProjectID))
+	}
+	if jli.DepartmentID != "" {
+		dimensions = append(dimensions, fmt.Sprintf("Dept:%s", jli.DepartmentID))
+	}
+	
+	if len(dimensions) == 0 {
+		return "No Dimensions"
+	}
+	
+	return fmt.Sprintf("[%s]", fmt.Sprintf("%v", dimensions))
+}
+
+// Database table name
+func (JournalLineItem) TableName() string {
+	return "journal_line_items"
 }

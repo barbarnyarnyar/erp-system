@@ -1,11 +1,11 @@
+// File: services/financial-management/models/journal_entry.go
 package models
 
 import (
-	"time"
 	"fmt"
+	"time"
 	"gorm.io/gorm"
 )
-import JournalLineItem "services/fm-service/internal/models/journal_line_item"
 
 // JournalEntry represents the header of a financial transaction
 type JournalEntry struct {
@@ -95,4 +95,40 @@ func (je *JournalEntry) Validate() error {
 	}
 	
 	return nil
+}
+
+func (je *JournalEntry) CanBeEdited() bool {
+	return je.Status == JournalStatusDraft
+}
+
+func (je *JournalEntry) CanBePosted() bool {
+	return je.Status == JournalStatusDraft && len(je.LineItems) >= 2 && je.IsBalanced()
+}
+
+func (je *JournalEntry) CanBeReversed() bool {
+	return je.Status == JournalStatusPosted
+}
+
+func (je *JournalEntry) GetSourceDescription() string {
+	if je.SourceType == "" {
+		return "Manual Entry"
+	}
+	return fmt.Sprintf("%s - %s", je.SourceType, je.SourceID)
+}
+
+func (je *JournalEntry) IsDraft() bool {
+	return je.Status == JournalStatusDraft
+}
+
+func (je *JournalEntry) IsPosted() bool {
+	return je.Status == JournalStatusPosted
+}
+
+func (je *JournalEntry) IsReversed() bool {
+	return je.Status == JournalStatusReversed
+}
+
+// Database table name
+func (JournalEntry) TableName() string {
+	return "journal_entries"
 }

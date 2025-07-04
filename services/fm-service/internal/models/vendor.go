@@ -1,11 +1,11 @@
+// File: services/financial-management/models/vendor.go
 package models
 
 import (
-	"time"
 	"fmt"
+	"time"
 	"gorm.io/gorm"
 )
-import Invoice "services/fm-service/internal/models/invoice"
 
 // Vendor represents suppliers we owe money to
 type Vendor struct {
@@ -48,4 +48,28 @@ func (v *Vendor) GetPaymentTermsDescription() string {
 		return "Due on Receipt"
 	}
 	return fmt.Sprintf("Net %d days", v.PaymentTerms)
+}
+
+func (v *Vendor) GetPaymentPriority() string {
+	if v.Balance <= 0 {
+		return "None"
+	}
+	if v.Balance >= 10000 {
+		return "High"
+	} else if v.Balance >= 5000 {
+		return "Medium"
+	}
+	return "Low"
+}
+
+func (v *Vendor) GetCategoryDescription() string {
+	if v.Category == "" {
+		return "General Vendor"
+	}
+	return v.Category
+}
+
+// Database table name
+func (Vendor) TableName() string {
+	return "vendors"
 }
