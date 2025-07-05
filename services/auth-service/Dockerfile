@@ -1,22 +1,28 @@
-# services/auth-service/Dockerfile
+# Build stage
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Copy the entire project context first
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod tidy && go mod download
+
+# Copy source code
 COPY . .
 
-# Change to the auth service directory
-WORKDIR /app/services/auth-service
-
-# Initialize and download dependencies
-RUN go mod tidy
-RUN go build -o main cmd/main.go
+# Build the application
+RUN go build -o main ./cmd
 
 # Final stage
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/services/auth-service/main .
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/main .
+
+# Expose port
 EXPOSE 8000
+
+# Run the application
 CMD ["./main"]

@@ -1,112 +1,58 @@
-# docker-compose.yml
 version: '3.8'
 
 services:
-  # Authentication Service
   auth-service:
-    build:
-      context: .
-      dockerfile: services/auth-service/Dockerfile
-    container_name: erp-auth-service
-    environment:
-      - PORT=8000
-      - SERVICE_NAME=auth
+    build: ./services/auth-service
     ports:
       - "8000:8000"
-    networks:
-      - erp-network
-    restart: unless-stopped
-
-  # Financial Management Service
-  fm-service:
-    build:
-      context: .
-      dockerfile: services/fm-service/Dockerfile
-    container_name: erp-fm-service
     environment:
-      - PORT=8001
-      - SERVICE_NAME=fm
-    ports:
-      - "8001:8001"
-    networks:
-      - erp-network
+      - PORT=8000
     restart: unless-stopped
 
-  # # HR Service
-  # hr-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/hr-service/Dockerfile
-  #   container_name: erp-hr-service
+  # fm-service:
+  #   build: ./services/fm-service
+  #   ports:
+  #     - "8001:8001"
   #   environment:
-  #     - PORT=8002
-  #     - SERVICE_NAME=hr
+  #     - PORT=8001
+  #   restart: unless-stopped
+
+  # crm-service:
+  #   build: ./services/crm-service
   #   ports:
   #     - "8002:8002"
-  #   networks:
-  #     - erp-network
+  #   environment:
+  #     - PORT=8002
   #   restart: unless-stopped
 
-  # # SCM Service
-  # scm-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/scm-service/Dockerfile
-  #   container_name: erp-scm-service
-  #   environment:
-  #     - PORT=8003
-  #     - SERVICE_NAME=scm
+  # hr-service:
+  #   build: ./services/hr-service
   #   ports:
   #     - "8003:8003"
-  #   networks:
-  #     - erp-network
+  #   environment:
+  #     - PORT=8003
   #   restart: unless-stopped
 
-  # # Manufacturing Service (m-service)
   # m-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/m-service/Dockerfile
-  #   container_name: erp-m-service
-  #   environment:
-  #     - PORT=8004
-  #     - SERVICE_NAME=manufacturing
+  #   build: ./services/m-service
   #   ports:
   #     - "8004:8004"
-  #   networks:
-  #     - erp-network
+  #   environment:
+  #     - PORT=8004
   #   restart: unless-stopped
 
-  # # CRM Service
-  # crm-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/crm-service/Dockerfile
-  #   container_name: erp-crm-service
-  #   environment:
-  #     - PORT=8005
-  #     - SERVICE_NAME=crm
+  # pm-service:
+  #   build: ./services/pm-service
   #   ports:
   #     - "8005:8005"
-  #   networks:
-  #     - erp-network
+  #   environment:
+  #     - PORT=8005
   #   restart: unless-stopped
 
-  # # Project Management Service
-  # pm-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/pm-service/Dockerfile
-  #   container_name: erp-pm-service
-  #   environment:
-  #     - PORT=8006
-  #     - SERVICE_NAME=pm
+  # scm-service:
+  #   build: ./services/scm-service
   #   ports:
   #     - "8006:8006"
-  #   networks:
-  #     - erp-network
+  #   environment:
+  #     - PORT=8006
   #   restart: unless-stopped
-
-networks:
-  erp-network:
-    driver: bridge

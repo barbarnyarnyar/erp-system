@@ -6,7 +6,7 @@ import (
     "os"
 
     "github.com/gin-gonic/gin"
-    "github.com/sithuhlaing/erp-system/shared/utils"
+    "erp-system/shared/utils"
 )
 
 func main() {

@@ -1,73 +1,69 @@
-// services/auth-service/cmd/main.go
 package main
 
 import (
-    "log"
-    "os"
+	"os"
 
-    "github.com/gin-gonic/gin"
-    "github.com/sithuhlaing/erp-system/shared/utils"
+	"github.com/gin-gonic/gin"
+	"auth-service/utils"
 )
 
 func main() {
-    serviceName := getEnv("SERVICE_NAME", "auth")
-    port := getEnv("PORT", "8000")
-    
-    utils.InitLogger(serviceName)
-    utils.Logger.Info("Starting Auth Service")
+	// Get port from environment or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
 
-    r := gin.Default()
+	serviceName := "auth-service"
+	
+	// Setup logger
+	logger := utils.SetupLogger(serviceName)
+	
+	// Setup response helper
+	responseHelper := utils.NewResponseHelper(serviceName)
 
-    // Health check
-    r.GET("/health", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Auth Service is healthy", gin.H{
-            "service": serviceName,
-            "version": "1.0.0",
-        })
-    })
+	// Create Gin router
+	r := gin.New()
+	
+	// Add middleware
+	r.Use(utils.RequestIDMiddleware(serviceName))
+	r.Use(logger.GinLogger())
+	r.Use(gin.Recovery())
 
-    // Hello World endpoints
-    r.GET("/", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Auth Service!", gin.H{
-            "service": "auth",
-            "domain": "Authentication & Authorization",
-        })
-    })
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		responseHelper.Health(c, port)
+	})
 
-    r.GET("/api/v1/auth/hello", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Auth API!", gin.H{
-            "endpoints": []string{
-                "POST /api/v1/auth/login - User Login",
-                "POST /api/v1/auth/register - User Registration",
-                "POST /api/v1/auth/refresh - Refresh Token",
-                "POST /api/v1/auth/logout - User Logout",
-            },
-        })
-    })
+	// Hello World endpoint
+	r.GET("/api/auth/hello", func(c *gin.Context) {
+		responseHelper.Success(c, "Hello World from Auth Service!", gin.H{
+			"service": serviceName,
+			"port":    port,
+		})
+	})
 
-    r.GET("/api/v1/auth/login", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Login!", gin.H{
-            "module": "User Authentication",
-            "features": []string{"JWT Tokens", "Session Management", "Password Validation"},
-        })
-    })
+	// Root endpoint
+	r.GET("/", func(c *gin.Context) {
+		responseHelper.Success(c, "Auth Service is running", gin.H{
+			"service": serviceName,
+			"port":    port,
+			"endpoints": []string{
+				"GET /health - Health check",
+				"GET /api/auth/hello - Hello world endpoint",
+			},
+		})
+	})
 
-    r.GET("/api/v1/auth/users", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from User Management!", gin.H{
-            "module": "User Management",
-            "features": []string{"User Profiles", "Role Management", "Permissions"},
-        })
-    })
-
-    utils.Logger.WithField("port", port).Info("Auth service starting")
-    if err := r.Run(":" + port); err != nil {
-        log.Fatal("Failed to start server:", err)
-    }
+	logger.Info("Auth Service starting on port %s", port)
+	
+	// Start server
+	if err := r.Run(":" + port); err != nil {
+		logger.Error("Failed to start server: %s", err.Error())
+	}
 }
 
-func getEnv(key, defaultValue string) string {
-    if value := os.Getenv(key); value != "" {
-        return value
-    }
-    return defaultValue
-}
+// To use this updated version:
+// 1. Update auth-service/go.mod to include shared dependency
+// 2. Replace main.go content with this file content
+// 3. Remove this file

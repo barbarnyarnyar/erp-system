@@ -1,16 +1,33 @@
-# services/fm-service/Dockerfile  
+# Build stage
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
+
+# Copy shared utilities
+
+
+# Copy go mod files
+COPY go.mod ./
+COPY go.sum* ./
+
+RUN go mod tidy && go mod download
+
+# Copy source code
 COPY . .
-WORKDIR /app/services/fm-service
 
-RUN go mod tidy
-RUN go build -o main cmd/main.go
+# Build the application
+RUN go build -o main ./cmd
 
+# Final stage
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/services/fm-service/main .
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/main .
+
+# Expose port
 EXPOSE 8001
+
+# Run the application
 CMD ["./main"]

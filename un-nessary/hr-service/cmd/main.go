@@ -4,11 +4,11 @@ module github.com/sithuhlaing/erp-system/services/hr
 go 1.21
 
 require (
-    github.com/sithuhlaing/erp-system/shared v0.0.0
+    erp-system/shared v0.0.0
     github.com/gin-gonic/gin v1.9.1
 )
 
-replace github.com/sithuhlaing/erp-system/shared => ../../shared
+replace erp-system/shared => ../../shared
 
 // services/hr/cmd/main.go
 package main
@@ -18,7 +18,7 @@ import (
     "os"
 
     "github.com/gin-gonic/gin"
-    "github.com/sithuhlaing/erp-system/shared/utils"
+    "erp-system/shared/utils"
 )
 
 func main() {

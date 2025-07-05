@@ -1,87 +1,69 @@
-// services/fm-service/cmd/main.go
 package main
 
 import (
-    "log"
-    "os"
+	"os"
 
-    "github.com/gin-gonic/gin"
-    "github.com/sithuhlaing/erp-system/shared/utils"
+	"github.com/gin-gonic/gin"
+	"fm-service/utils"
 )
 
 func main() {
-    serviceName := getEnv("SERVICE_NAME", "fm")
-    port := getEnv("PORT", "8001")
-    
-    utils.InitLogger(serviceName)
-    utils.Logger.Info("Starting Financial Management Service")
+	// Get port from environment or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8001"
+	}
 
-    r := gin.Default()
+	serviceName := "fm-service"
+	
+	// Setup logger
+	logger := utils.SetupLogger(serviceName)
+	
+	// Setup response helper
+	responseHelper := utils.NewResponseHelper(serviceName)
 
-    // Health check
-    r.GET("/health", func(c *gin.Context) {
-        utils.SuccessResponse(c, "FM Service is healthy", gin.H{
-            "service": serviceName,
-            "version": "1.0.0",
-        })
-    })
+	// Create Gin router
+	r := gin.New()
+	
+	// Add middleware
+	r.Use(utils.RequestIDMiddleware(serviceName))
+	r.Use(logger.GinLogger())
+	r.Use(gin.Recovery())
 
-    // Hello World endpoints
-    r.GET("/", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Financial Management Service!", gin.H{
-            "service": "fm",
-            "domain": "Financial Management",
-        })
-    })
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		responseHelper.Health(c, port)
+	})
 
-    r.GET("/api/v1/fm/hello", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from FM API!", gin.H{
-            "endpoints": []string{
-                "GET /api/v1/fm/gl - General Ledger",
-                "GET /api/v1/fm/ap - Accounts Payable", 
-                "GET /api/v1/fm/ar - Accounts Receivable",
-                "GET /api/v1/fm/reports - Financial Reports",
-            },
-        })
-    })
+	// Hello World endpoint
+	r.GET("/api/fm/hello", func(c *gin.Context) {
+		responseHelper.Success(c, "Hello World from Financial Management Service!", gin.H{
+			"service": serviceName,
+			"port":    port,
+		})
+	})
 
-    r.GET("/api/v1/fm/gl", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from General Ledger!", gin.H{
-            "module": "General Ledger",
-            "features": []string{"Chart of Accounts", "Journal Entries", "Trial Balance"},
-        })
-    })
+	// Root endpoint
+	r.GET("/", func(c *gin.Context) {
+		responseHelper.Success(c, "Financial Management Service is running", gin.H{
+			"service": serviceName,
+			"port":    port,
+			"endpoints": []string{
+				"GET /health - Health check",
+				"GET /api/fm/hello - Hello world endpoint",
+			},
+		})
+	})
 
-    r.GET("/api/v1/fm/ap", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Accounts Payable!", gin.H{
-            "module": "Accounts Payable",
-            "features": []string{"Vendor Invoices", "Payments", "Aging Reports"},
-        })
-    })
+	// Example error endpoint to demonstrate error handling
+	r.GET("/api/fm/error", func(c *gin.Context) {
+		responseHelper.InternalServerError(c, "This is a test error", nil)
+	})
 
-    r.GET("/api/v1/fm/ar", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Accounts Receivable!", gin.H{
-            "module": "Accounts Receivable",
-            "features": []string{"Customer Invoices", "Collections", "Credit Management"},
-        })
-    })
-
-    r.GET("/api/v1/fm/reports", func(c *gin.Context) {
-        utils.SuccessResponse(c, "Hello from Financial Reports!", gin.H{
-            "module": "Financial Reports",
-            "features": []string{"Balance Sheet", "Income Statement", "Cash Flow"},
-        })
-    })
-
-    utils.Logger.WithField("port", port).Info("FM service starting")
-    if err := r.Run(":" + port); err != nil {
-        log.Fatal("Failed to start server:", err)
-    }
-}
-
-func getEnv(key, defaultValue string) string {
-    if value := os.Getenv(key); value != "" {
-        return value
-    }
-    return defaultValue
+	logger.Info("Financial Management Service starting on port %s", port)
+	
+	// Start server
+	if err := r.Run(":" + port); err != nil {
+		logger.Error("Failed to start server: %s", err.Error())
+	}
 }
