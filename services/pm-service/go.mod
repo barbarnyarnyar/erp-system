@@ -1,5 +1,5 @@
-// services/manufacturing/go.mod
-module github.com/sithuhlaing/erp-system/services/manufacturing
+// services/projects/go.mod
+module github.com/sithuhlaing/erp-system/services/projects
 
 go 1.21
 

@@ -3,63 +3,85 @@ package main
 
 import (
     "log"
-    "net/http"
+    "os"
 
     "github.com/gin-gonic/gin"
-    "github.com/your-org/erp-microservices/shared/utils"
+    "github.com/sithuhlaing/erp-system/shared/utils"
 )
 
-// GetARDashboard returns accounts receivable dashboard
-func GetARDashboard(c *gin.Context) {
-    data := gin.H{
-        "message":     "Finance Service - Accounts Receivable Dashboard",
-        "endpoint":    "GET /api/v1/finance/ar",
-        "description": "Accounts Receivable overview and metrics",
-        "summary": gin.H{
-            "total_outstanding": 85000.00,
-            "current":          70000.00,
-            "30_days":          10000.00,
-            "60_days":          3000.00,
-            "90_plus":          2000.00,
-            "customer_count":   25,
-        },
+func main() {
+    serviceName := getEnv("SERVICE_NAME", "finance")
+    port := getEnv("PORT", "8001")
+    
+    utils.InitLogger(serviceName)
+    utils.Logger.Info("Starting Finance Service")
+
+    r := gin.Default()
+
+    // Health check
+    r.GET("/health", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Finance Service is healthy", gin.H{
+            "service": serviceName,
+            "version": "1.0.0",
+        })
+    })
+
+    // Hello World endpoints
+    r.GET("/", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Hello from Finance Service!", gin.H{
+            "service": "finance",
+            "domain": "Financial Management",
+        })
+    })
+
+    r.GET("/api/v1/finance/hello", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Hello from Finance API!", gin.H{
+            "endpoints": []string{
+                "GET /api/v1/finance/gl - General Ledger",
+                "GET /api/v1/finance/ap - Accounts Payable", 
+                "GET /api/v1/finance/ar - Accounts Receivable",
+                "GET /api/v1/finance/reports - Financial Reports",
+            },
+        })
+    })
+
+    r.GET("/api/v1/finance/gl", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Hello from General Ledger!", gin.H{
+            "module": "General Ledger",
+            "features": []string{"Chart of Accounts", "Journal Entries", "Trial Balance"},
+        })
+    })
+
+    r.GET("/api/v1/finance/ap", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Hello from Accounts Payable!", gin.H{
+            "module": "Accounts Payable",
+            "features": []string{"Vendor Invoices", "Payments", "Aging Reports"},
+        })
+    })
+
+    r.GET("/api/v1/finance/ar", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Hello from Accounts Receivable!", gin.H{
+            "module": "Accounts Receivable",
+            "features": []string{"Customer Invoices", "Collections", "Credit Management"},
+        })
+    })
+
+    r.GET("/api/v1/finance/reports", func(c *gin.Context) {
+        utils.SuccessResponse(c, "Hello from Financial Reports!", gin.H{
+            "module": "Financial Reports",
+            "features": []string{"Balance Sheet", "Income Statement", "Cash Flow"},
+        })
+    })
+
+    utils.Logger.WithField("port", port).Info("Finance service starting")
+    if err := r.Run(":" + port); err != nil {
+        log.Fatal("Failed to start server:", err)
     }
-    utils.SuccessResponse(c, data)
 }
 
-// CreateCustomerInvoice creates a customer invoice
-func CreateCustomerInvoice(c *gin.Context) {
-    data := gin.H{
-        "message":     "Finance Service - Create Customer Invoice",
-        "endpoint":    "POST /api/v1/finance/ar/invoices",
-        "description": "Create customer invoice for accounts receivable",
-        "example": gin.H{
-            "invoice_id":     "ar_inv_12345",
-            "customer_id":    "CUST-001",
-            "invoice_number": "INV-2024-001",
-            "total_amount":   5500.00,
-            "status":        "SENT",
-        },
+func getEnv(key, defaultValue string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
     }
-    utils.SuccessResponse(c, data)
-}
-
-// GetCustomerInvoices retrieves customer invoices
-func GetCustomerInvoices(c *gin.Context) {
-    data := gin.H{
-        "message":     "Finance Service - Customer Invoices",
-        "endpoint":    "GET /api/v1/finance/ar/invoices",
-        "description": "Retrieve customer invoices with aging and status",
-    }
-    utils.SuccessResponse(c, data)
-}
-
-// RecordPaymentReceipt records customer payment
-func RecordPaymentReceipt(c *gin.Context) {
-    data := gin.H{
-        "message":     "Finance Service - Record Payment Receipt",
-        "endpoint":    "POST /api/v1/finance/ar/receipts",
-        "description": "Record customer payment receipt",
-    }
-    utils.SuccessResponse(c, data)
+    return defaultValue
 }

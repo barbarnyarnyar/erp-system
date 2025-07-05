@@ -2,51 +2,32 @@
 package utils
 
 import (
-	"net/http"
-	"time"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+    "net/http"
+    "time"
+    
+    "github.com/gin-gonic/gin"
 )
 
-type APIResponse struct {
-	Status    string      `json:"status"`
-	Data      interface{} `json:"data,omitempty"`
-	Error     *APIError   `json:"error,omitempty"`
-	RequestID string      `json:"request_id"`
-	Timestamp time.Time   `json:"timestamp"`
+type Response struct {
+    Status    string      `json:"status"`
+    Message   string      `json:"message"`
+    Data      interface{} `json:"data,omitempty"`
+    Timestamp time.Time   `json:"timestamp"`
 }
 
-type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Details string `json:"details,omitempty"`
+func SuccessResponse(c *gin.Context, message string, data interface{}) {
+    c.JSON(http.StatusOK, Response{
+        Status:    "success",
+        Message:   message,
+        Data:      data,
+        Timestamp: time.Now(),
+    })
 }
 
-func SuccessResponse(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, APIResponse{
-		Status:    "success",
-		Data:      data,
-		RequestID: getRequestID(c),
-		Timestamp: time.Now(),
-	})
-}
-
-func ErrorResponse(c *gin.Context, statusCode int, code, message, details string) {
-	c.JSON(statusCode, APIResponse{
-		Status: "error",
-		Error: &APIError{
-			Code:    code,
-			Message: message,
-			Details: details,
-		},
-		RequestID: getRequestID(c),
-		Timestamp: time.Now(),
-	})
-}
-
-func getRequestID(c *gin.Context) string {
-	if requestID := c.GetString("request_id"); requestID != "" {
-		return requestID
-	}
-	return uuid.New().String()
+func ErrorResponse(c *gin.Context, statusCode int, message string) {
+    c.JSON(statusCode, Response{
+        Status:    "error",
+        Message:   message,
+        Timestamp: time.Now(),
+    })
 }
