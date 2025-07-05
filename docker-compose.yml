@@ -1,169 +1,269 @@
-// File: docker-compose.yml (Updated with Auth Service and API Gateway)
+# docker-compose.yml
 version: '3.8'
+
 services:
-  # Infrastructure
+  # Infrastructure Services
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: erp-postgres
     environment:
       POSTGRES_DB: erp_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: erp_user
+      POSTGRES_PASSWORD: erp_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     networks:
       - erp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp_user -d erp_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    networks:
+      - erp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
+    container_name: erp-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_USER: erp_user
+      RABBITMQ_DEFAULT_PASS: erp_password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./infrastructure/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
     ports:
       - "5672:5672"
       - "15672:15672"
     networks:
       - erp-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - erp-network
-
-  # API Gateway (Entry Point)
+  # API Gateway
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: erp-api-gateway
+    environment:
+      - PORT=8080
+      - FINANCE_SERVICE_URL=http://finance-service:8001
+      - HR_SERVICE_URL=http://hr-service:8002
+      - SCM_SERVICE_URL=http://scm-service:8003
+      - MANUFACTURING_SERVICE_URL=http://manufacturing-service:8004
+      - CRM_SERVICE_URL=http://crm-service:8005
+      - PROJECTS_SERVICE_URL=http://projects-service:8006
     ports:
       - "8080:8080"
-    environment:
-      - JWT_SECRET=your-super-secret-key
-      - AUTH_SERVICE_URL=http://auth-service:8090
-      - FM_SERVICE_URL=http://fm-service:8081
-      - HR_SERVICE_URL=http://hr-service:8082
-      - SCM_SERVICE_URL=http://scm-service:8083
-      - M_SERVICE_URL=http://m-service:8084
-      - CRM_SERVICE_URL=http://crm-service:8085
-      - PM_SERVICE_URL=http://pm-service:8086
-    depends_on:
-      - auth-service
-      - fm-service
     networks:
       - erp-network
-
-  # Authentication Service
-  auth-service:
-    build: ./services/auth-service
-    ports:
-      - "8090:8090"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=erp_db
-      - DB_USER=admin
-      - DB_PASSWORD=admin
-      - REDIS_URL=redis:6379
-      - JWT_SECRET=your-super-secret-key
     depends_on:
       - postgres
       - redis
-    networks:
-      - erp-network
-
-  # Financial Management Service
-  fm-service:
-    build: ./services/financial-management
-    ports:
-      - "8081:8081"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=erp_db
-      - DB_USER=admin
-      - DB_PASSWORD=admin
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
-      - REDIS_URL=redis:6379
-    depends_on:
-      - postgres
       - rabbitmq
-      - redis
+    restart: unless-stopped
+
+  # Microservices
+  finance-service:
+    build:
+      context: ./services/finance
+      dockerfile: Dockerfile
+    container_name: erp-finance-service
+    environment:
+      - PORT=8001
+      - SERVICE_NAME=finance
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://erp_user:erp_password@rabbitmq:5672/
+    ports:
+      - "8001:8001"
     networks:
       - erp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
-  # HR Service
   hr-service:
-    build: ./services/hr-hcm
-    ports:
-      - "8082:8082"
+    build:
+      context: ./services/hr
+      dockerfile: Dockerfile
+    container_name: erp-hr-service
     environment:
+      - PORT=8002
+      - SERVICE_NAME=hr
       - DB_HOST=postgres
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
-    depends_on:
-      - postgres
-      - rabbitmq
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://erp_user:erp_password@rabbitmq:5672/
+    ports:
+      - "8002:8002"
     networks:
       - erp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
-  # Supply Chain Management Service
   scm-service:
-    build: ./services/supply-chain-management
-    ports:
-      - "8083:8083"
+    build:
+      context: ./services/scm
+      dockerfile: Dockerfile
+    container_name: erp-scm-service
     environment:
+      - PORT=8003
+      - SERVICE_NAME=scm
       - DB_HOST=postgres
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
-    depends_on:
-      - postgres
-      - rabbitmq
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://erp_user:erp_password@rabbitmq:5672/
+    ports:
+      - "8003:8003"
     networks:
       - erp-network
-
-  # Manufacturing Service
-  m-service:
-    build: ./services/manufacturing
-    ports:
-      - "8084:8084"
-    environment:
-      - DB_HOST=postgres
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  manufacturing-service:
+    build:
+      context: ./services/manufacturing
+      dockerfile: Dockerfile
+    container_name: erp-manufacturing-service
+    environment:
+      - PORT=8004
+      - SERVICE_NAME=manufacturing
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://erp_user:erp_password@rabbitmq:5672/
+    ports:
+      - "8004:8004"
     networks:
       - erp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
-  # CRM Service
   crm-service:
-    build: ./services/sales-crm
-    ports:
-      - "8085:8085"
+    build:
+      context: ./services/crm
+      dockerfile: Dockerfile
+    container_name: erp-crm-service
     environment:
+      - PORT=8005
+      - SERVICE_NAME=crm
       - DB_HOST=postgres
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
-    depends_on:
-      - postgres
-      - rabbitmq
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://erp_user:erp_password@rabbitmq:5672/
+    ports:
+      - "8005:8005"
     networks:
       - erp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
-  # Project Management Service
-  pm-service:
-    build: ./services/project-management
-    ports:
-      - "8086:8086"
+  projects-service:
+    build:
+      context: ./services/projects
+      dockerfile: Dockerfile
+    container_name: erp-projects-service
     environment:
+      - PORT=8006
+      - SERVICE_NAME=projects
       - DB_HOST=postgres
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
-    depends_on:
-      - postgres
-      - rabbitmq
+      - DB_PORT=5432
+      - DB_USER=erp_user
+      - DB_PASSWORD=erp_password
+      - DB_NAME=erp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://erp_user:erp_password@rabbitmq:5672/
+    ports:
+      - "8006:8006"
     networks:
       - erp-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:
+  rabbitmq_data:
 
 networks:
   erp-network:
