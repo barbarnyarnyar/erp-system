@@ -1,5 +1,5 @@
-// services/finance/go.mod
-module github.com/sithuhlaing/erp-system/services/finance
+// services/fm-service/go.mod
+module github.com/sithuhlaing/erp-system/services/fm-service
 
 go 1.21
 

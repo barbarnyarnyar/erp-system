@@ -1,4 +1,3 @@
-// shared/go.mod
 module github.com/sithuhlaing/erp-system/shared
 
 go 1.21
