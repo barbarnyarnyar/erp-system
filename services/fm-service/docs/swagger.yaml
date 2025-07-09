@@ -1,0 +1,18 @@
+basePath: /api/fm
+host: localhost:8001
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the Financial Management Service for ERP System
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Financial Management Service API
+  version: "1.0"
+paths: {}
+schemes:
+- http
+swagger: "2.0"

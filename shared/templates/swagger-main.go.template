@@ -3,17 +3,17 @@ package main
 import (
 	"os"
 
-	"fm-service/docs"
-	"fm-service/utils"
+	"{{SERVICE_NAME}}/docs"
+	"{{SERVICE_NAME}}/utils"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// @title Financial Management Service API
+// @title {{SERVICE_TITLE}} API
 // @version 1.0
-// @description This is the Financial Management Service for ERP System
+// @description This is the {{SERVICE_TITLE}} for ERP System
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
@@ -23,18 +23,18 @@ import (
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
 
-// @host localhost:8001
-// @BasePath /api/fm
+// @host localhost:{{PORT}}
+// @BasePath /api/{{API_PREFIX}}
 // @schemes http
 
 func main() {
 	// Get port from environment or use default
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8001"
+		port = "{{PORT}}"
 	}
 
-	serviceName := "fm-service"
+	serviceName := "{{SERVICE_NAME}}"
 	
 	// Setup logger and response helper
 	logger := utils.SetupLogger(serviceName)
@@ -65,7 +65,7 @@ func main() {
 	})
 
 	// API group
-	api := r.Group("/api/fm")
+	api := r.Group("/api/{{API_PREFIX}}")
 	{
 		// Hello World endpoint
 		// @Summary Hello World
@@ -76,7 +76,7 @@ func main() {
 		// @Success 200 {object} utils.StandardResponse
 		// @Router /hello [get]
 		api.GET("/hello", func(c *gin.Context) {
-			responseHelper.Success(c, "Hello World from Financial Management Service!", gin.H{
+			responseHelper.Success(c, "Hello World from {{SERVICE_TITLE}}!", gin.H{
 				"service": serviceName,
 				"port":    port,
 			})
@@ -92,18 +92,18 @@ func main() {
 	// @Success 200 {object} utils.StandardResponse
 	// @Router / [get]
 	r.GET("/", func(c *gin.Context) {
-		responseHelper.Success(c, "Financial Management Service is running", gin.H{
+		responseHelper.Success(c, "{{SERVICE_TITLE}} is running", gin.H{
 			"service": serviceName,
 			"port":    port,
 			"endpoints": []string{
 				"GET /health - Health check",
-				"GET /api/fm/hello - Hello world endpoint",
+				"GET /api/{{API_PREFIX}}/hello - Hello world endpoint",
 				"GET /swagger/index.html - API Documentation",
 			},
 		})
 	})
 
-	logger.Info("Financial Management Service starting on port %s", port)
+	logger.Info("{{SERVICE_TITLE}} starting on port %s", port)
 	logger.Info("Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
 	
 	// Start server
@@ -111,3 +111,9 @@ func main() {
 		logger.Error("Failed to start server: %s", err.Error())
 	}
 }
+
+// Template variables to replace:
+// {{SERVICE_NAME}} - auth-service, fm-service, hr-service, etc.
+// {{SERVICE_TITLE}} - Auth Service, Financial Management Service, etc.
+// {{PORT}} - 8000, 8001, 8002, etc.
+// {{API_PREFIX}} - auth, fm, hr, etc.

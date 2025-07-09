@@ -9,50 +9,50 @@ services:
       - PORT=8000
     restart: unless-stopped
 
-  # fm-service:
-  #   build: ./services/fm-service
-  #   ports:
-  #     - "8001:8001"
-  #   environment:
-  #     - PORT=8001
-  #   restart: unless-stopped
+  fm-service:
+    build: ./services/fm-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+    restart: unless-stopped
 
-  # crm-service:
-  #   build: ./services/crm-service
-  #   ports:
-  #     - "8002:8002"
-  #   environment:
-  #     - PORT=8002
-  #   restart: unless-stopped
+  crm-service:
+    build: ./services/crm-service
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+    restart: unless-stopped
 
-  # hr-service:
-  #   build: ./services/hr-service
-  #   ports:
-  #     - "8003:8003"
-  #   environment:
-  #     - PORT=8003
-  #   restart: unless-stopped
+  hr-service:
+    build: ./services/hr-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+    restart: unless-stopped
 
-  # m-service:
-  #   build: ./services/m-service
-  #   ports:
-  #     - "8004:8004"
-  #   environment:
-  #     - PORT=8004
-  #   restart: unless-stopped
+  m-service:
+    build: ./services/m-service
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+    restart: unless-stopped
 
-  # pm-service:
-  #   build: ./services/pm-service
-  #   ports:
-  #     - "8005:8005"
-  #   environment:
-  #     - PORT=8005
-  #   restart: unless-stopped
+  pm-service:
+    build: ./services/pm-service
+    ports:
+      - "8005:8005"
+    environment:
+      - PORT=8005
+    restart: unless-stopped
 
-  # scm-service:
-  #   build: ./services/scm-service
-  #   ports:
-  #     - "8006:8006"
-  #   environment:
-  #     - PORT=8006
-  #   restart: unless-stopped
+  scm-service:
+    build: ./services/scm-service
+    ports:
+      - "8006:8006"
+    environment:
+      - PORT=8006
+    restart: unless-stopped

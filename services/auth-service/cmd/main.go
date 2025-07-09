@@ -38,8 +38,12 @@ func main() {
 	// Hello World endpoint
 	r.GET("/api/auth/hello", func(c *gin.Context) {
 		responseHelper.Success(c, "Hello World from Auth Service!", gin.H{
-			"service": serviceName,
-			"port":    port,
+			"endpoints": []string{
+				"POST /api/v1/auth/login - User Login",
+				"POST /api/v1/auth/register - User Registration",
+				"POST /api/v1/auth/refresh - Refresh Token",
+				"POST /api/v1/auth/logout - User Logout",
+			},
 		})
 	})
 
@@ -52,6 +56,20 @@ func main() {
 				"GET /health - Health check",
 				"GET /api/auth/hello - Hello world endpoint",
 			},
+		})
+	})
+
+	r.GET("/api/v1/auth/login", func(c *gin.Context) {
+		responseHelper.Success(c, "Hello from Login!", gin.H{
+			"module": "User Authentication",
+			"features": []string{"JWT Tokens", "Session Management", "Password Validation"},
+		})
+	})
+
+	r.GET("/api/v1/auth/users", func(c *gin.Context) {
+		responseHelper.Success(c, "Hello from User Management!", gin.H{
+			"module": "User Management",
+			"features": []string{"User Profiles", "Role Management", "Permissions"},
 		})
 	})
 
