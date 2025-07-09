@@ -5,14 +5,13 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"hr-service/utils" // Assuming utils package is in the same directory structure
 )
 
 func main() {
 	// Get port from environment or use default
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8001"
+		port = "8003"
 	}
 
 	// Create Gin router
@@ -21,17 +20,17 @@ func main() {
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"service": "fm-service",
+			"service": "hr-service",
 			"status":  "healthy",
 			"port":    port,
 		})
 	})
 
 	// Hello World endpoint
-	r.GET("/api/fm/hello", func(c *gin.Context) {
+	r.GET("/api/hr/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello World from Financial Management Service!",
-			"service": "fm-service",
+			"message": "Hello World from Human Resources Service!",
+			"service": "hr-service",
 			"port":    port,
 		})
 	})
@@ -39,12 +38,11 @@ func main() {
 	// Root endpoint
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Financial Management Service is running",
-			"service": "fm-service",
+			"message": "Human Resources Service is running",
+			"service": "hr-service",
 			"port":    port,
 		})
 	})
 
 	// Start server
-	r.Run(":" + port)
-}
+	r.Run(":" + port)}
