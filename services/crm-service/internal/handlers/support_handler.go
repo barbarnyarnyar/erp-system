@@ -39,13 +39,13 @@ func (h *SupportHandler) CreateTicket(c *gin.Context) {
 	}
 
 	ticket := &models.SupportTicket{
-		ContactID:     req.ContactID,
-		TicketNumber:  generateTicketNumber(),
-		Subject:       req.Subject,
-		Description:   req.Description,
-		Category:      req.Category,
-		Priority:      req.Priority,
-		Status:        "open",
+		ContactID:    req.ContactID,
+		TicketNumber: generateTicketNumber(),
+		Subject:      req.Subject,
+		Description:  req.Description,
+		Category:     req.Category,
+		Priority:     req.Priority,
+		Status:       "open",
 	}
 
 	if err := h.ticketRepo.Create(ticket); err != nil {
@@ -213,10 +213,10 @@ func (h *SupportHandler) GetTicketsByContact(c *gin.Context) {
 	}
 
 	h.response.Success(c, "Support tickets retrieved successfully", gin.H{
-		"tickets":   tickets,
-		"total":     total,
-		"page":      page,
-		"limit":     limit,
+		"tickets":    tickets,
+		"total":      total,
+		"page":       page,
+		"limit":      limit,
 		"contact_id": contactID,
 	})
 }
@@ -258,4 +258,3 @@ func (h *SupportHandler) GetResponsesByTicket(c *gin.Context) {
 
 	h.response.Success(c, "Support responses retrieved successfully", responses)
 }
-``` 
