@@ -45,4 +45,5 @@ func main() {
 	})
 
 	// Start server
-	r.Run(":" + port)}
+	r.Run(":" + port)
+}
