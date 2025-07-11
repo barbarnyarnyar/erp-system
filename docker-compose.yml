@@ -1,13 +1,36 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database with Multiple Schemas
+  postgres:
+    image: postgres:15
+    container_name: erp_postgres
+    environment:
+      POSTGRES_DB: erp_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - erp_network
+
   auth-service:
     build: ./services/auth-service
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=auth
+    networks:
+      - erp_network
 
   fm-service:
     build: ./services/fm-service
@@ -15,15 +38,31 @@ services:
       - "8001:8001"
     environment:
       - PORT=8001
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=fm
+    networks:
+      - erp_network
 
   crm-service:
     build: ./services/crm-service
+    container_name: erp_crm_service
     ports:
-      - "8002:8002"
+      - "8080:8002"
+    depends_on:
+      - postgres
     environment:
-      - PORT=8002
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=crm
+    networks:
+      - erp_network
 
   hr-service:
     build: ./services/hr-service
@@ -31,7 +70,14 @@ services:
       - "8003:8003"
     environment:
       - PORT=8003
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=hr
+    networks:
+      - erp_network
 
   m-service:
     build: ./services/m-service
@@ -39,7 +85,14 @@ services:
       - "8004:8004"
     environment:
       - PORT=8004
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=m
+    networks:
+      - erp_network
 
   pm-service:
     build: ./services/pm-service
@@ -47,7 +100,14 @@ services:
       - "8005:8005"
     environment:
       - PORT=8005
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=pm
+    networks:
+      - erp_network
 
   scm-service:
     build: ./services/scm-service
@@ -55,4 +115,18 @@ services:
       - "8006:8006"
     environment:
       - PORT=8006
-    restart: unless-stopped
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=erp_db
+      - DB_SCHEMA=scm
+    networks:
+      - erp_network
+
+volumes:
+  postgres_data:
+
+networks:
+  erp_network:
+    driver: bridge
