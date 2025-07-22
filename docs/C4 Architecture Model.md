@@ -27,7 +27,7 @@ graph TB
     end
     
     subgraph "ERP System Boundary"
-        ERP[Modern ERP System<br/>Integrated Business Management Platform<br/>FIN | HRM | SCM | CRM | MFG | PRJ]
+        ERP[Modern ERP System<br/>Integrated Business Management Platform<br/>Financial • HR • Supply Chain • CRM • Manufacturing • Projects]
     end
     
     subgraph "External Systems"
