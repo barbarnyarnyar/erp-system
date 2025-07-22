@@ -487,53 +487,53 @@ classDiagram
     %% ========================================
     
     %% Customer & Sales Relationships
-    Customer ||--o{ Sale : "places"
-    Customer }o--|| LoyaltyProgram : "enrolled_in"
-    Sale ||--o{ SaleLine : "contains"
-    Sale ||--|| Payment : "paid_with"
-    SaleLine }o--|| Product : "references"
-    SaleLine }o--o| Promotion : "applies"
+    Customer ||--o{ Sale
+    Customer }o--|| LoyaltyProgram
+    Sale ||--o{ SaleLine
+    Sale ||--|| Payment
+    SaleLine }o--|| Product
+    SaleLine }o--o{ Promotion
     
     %% Product & Inventory Relationships
-    Product }o--|| Category : "belongs_to"
-    Product }o--|| Brand : "manufactured_by"
-    Product }o--|| TaxCode : "taxed_with"
-    Product ||--o{ Inventory : "stocked_as"
-    Inventory }o--|| StockLocation : "stored_in"
-    Inventory ||--o{ StockMovement : "tracked_by"
+    Product }o--|| Category
+    Product }o--|| Brand
+    Product }o--|| TaxCode
+    Product ||--o{ Inventory
+    Inventory }o--|| StockLocation
+    Inventory ||--o{ StockMovement
     
     %% Employee & HR Relationships
-    Employee }o--|| Position : "holds"
-    Employee }o--|| Department : "works_in"
-    Employee ||--o{ Schedule : "assigned_to"
-    Employee ||--o{ TimeEntry : "records"
-    Employee ||--|| Payroll : "receives"
-    Department ||--o| Employee : "managed_by"
+    Employee }o--|| Position
+    Employee }o--|| Department
+    Employee ||--o{ Schedule
+    Employee ||--o{ TimeEntry
+    Employee ||--|| Payroll
+    Department ||--o{ Employee
     
     %% Supplier & Purchasing Relationships
-    Supplier ||--o{ PurchaseOrder : "receives"
-    PurchaseOrder ||--o{ PurchaseOrderLine : "contains"
-    PurchaseOrderLine }o--|| Product : "orders"
-    PurchaseOrder ||--o| Receiving : "fulfilled_by"
+    Supplier ||--o{ PurchaseOrder
+    PurchaseOrder ||--o{ PurchaseOrderLine
+    PurchaseOrderLine }o--|| Product
+    PurchaseOrder ||--o{ Receiving
     
     %% Manufacturing Relationships
-    Recipe ||--o{ RecipeIngredient : "contains"
-    RecipeIngredient }o--|| Product : "uses"
-    Recipe ||--o{ ProductionOrder : "produces"
-    ProductionOrder }o--|| Employee : "assigned_to"
-    ProductionOrder ||--o{ Batch : "creates"
-    Batch ||--o{ QualityCheck : "inspected_by"
-    QualityCheck }o--|| Employee : "performed_by"
+    Recipe ||--o{ RecipeIngredient
+    RecipeIngredient }o--|| Product
+    Recipe ||--o{ ProductionOrder
+    ProductionOrder }o--|| Employee
+    ProductionOrder ||--o{ Batch
+    Batch ||--o{ QualityCheck
+    QualityCheck }o--|| Employee
     
     %% Financial Relationships
-    Transaction ||--o{ TransactionLine : "contains"
-    TransactionLine }o--|| Account : "affects"
-    Sale }o--|| TaxCode : "calculated_with"
+    Transaction ||--o{ TransactionLine
+    TransactionLine }o--|| Account
+    Sale }o--|| TaxCode
     
     %% Project Relationships
-    StoreProject ||--o{ Task : "contains"
-    Task }o--|| Employee : "assigned_to"
-    StoreProject }o--|| Employee : "managed_by"
+    StoreProject ||--o{ Task
+    Task }o--|| Employee
+    StoreProject }o--|| Employee
 ```
 
 ## 2. Domain Aggregates
