@@ -487,53 +487,53 @@ classDiagram
     %% ========================================
     
     %% Customer & Sales Relationships
-    Customer ||--o{ Sale : places
-    Customer }o--|| LoyaltyProgram : enrolled_in
-    Sale ||--o{ SaleLine : contains
-    Sale ||--|| Payment : paid_with
-    SaleLine }o--|| Product : references
-    SaleLine }o--o| Promotion : applies
+    Customer ||--o{ Sale : "places"
+    Customer }o--|| LoyaltyProgram : "enrolled_in"
+    Sale ||--o{ SaleLine : "contains"
+    Sale ||--|| Payment : "paid_with"
+    SaleLine }o--|| Product : "references"
+    SaleLine }o--o| Promotion : "applies"
     
     %% Product & Inventory Relationships
-    Product }o--|| Category : belongs_to
-    Product }o--|| Brand : manufactured_by
-    Product }o--|| TaxCode : taxed_with
-    Product ||--o{ Inventory : stocked_as
-    Inventory }o--|| StockLocation : stored_in
-    Inventory ||--o{ StockMovement : tracked_by
+    Product }o--|| Category : "belongs_to"
+    Product }o--|| Brand : "manufactured_by"
+    Product }o--|| TaxCode : "taxed_with"
+    Product ||--o{ Inventory : "stocked_as"
+    Inventory }o--|| StockLocation : "stored_in"
+    Inventory ||--o{ StockMovement : "tracked_by"
     
     %% Employee & HR Relationships
-    Employee }o--|| Position : holds
-    Employee }o--|| Department : works_in
-    Employee ||--o{ Schedule : assigned_to
-    Employee ||--o{ TimeEntry : records
-    Employee ||--|| Payroll : receives
-    Department ||--o| Employee : managed_by
+    Employee }o--|| Position : "holds"
+    Employee }o--|| Department : "works_in"
+    Employee ||--o{ Schedule : "assigned_to"
+    Employee ||--o{ TimeEntry : "records"
+    Employee ||--|| Payroll : "receives"
+    Department ||--o| Employee : "managed_by"
     
     %% Supplier & Purchasing Relationships
-    Supplier ||--o{ PurchaseOrder : receives
-    PurchaseOrder ||--o{ PurchaseOrderLine : contains
-    PurchaseOrderLine }o--|| Product : orders
-    PurchaseOrder ||--o| Receiving : fulfilled_by
+    Supplier ||--o{ PurchaseOrder : "receives"
+    PurchaseOrder ||--o{ PurchaseOrderLine : "contains"
+    PurchaseOrderLine }o--|| Product : "orders"
+    PurchaseOrder ||--o| Receiving : "fulfilled_by"
     
     %% Manufacturing Relationships
-    Recipe ||--o{ RecipeIngredient : contains
-    RecipeIngredient }o--|| Product : uses
-    Recipe ||--o{ ProductionOrder : produces
-    ProductionOrder }o--|| Employee : assigned_to
-    ProductionOrder ||--o{ Batch : creates
-    Batch ||--o{ QualityCheck : inspected_by
-    QualityCheck }o--|| Employee : performed_by
+    Recipe ||--o{ RecipeIngredient : "contains"
+    RecipeIngredient }o--|| Product : "uses"
+    Recipe ||--o{ ProductionOrder : "produces"
+    ProductionOrder }o--|| Employee : "assigned_to"
+    ProductionOrder ||--o{ Batch : "creates"
+    Batch ||--o{ QualityCheck : "inspected_by"
+    QualityCheck }o--|| Employee : "performed_by"
     
     %% Financial Relationships
-    Transaction ||--o{ TransactionLine : contains
-    TransactionLine }o--|| Account : affects
-    Sale }o--|| TaxCode : calculated_with
+    Transaction ||--o{ TransactionLine : "contains"
+    TransactionLine }o--|| Account : "affects"
+    Sale }o--|| TaxCode : "calculated_with"
     
     %% Project Relationships
-    StoreProject ||--o{ Task : contains
-    Task }o--|| Employee : assigned_to
-    StoreProject }o--|| Employee : managed_by
+    StoreProject ||--o{ Task : "contains"
+    Task }o--|| Employee : "assigned_to"
+    StoreProject }o--|| Employee : "managed_by"
 ```
 
 ## 2. Domain Aggregates
