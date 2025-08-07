@@ -111,7 +111,7 @@ graph TB
     FileStorage[(📁 File Storage<br/>S3/MinIO<br/>Employee documents)]
     
     %% Message Queue
-    MessageQueue[📨 RabbitMQ<br/>Event-driven communication]
+    MessageQueue[📨 Kafka<br/>Event-driven communication]
     
     %% External Services
     FinancialAPI[💼 Financial Service API]
@@ -543,28 +543,20 @@ type EventPublisher interface {
     PublishSalaryChanged(ctx context.Context, event SalaryChangedEvent) error
 }
 
-type RabbitMQPublisher struct {
-    connection *amqp.Connection
-    channel    *amqp.Channel
-    exchange   string
+type KafkaPublisher struct {
+    writer *kafka.Writer
 }
 
-func (p *RabbitMQPublisher) PublishEmployeeCreated(ctx context.Context, event EmployeeCreatedEvent) error {
+func (p *KafkaPublisher) PublishEmployeeCreated(ctx context.Context, event EmployeeCreatedEvent) error {
     body, err := json.Marshal(event)
     if err != nil {
         return fmt.Errorf("failed to marshal event: %w", err)
     }
-    
-    return p.channel.Publish(
-        p.exchange,              // exchange
-        "employee.created",      // routing key
-        false,                   // mandatory
-        false,                   // immediate
-        amqp.Publishing{
-            ContentType: "application/json",
-            Body:        body,
-            MessageId:   event.EventID.String(),
-            Timestamp:   time.Now(),
+
+    return p.writer.WriteMessages(ctx,
+        kafka.Message{
+            Key:   []byte(event.EventID.String()),
+            Value: body,
         },
     )
 }

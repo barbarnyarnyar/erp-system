@@ -830,7 +830,7 @@ erDiagram
 
 - **Backend Services**: Go with Gin framework
 - **Database**: PostgreSQL for transactional data, Redis for caching
-- **Message Queue**: RabbitMQ or Apache Kafka
+- **Message Queue**: Apache Kafka
 - **API Gateway**: Kong or Nginx with authentication
 - **Containerization**: Docker with Kubernetes orchestration
 - **Monitoring**: Prometheus + Grafana

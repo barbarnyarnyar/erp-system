@@ -267,30 +267,27 @@
 
 ### 6.1 Core Entity Relationships (Simplified)
 
-```
+```plantuml
+@startuml
 Customer ||--o{ Sale : places
 Sale ||--o{ SaleLine : contains
 SaleLine }o--|| Product : references
 Product }o--|| Category : belongs_to
 Product }o--|| Brand : manufactured_by
-
 Supplier ||--o{ PurchaseOrder : receives
 PurchaseOrder ||--o{ PurchaseOrderLine : contains
 PurchaseOrderLine }o--|| Product : orders
-
 Product ||--o{ Inventory : stocked_as
 Inventory }o--|| StockLocation : stored_in
-
 Employee }o--|| Department : works_in
 Employee ||--o{ Schedule : assigned_to
 Employee ||--o{ TimeEntry : records
-
 Recipe ||--o{ RecipeIngredient : contains
 RecipeIngredient }o--|| Product : uses
 ProductionOrder }o--|| Recipe : produces
-
 StoreProject ||--o{ Task : contains
 Task }o--|| Employee : assigned_to
+@enduml
 ```
 
 ### 6.2 Aggregate Root Identification

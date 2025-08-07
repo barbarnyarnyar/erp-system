@@ -161,7 +161,7 @@ graph TB
     end
     
     subgraph "Message Queue"
-        MQ[RabbitMQ<br/>Port: 5672<br/>Management: 15672]
+        MQ[Kafka<br/>Port: 9092]
     end
     
     subgraph "External Integration"

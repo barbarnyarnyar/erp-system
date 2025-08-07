@@ -44,7 +44,7 @@ This ERP system provides a complete business management solution with the follow
     ┌────────────────────────────┼────────────────────────────┐
     │                            │                            │
     │                    Message Queue                        │
-    │                   (RabbitMQ)                           │
+    │                      (Kafka)                           │
     │                                                        │
     └────────────────────────────┼────────────────────────────┘
                                  │
@@ -118,7 +118,6 @@ This ERP system provides a complete business management solution with the follow
 
 4. **Access the application**
    - API Gateway: http://localhost:8080
-   - RabbitMQ Management: http://localhost:15672 (admin/admin)
    - Grafana Dashboard: http://localhost:3000 (admin/admin)
 
 5. **Initialize sample data**
@@ -139,9 +138,7 @@ POSTGRES_PASSWORD=admin
 POSTGRES_DB=erp_db
 
 # Message Queue
-RABBITMQ_USER=admin
-RABBITMQ_PASSWORD=admin
-RABBITMQ_VHOST=/
+KAFKA_BROKERS=localhost:9092
 
 # Redis
 REDIS_PASSWORD=admin
@@ -167,8 +164,9 @@ database:
   user: admin
   password: admin
 
-rabbitmq:
-  url: amqp://admin:admin@rabbitmq:5672/
+kafka:
+  brokers:
+    - kafka:9092
   
 redis:
   host: redis
@@ -221,7 +219,7 @@ Full API documentation is available at: http://localhost:8080/docs
 
 2. **Start infrastructure only**
    ```bash
-   docker-compose up -d postgres rabbitmq redis
+   docker-compose up -d postgres kafka redis
    ```
 
 3. **Run services locally**

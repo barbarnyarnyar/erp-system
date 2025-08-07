@@ -75,7 +75,7 @@
 - Story 3.2: Financial Integration - Employee Changes (3 points)
 
 **Technical Deliverables**:
-- RabbitMQ event publishing system
+- Kafka event publishing system
 - Event schema definitions
 - Retry mechanism with exponential backoff
 - Integration error handling and monitoring
@@ -363,7 +363,7 @@
 ### Technology Stack Requirements
 - **Backend**: Go 1.21+, Gin framework
 - **Database**: PostgreSQL with Redis caching
-- **Message Queue**: RabbitMQ for event-driven communication
+- **Message Queue**: Kafka for event-driven communication
 - **Frontend**: React.js for web portal, React Native for mobile
 - **Infrastructure**: Docker containers, CI/CD pipeline
 - **Monitoring**: Prometheus, Grafana, ELK stack
