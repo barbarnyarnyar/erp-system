@@ -9,10 +9,12 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type TaxService struct{}
+type TaxService struct {
+	repo domain.TaxRateRepository
+}
 
-func NewTaxService() *TaxService {
-	return &TaxService{}
+func NewTaxService(repo domain.TaxRateRepository) *TaxService {
+	return &TaxService{repo: repo}
 }
 
 func (s *TaxService) CreateTaxRate(ctx context.Context, code, name string, rate decimal.Decimal) (*domain.TaxRate, error) {
@@ -29,6 +31,19 @@ func (s *TaxService) CreateTaxRate(ctx context.Context, code, name string, rate 
 		IsActive: true,
 	}
 	
-	// Normally we would persist this via a repository
+	err := s.repo.Create(ctx, taxRate)
+	if err != nil {
+		return nil, err
+	}
+
 	return taxRate, nil
 }
+
+func (s *TaxService) ListTaxRates(ctx context.Context) ([]domain.TaxRate, error) {
+	return s.repo.List(ctx)
+}
+
+func (s *TaxService) GetTaxRate(ctx context.Context, id string) (*domain.TaxRate, error) {
+	return s.repo.GetByID(ctx, id)
+}
+

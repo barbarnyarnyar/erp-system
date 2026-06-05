@@ -27,19 +27,24 @@ func (s *CashManagementService) ListPayments(ctx context.Context) ([]domain.Paym
 	return s.payments.List(ctx)
 }
 
-func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, billID string, amount decimal.Decimal, method string) (*domain.Payment, error) {
+func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, billID, bankAccountID string, amount decimal.Decimal, method string) (*domain.Payment, error) {
 	id := fmt.Sprintf("pay_%d", time.Now().UnixNano())
 	payNum := fmt.Sprintf("PAY-%d", time.Now().Unix())
 
 	payment := &domain.Payment{
-		ID:            id,
-		PaymentNumber: payNum,
-		PaymentDate:   time.Now(),
-		Amount:        amount,
-		PaymentMethod: method,
-		Status:        "COMPLETED",
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		ID:              id,
+		PaymentNumber:   payNum,
+		PaymentDate:     time.Now(),
+		Amount:          amount,
+		PaymentMethod:   method,
+		Status:          "COMPLETED",
+		BankAccountID:   nil,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+
+	if bankAccountID != "" {
+		payment.BankAccountID = &bankAccountID
 	}
 
 	if invoiceID != "" {

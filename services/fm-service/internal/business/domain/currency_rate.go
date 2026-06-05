@@ -7,6 +7,7 @@ import (
 )
 
 type CurrencyRate struct {
+	ID            string          `json:"id"`
 	FromCurrency  string          `json:"from_currency"`
 	ToCurrency    string          `json:"to_currency"`
 	Rate          decimal.Decimal `json:"rate"`

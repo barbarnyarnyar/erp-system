@@ -444,3 +444,43 @@ func (r *MemoryVendorBillRepo) List(ctx context.Context) ([]domain.VendorBill, e
 	return list, nil
 }
 
+// MemoryTaxRateRepo implements domain.TaxRateRepository
+type MemoryTaxRateRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.TaxRate
+}
+
+func NewMemoryTaxRateRepo() *MemoryTaxRateRepo {
+	return &MemoryTaxRateRepo{
+		data: make(map[string]domain.TaxRate),
+	}
+}
+
+func (r *MemoryTaxRateRepo) Create(ctx context.Context, tr *domain.TaxRate) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[tr.ID] = *tr
+	return nil
+}
+
+func (r *MemoryTaxRateRepo) GetByID(ctx context.Context, id string) (*domain.TaxRate, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	tr, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("tax rate not found")
+	}
+	return &tr, nil
+}
+
+func (r *MemoryTaxRateRepo) List(ctx context.Context) ([]domain.TaxRate, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.TaxRate, 0, len(r.data))
+	for _, tr := range r.data {
+		list = append(list, tr)
+	}
+	return list, nil
+}
+
+

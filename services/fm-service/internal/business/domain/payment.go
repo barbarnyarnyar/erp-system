@@ -10,6 +10,7 @@ type Payment struct {
 	ID            string          `json:"id"`
 	InvoiceID     *string         `json:"invoice_id"`
 	BillID        *string         `json:"bill_id"`
+	BankAccountID *string         `json:"bank_account_id"`
 	PaymentNumber string          `json:"payment_number"`
 	PaymentDate   time.Time       `json:"payment_date"`
 	Amount        decimal.Decimal `json:"amount"`

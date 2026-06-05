@@ -201,6 +201,51 @@ func (s *GeneralLedgerService) GetJournalEntry(ctx context.Context, id string) (
 	return s.entries.GetByID(ctx, id)
 }
 
+func (s *GeneralLedgerService) ReverseJournalEntry(ctx context.Context, id string) (*domain.JournalEntry, error) {
+	entry, lines, err := s.entries.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry.Status == "REVERSED" {
+		return nil, errors.New("journal entry is already reversed")
+	}
+
+	// Create reverse lines
+	revLines := make([]domain.JournalEntryLine, len(lines))
+	for i, l := range lines {
+		revLines[i] = domain.JournalEntryLine{
+			AccountID:     l.AccountID,
+			DebitAmount:   l.CreditAmount, // swap debits and credits
+			CreditAmount:  l.DebitAmount,
+			Description:   "Reversal of " + entry.Reference + ": " + l.Description,
+			CostCenterID:  l.CostCenterID,
+		}
+	}
+
+	revRef := fmt.Sprintf("REV-%s", entry.Reference)
+	revDesc := fmt.Sprintf("Reversal of Journal Entry %s: %s", entry.Reference, entry.Description)
+	
+	// Create reversing journal entry (which will handle adjusting the GL account balances)
+	revEntry, err := s.CreateJournalEntry(ctx, revRef, revDesc, revLines)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create reversing entry: %w", err)
+	}
+
+	// Update original entry
+	entry.Status = "REVERSED"
+	entry.ReversedBy = &revEntry.ID
+	entry.UpdatedAt = time.Now()
+
+	err = s.entries.Update(ctx, entry, lines)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update original entry status: %w", err)
+	}
+
+	return revEntry, nil
+}
+
+
 func (s *GeneralLedgerService) GetTrialBalance(ctx context.Context) (map[string]interface{}, error) {
 	accs, err := s.accounts.List(ctx)
 	if err != nil {

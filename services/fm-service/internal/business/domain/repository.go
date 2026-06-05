@@ -67,3 +67,11 @@ type VendorBillRepository interface {
 	List(ctx context.Context) ([]VendorBill, error)
 }
 
+// TaxRateRepository defines operations for tax rates
+type TaxRateRepository interface {
+	Create(ctx context.Context, tr *TaxRate) error
+	GetByID(ctx context.Context, id string) (*TaxRate, error)
+	List(ctx context.Context) ([]TaxRate, error)
+}
+
+

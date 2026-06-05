@@ -2,10 +2,19 @@
 -- Database schema for FM Service
 
 CREATE TABLE IF NOT EXISTS currency_rates (
-    from_currency VARCHAR(255) PRIMARY KEY NOT NULL,
-    to_currency VARCHAR(255) PRIMARY KEY NOT NULL,
+    id UUID PRIMARY KEY NOT NULL,
+    from_currency VARCHAR(255) NOT NULL,
+    to_currency VARCHAR(255) NOT NULL,
     rate NUMERIC(15, 4) NOT NULL,
     effective_date DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fiscal_years (
+    id UUID PRIMARY KEY NOT NULL,
+    year INT UNIQUE NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_closed BOOLEAN NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS cost_centers (
@@ -86,6 +95,7 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     description TEXT NOT NULL,
     status VARCHAR(255) NOT NULL,
     created_by VARCHAR(255) NOT NULL,
+    reversed_by UUID REFERENCES journal_entries(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -152,6 +162,7 @@ CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY NOT NULL,
     invoice_id UUID REFERENCES invoices(id),
     bill_id UUID REFERENCES vendor_bills(id),
+    bank_account_id UUID REFERENCES bank_accounts(id),
     payment_number VARCHAR(255) UNIQUE NOT NULL,
     payment_date DATE NOT NULL,
     amount NUMERIC(15, 4) NOT NULL,

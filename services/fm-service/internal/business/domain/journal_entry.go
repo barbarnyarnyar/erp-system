@@ -12,6 +12,7 @@ type JournalEntry struct {
 	Description string    `json:"description"`
 	Status      string    `json:"status"` // e.g., PENDING, POSTED, REVERSED
 	CreatedBy   string    `json:"created_by"`
+	ReversedBy  *string   `json:"reversed_by"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

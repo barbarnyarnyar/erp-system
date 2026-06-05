@@ -3,10 +3,19 @@ service FM {
     // PREREQUISITE REFERENCES / INDEPENDENT TABLES
     // -------------------------------------------------------------
     entity CurrencyRate {
-        from_currency  string    @primary
-        to_currency    string    @primary
+        id             uuid      @primary
+        from_currency  string
+        to_currency    string
         rate           decimal
         effective_date date
+    }
+
+    entity FiscalYear {
+        id         uuid      @primary
+        year       integer   @unique
+        start_date date
+        end_date   date
+        is_closed  boolean
     }
 
     entity CostCenter {
@@ -93,6 +102,7 @@ service FM {
         description string
         status      string    // e.g., PENDING, POSTED, REVERSED
         created_by  string
+        reversed_by uuid      @reference(JournalEntry.id) @optional
         created_at  timestamp
         updated_at  timestamp
     }
@@ -168,6 +178,7 @@ service FM {
         id             uuid      @primary
         invoice_id     uuid      @reference(Invoice.id) @optional
         bill_id        uuid      @reference(VendorBill.id) @optional
+        bank_account_id uuid      @reference(BankAccount.id) @optional
         payment_number string    @unique
         payment_date   date
         amount         decimal
@@ -227,6 +238,9 @@ service FM {
         }
         func getJournalEntry(id: string): JournalEntry {
             description: "Get journal entry details by ID"
+        }
+        func reverseJournalEntry(id: string): JournalEntry {
+            description: "Reverse a posted journal entry"
         }
         func getTrialBalance(): object {
             description: "Generate Trial Balance report"
@@ -336,6 +350,12 @@ service FM {
 
         func createTaxRate(code: string, name: string, rate: decimal): TaxRate {
             description: "Create a tax rate"
+        }
+        func listTaxRates(): list<TaxRate> {
+            description: "List all tax rates"
+        }
+        func getTaxRate(id: string): TaxRate {
+            description: "Get tax rate details by ID"
         }
     }
 

@@ -29,6 +29,7 @@ func (h *PaymentHandler) RecordPayment(c *gin.Context) {
 	var req struct {
 		InvoiceID     string `json:"invoice_id"`
 		BillID        string `json:"bill_id"`
+		BankAccountID string `json:"bank_account_id"`
 		Amount        string `json:"amount"`
 		PaymentMethod string `json:"payment_method"`
 	}
@@ -44,7 +45,7 @@ func (h *PaymentHandler) RecordPayment(c *gin.Context) {
 		return
 	}
 
-	payment, err := h.svc.RecordPayment(c.Request.Context(), req.InvoiceID, req.BillID, amountDec, req.PaymentMethod)
+	payment, err := h.svc.RecordPayment(c.Request.Context(), req.InvoiceID, req.BillID, req.BankAccountID, amountDec, req.PaymentMethod)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
