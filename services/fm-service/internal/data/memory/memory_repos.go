@@ -381,3 +381,66 @@ func (r *MemoryBudgetRepo) GetByAccountAndPeriod(ctx context.Context, accountID 
 	}
 	return nil, errors.New("budget not found")
 }
+
+// MemoryVendorBillRepo implements domain.VendorBillRepository in-memory
+type MemoryVendorBillRepo struct {
+	mu    sync.RWMutex
+	bills map[string]domain.VendorBill
+	lines map[string][]domain.VendorBillLine
+}
+
+func NewMemoryVendorBillRepo() *MemoryVendorBillRepo {
+	return &MemoryVendorBillRepo{
+		bills: make(map[string]domain.VendorBill),
+		lines: make(map[string][]domain.VendorBillLine),
+	}
+}
+
+func (r *MemoryVendorBillRepo) Create(ctx context.Context, bill *domain.VendorBill, lines []domain.VendorBillLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
+	r.bills[bill.ID] = *bill
+	r.lines[bill.ID] = lines
+	return nil
+}
+
+func (r *MemoryVendorBillRepo) GetByID(ctx context.Context, id string) (*domain.VendorBill, []domain.VendorBillLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	bill, ok := r.bills[id]
+	if !ok {
+		return nil, nil, errors.New("vendor bill not found")
+	}
+	return &bill, r.lines[id], nil
+}
+
+func (r *MemoryVendorBillRepo) Update(ctx context.Context, bill *domain.VendorBill) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
+	r.bills[bill.ID] = *bill
+	return nil
+}
+
+func (r *MemoryVendorBillRepo) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
+	delete(r.bills, id)
+	delete(r.lines, id)
+	return nil
+}
+
+func (r *MemoryVendorBillRepo) List(ctx context.Context) ([]domain.VendorBill, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	list := make([]domain.VendorBill, 0, len(r.bills))
+	for _, bill := range r.bills {
+		list = append(list, bill)
+	}
+	return list, nil
+}
+

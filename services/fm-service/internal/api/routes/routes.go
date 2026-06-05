@@ -12,6 +12,8 @@ func SetupRoutes(
 	accHandler *handlers.AccountHandler,
 	txHandler *handlers.TransactionHandler,
 	repHandler *handlers.ReportHandler,
+	invHandler *handlers.InvoiceHandler,
+	payHandler *handlers.PaymentHandler,
 ) {
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -35,12 +37,33 @@ func SetupRoutes(
 			accounts.GET("/:id/balance", accHandler.GetAccountBalance)
 		}
 
-		// Transaction routes
-		transactions := v1.Group("/transactions")
+		// Journal Entries routes
+		journalEntries := v1.Group("/journal-entries")
 		{
-			transactions.GET("", txHandler.GetTransactions)
-			transactions.POST("", txHandler.CreateTransaction)
-			transactions.GET("/:id", txHandler.GetTransaction)
+			journalEntries.GET("", txHandler.GetTransactions)
+			journalEntries.POST("", txHandler.CreateTransaction)
+			journalEntries.GET("/:id", txHandler.GetTransaction)
+			journalEntries.PUT("/:id", txHandler.UpdateTransaction)
+			journalEntries.DELETE("/:id", txHandler.DeleteTransaction)
+		}
+
+		// Invoices routes
+		invoices := v1.Group("/invoices")
+		{
+			invoices.GET("", invHandler.GetInvoices)
+			invoices.POST("", invHandler.CreateInvoice)
+			invoices.GET("/:id", invHandler.GetInvoice)
+			invoices.PUT("/:id", invHandler.UpdateInvoice)
+			invoices.DELETE("/:id", invHandler.DeleteInvoice)
+			invoices.POST("/:id/send", invHandler.SendInvoice)
+		}
+
+		// Payments routes
+		payments := v1.Group("/payments")
+		{
+			payments.GET("", payHandler.GetPayments)
+			payments.POST("", payHandler.RecordPayment)
+			payments.GET("/:id", payHandler.GetPayment)
 		}
 
 		// Reports routes

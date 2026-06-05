@@ -24,9 +24,16 @@ type Entity struct {
 	Comment string
 }
 
+type Event struct {
+	Topic   string
+	Payload string
+}
+
 type Service struct {
-	Name     string
-	Entities []Entity
+	Name           string
+	Entities       []Entity
+	ProducerEvents []Event
+	ConsumerEvents []Event
 }
 
 // ParseCDD reads and parses a .cdd file
@@ -49,6 +56,9 @@ func ParseCDD(filePath string) (*Service, error) {
 	lineNum := 0
 	inService := false
 	inEntity := false
+	inProducerEvents := false
+	inConsumerEvents := false
+	braceLevel := 0
 
 	for scanner.Scan() {
 		lineNum++
@@ -66,14 +76,20 @@ func ParseCDD(filePath string) (*Service, error) {
 			line = strings.TrimSpace(line[:idx])
 		}
 
-		// Close block
-		if line == "}" {
-			if inEntity {
-				service.Entities = append(service.Entities, *currentEntity)
-				currentEntity = nil
-				inEntity = false
-			} else if inService {
+		// Track braces for nesting
+		braceLevel += strings.Count(line, "{")
+		if strings.Contains(line, "}") {
+			braceLevel -= strings.Count(line, "}")
+			if braceLevel == 0 {
 				inService = false
+			} else if braceLevel == 1 {
+				if inEntity {
+					service.Entities = append(service.Entities, *currentEntity)
+					currentEntity = nil
+					inEntity = false
+				}
+				inProducerEvents = false
+				inConsumerEvents = false
 			}
 			continue
 		}
@@ -88,8 +104,17 @@ func ParseCDD(filePath string) (*Service, error) {
 			}
 		}
 
-		// Parse entity block
-		if inService && !inEntity {
+		// Parse entity or events blocks
+		if inService && !inEntity && !inProducerEvents && !inConsumerEvents {
+			if line == "producer_events {" {
+				inProducerEvents = true
+				continue
+			}
+			if line == "consumer_events {" {
+				inConsumerEvents = true
+				continue
+			}
+
 			matches := entityRegex.FindStringSubmatch(line)
 			if len(matches) > 1 {
 				currentEntity = &Entity{
@@ -100,6 +125,33 @@ func ParseCDD(filePath string) (*Service, error) {
 				inEntity = true
 				continue
 			}
+		}
+
+		// Parse events fields
+		if inProducerEvents {
+			parts := strings.Split(line, ":")
+			if len(parts) >= 2 {
+				topic := strings.TrimSpace(parts[0])
+				payload := strings.TrimSpace(parts[1])
+				service.ProducerEvents = append(service.ProducerEvents, Event{
+					Topic:   topic,
+					Payload: payload,
+				})
+			}
+			continue
+		}
+
+		if inConsumerEvents {
+			parts := strings.Split(line, ":")
+			if len(parts) >= 2 {
+				topic := strings.TrimSpace(parts[0])
+				payload := strings.TrimSpace(parts[1])
+				service.ConsumerEvents = append(service.ConsumerEvents, Event{
+					Topic:   topic,
+					Payload: payload,
+				})
+			}
+			continue
 		}
 
 		// Parse fields

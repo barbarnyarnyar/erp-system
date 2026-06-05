@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/erp-system/fm-service/internal/business/service"
 	"github.com/erp-system/fm-service/internal/config"
 	"github.com/erp-system/fm-service/internal/data/memory"
+	kafkaData "github.com/erp-system/fm-service/internal/data/kafka"
 )
 
 func main() {
@@ -19,6 +21,10 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// Initialize Kafka Publisher
+	kafkaPublisher := kafkaData.NewKafkaPublisher(cfg.Kafka.Brokers)
+	defer kafkaPublisher.Close()
+
 	// Initialize in-memory repositories
 	accountRepo := memory.NewMemoryAccountRepo()
 	entryRepo := memory.NewMemoryJournalEntryRepo()
@@ -26,27 +32,62 @@ func main() {
 	paymentRepo := memory.NewMemoryPaymentRepo()
 	vendorRepo := memory.NewMemoryVendorRepo()
 	budgetRepo := memory.NewMemoryBudgetRepo()
+	vendorBillRepo := memory.NewMemoryVendorBillRepo()
 
-	// Initialize application service
-	financeSvc := service.NewFinanceService(
+	// Initialize application services
+	generalLedgerSvc := service.NewGeneralLedgerService(
 		accountRepo,
 		entryRepo,
+		kafkaPublisher,
+	)
+	accountsReceivableSvc := service.NewAccountsReceivableService(
 		invoiceRepo,
+		kafkaPublisher,
+	)
+	cashManagementSvc := service.NewCashManagementService(
 		paymentRepo,
+		invoiceRepo,
+		kafkaPublisher,
+	)
+	accountsPayableSvc := service.NewAccountsPayableService(
 		vendorRepo,
+		vendorBillRepo,
+		kafkaPublisher,
+	)
+	budgetingSvc := service.NewBudgetingService(
 		budgetRepo,
+		accountRepo,
+		kafkaPublisher,
 	)
 
+	// Initialize and start Kafka Consumer in the background
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kafkaConsumer := kafkaData.NewKafkaConsumer(
+		cfg.Kafka.Brokers,
+		cfg.Kafka.GroupID,
+		generalLedgerSvc,
+		accountsPayableSvc,
+		accountsReceivableSvc,
+		cashManagementSvc,
+		budgetingSvc,
+	)
+	go kafkaConsumer.Start(ctx)
+	defer kafkaConsumer.Close()
+
 	// Initialize handlers
-	accHandler := handlers.NewAccountHandler(financeSvc)
-	txHandler := handlers.NewTransactionHandler(financeSvc)
-	repHandler := handlers.NewReportHandler(financeSvc)
+	accHandler := handlers.NewAccountHandler(generalLedgerSvc)
+	txHandler := handlers.NewTransactionHandler(generalLedgerSvc)
+	repHandler := handlers.NewReportHandler(generalLedgerSvc)
+	invHandler := handlers.NewInvoiceHandler(accountsReceivableSvc)
+	payHandler := handlers.NewPaymentHandler(cashManagementSvc)
 
 	// Initialize Gin router
 	router := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler)
+	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler, invHandler, payHandler)
 
 	// Start server
 	log.Printf("Financial Management Service starting on port %s", cfg.Server.Port)

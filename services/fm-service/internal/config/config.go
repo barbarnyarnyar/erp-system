@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -10,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	RabbitMQ RabbitMQConfig
+	Kafka    KafkaConfig
 }
 
 type ServerConfig struct {
@@ -38,6 +40,11 @@ type RabbitMQConfig struct {
 	Exchange string
 }
 
+type KafkaConfig struct {
+	Brokers []string
+	GroupID string
+}
+
 func Load() (*Config, error) {
 	cfg := &Config{
 		Server: ServerConfig{
@@ -61,6 +68,10 @@ func Load() (*Config, error) {
 		RabbitMQ: RabbitMQConfig{
 			URL:      getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 			Exchange: getEnv("RABBITMQ_EXCHANGE", "fm-service"),
+		},
+		Kafka: KafkaConfig{
+			Brokers: strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
+			GroupID: getEnv("KAFKA_GROUP_ID", "fm-service"),
 		},
 	}
 

@@ -338,4 +338,45 @@ service FM {
             description: "Create a tax rate"
         }
     }
+
+    // =============================================================
+    // MESSAGE QUEUE EVENTS (EVENT-DRIVEN CONTRACTS)
+    // =============================================================
+    
+    producer_events {
+        fin.invoice.created: InvoiceEventPayload
+        fin.invoice.updated: InvoiceEventPayload
+        fin.invoice.sent: InvoiceEventPayload
+        fin.invoice.paid: InvoiceEventPayload
+        fin.invoice.overdue: InvoiceEventPayload
+        fin.payment.received: PaymentEventPayload
+        fin.payment.processed: PaymentEventPayload
+        fin.payment.failed: PaymentEventPayload
+        fin.vendor.created: VendorEventPayload
+        fin.vendor.updated: VendorEventPayload
+        fin.vendor.payment.due: VendorBillEventPayload
+        fin.budget.created: BudgetEventPayload
+        fin.budget.updated: BudgetEventPayload
+        fin.budget.exceeded: BudgetEventPayload
+        fin.account.created: AccountEventPayload
+        fin.account.updated: AccountEventPayload
+        fin.account.balance.changed: AccountEventPayload
+    }
+
+    consumer_events {
+        hr.employee.created: EmployeeCreatedEvent
+        hr.payroll.processed: PayrollProcessedEvent
+        hr.expense.submitted: ExpenseSubmittedEvent
+        scm.purchase.order.created: PurchaseOrderCreatedEvent
+        scm.invoice.received: InvoiceReceivedEvent
+        scm.inventory.valued: InventoryValuedEvent
+        crm.sale.completed: SaleCompletedEvent
+        crm.customer.created: CustomerCreatedEvent
+        mfg.production.completed: ProductionCompletedEvent
+        mfg.material.consumed: MaterialConsumedEvent
+        prj.project.created: ProjectCreatedEvent
+        prj.time.logged: TimeLoggedEvent
+        prj.expense.incurred: ProjectExpenseIncurredEvent
+    }
 }
+

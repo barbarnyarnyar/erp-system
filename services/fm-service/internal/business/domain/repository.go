@@ -57,3 +57,13 @@ type BudgetRepository interface {
 	List(ctx context.Context) ([]Budget, error)
 	GetByAccountAndPeriod(ctx context.Context, accountID string, fiscalYear int, period int) (*Budget, error)
 }
+
+// VendorBillRepository defines operations for vendor bills (Accounts Payable)
+type VendorBillRepository interface {
+	Create(ctx context.Context, bill *VendorBill, lines []VendorBillLine) error
+	GetByID(ctx context.Context, id string) (*VendorBill, []VendorBillLine, error)
+	Update(ctx context.Context, bill *VendorBill) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context) ([]VendorBill, error)
+}
+
