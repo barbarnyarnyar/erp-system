@@ -71,3 +71,65 @@ CREATE TABLE IF NOT EXISTS time_entries (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS leave_requests (
+    id UUID PRIMARY KEY NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    leave_type VARCHAR(255) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    approved_by UUID REFERENCES employees(id),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS job_postings (
+    id UUID PRIMARY KEY NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    department_id UUID NOT NULL REFERENCES departments(id),
+    location VARCHAR(255) NOT NULL,
+    salary_range VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS job_applications (
+    id UUID PRIMARY KEY NOT NULL,
+    job_posting_id UUID NOT NULL REFERENCES job_postings(id),
+    applicant_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(255) NOT NULL,
+    resume_url VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS performance_reviews (
+    id UUID PRIMARY KEY NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    reviewer_id UUID NOT NULL REFERENCES employees(id),
+    review_date DATE NOT NULL,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    rating INT NOT NULL,
+    feedback VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS training_programs (
+    id UUID PRIMARY KEY NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    trainer VARCHAR(255) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+

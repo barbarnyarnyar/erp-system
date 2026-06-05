@@ -1,4 +1,7 @@
 service HR {
+    // -------------------------------------------------------------
+    // ORGANIZATIONAL ENTITIES
+    // -------------------------------------------------------------
     entity Department {
         id             uuid      @primary
         code           string    @unique
@@ -42,6 +45,9 @@ service HR {
         updated_at    timestamp
     }
 
+    // -------------------------------------------------------------
+    // PAYROLL & TIME ENTRY ENTITIES
+    // -------------------------------------------------------------
     entity PayrollRecord {
         id                uuid      @primary
         employee_id       uuid      @reference(Employee.id)
@@ -69,27 +75,259 @@ service HR {
         updated_at  timestamp
     }
 
-    component HRService {
-        description: "Manages departments, positions, employee lifecycles, and payroll"
+    // -------------------------------------------------------------
+    // LEAVE MANAGEMENT ENTITIES
+    // -------------------------------------------------------------
+    entity LeaveRequest {
+        id             uuid      @primary
+        employee_id    uuid      @reference(Employee.id)
+        leave_type     string    // e.g., ANNUAL, SICK, UNPAID
+        start_date     date
+        end_date       date
+        reason         string
+        status         string    // e.g., PENDING, APPROVED, REJECTED
+        approved_by    uuid      @reference(Employee.id) @optional
+        created_at     timestamp
+        updated_at     timestamp
+    }
 
+    // -------------------------------------------------------------
+    // RECRUITMENT ENTITIES
+    // -------------------------------------------------------------
+    entity JobPosting {
+        id             uuid      @primary
+        title          string
+        description    string
+        department_id  uuid      @reference(Department.id)
+        location       string
+        salary_range   string
+        status         string    // e.g., DRAFT, OPEN, CLOSED
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    entity JobApplication {
+        id             uuid      @primary
+        job_posting_id uuid      @reference(JobPosting.id)
+        applicant_name string
+        email          string
+        phone          string
+        resume_url     string
+        status         string    // e.g., APPLIED, SCREENING, INTERVIEW, OFFER, REJECTED
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    // -------------------------------------------------------------
+    // PERFORMANCE ENTITIES
+    // -------------------------------------------------------------
+    entity PerformanceReview {
+        id             uuid      @primary
+        employee_id    uuid      @reference(Employee.id)
+        reviewer_id    uuid      @reference(Employee.id)
+        review_date    date
+        period_start   date
+        period_end     date
+        rating         integer
+        feedback       string
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    // -------------------------------------------------------------
+    // TRAINING ENTITIES
+    // -------------------------------------------------------------
+    entity TrainingProgram {
+        id             uuid      @primary
+        title          string
+        description    string
+        trainer        string
+        start_date     date
+        end_date       date
+        status         string    // e.g., SCHEDULED, ACTIVE, COMPLETED
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    // -------------------------------------------------------------
+    // SUBDOMAIN SERVICES (COMPONENTS)
+    // -------------------------------------------------------------
+    component EmployeeManagementService {
+        description: "Manages employee lifecycles and positions"
+
+        func listEmployees(): list<Employee> {
+            description: "List all employees"
+        }
         func createEmployee(firstName: string, lastName: string, email: string, departmentId: string, positionId: string, salary: decimal): Employee {
-            description: "Onboards a new employee"
+            description: "Onboard a new employee"
         }
+        func getEmployee(id: string): Employee {
+            description: "Get employee details by ID"
+        }
+        func updateEmployee(id: string, firstName: string, lastName: string, email: string, departmentId: string, positionId: string, salary: decimal, status: string): Employee {
+            description: "Update employee details"
+        }
+        func deleteEmployee(id: string): void {
+            description: "Mark an employee as terminated or delete entry"
+        }
+    }
 
-        func transferEmployee(employeeId: string, newDepartmentId: string, newPositionId: string): Employee {
-            description: "Transfers an employee to a new department or position"
-        }
+    component PayrollService {
+        description: "Manages payroll runs and processing"
 
-        func terminateEmployee(employeeId: string, terminationDate: date): Employee {
-            description: "Terminates an employee contract"
+        func listPayrollRecords(): list<PayrollRecord> {
+            description: "List all payroll records"
         }
+        func processPayroll(employeeId: string, start: date, end: date, regularHours: decimal, overtimeHours: decimal): PayrollRecord {
+            description: "Calculate and process employee payroll"
+        }
+        func getPayrollRecord(id: string): PayrollRecord {
+            description: "Get payroll record details"
+        }
+        func updatePayrollRecord(id: string, status: string): PayrollRecord {
+            description: "Update payroll record status"
+        }
+        func getEmployeePayroll(employeeId: string): list<PayrollRecord> {
+            description: "Get payroll history for a specific employee"
+        }
+    }
 
-        func submitTimeEntry(employeeId: string, entryDate: date, clockIn: timestamp, clockOut: timestamp): TimeEntry {
-            description: "Logs daily working hours for an employee"
-        }
+    component TimeAttendanceService {
+        description: "Tracks daily timesheets and logger entries"
 
-        func runPayroll(employeeId: string, start: date, end: date): PayrollRecord {
-            description: "Calculates gross pay, deductions, net pay, and issues a payroll record"
+        func listTimesheets(): list<TimeEntry> {
+            description: "List all timesheet entries"
         }
+        func createTimesheet(employeeId: string, entryDate: date, clockIn: timestamp, clockOut: timestamp, notes: string): TimeEntry {
+            description: "Create a new timesheet record"
+        }
+        func getTimesheet(id: string): TimeEntry {
+            description: "Get timesheet details"
+        }
+        func updateTimesheet(id: string, clockIn: timestamp, clockOut: timestamp, notes: string): TimeEntry {
+            description: "Update clock-in/out and notes for a timesheet"
+        }
+        func submitTimesheet(id: string): TimeEntry {
+            description: "Submit timesheet for manager review"
+        }
+    }
+
+    component LeaveManagementService {
+        description: "Manages employee leave requests and approvals"
+
+        func listLeaveRequests(): list<LeaveRequest> {
+            description: "List all leave requests"
+        }
+        func createLeaveRequest(employeeId: string, leaveType: string, startDate: date, endDate: date, reason: string): LeaveRequest {
+            description: "Submit a new leave request"
+        }
+        func getLeaveRequest(id: string): LeaveRequest {
+            description: "Get leave request details"
+        }
+        func updateLeaveRequest(id: string, leaveType: string, startDate: date, endDate: date, reason: string): LeaveRequest {
+            description: "Update details of a leave request"
+        }
+        func approveLeaveRequest(id: string, approvedBy: string): LeaveRequest {
+            description: "Approve or reject a leave request"
+        }
+    }
+
+    component RecruitmentService {
+        description: "Manages candidate job postings and applications"
+
+        func listJobPostings(): list<JobPosting> {
+            description: "List all active job openings"
+        }
+        func createJobPosting(title: string, description: string, departmentId: string, location: string, salaryRange: string): JobPosting {
+            description: "Create a new job opening"
+        }
+        func getJobPosting(id: string): JobPosting {
+            description: "Get job posting details"
+        }
+        func updateJobPosting(id: string, title: string, description: string, location: string, salaryRange: string, status: string): JobPosting {
+            description: "Update job posting details"
+        }
+        func deleteJobPosting(id: string): void {
+            description: "Remove a job posting"
+        }
+        func listApplications(): list<JobApplication> {
+            description: "List candidate applications"
+        }
+        func createApplication(jobPostingId: string, applicantName: string, email: string, phone: string, resumeUrl: string): JobApplication {
+            description: "Submit a candidate application"
+        }
+        func getApplication(id: string): JobApplication {
+            description: "Get application details"
+        }
+        func updateApplication(id: string, status: string): JobApplication {
+            description: "Update recruitment application status"
+        }
+    }
+
+    component PerformanceService {
+        description: "Manages employee reviews and performance ratings"
+
+        func listPerformanceReviews(): list<PerformanceReview> {
+            description: "List all performance reviews"
+        }
+        func createPerformanceReview(employeeId: string, reviewerId: string, reviewDate: date, periodStart: date, periodEnd: date, rating: integer, feedback: string): PerformanceReview {
+            description: "Record a performance review"
+        }
+        func getPerformanceReview(id: string): PerformanceReview {
+            description: "Get performance review details"
+        }
+        func updatePerformanceReview(id: string, rating: integer, feedback: string): PerformanceReview {
+            description: "Update review details"
+        }
+    }
+
+    component TrainingService {
+        description: "Manages employee training programs"
+
+        func listTrainingPrograms(): list<TrainingProgram> {
+            description: "List all training programs"
+        }
+        func createTrainingProgram(title: string, description: string, trainer: string, startDate: date, endDate: date): TrainingProgram {
+            description: "Create a new training program"
+        }
+        func getTrainingProgram(id: string): TrainingProgram {
+            description: "Get training program details"
+        }
+        func updateTrainingProgram(id: string, title: string, description: string, trainer: string, startDate: date, endDate: date, status: string): TrainingProgram {
+            description: "Update details of a training program"
+        }
+    }
+
+    // -------------------------------------------------------------
+    // KAFKA PUB/SUB EVENT TOPICS
+    // -------------------------------------------------------------
+    producer_events {
+        hr.employee.created: EmployeeCreatedEvent
+        hr.employee.updated: EmployeeUpdatedEvent
+        hr.employee.terminated: EmployeeTerminatedEvent
+        hr.employee.promoted: EmployeePromotedEvent
+        hr.payroll.processed: PayrollProcessedEvent
+        hr.payroll.failed: PayrollFailedEvent
+        hr.salary.changed: SalaryChangedEvent
+        hr.timesheet.submitted: TimesheetSubmittedEvent
+        hr.timesheet.approved: TimesheetApprovedEvent
+        hr.overtime.recorded: OvertimeRecordedEvent
+        hr.leave.requested: LeaveRequestedEvent
+        hr.leave.approved: LeaveApprovedEvent
+        hr.leave.rejected: LeaveRejectedEvent
+        hr.training.completed: TrainingCompletedEvent
+        hr.certification.earned: CertificationEarnedEvent
+        hr.skill.acquired: SkillAcquiredEvent
+        hr.performance.review.completed: PerformanceReviewCompletedEvent
+        hr.goal.achieved: GoalAchievedEvent
+        hr.performance.improvement.needed: PerformanceImprovementNeededEvent
+    }
+
+    consumer_events {
+        prj.project.created: ProjectCreatedEvent
+        prj.task.assigned: TaskAssignedEvent
+        fin.budget.allocated: BudgetAllocatedEvent
+        mfg.production.scheduled: ProductionScheduledEvent
+        scm.training.required: SCMTrainingRequiredEvent
     }
 }
