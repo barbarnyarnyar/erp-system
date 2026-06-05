@@ -12,6 +12,7 @@ type Product struct {
 	ProductName   string          `json:"product_name"`
 	Description   string          `json:"description"`
 	ProductType   string          `json:"product_type"` // e.g., RAW_MATERIAL, WORK_IN_PROGRESS, FINISHED_GOOD
+	CategoryID    *string         `json:"category_id"`
 	UnitOfMeasure string          `json:"unit_of_measure"`
 	StandardCost  decimal.Decimal `json:"standard_cost"`
 	ListPrice     decimal.Decimal `json:"list_price"`

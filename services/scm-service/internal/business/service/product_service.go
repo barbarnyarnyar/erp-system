@@ -1,0 +1,133 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/erp-system/scm-service/internal/business/domain"
+	"github.com/shopspring/decimal"
+)
+
+type ProductManagementService struct {
+	repo    domain.ProductRepository
+	catRepo domain.ProductCategoryRepository
+}
+
+func NewProductManagementService(repo domain.ProductRepository, catRepo domain.ProductCategoryRepository) *ProductManagementService {
+	return &ProductManagementService{
+		repo:    repo,
+		catRepo: catRepo,
+	}
+}
+
+func (s *ProductManagementService) ListProducts(ctx context.Context) ([]domain.Product, error) {
+	return s.repo.List(ctx)
+}
+
+func (s *ProductManagementService) CreateProduct(ctx context.Context, code, name, desc, pType, uom string, cost, price decimal.Decimal, categoryID *string) (*domain.Product, error) {
+	id := fmt.Sprintf("prod_%d", time.Now().UnixNano())
+
+	p := &domain.Product{
+		ID:              id,
+		ProductCode:     code,
+		ProductName:     name,
+		Description:     desc,
+		ProductType:     pType,
+		CategoryID:      categoryID,
+		UnitOfMeasure:   uom,
+		StandardCost:    cost,
+		ListPrice:       price,
+		IsActive:        true,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+
+	err := s.repo.Create(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (s *ProductManagementService) GetProduct(ctx context.Context, id string) (*domain.Product, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *ProductManagementService) UpdateProduct(ctx context.Context, id, code, name, desc, pType, uom string, cost, price decimal.Decimal, isActive bool, categoryID *string) (*domain.Product, error) {
+	p, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	p.ProductCode = code
+	p.ProductName = name
+	p.Description = desc
+	p.ProductType = pType
+	p.CategoryID = categoryID
+	p.UnitOfMeasure = uom
+	p.StandardCost = cost
+	p.ListPrice = price
+	p.IsActive = isActive
+	p.UpdatedAt = time.Now()
+
+	err = s.repo.Update(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (s *ProductManagementService) DeleteProduct(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
+}
+
+// Product Categories CRUD
+
+func (s *ProductManagementService) ListCategories(ctx context.Context) ([]domain.ProductCategory, error) {
+	return s.catRepo.List(ctx)
+}
+
+func (s *ProductManagementService) CreateCategory(ctx context.Context, code, name, desc string) (*domain.ProductCategory, error) {
+	id := fmt.Sprintf("cat_%d", time.Now().UnixNano())
+	pc := &domain.ProductCategory{
+		ID:          id,
+		Code:        code,
+		Name:        name,
+		Description: desc,
+	}
+
+	err := s.catRepo.Create(ctx, pc)
+	if err != nil {
+		return nil, err
+	}
+	return pc, nil
+}
+
+func (s *ProductManagementService) GetCategory(ctx context.Context, id string) (*domain.ProductCategory, error) {
+	return s.catRepo.GetByID(ctx, id)
+}
+
+func (s *ProductManagementService) UpdateCategory(ctx context.Context, id, code, name, desc string) (*domain.ProductCategory, error) {
+	pc, err := s.catRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	pc.Code = code
+	pc.Name = name
+	pc.Description = desc
+
+	err = s.catRepo.Update(ctx, pc)
+	if err != nil {
+		return nil, err
+	}
+	return pc, nil
+}
+
+func (s *ProductManagementService) DeleteCategory(ctx context.Context, id string) error {
+	return s.catRepo.Delete(ctx, id)
+}
+

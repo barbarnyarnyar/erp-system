@@ -1,16 +1,27 @@
 service SCM {
+    // -------------------------------------------------------------
+    // PRODUCT & SUPPLIER ENTITIES
+    // -------------------------------------------------------------
+    entity ProductCategory {
+        id          uuid      @primary
+        code        string    @unique
+        name        string
+        description string
+    }
+
     entity Product {
-        id            uuid      @primary
-        product_code  string    @unique
-        product_name  string
-        description   string
-        product_type  string    // e.g., RAW_MATERIAL, WORK_IN_PROGRESS, FINISHED_GOOD
+        id              uuid      @primary
+        product_code    string    @unique
+        product_name    string
+        description     string
+        product_type    string    // e.g., RAW_MATERIAL, WORK_IN_PROGRESS, FINISHED_GOOD
+        category_id     uuid      @reference(ProductCategory.id) @optional
         unit_of_measure string
-        standard_cost decimal
-        list_price    decimal
-        is_active     boolean
-        created_at    timestamp
-        updated_at    timestamp
+        standard_cost   decimal
+        list_price      decimal
+        is_active       boolean
+        created_at      timestamp
+        updated_at      timestamp
     }
 
     entity Location {
@@ -23,6 +34,33 @@ service SCM {
         updated_at    timestamp
     }
 
+    entity Supplier {
+        id            uuid      @primary
+        supplier_code string    @unique
+        supplier_name string
+        contact_name  string
+        email         string
+        phone         string
+        is_active     boolean
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity VendorContract {
+        id              uuid      @primary
+        contract_number string    @unique
+        supplier_id     uuid      @reference(Supplier.id)
+        start_date      date
+        end_date        date
+        terms           string
+        status          string    // e.g., ACTIVE, EXPIRED, TERMINATED
+        created_at      timestamp
+        updated_at      timestamp
+    }
+
+    // -------------------------------------------------------------
+    // INVENTORY ENTITIES
+    // -------------------------------------------------------------
     entity InventoryItem {
         id                 uuid      @primary
         product_id         uuid      @reference(Product.id)
@@ -50,16 +88,28 @@ service SCM {
         created_at    timestamp
     }
 
-    entity Supplier {
+    // -------------------------------------------------------------
+    // PURCHASING & REQUISITION ENTITIES
+    // -------------------------------------------------------------
+    entity PurchaseRequisition {
         id            uuid      @primary
-        supplier_code string    @unique
-        supplier_name string
-        contact_name  string
-        email         string
-        phone         string
-        is_active     boolean
+        req_number    string    @unique
+        requester_id  string
+        request_date  date
+        status        string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
+        total_amount  decimal
+        notes         string
         created_at    timestamp
         updated_at    timestamp
+    }
+
+    entity PurchaseRequisitionLine {
+        id                      uuid      @primary
+        purchase_requisition_id uuid      @reference(PurchaseRequisition.id)
+        product_id              uuid      @reference(Product.id)
+        quantity_requested      integer
+        estimated_unit_price    decimal
+        line_total              decimal
     }
 
     entity PurchaseOrder {
@@ -87,23 +137,144 @@ service SCM {
         created_at        timestamp
     }
 
-    component SupplyChainService {
-        description: "Manages product catalogs, locations, inventory levels, and purchasing"
+    // -------------------------------------------------------------
+    // WAREHOUSE OPERATIONS ENTITIES
+    // -------------------------------------------------------------
+    entity Receipt {
+        id                uuid      @primary
+        receipt_number    string    @unique
+        purchase_order_id uuid      @reference(PurchaseOrder.id) @optional
+        received_date     timestamp
+        status            string    // e.g., PENDING, RECEIVED, CANCELLED
+        notes             string
+        created_at        timestamp
+        updated_at        timestamp
+    }
 
-        func createProduct(code: string, name: string, standardCost: decimal, listPrice: decimal): Product {
-            description: "Adds a new product to the catalog"
-        }
+    entity ReceiptLine {
+        id                uuid      @primary
+        receipt_id        uuid      @reference(Receipt.id)
+        product_id        uuid      @reference(Product.id)
+        quantity_received integer
+        created_at        timestamp
+    }
 
-        func adjustInventory(productId: string, locationId: string, quantity: integer, movementType: string): InventoryItem {
-            description: "Adjusts stock levels and records inventory movement"
-        }
+    entity Shipment {
+        id                 uuid      @primary
+        shipment_number    string    @unique
+        carrier            string
+        tracking_number    string
+        shipped_date       timestamp
+        estimated_delivery timestamp
+        status             string    // e.g., PENDING, SHIPPED, DELIVERED, CANCELLED
+        notes              string
+        created_at         timestamp
+        updated_at         timestamp
+    }
 
-        func createPurchaseOrder(supplierId: string, expectedDelivery: date, lines: list<object>): PurchaseOrder {
-            description: "Issues a new purchase order to a supplier"
-        }
+    entity ShipmentLine {
+        id               uuid      @primary
+        shipment_id      uuid      @reference(Shipment.id)
+        product_id       uuid      @reference(Product.id)
+        quantity_shipped integer
+        created_at       timestamp
+    }
 
-        func receivePurchaseOrder(poId: string): PurchaseOrder {
-            description: "Marks a purchase order as received and updates inventory hand count"
-        }
+    // -------------------------------------------------------------
+    // DEMAND PLANNING ENTITIES
+    // -------------------------------------------------------------
+    entity DemandForecast {
+        id                uuid      @primary
+        product_id        uuid      @reference(Product.id)
+        forecast_date     date
+        forecast_quantity integer
+        confidence_level  decimal
+        notes             string
+        created_at        timestamp
+        updated_at        timestamp
+    }
+
+    // -------------------------------------------------------------
+    // SUBDOMAIN SERVICES (COMPONENTS)
+    // -------------------------------------------------------------
+    component ProductManagementService {
+        description: "Manages catalog products, categories, and variants"
+    }
+
+    component SupplierManagementService {
+        description: "Manages SCM vendors, supplier qualifications, and contracts"
+    }
+
+    component PurchaseOrderService {
+        description: "Manages purchase requisitions and purchase orders lifecycle"
+    }
+
+    component InventoryService {
+        description: "Manages warehouse location stock levels, values, and cycle counting"
+    }
+
+    component WarehouseService {
+        description: "Manages warehouse receipts and outbound shipments"
+    }
+
+    component DemandPlanningService {
+        description: "Manages future stock demand forecasts and safety stock"
+    }
+
+    component ReportService {
+        description: "Generates inventory level, vendor performance, and procurement reports"
+    }
+
+    // -------------------------------------------------------------
+    // KAFKA PUB/SUB EVENT TOPICS
+    // -------------------------------------------------------------
+    producer_events {
+        // Product Events
+        scm.product.created: ProductCreatedEvent
+        scm.product.updated: ProductUpdatedEvent
+        scm.product.discontinued: ProductDiscontinuedEvent
+
+        // Inventory Events
+        scm.inventory.received: InventoryReceivedEvent
+        scm.inventory.shipped: InventoryShippedEvent
+        scm.inventory.adjusted: InventoryAdjustedEvent
+        scm.inventory.low.stock: InventoryLowStockEvent
+        scm.inventory.out.of.stock: InventoryOutOfStockEvent
+        scm.inventory.valued: InventoryValuedEvent
+
+        // Purchase Events
+        scm.purchase.order.created: PurchaseOrderCreatedEvent
+        scm.purchase.order.sent: PurchaseOrderSentEvent
+        scm.purchase.order.received: PurchaseOrderReceivedEvent
+        scm.purchase.order.cancelled: PurchaseOrderCancelledEvent
+
+        // Vendor Events
+        scm.vendor.created: VendorCreatedEvent
+        scm.vendor.updated: VendorUpdatedEvent
+        scm.vendor.performance.evaluated: VendorPerformanceEvaluatedEvent
+
+        // Shipment Events
+        scm.shipment.created: ShipmentCreatedEvent
+        scm.shipment.dispatched: ShipmentDispatchedEvent
+        scm.shipment.delivered: ShipmentDeliveredEvent
+        scm.shipment.delayed: ShipmentDelayedEvent
+
+        scm.training.required: SCMTrainingRequiredEvent
+    }
+
+    consumer_events {
+        // From CRM Module
+        crm.sales.order.created: SalesOrderCreatedEvent
+        crm.customer.demand.forecast: CustomerDemandForecastEvent
+
+        // From Manufacturing Module
+        mfg.material.required: MaterialRequiredEvent
+        mfg.production.completed: ProductionCompletedEvent
+
+        // From Financial Module
+        fin.vendor.payment.processed: VendorPaymentProcessedEvent
+
+        // From Project Module
+        prj.material.requested: MaterialRequestedEvent
     }
 }
