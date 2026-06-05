@@ -74,3 +74,11 @@ type TrainingProgramRepository interface {
 	List(ctx context.Context) ([]TrainingProgram, error)
 	Update(ctx context.Context, tp *TrainingProgram) error
 }
+
+type EmployeeDocumentRepository interface {
+	Create(ctx context.Context, doc *EmployeeDocument) error
+	GetByID(ctx context.Context, id string) (*EmployeeDocument, error)
+	ListByEmployeeID(ctx context.Context, empID string) ([]EmployeeDocument, error)
+	Delete(ctx context.Context, id string) error
+}
+

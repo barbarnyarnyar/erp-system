@@ -150,6 +150,19 @@ service HR {
     }
 
     // -------------------------------------------------------------
+    // DOCUMENT STORAGE ENTITIES
+    // -------------------------------------------------------------
+    entity EmployeeDocument {
+        id          uuid      @primary
+        employee_id uuid      @reference(Employee.id)
+        doc_type    string    // e.g., CONTRACT, ID_PROOF, CERTIFICATE
+        file_name   string
+        file_url    string
+        uploaded_at timestamp
+    }
+
+
+    // -------------------------------------------------------------
     // SUBDOMAIN SERVICES (COMPONENTS)
     // -------------------------------------------------------------
     component EmployeeManagementService {
@@ -297,6 +310,35 @@ service HR {
             description: "Update details of a training program"
         }
     }
+
+    component EmployeeDocumentService {
+        description: "Manages employee documents and file references"
+
+        func listDocuments(employeeId: string): list<EmployeeDocument> {
+            description: "List all documents for an employee"
+        }
+        func uploadDocument(employeeId: string, docType: string, fileName: string, fileUrl: string): EmployeeDocument {
+            description: "Attach a new document reference"
+        }
+        func deleteDocument(id: string): void {
+            description: "Delete a document reference"
+        }
+    }
+
+    component ReportService {
+        description: "Generates HR summaries and reports"
+
+        func getHeadcountReport(): string {
+            description: "Generate headcount summary reports"
+        }
+        func getPayrollReport(): string {
+            description: "Generate payroll cost reports"
+        }
+        func getAttendanceReport(): string {
+            description: "Generate attendance summary reports"
+        }
+    }
+
 
     // -------------------------------------------------------------
     // KAFKA PUB/SUB EVENT TOPICS

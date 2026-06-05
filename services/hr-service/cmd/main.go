@@ -38,6 +38,7 @@ func main() {
 	jobAppRepo := memory.NewMemoryJobApplicationRepo()
 	perfRepo := memory.NewMemoryPerformanceReviewRepo()
 	trainingRepo := memory.NewMemoryTrainingProgramRepo()
+	docRepo := memory.NewMemoryEmployeeDocumentRepo()
 
 	// 4. Initialize Services
 	empSvc := service.NewEmployeeManagementService(empRepo, publisher)
@@ -47,6 +48,8 @@ func main() {
 	recruitmentSvc := service.NewRecruitmentService(jobPostingRepo, jobAppRepo)
 	perfSvc := service.NewPerformanceService(perfRepo, publisher)
 	trainingSvc := service.NewTrainingService(trainingRepo, publisher)
+	docSvc := service.NewEmployeeDocumentService(docRepo)
+	reportSvc := service.NewReportService(empRepo, payrollRepo, timesheetRepo)
 
 	// 5. Initialize Handlers
 	empHandler := handlers.NewEmployeeHandler(empSvc)
@@ -56,6 +59,8 @@ func main() {
 	recruitmentHandler := handlers.NewRecruitmentHandler(recruitmentSvc)
 	perfHandler := handlers.NewPerformanceHandler(perfSvc)
 	trainingHandler := handlers.NewTrainingHandler(trainingSvc)
+	docHandler := handlers.NewDocumentHandler(docSvc)
+	reportHandler := handlers.NewReportHandler(reportSvc)
 
 	// 5b. Initialize Event Consumer (Kafka)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -91,6 +96,8 @@ func main() {
 		recruitmentHandler,
 		perfHandler,
 		trainingHandler,
+		docHandler,
+		reportHandler,
 	)
 
 	// 7. Start Server

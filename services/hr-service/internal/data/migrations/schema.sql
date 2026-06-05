@@ -133,3 +133,12 @@ CREATE TABLE IF NOT EXISTS training_programs (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS employee_documents (
+    id UUID PRIMARY KEY NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    doc_type VARCHAR(255) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    uploaded_at TIMESTAMP NOT NULL
+);
+

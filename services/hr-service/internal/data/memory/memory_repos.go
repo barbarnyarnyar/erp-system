@@ -473,3 +473,50 @@ func (r *MemoryTrainingProgramRepo) Update(ctx context.Context, tp *domain.Train
 	r.tps[tp.ID] = *tp
 	return nil
 }
+
+// MemoryEmployeeDocumentRepo implements domain.EmployeeDocumentRepository
+type MemoryEmployeeDocumentRepo struct {
+	mu   sync.RWMutex
+	docs map[string]domain.EmployeeDocument
+}
+
+func NewMemoryEmployeeDocumentRepo() *MemoryEmployeeDocumentRepo {
+	return &MemoryEmployeeDocumentRepo{docs: make(map[string]domain.EmployeeDocument)}
+}
+
+func (r *MemoryEmployeeDocumentRepo) Create(ctx context.Context, doc *domain.EmployeeDocument) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.docs[doc.ID] = *doc
+	return nil
+}
+
+func (r *MemoryEmployeeDocumentRepo) GetByID(ctx context.Context, id string) (*domain.EmployeeDocument, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	doc, ok := r.docs[id]
+	if !ok {
+		return nil, errors.New("employee document not found")
+	}
+	return &doc, nil
+}
+
+func (r *MemoryEmployeeDocumentRepo) ListByEmployeeID(ctx context.Context, empID string) ([]domain.EmployeeDocument, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.EmployeeDocument
+	for _, d := range r.docs {
+		if d.EmployeeID == empID {
+			list = append(list, d)
+		}
+	}
+	return list, nil
+}
+
+func (r *MemoryEmployeeDocumentRepo) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.docs, id)
+	return nil
+}
+

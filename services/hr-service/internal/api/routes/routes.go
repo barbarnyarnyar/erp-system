@@ -14,6 +14,8 @@ func RegisterRoutes(
 	recruitmentHandler *handlers.RecruitmentHandler,
 	performanceHandler *handlers.PerformanceHandler,
 	trainingHandler *handlers.TrainingHandler,
+	docHandler *handlers.DocumentHandler,
+	reportHandler *handlers.ReportHandler,
 ) {
 	v1 := r.Group("/api/v1")
 	{
@@ -70,5 +72,15 @@ func RegisterRoutes(
 		v1.POST("/training/programs", trainingHandler.CreateTrainingProgram)
 		v1.GET("/training/programs/:id", trainingHandler.GetTrainingProgram)
 		v1.PUT("/training/programs/:id", trainingHandler.UpdateTrainingProgram)
+
+		// Document Management
+		v1.GET("/employees/:id/documents", docHandler.GetEmployeeDocuments)
+		v1.POST("/employees/:id/documents", docHandler.UploadEmployeeDocument)
+		v1.DELETE("/employees/:id/documents/:docId", docHandler.DeleteEmployeeDocument)
+
+		// Basic Reporting
+		v1.GET("/reports/headcount", reportHandler.GetHeadcountReport)
+		v1.GET("/reports/payroll", reportHandler.GetPayrollReport)
+		v1.GET("/reports/attendance", reportHandler.GetAttendanceReport)
 	}
 }
