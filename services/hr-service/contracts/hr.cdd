@@ -1,0 +1,71 @@
+service HR {
+    entity Department {
+        id             uuid      @primary
+        code           string    @unique
+        name           string
+        description    string
+        manager_id     uuid      @optional
+        parent_dept_id uuid      @reference(Department.id) @optional
+        is_active      boolean
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    entity Position {
+        id            uuid      @primary
+        code          string    @unique
+        title         string
+        description   string
+        department_id uuid      @reference(Department.id)
+        min_salary    decimal
+        max_salary    decimal
+        is_active     boolean
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity Employee {
+        id            uuid      @primary
+        employee_id   string    @unique
+        first_name    string
+        last_name     string
+        email         string    @unique
+        phone         string
+        hire_date     date
+        term_date     date      @optional
+        department_id uuid      @reference(Department.id)
+        position_id   uuid      @reference(Position.id)
+        manager_id    uuid      @reference(Employee.id) @optional
+        status        string    // e.g., ACTIVE, TERMINATED, LEAVE
+        salary        decimal
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity PayrollRecord {
+        id                uuid      @primary
+        employee_id       uuid      @reference(Employee.id)
+        pay_period_start  date
+        pay_period_end    date
+        regular_hours     decimal
+        overtime_hours    decimal
+        gross_pay         decimal
+        net_pay           decimal
+        status            string    // e.g., DRAFT, APPROVED, PAID
+        created_at        timestamp
+        updated_at        timestamp
+    }
+
+    entity TimeEntry {
+        id          uuid      @primary
+        employee_id uuid      @reference(Employee.id)
+        entry_date  date
+        clock_in    timestamp
+        clock_out   timestamp
+        total_hours decimal
+        notes       string
+        status      string    // e.g., SUBMITTED, APPROVED, REJECTED
+        created_at  timestamp
+        updated_at  timestamp
+    }
+}

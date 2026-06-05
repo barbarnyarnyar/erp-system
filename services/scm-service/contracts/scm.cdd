@@ -1,0 +1,89 @@
+service SCM {
+    entity Product {
+        id            uuid      @primary
+        product_code  string    @unique
+        product_name  string
+        description   string
+        product_type  string    // e.g., RAW_MATERIAL, WORK_IN_PROGRESS, FINISHED_GOOD
+        unit_of_measure string
+        standard_cost decimal
+        list_price    decimal
+        is_active     boolean
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity Location {
+        id            uuid      @primary
+        location_code string    @unique
+        location_name string
+        location_type string    // e.g., WAREHOUSE, RETAIL, TRANSIT
+        is_active     boolean
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity InventoryItem {
+        id                 uuid      @primary
+        product_id         uuid      @reference(Product.id)
+        location_id        uuid      @reference(Location.id)
+        quantity_on_hand   integer
+        quantity_reserved   integer
+        quantity_available  integer
+        reorder_point      integer
+        maximum_stock      integer
+        unit_cost          decimal
+        created_at         timestamp
+        updated_at         timestamp
+    }
+
+    entity InventoryMovement {
+        id            uuid      @primary
+        product_id    uuid      @reference(Product.id)
+        location_id   uuid      @reference(Location.id)
+        movement_type string    // e.g., RECEIPT, ISSUE, TRANSFER, ADJUSTMENT
+        quantity      integer
+        unit_cost     decimal
+        reference_type string
+        reference_id  string
+        notes         string
+        created_at    timestamp
+    }
+
+    entity Supplier {
+        id            uuid      @primary
+        supplier_code string    @unique
+        supplier_name string
+        contact_name  string
+        email         string
+        phone         string
+        is_active     boolean
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity PurchaseOrder {
+        id                uuid      @primary
+        po_number         string    @unique
+        supplier_id       uuid      @reference(Supplier.id)
+        order_date        date
+        expected_delivery date
+        status            string    // e.g., DRAFT, SUBMITTED, APPROVED, SHIPPED, DELIVERED, CANCELLED
+        total_amount      decimal
+        notes             string
+        created_at        timestamp
+        updated_at        timestamp
+    }
+
+    entity PurchaseOrderLine {
+        id                uuid      @primary
+        purchase_order_id uuid      @reference(PurchaseOrder.id)
+        product_id        uuid      @reference(Product.id)
+        quantity_ordered  integer
+        quantity_received integer
+        unit_price        decimal
+        line_total        decimal
+        description       string
+        created_at        timestamp
+    }
+}

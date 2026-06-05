@@ -1,0 +1,46 @@
+service FM {
+    entity Account {
+        id             uuid      @primary
+        account_number string    @unique
+        name           string
+        type           string    // e.g., ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+        parent_id      uuid      @reference(Account.id) @optional
+        balance        decimal
+        is_active      boolean
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    entity JournalEntry {
+        id          uuid      @primary
+        reference   string    @unique
+        date        timestamp
+        description string
+        status      string    // e.g., PENDING, POSTED, REVERSED
+        created_by  string
+        created_at  timestamp
+        updated_at  timestamp
+    }
+
+    entity JournalEntryLine {
+        id           uuid      @primary
+        entry_id     uuid      @reference(JournalEntry.id)
+        account_id   uuid      @reference(Account.id)
+        debit_amount decimal
+        credit_amount decimal
+        description  string
+        created_at   timestamp
+    }
+
+    entity Vendor {
+        id          uuid      @primary
+        vendor_code string    @unique
+        vendor_name string
+        contact_name string
+        email       string
+        phone       string
+        is_active   boolean
+        created_at  timestamp
+        updated_at  timestamp
+    }
+}

@@ -1,0 +1,20 @@
+service Manufacturing {
+    entity BillOfMaterials {
+        id          uuid      @primary
+        product_id  uuid
+        description string
+        created_at  timestamp
+        updated_at  timestamp
+    }
+
+    entity ProductionOrder {
+        id             uuid      @primary
+        bom_id         uuid      @reference(BillOfMaterials.id)
+        product_id     uuid
+        quantity       integer
+        status         string    // e.g., DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+        scheduled_date timestamp
+        created_at     timestamp
+        updated_at     timestamp
+    }
+}

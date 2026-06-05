@@ -1,0 +1,3 @@
+# Common Setup Issues
+
+*This document is a placeholder. You can help by expanding it.*

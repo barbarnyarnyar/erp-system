@@ -1,0 +1,22 @@
+service CRM {
+    entity Customer {
+        id           uuid      @primary
+        company_name string
+        contact_name string
+        email        string    @unique
+        phone        string
+        status       string    // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
+        created_at   timestamp
+        updated_at   timestamp
+    }
+
+    entity Opportunity {
+        id          uuid      @primary
+        customer_id uuid      @reference(Customer.id)
+        title       string
+        value       decimal
+        status      string    // e.g., NEW, QUALIFIED, PROPOSAL, WON, LOST
+        created_at  timestamp
+        updated_at  timestamp
+    }
+}

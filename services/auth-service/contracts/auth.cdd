@@ -1,0 +1,22 @@
+service Auth {
+    entity User {
+        id            uuid      @primary
+        username      string    @unique
+        email         string    @unique
+        password_hash string
+        role          string
+        first_name    string
+        last_name     string
+        is_active     boolean
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity Session {
+        id            uuid      @primary
+        user_id       uuid      @reference(User.id)
+        refresh_token string
+        expires_at    timestamp
+        created_at    timestamp
+    }
+}

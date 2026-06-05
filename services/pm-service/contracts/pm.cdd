@@ -1,0 +1,25 @@
+service PM {
+    entity Project {
+        id          uuid      @primary
+        name        string
+        description string
+        start_date  date
+        end_date    date      @optional
+        status      string    // e.g., PLANNING, ACTIVE, COMPLETED, ON_HOLD, CANCELLED
+        created_at  timestamp
+        updated_at  timestamp
+    }
+
+    entity Task {
+        id          uuid      @primary
+        project_id  uuid      @reference(Project.id)
+        title       string
+        description string
+        assigned_to uuid      @optional
+        status      string    // e.g., TODO, IN_PROGRESS, REVIEW, DONE
+        start_date  date      @optional
+        end_date    date      @optional
+        created_at  timestamp
+        updated_at  timestamp
+    }
+}

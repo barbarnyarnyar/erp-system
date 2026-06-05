@@ -4,148 +4,228 @@ A modern, microservices-based Enterprise Resource Planning system built with Go,
 
 ## What is This System?
 
-The ERP System is a comprehensive business management platform that handles:
-- **Financial Management**: General ledger, accounts payable/receivable, budgeting
-- **Human Resources**: Employee management, payroll, time tracking
-- **Supply Chain**: Inventory management, procurement, supplier relations
-- **Customer Relations**: Sales pipeline, customer support, marketing campaigns
-- **Manufacturing**: Production planning, quality control, bill of materials
-- **Project Management**: Resource allocation, time tracking, project billing
-
-## Quick Start
-
-New to the system? Start here:
-
-1. **[🚀 Getting Started](getting-started.md)** - Set up your development environment (15 minutes)
-2. **[🏗️ Architecture Overview](architecture-overview.md)** - Understand the system design
-3. **[⚡ First Implementation](first-implementation.md)** - Build and run your first service
+The ERP System is a comprehensive business management platform that handles financial management, human resources, supply chain, customer relations, manufacturing, and project management through integrated microservices.
 
 ## Documentation Structure
 
-This documentation follows a **top-down implementation flow** - from high-level concepts to specific code examples:
+This documentation is organized into focused, digestible sections. Each section contains topic-specific files of 800-1000 words for optimal readability.
 
-### 📚 Foundation Knowledge
-Start here to understand the system before implementing:
+## 📚 Getting Started
 
-- **[Architecture Overview](architecture-overview.md)** - System design, components, and data flow
-- **[Technology Stack](technology-stack.md)** - Technologies used and why
-- **[Development Environment](development-environment.md)** - Tools and setup requirements
+Everything you need to get the system running:
 
-### 🔨 Implementation Guides
-Step-by-step instructions for building the system:
+### Quick Setup
+- [Prerequisites](getting-started/prerequisites.md) - Required software and system requirements
+- [Installation](getting-started/installation.md) - Get running in 15 minutes
+- [Configuration](getting-started/configuration.md) - Environment setup and customization
 
-- **[Getting Started](getting-started.md)** - Prerequisites and first setup
-- **[Backend Services](backend-implementation.md)** - Build Go microservices
-- **[Frontend Application](frontend-implementation.md)** - Build React applications
-- **[Database Setup](database-implementation.md)** - Configure PostgreSQL and Redis
-- **[API Integration](api-integration.md)** - Connect services and external systems
+### Development
+- [Development Environment](getting-started/development-environment.md) - IDE setup and local development
+- [Development Workflow](getting-started/development-workflow.md) - Daily development practices
+- [Testing and Verification](getting-started/testing-verification.md) - Ensure everything works
+- [Common Setup Issues](getting-started/common-issues.md) - Solutions to frequent problems
 
-### 🏢 Business Modules
-Module-specific implementation details:
+## 🏗️ System Architecture
 
-- **[Financial Management](modules/financial-implementation.md)** - Accounting and financial features
-- **[Human Resources](modules/hr-implementation.md)** - Employee and payroll features
-- **[Supply Chain](modules/supply-chain-implementation.md)** - Inventory and procurement features
-- **[Customer Relations](modules/crm-implementation.md)** - Sales and customer features
+Complete technical overview and design decisions:
 
-### 🚀 Deployment & Operations
+### Architecture Overview
+- [System Overview](architecture/system-overview.md) - High-level architecture and components
+- [Technology Stack](architecture/technology-stack.md) - Technologies, frameworks, and tools
+- [Microservices Architecture](architecture/microservices-architecture.md) - Service design patterns
+
+### Data and Integration
+- [Database Design](architecture/database-design.md) - Data modeling and schemas
+- [Event-Driven Architecture](architecture/event-architecture.md) - Asynchronous communication
+- [API Design](architecture/api-design.md) - REST API standards and conventions
+
+### Security and Performance
+- [Security Architecture](architecture/security-architecture.md) - Authentication and data protection
+- [Performance Architecture](architecture/performance-architecture.md) - Caching and optimization
+- [Deployment Architecture](architecture/deployment-architecture.md) - Container orchestration
+
+## 🏢 Business Modules
+
+All business functionality and features:
+
+### Core Modules
+- [Financial Management](modules/financial-management/) - Accounting and financial operations
+- [Human Resources](modules/human-resources/) - Employee lifecycle and payroll management
+- [Supply Chain Management](modules/supply-chain-management/) - Inventory and procurement
+- [Customer Relationship Management](modules/customer-relationship-management/) - Sales and customer management
+- [Manufacturing](modules/manufacturing/) - Production planning and execution
+- [Project Management](modules/project-management/) - Project planning and resource management
+
+### Integration
+All modules are fully integrated, sharing data through:
+- Real-time event-driven communication
+- Shared customer and employee data
+- Unified financial reporting
+- Cross-module business process workflows
+
+## 🔧 Operations
+
 Production deployment and maintenance:
 
-- **[Deployment Guide](deployment.md)** - Deploy to production environments
-- **[Configuration Management](configuration.md)** - Environment-specific settings
-- **[Monitoring & Logging](monitoring.md)** - Observability and debugging
-- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+### Deployment
+- [Production Deployment](operations/deployment.md) - Deploy to Kubernetes, Docker Swarm, cloud platforms
+- [Infrastructure Setup](operations/infrastructure.md) - Database, caching, and message queues
+- [Configuration Management](operations/configuration.md) - Environment-specific settings
 
-### 📖 Reference Materials
-Quick reference for ongoing development:
+### API and Integration
+- [API Reference](operations/api-reference.md) - Complete REST API documentation
+- [Authentication](operations/authentication.md) - JWT tokens, user management, security
+- [Integration Patterns](operations/integration-patterns.md) - External system integration
 
-- **[API Reference](api-reference.md)** - All endpoints and data formats
-- **[Database Schema](database-schema.md)** - Complete data model
-- **[Glossary](glossary.md)** - Terms and definitions
-- **[FAQ](faq.md)** - Frequently asked questions
+### Monitoring and Maintenance
+- [Monitoring and Alerting](operations/monitoring.md) - Metrics, dashboards, alerting setup
+- [Troubleshooting](operations/troubleshooting.md) - Log analysis and problem resolution
+- [Performance Optimization](operations/performance.md) - Tuning for speed and scalability
 
-## Implementation Flow
+### Security and Data Protection
+- [Security Configuration](operations/security.md) - SSL/TLS, encryption, hardening
+- [Backup and Recovery](operations/backup-recovery.md) - Data protection and disaster recovery
+- [System Maintenance](operations/maintenance.md) - Routine tasks and health checks
 
-Follow this sequence for building the complete system:
+## System Overview Diagram
 
 ```mermaid
-graph TD
-    A[Read Architecture Overview] --> B[Set Up Development Environment]
-    B --> C[Build Core Services]
-    C --> D[Implement Database Layer]
-    D --> E[Build API Gateway]
-    E --> F[Create Frontend Applications]
-    F --> G[Add Business Modules]
-    G --> H[Configure Deployment]
-    H --> I[Set Up Monitoring]
-    I --> J[Production Deployment]
+graph TB
+    subgraph "Client Applications"
+        WEB[Web App<br/>React + TypeScript]
+        MOBILE[Mobile App<br/>React Native]
+    end
+    
+    subgraph "API Layer"
+        GATEWAY[API Gateway<br/>Port 8080]
+    end
+    
+    subgraph "Core Services"
+        FM[Financial<br/>:8001]
+        HR[Human Resources<br/>:8002]
+        SCM[Supply Chain<br/>:8003]
+        CRM[Customer Relations<br/>:8004]
+        MFG[Manufacturing<br/>:8005]
+        PM[Project Management<br/>:8006]
+    end
+    
+    subgraph "Data & Infrastructure"
+        DB[(PostgreSQL<br/>Databases)]
+        CACHE[(Redis Cache)]
+        MQ[Kafka<br/>Message Queue]
+    end
+    
+    WEB --> GATEWAY
+    MOBILE --> GATEWAY
+    GATEWAY --> FM
+    GATEWAY --> HR
+    GATEWAY --> SCM
+    GATEWAY --> CRM
+    GATEWAY --> MFG
+    GATEWAY --> PM
+    
+    FM --> DB
+    HR --> DB
+    SCM --> DB
+    CRM --> DB
+    MFG --> DB
+    PM --> DB
+    
+    FM --> CACHE
+    HR --> CACHE
+    SCM --> CACHE
+    CRM --> CACHE
+    
+    FM --> MQ
+    HR --> MQ
+    SCM --> MQ
+    CRM --> MQ
+    MFG --> MQ
+    PM --> MQ
 ```
 
-## For Different Audiences
+## Quick Navigation
 
-### 👨‍💻 Developers
-Start with:
-1. [Getting Started](getting-started.md)
-2. [Architecture Overview](architecture-overview.md)
-3. [Backend Implementation](backend-implementation.md)
-4. [API Reference](api-reference.md)
+### For New Users
+1. **[Prerequisites](getting-started/prerequisites.md)** - Install required software
+2. **[Installation](getting-started/installation.md)** - Get the system running
+3. **[System Overview](architecture/system-overview.md)** - Understand the architecture
+4. **[Business Modules](modules/README.md)** - Explore the features
 
-### 🏢 Business Stakeholders
-Focus on:
-1. [Architecture Overview](architecture-overview.md) (business sections)
-2. [Financial Management](modules/financial-implementation.md)
-3. [Human Resources](modules/hr-implementation.md)
-4. [Deployment Guide](deployment.md) (overview sections)
+### For Developers  
+1. **[Development Environment](getting-started/development-environment.md)** - Set up your workspace
+2. **[Development Workflow](getting-started/development-workflow.md)** - Learn daily practices
+3. **[Microservices Architecture](architecture/microservices-architecture.md)** - Understand service design
+4. **[API Reference](operations/api-reference.md)** - Integration specifications
 
-### 🔧 System Administrators
-Begin with:
-1. [Architecture Overview](architecture-overview.md)
-2. [Technology Stack](technology-stack.md)
-3. [Deployment Guide](deployment.md)
-4. [Monitoring & Logging](monitoring.md)
-5. [Troubleshooting](troubleshooting.md)
+### For System Administrators
+1. **[Production Deployment](operations/deployment.md)** - Deploy to production
+2. **[Security Configuration](operations/security.md)** - Secure your deployment
+3. **[Monitoring](operations/monitoring.md)** - Set up monitoring and alerting
+4. **[Troubleshooting](operations/troubleshooting.md)** - Resolve issues
 
-## System Requirements
+### For Business Users
+1. **[Financial Management](modules/financial-management/)** - Accounting features
+2. **[Human Resources](modules/human-resources/)** - Employee management
+3. **[Supply Chain](modules/supply-chain-management/)** - Inventory operations
+4. **[Customer Relations](modules/customer-relationship-management/)** - Sales management
 
-### Minimum Development Environment
-- **Go**: 1.21 or later
-- **Node.js**: 18.0 or later
-- **Docker**: 20.10 or later
-- **PostgreSQL**: 15.0 or later
-- **Redis**: 7.0 or later
+## Key Features
 
-### Production Environment
-- **Kubernetes**: 1.25 or later
-- **Cloud Provider**: AWS, GCP, or Azure
-- **Load Balancer**: With SSL termination
-- **Monitoring**: Prometheus and Grafana
+- **Microservices Architecture**: Independent, scalable services
+- **Event-Driven Design**: Real-time data synchronization  
+- **Cloud-Native**: Container-based deployment with Kubernetes support
+- **Modern Tech Stack**: Go backend, React frontend, PostgreSQL database
+- **Complete Business Coverage**: All major ERP functions included
+- **API-First**: Comprehensive REST APIs for integration
+- **Security-Focused**: JWT authentication, role-based access, data encryption
 
-## Contributing
+## Business Process Integration
 
-This documentation follows specific principles:
+### Order-to-Cash Process
+**CRM → SCM → Manufacturing → Financial**
+1. Lead qualification and opportunity management (CRM)
+2. Inventory allocation and fulfillment (SCM)
+3. Production scheduling if needed (Manufacturing)
+4. Invoicing and payment collection (Financial)
 
-1. **Top-Down Flow**: Start with overview, end with specific implementation
-2. **Implementation-Ready**: Every guide includes working code examples
-3. **Active Voice**: Use direct, actionable language
-4. **Visual Aids**: Include Mermaid diagrams for complex concepts
-5. **Consistency**: Maintain uniform formatting and terminology
+### Procure-to-Pay Process
+**SCM → Financial → HR**
+1. Purchase requisition and approval (SCM)
+2. Purchase order creation and approval (SCM)
+3. Goods receipt and inspection (SCM)
+4. Invoice processing and payment (Financial)
+5. Expense allocation (HR/Projects)
 
-When updating documentation:
-- Follow the established structure and flow
-- Include working code examples
-- Add Mermaid diagrams for complex processes
-- Test all instructions on a fresh environment
-- Update related sections for consistency
+### Hire-to-Retire Process
+**HR → Project → Financial**
+1. Recruitment and onboarding (HR)
+2. Resource allocation to projects (Project)
+3. Time tracking and performance (HR/Project)
+4. Payroll processing and benefits (HR)
+5. Financial reporting and analysis (Financial)
 
 ## Getting Help
 
-1. **Start with [FAQ](faq.md)** - Common questions and answers
-2. **Check [Troubleshooting](troubleshooting.md)** - Known issues and solutions
-3. **Review [API Reference](api-reference.md)** - Technical specifications
-4. **Consult module-specific guides** - Detailed implementation help
+### Documentation Hierarchy
+1. **Start Here**: [Getting Started](getting-started/README.md)
+2. **Technical Issues**: [Troubleshooting](operations/troubleshooting.md)
+3. **API Questions**: [API Reference](operations/api-reference.md)
+4. **Architecture Questions**: [System Overview](architecture/system-overview.md)
+
+### Support Resources
+- **Setup Problems**: [Common Setup Issues](getting-started/common-issues.md)
+- **Performance Issues**: [Performance Optimization](operations/performance.md)
+- **Security Questions**: [Security Configuration](operations/security.md)
+- **Deployment Help**: [Production Deployment](operations/deployment.md)
 
 ---
 
-**Ready to start?** → [🚀 Getting Started](getting-started.md)
+## Ready to Begin?
 
-**Need architecture context first?** → [🏗️ Architecture Overview](architecture-overview.md)
+Choose your path:
+- **🚀 Just want to see it work?** → [Installation Guide](getting-started/installation.md)
+- **💻 Planning to develop?** → [Development Environment](getting-started/development-environment.md)  
+- **🏗️ Want to understand the design?** → [System Overview](architecture/system-overview.md)
+- **📋 Need to deploy to production?** → [Production Deployment](operations/deployment.md)
+- **🏢 Interested in business features?** → [Business Modules](modules/README.md)

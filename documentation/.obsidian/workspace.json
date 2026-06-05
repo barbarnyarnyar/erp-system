@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "1_product/consolidated/core_features.md",
+                "file": "architecture/database-design.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "core_features"
+              "title": "database-design"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "1_product/consolidated/core_features.md",
+                "file": "operations/infrastructure.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for core_features"
+              "title": "Backlinks for infrastructure"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "1_product/consolidated/core_features.md",
+                "file": "operations/infrastructure.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from core_features"
+              "title": "Outgoing links from infrastructure"
             }
           },
           {
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "1_product/consolidated/core_features.md",
+                "file": "operations/infrastructure.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of core_features"
+              "title": "Outline of infrastructure"
             }
           }
         ]
@@ -160,6 +160,7 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "bases:Create new base": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
@@ -170,36 +171,42 @@
   },
   "active": "05c024e5f7338285",
   "lastOpenFiles": [
-    "modules/supply-chain.md",
-    "modules/human-resources.md",
-    "modules/finance.md",
-    "modules/crm-sales.md",
-    "technical/architecture.md",
-    "technical/apis.md",
-    "architecture-overview.md",
-    "faq.md",
-    "troubleshooting.md",
-    "getting-started.md",
-    "README.md",
-    "7_additional_specs/architecture/inter_service_communication.md",
-    "modules/crm-sales.md.tmp.55068.1754530779287",
-    "7_additional_specs/architecture/erp_system_overview.md",
-    "7_additional_specs/architecture/common_api_patterns.md",
-    "5_process/adrs/001-use-jwt-for-auth.md",
-    "5_process/adrs/001-technology-decision-matrix.md",
-    "2_design/wireframes/wireframe-06-payment-failed.md",
-    "guides",
-    "technical",
+    "architecture/api-design.md",
+    "operations/infrastructure.md",
+    "operations/api-reference.md",
+    "operations/authentication.md",
+    "modules/human-resources/README.md",
+    "architecture/event-architecture.md",
+    "modules/README.md",
+    "modules/supply-chain-management.md",
+    "operations/maintenance.md",
+    "operations/backup-recovery.md",
+    "operations/security.md",
+    "operations/performance.md",
+    "operations/troubleshooting.md",
+    "operations/monitoring.md",
+    "operations/integration-patterns.md",
+    "operations/configuration.md",
+    "modules/project-management/README.md",
+    "modules/manufacturing/README.md",
+    "modules/customer-relationship-management/README.md",
+    "architecture/deployment-architecture.md",
+    "architecture/performance-architecture.md",
+    "architecture/security-architecture.md",
+    "getting-started/common-issues.md",
+    "getting-started/testing-verification.md",
+    "modules/supply-chain-management/README.md",
+    "modules/financial-management/api-reference.md",
+    "modules/project-management",
+    "modules/manufacturing",
+    "modules/customer-relationship-management",
+    "modules/supply-chain-management",
+    "modules/human-resources",
+    "modules/financial-management",
+    "operations",
+    "modules/supply-chain-management.md.tmp.55068.1754554038535",
     "modules",
-    "2_design/wireframes/wireframe-05-confirmation.md",
-    "2_design/wireframes/wireframe-04-checkout.md",
-    "2_design/wireframes/wireframe-03-ferry-seat-details.md",
-    "2_design/wireframes/wireframe-02-search-results.md",
-    "2_design/wireframes/wireframe-01-homepage.md",
-    "6_guides/local_setup_guide.md",
-    "6_guides/coding_style_guide.md",
-    "5_process/meeting_notes/2025-07-31_kickoff_meeting.md",
-    "4_api/hr_service_api.md",
+    "architecture",
     "3_architecture/database_schema.png"
   ]
 }
