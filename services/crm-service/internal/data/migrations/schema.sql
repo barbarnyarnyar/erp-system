@@ -8,6 +8,22 @@ CREATE TABLE IF NOT EXISTS customers (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(255) NOT NULL,
     status VARCHAR(255) NOT NULL,
+    category VARCHAR(255) NOT NULL,
+    parent_customer_id UUID,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS leads (
+    id UUID PRIMARY KEY NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    company VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    score INT NOT NULL,
+    source VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -18,6 +34,83 @@ CREATE TABLE IF NOT EXISTS opportunities (
     title VARCHAR(255) NOT NULL,
     value NUMERIC(15, 4) NOT NULL,
     status VARCHAR(255) NOT NULL,
+    stage VARCHAR(255) NOT NULL,
+    probability NUMERIC(15, 4) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sales_orders (
+    id UUID PRIMARY KEY NOT NULL,
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    order_date TIMESTAMP NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    total_amount NUMERIC(15, 4) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sales_order_items (
+    id UUID PRIMARY KEY NOT NULL,
+    sales_order_id UUID NOT NULL REFERENCES sales_orders(id),
+    product_id UUID NOT NULL,
+    quantity INT NOT NULL,
+    unit_price NUMERIC(15, 4) NOT NULL,
+    discount NUMERIC(15, 4) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id UUID PRIMARY KEY NOT NULL,
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    title VARCHAR(255) NOT NULL,
+    valid_until TIMESTAMP NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    total_amount NUMERIC(15, 4) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quote_line_items (
+    id UUID PRIMARY KEY NOT NULL,
+    quote_id UUID NOT NULL REFERENCES quotes(id),
+    product_id UUID NOT NULL,
+    quantity INT NOT NULL,
+    unit_price NUMERIC(15, 4) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS price_lists (
+    id UUID PRIMARY KEY NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS price_list_items (
+    id UUID PRIMARY KEY NOT NULL,
+    price_list_id UUID NOT NULL REFERENCES price_lists(id),
+    product_id UUID NOT NULL,
+    unit_price NUMERIC(15, 4) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS service_tickets (
+    id UUID PRIMARY KEY NOT NULL,
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    priority VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS campaigns (
+    id UUID PRIMARY KEY NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    budget NUMERIC(15, 4) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );

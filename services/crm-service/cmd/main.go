@@ -1,20 +1,75 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/erp-system/crm-service/internal/api/handlers"
+	"github.com/erp-system/crm-service/internal/api/routes"
+	"github.com/erp-system/crm-service/internal/business/service"
+	"github.com/erp-system/crm-service/internal/config"
+	"github.com/erp-system/crm-service/internal/data/kafka"
+	"github.com/erp-system/crm-service/internal/data/memory"
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 )
 
 func main() {
-	// Get port from environment or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8002"
+	// 1. Load config
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Create Gin router
+	log.Printf("Starting crm-service in %s environment...", cfg.Server.Env)
+
+	// 2. Initialize in-memory repositories
+	custRepo := memory.NewCustomerRepository()
+	leadRepo := memory.NewLeadRepository()
+	oppRepo := memory.NewOpportunityRepository()
+	orderRepo := memory.NewSalesOrderRepository()
+	orderItemRepo := memory.NewSalesOrderItemRepository()
+	quoteRepo := memory.NewQuoteRepository()
+	quoteItemRepo := memory.NewQuoteLineItemRepository()
+	priceListRepo := memory.NewPriceListRepository()
+	priceListItemRepo := memory.NewPriceListItemRepository()
+	ticketRepo := memory.NewServiceTicketRepository()
+	campaignRepo := memory.NewCampaignRepository()
+
+	// 3. Initialize Kafka publisher
+	kafkaPub := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
+	defer kafkaPub.Close()
+
+	// 4. Initialize subdivided business services
+	custSvc := service.NewCustomerService(custRepo, kafkaPub)
+	oppSvc := service.NewOpportunityService(oppRepo, kafkaPub)
+	leadSvc := service.NewLeadService(leadRepo, custSvc, oppSvc, kafkaPub)
+	orderSvc := service.NewSalesOrderService(orderRepo, orderItemRepo, kafkaPub)
+	quoteSvc := service.NewQuoteService(quoteRepo, quoteItemRepo, kafkaPub)
+	ticketSvc := service.NewServiceTicketService(ticketRepo, kafkaPub)
+	campSvc := service.NewCampaignService(campaignRepo, kafkaPub)
+	plSvc := service.NewPriceListService(priceListRepo, priceListItemRepo)
+
+	// 5. Seed initial mock data
+	seedMockData(custSvc, leadSvc, oppSvc)
+
+	// 6. Start Kafka consumer in a background thread
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kafkaSub := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, orderSvc)
+	go kafkaSub.Start(ctx)
+	defer kafkaSub.Close()
+
+	// 7. Setup Gin routing
+	if cfg.Server.Env == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.Default()
 
 	// Health check endpoint
@@ -22,27 +77,61 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"service": "crm-service",
 			"status":  "healthy",
-			"port":    port,
+			"port":    cfg.Server.Port,
 		})
 	})
 
-	// Hello World endpoint
-	r.GET("/api/crm/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello World from Customer Relationship Management Service!",
-			"service": "crm-service",
-			"port":    port,
-		})
-	})
+	custLeadHandler := handlers.NewCustomerLeadHandler(custSvc, leadSvc)
+	salesOppHandler := handlers.NewSalesOpportunityHandler(oppSvc, orderSvc, quoteSvc, ticketSvc, campSvc, plSvc)
 
-	// Root endpoint
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Customer Relationship Management Service is running",
-			"service": "crm-service",
-			"port":    port,
-		})
-	})
+	routes.SetupCRMRoutes(r, custLeadHandler, salesOppHandler)
 
-	// Start server
-	r.Run(":" + port)}
+	// 8. Start HTTP server with graceful shutdown
+	server := &http.Server{
+		Addr:    ":" + cfg.Server.Port,
+		Handler: r,
+	}
+
+	go func() {
+		log.Printf("CRM HTTP Server listening on port %s", cfg.Server.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server failed: %v", err)
+		}
+	}()
+
+	// Wait for termination signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down crm-service...")
+
+	// Gracefully shutdown HTTP server
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("crm-service stopped gracefully.")
+}
+
+func seedMockData(custSvc *service.CustomerService, leadSvc *service.LeadService, oppSvc *service.OpportunityService) {
+	ctx := context.Background()
+	log.Println("Seeding CRM mock data...")
+
+	// Seed customer
+	cust, err := custSvc.CreateCustomer(ctx, "Acme Corporation", "John Doe", "john@acme.com", "+1-555-0199", "WHOLESALE", "")
+	if err != nil {
+		log.Printf("Failed to seed customer: %v", err)
+		return
+	}
+
+	// Seed leads
+	_, _ = leadSvc.CreateLead(ctx, "Alice", "Smith", "Initech", "alice@initech.com", "+1-555-0100", "WEBSITE")
+	_, _ = leadSvc.CreateLead(ctx, "Bob", "Johnson", "Umbrella Corp", "bob@umbrella.com", "+1-555-0120", "CAMPAIGN")
+
+	// Seed opportunity
+	_, _ = oppSvc.CreateOpportunity(ctx, cust.ID, "Upgrade Database Infrastructure", decimal.NewFromFloat(45000.00), "PROPOSAL")
+
+	log.Println("CRM mock data seeded successfully.")
+}

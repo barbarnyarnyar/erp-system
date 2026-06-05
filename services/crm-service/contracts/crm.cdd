@@ -1,13 +1,29 @@
 service CRM {
     entity Customer {
-        id           uuid      @primary
-        company_name string
-        contact_name string
-        email        string    @unique
-        phone        string
-        status       string    // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
-        created_at   timestamp
-        updated_at   timestamp
+        id                 uuid      @primary
+        company_name       string
+        contact_name       string
+        email              string    @unique
+        phone              string
+        status             string    // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
+        category           string    // e.g., RETAIL, WHOLESALE
+        parent_customer_id uuid      @optional
+        created_at         timestamp
+        updated_at         timestamp
+    }
+
+    entity Lead {
+        id         uuid      @primary
+        first_name string
+        last_name  string
+        company    string
+        email      string    @unique
+        phone      string
+        status     string    // e.g., NEW, QUALIFIED, NURTURING, CONVERTED, LOST
+        score      integer
+        source     string    // e.g., CAMPAIGN, WEBSITE, COLD_CALL
+        created_at timestamp
+        updated_at timestamp
     }
 
     entity Opportunity {
@@ -16,31 +32,290 @@ service CRM {
         title       string
         value       decimal
         status      string    // e.g., NEW, QUALIFIED, PROPOSAL, WON, LOST
+        stage       string    // e.g., DISCOVERY, NEGOTIATION
+        probability decimal
         created_at  timestamp
         updated_at  timestamp
     }
 
-    component CRMService {
-        description: "Manages customers and opportunities"
+    entity SalesOrder {
+        id           uuid      @primary
+        customer_id  uuid      @reference(Customer.id)
+        order_date   timestamp
+        status       string    // e.g., DRAFT, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+        total_amount decimal
+        created_at   timestamp
+        updated_at   timestamp
+    }
 
-        func createCustomer(companyName: string, contactName: string, email: string, phone: string): Customer {
-            description: "Creates a new customer record"
+    entity SalesOrderItem {
+        id             uuid      @primary
+        sales_order_id uuid      @reference(SalesOrder.id)
+        product_id     uuid
+        quantity       integer
+        unit_price     decimal
+        discount       decimal
+    }
+
+    entity Quote {
+        id           uuid      @primary
+        customer_id  uuid      @reference(Customer.id)
+        title        string
+        valid_until  timestamp
+        status       string    // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
+        total_amount decimal
+        created_at   timestamp
+        updated_at   timestamp
+    }
+
+    entity QuoteLineItem {
+        id         uuid      @primary
+        quote_id   uuid      @reference(Quote.id)
+        product_id uuid
+        quantity   integer
+        unit_price decimal
+    }
+
+    entity PriceList {
+        id          uuid      @primary
+        name        string
+        description string
+        is_active   boolean
+        created_at  timestamp
+        updated_at  timestamp
+    }
+
+    entity PriceListItem {
+        id            uuid      @primary
+        price_list_id uuid      @reference(PriceList.id)
+        product_id    uuid
+        unit_price    decimal
+    }
+
+    entity ServiceTicket {
+        id          uuid      @primary
+        customer_id uuid      @reference(Customer.id)
+        title       string
+        description string
+        status      string    // e.g., OPEN, IN_PROGRESS, RESOLVED, ESCALATED
+        priority    string    // e.g., LOW, MEDIUM, HIGH, URGENT
+        created_at  timestamp
+        updated_at  timestamp
+    }
+
+    entity Campaign {
+        id         uuid      @primary
+        name       string
+        type       string    // e.g., EMAIL, SOCIAL, EVENT
+        status     string    // e.g., DRAFT, LAUNCHED, COMPLETED
+        budget     decimal
+        created_at timestamp
+        updated_at timestamp
+    }
+
+    component CustomerService {
+        description: "Manages customer master data"
+
+        func createCustomer(companyName: string, contactName: string, email: string, phone: string, category: string, parentCustomerId: string): Customer {
+            description: "Creates a new customer"
         }
-
         func getCustomer(id: string): Customer {
-            description: "Retrieves a customer by ID"
+            description: "Get customer by ID"
         }
+        func listCustomers(): list<Customer> {
+            description: "List all customers"
+        }
+        func updateCustomer(id: string, companyName: string, contactName: string, email: string, phone: string, status: string, category: string): Customer {
+            description: "Update customer details"
+        }
+        func deleteCustomer(id: string): void {
+            description: "Delete customer record"
+        }
+    }
 
-        func updateCustomer(id: string, fields: object): Customer {
-            description: "Updates customer fields"
-        }
+    component LeadService {
+        description: "Manages incoming sales leads"
 
-        func createOpportunity(customerId: string, title: string, value: decimal): Opportunity {
-            description: "Creates an sales opportunity for a customer"
+        func createLead(firstName: string, lastName: string, company: string, email: string, phone: string, source: string): Lead {
+            description: "Create a new lead"
         }
+        func getLead(id: string): Lead {
+            description: "Get lead details"
+        }
+        func listLeads(): list<Lead> {
+            description: "List all leads"
+        }
+        func updateLead(id: string, firstName: string, lastName: string, company: string, status: string, score: integer): Lead {
+            description: "Update lead details"
+        }
+        func deleteLead(id: string): void {
+            description: "Delete lead record"
+        }
+        func convertLead(id: string): Opportunity {
+            description: "Convert a qualified lead into an opportunity and customer"
+        }
+    }
 
-        func updateOpportunityStatus(opportunityId: string, status: string): Opportunity {
-            description: "Updates the status of an opportunity"
+    component OpportunityService {
+        description: "Manages sales opportunities and pipelines"
+
+        func createOpportunity(customerId: string, title: string, value: decimal, stage: string): Opportunity {
+            description: "Create an sales opportunity"
         }
+        func getOpportunity(id: string): Opportunity {
+            description: "Get opportunity details"
+        }
+        func listOpportunities(): list<Opportunity> {
+            description: "List all opportunities"
+        }
+        func updateOpportunity(id: string, title: string, value: decimal, status: string, stage: string, probability: decimal): Opportunity {
+            description: "Update opportunity details"
+        }
+        func deleteOpportunity(id: string): void {
+            description: "Delete opportunity record"
+        }
+    }
+
+    component SalesOrderService {
+        description: "Manages sales order processing"
+
+        func createSalesOrder(customerId: string, items: list<object>): SalesOrder {
+            description: "Process a new sales order"
+        }
+        func getSalesOrder(id: string): SalesOrder {
+            description: "Get sales order details"
+        }
+        func listSalesOrders(): list<SalesOrder> {
+            description: "List all sales orders"
+        }
+        func updateSalesOrder(id: string, status: string): SalesOrder {
+            description: "Update sales order status"
+        }
+        func deleteSalesOrder(id: string): void {
+            description: "Cancel/delete sales order"
+        }
+    }
+
+    component QuoteService {
+        description: "Manages client quotes"
+
+        func createQuote(customerId: string, title: string, validUntil: timestamp, items: list<object>): Quote {
+            description: "Generate a new quote"
+        }
+        func getQuote(id: string): Quote {
+            description: "Get quote details"
+        }
+        func listQuotes(): list<Quote> {
+            description: "List all quotes"
+        }
+        func updateQuote(id: string, status: string): Quote {
+            description: "Update quote details/status"
+        }
+        func deleteQuote(id: string): void {
+            description: "Delete quote record"
+        }
+        func sendQuote(id: string): Quote {
+            description: "Send quote to customer email"
+        }
+    }
+
+    component ServiceTicketService {
+        description: "Manages customer support service tickets"
+
+        func createServiceTicket(customerId: string, title: string, description: string, priority: string): ServiceTicket {
+            description: "Log a new service ticket/case"
+        }
+        func getServiceTicket(id: string): ServiceTicket {
+            description: "Get service ticket details"
+        }
+        func listServiceTickets(): list<ServiceTicket> {
+            description: "List all service tickets"
+        }
+        func updateServiceTicket(id: string, status: string, priority: string): ServiceTicket {
+            description: "Update service ticket details"
+        }
+        func deleteServiceTicket(id: string): void {
+            description: "Delete service ticket record"
+        }
+    }
+
+    component CampaignService {
+        description: "Manages marketing campaigns"
+
+        func createCampaign(name: string, campaignType: string, budget: decimal): Campaign {
+            description: "Create a marketing campaign"
+        }
+        func getCampaign(id: string): Campaign {
+            description: "Get campaign details"
+        }
+        func listCampaigns(): list<Campaign> {
+            description: "List all campaigns"
+        }
+        func updateCampaign(id: string, status: string, budget: decimal): Campaign {
+            description: "Update campaign details"
+        }
+        func deleteCampaign(id: string): void {
+            description: "Delete campaign record"
+        }
+    }
+
+    component PriceListService {
+        description: "Manages product pricing catalogs"
+
+        func createPriceList(name: string, description: string, isActive: boolean): PriceList {
+            description: "Create a new price list"
+        }
+        func getPriceList(id: string): PriceList {
+            description: "Get price list details"
+        }
+        func listPriceLists(): list<PriceList> {
+            description: "List all price lists"
+        }
+        func updatePriceList(id: string, name: string, description: string, isActive: boolean): PriceList {
+            description: "Update price list details"
+        }
+        func deletePriceList(id: string): void {
+            description: "Delete price list record"
+        }
+    }
+
+    producer_events {
+        crm.customer.created: CustomerCreatedEvent
+        crm.customer.updated: CustomerUpdatedEvent
+        crm.customer.activated: CustomerActivatedEvent
+        crm.customer.deactivated: CustomerDeactivatedEvent
+        crm.lead.created: LeadCreatedEvent
+        crm.lead.qualified: LeadQualifiedEvent
+        crm.lead.converted: LeadConvertedEvent
+        crm.lead.lost: LeadLostEvent
+        crm.opportunity.created: OpportunityCreatedEvent
+        crm.opportunity.updated: OpportunityUpdatedEvent
+        crm.opportunity.won: OpportunityWonEvent
+        crm.opportunity.lost: OpportunityLostEvent
+        crm.sales.order.created: SalesOrderCreatedEvent
+        crm.sales.order.updated: SalesOrderUpdatedEvent
+        crm.sales.order.confirmed: SalesOrderConfirmedEvent
+        crm.sales.order.cancelled: SalesOrderCancelledEvent
+        crm.sales.order.shipped: SalesOrderShippedEvent
+        crm.sales.order.delivered: SalesOrderDeliveredEvent
+        crm.service.ticket.created: ServiceTicketCreatedEvent
+        crm.service.ticket.updated: ServiceTicketUpdatedEvent
+        crm.service.ticket.resolved: ServiceTicketResolvedEvent
+        crm.service.ticket.escalated: ServiceTicketEscalatedEvent
+        crm.campaign.launched: CampaignLaunchedEvent
+        crm.campaign.completed: CampaignCompletedEvent
+        crm.email.sent: EmailSentEvent
+        crm.email.opened: EmailOpenedEvent
+        crm.email.clicked: EmailClickedEvent
+    }
+
+    consumer_events {
+        scm.inventory.available: InventoryAvailableEvent
+        scm.shipment.delivered: ShipmentDeliveredEvent
+        fin.payment.received: PaymentReceivedEvent
+        fin.credit.check.completed: CreditCheckCompletedEvent
+        mfg.production.completed: ProductionCompletedEvent
+        prj.project.completed: ProjectCompletedEvent
+        hr.employee.performance: EmployeePerformanceEvent
     }
 }

@@ -6,14 +6,13 @@ import (
 	"time"
 )
 
-type Opportunity struct {
+type Quote struct {
 	ID          string          `json:"id"`
 	CustomerID  string          `json:"customer_id"`
 	Title       string          `json:"title"`
-	Value       decimal.Decimal `json:"value"`
-	Status      string          `json:"status"` // e.g., NEW, QUALIFIED, PROPOSAL, WON, LOST
-	Stage       string          `json:"stage"`  // e.g., DISCOVERY, NEGOTIATION
-	Probability decimal.Decimal `json:"probability"`
+	ValidUntil  time.Time       `json:"valid_until"`
+	Status      string          `json:"status"` // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
+	TotalAmount decimal.Decimal `json:"total_amount"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
 }
