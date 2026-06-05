@@ -10,16 +10,18 @@ import (
 )
 
 type PayrollService struct {
-	repo      domain.PayrollRecordRepository
-	employees domain.EmployeeRepository
-	publisher domain.EventPublisher
+	repo       domain.PayrollRecordRepository
+	deductions domain.PayrollDeductionRepository
+	employees  domain.EmployeeRepository
+	publisher  domain.EventPublisher
 }
 
-func NewPayrollService(repo domain.PayrollRecordRepository, employees domain.EmployeeRepository, publisher domain.EventPublisher) *PayrollService {
+func NewPayrollService(repo domain.PayrollRecordRepository, deductions domain.PayrollDeductionRepository, employees domain.EmployeeRepository, publisher domain.EventPublisher) *PayrollService {
 	return &PayrollService{
-		repo:      repo,
-		employees: employees,
-		publisher: publisher,
+		repo:       repo,
+		deductions: deductions,
+		employees:  employees,
+		publisher:  publisher,
 	}
 }
 
@@ -40,9 +42,11 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 	overtimePay := overtimeRate.Mul(overtimeHours)
 	grossPay := regularPay.Add(overtimePay)
 
-	// Deductions (Simple 20% tax deduction)
-	taxDeduction := grossPay.Mul(decimal.NewFromFloat(0.20))
-	netPay := grossPay.Sub(taxDeduction)
+	// Deductions (15% Income Tax, 5% Social Security)
+	incomeTaxAmt := grossPay.Mul(decimal.NewFromFloat(0.15))
+	socialSecurityAmt := grossPay.Mul(decimal.NewFromFloat(0.05))
+	totalDeductions := incomeTaxAmt.Add(socialSecurityAmt)
+	netPay := grossPay.Sub(totalDeductions)
 
 	id := fmt.Sprintf("pay_%d", time.Now().UnixNano())
 
@@ -65,6 +69,23 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 		return nil, err
 	}
 
+	// Create deductions breakdown
+	ded1 := &domain.PayrollDeduction{
+		ID:        fmt.Sprintf("ded_tax_%d", time.Now().UnixNano()),
+		PayrollID: pr.ID,
+		Type:      "Income Tax",
+		Amount:    incomeTaxAmt,
+	}
+	_ = s.deductions.Create(ctx, ded1)
+
+	ded2 := &domain.PayrollDeduction{
+		ID:        fmt.Sprintf("ded_ss_%d", time.Now().UnixNano()),
+		PayrollID: pr.ID,
+		Type:      "Social Security",
+		Amount:    socialSecurityAmt,
+	}
+	_ = s.deductions.Create(ctx, ded2)
+
 	// Publish payroll processed event to Kafka
 	_ = s.publisher.Publish(ctx, domain.TopicHrPayrollProcessed, pr.ID, domain.PayrollProcessedEvent{
 		PayrollID:   pr.ID,
@@ -77,6 +98,7 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 
 	return pr, nil
 }
+
 
 func (s *PayrollService) GetPayrollRecord(ctx context.Context, id string) (*domain.PayrollRecord, error) {
 	return s.repo.GetByID(ctx, id)

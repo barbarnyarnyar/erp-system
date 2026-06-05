@@ -15,6 +15,8 @@ type TimeEntry struct {
 	TotalHours decimal.Decimal `json:"total_hours"`
 	Notes      string          `json:"notes"`
 	Status     string          `json:"status"` // e.g., SUBMITTED, APPROVED, REJECTED
+	ProjectID  *string         `json:"project_id"`
+	TaskID     *string         `json:"task_id"`
 	CreatedAt  time.Time       `json:"created_at"`
 	UpdatedAt  time.Time       `json:"updated_at"`
 }

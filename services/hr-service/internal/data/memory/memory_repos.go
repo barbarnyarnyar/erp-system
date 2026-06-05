@@ -520,3 +520,238 @@ func (r *MemoryEmployeeDocumentRepo) Delete(ctx context.Context, id string) erro
 	return nil
 }
 
+// MemoryPayrollDeductionRepo implements domain.PayrollDeductionRepository
+type MemoryPayrollDeductionRepo struct {
+	mu   sync.RWMutex
+	deds map[string]domain.PayrollDeduction
+}
+
+func NewMemoryPayrollDeductionRepo() *MemoryPayrollDeductionRepo {
+	return &MemoryPayrollDeductionRepo{deds: make(map[string]domain.PayrollDeduction)}
+}
+
+func (r *MemoryPayrollDeductionRepo) Create(ctx context.Context, pd *domain.PayrollDeduction) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.deds[pd.ID] = *pd
+	return nil
+}
+
+func (r *MemoryPayrollDeductionRepo) GetByID(ctx context.Context, id string) (*domain.PayrollDeduction, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	pd, ok := r.deds[id]
+	if !ok {
+		return nil, errors.New("payroll deduction not found")
+	}
+	return &pd, nil
+}
+
+func (r *MemoryPayrollDeductionRepo) ListByPayrollID(ctx context.Context, payrollID string) ([]domain.PayrollDeduction, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.PayrollDeduction
+	for _, pd := range r.deds {
+		if pd.PayrollID == payrollID {
+			list = append(list, pd)
+		}
+	}
+	return list, nil
+}
+
+// MemoryLeaveBalanceRepo implements domain.LeaveBalanceRepository
+type MemoryLeaveBalanceRepo struct {
+	mu   sync.RWMutex
+	bals map[string]domain.LeaveBalance
+}
+
+func NewMemoryLeaveBalanceRepo() *MemoryLeaveBalanceRepo {
+	return &MemoryLeaveBalanceRepo{bals: make(map[string]domain.LeaveBalance)}
+}
+
+func (r *MemoryLeaveBalanceRepo) Create(ctx context.Context, lb *domain.LeaveBalance) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.bals[lb.ID] = *lb
+	return nil
+}
+
+func (r *MemoryLeaveBalanceRepo) GetByID(ctx context.Context, id string) (*domain.LeaveBalance, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	lb, ok := r.bals[id]
+	if !ok {
+		return nil, errors.New("leave balance not found")
+	}
+	return &lb, nil
+}
+
+func (r *MemoryLeaveBalanceRepo) GetByEmployeeAndTypeAndYear(ctx context.Context, empID string, leaveType string, year int) (*domain.LeaveBalance, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, lb := range r.bals {
+		if lb.EmployeeID == empID && lb.LeaveType == leaveType && lb.Year == year {
+			return &lb, nil
+		}
+	}
+	return nil, errors.New("leave balance not found")
+}
+
+func (r *MemoryLeaveBalanceRepo) GetByEmployeeID(ctx context.Context, empID string) ([]domain.LeaveBalance, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.LeaveBalance
+	for _, lb := range r.bals {
+		if lb.EmployeeID == empID {
+			list = append(list, lb)
+		}
+	}
+	return list, nil
+}
+
+func (r *MemoryLeaveBalanceRepo) Update(ctx context.Context, lb *domain.LeaveBalance) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.bals[lb.ID] = *lb
+	return nil
+}
+
+func (r *MemoryLeaveBalanceRepo) List(ctx context.Context) ([]domain.LeaveBalance, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.LeaveBalance, 0, len(r.bals))
+	for _, lb := range r.bals {
+		list = append(list, lb)
+	}
+	return list, nil
+}
+
+// MemoryTrainingEnrollmentRepo implements domain.TrainingEnrollmentRepository
+type MemoryTrainingEnrollmentRepo struct {
+	mu     sync.RWMutex
+	enrols map[string]domain.TrainingEnrollment
+}
+
+func NewMemoryTrainingEnrollmentRepo() *MemoryTrainingEnrollmentRepo {
+	return &MemoryTrainingEnrollmentRepo{enrols: make(map[string]domain.TrainingEnrollment)}
+}
+
+func (r *MemoryTrainingEnrollmentRepo) Create(ctx context.Context, te *domain.TrainingEnrollment) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.enrols[te.ID] = *te
+	return nil
+}
+
+func (r *MemoryTrainingEnrollmentRepo) GetByID(ctx context.Context, id string) (*domain.TrainingEnrollment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	te, ok := r.enrols[id]
+	if !ok {
+		return nil, errors.New("training enrollment not found")
+	}
+	return &te, nil
+}
+
+func (r *MemoryTrainingEnrollmentRepo) GetByTrainingAndEmployee(ctx context.Context, trainingID string, empID string) (*domain.TrainingEnrollment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, te := range r.enrols {
+		if te.TrainingID == trainingID && te.EmployeeID == empID {
+			return &te, nil
+		}
+	}
+	return nil, errors.New("training enrollment not found")
+}
+
+func (r *MemoryTrainingEnrollmentRepo) Update(ctx context.Context, te *domain.TrainingEnrollment) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.enrols[te.ID] = *te
+	return nil
+}
+
+func (r *MemoryTrainingEnrollmentRepo) List(ctx context.Context) ([]domain.TrainingEnrollment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.TrainingEnrollment, 0, len(r.enrols))
+	for _, te := range r.enrols {
+		list = append(list, te)
+	}
+	return list, nil
+}
+
+// MemoryExpenseClaimRepo implements domain.ExpenseClaimRepository
+type MemoryExpenseClaimRepo struct {
+	mu     sync.RWMutex
+	claims map[string]domain.ExpenseClaim
+}
+
+func NewMemoryExpenseClaimRepo() *MemoryExpenseClaimRepo {
+	return &MemoryExpenseClaimRepo{claims: make(map[string]domain.ExpenseClaim)}
+}
+
+func (r *MemoryExpenseClaimRepo) Create(ctx context.Context, ec *domain.ExpenseClaim) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.claims[ec.ID] = *ec
+	return nil
+}
+
+func (r *MemoryExpenseClaimRepo) GetByID(ctx context.Context, id string) (*domain.ExpenseClaim, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ec, ok := r.claims[id]
+	if !ok {
+		return nil, errors.New("expense claim not found")
+	}
+	return &ec, nil
+}
+
+func (r *MemoryExpenseClaimRepo) List(ctx context.Context) ([]domain.ExpenseClaim, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.ExpenseClaim, 0, len(r.claims))
+	for _, ec := range r.claims {
+		list = append(list, ec)
+	}
+	return list, nil
+}
+
+func (r *MemoryExpenseClaimRepo) Update(ctx context.Context, ec *domain.ExpenseClaim) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.claims[ec.ID] = *ec
+	return nil
+}
+
+// MemoryExpenseClaimLineRepo implements domain.ExpenseClaimLineRepository
+type MemoryExpenseClaimLineRepo struct {
+	mu    sync.RWMutex
+	lines map[string]domain.ExpenseClaimLine
+}
+
+func NewMemoryExpenseClaimLineRepo() *MemoryExpenseClaimLineRepo {
+	return &MemoryExpenseClaimLineRepo{lines: make(map[string]domain.ExpenseClaimLine)}
+}
+
+func (r *MemoryExpenseClaimLineRepo) Create(ctx context.Context, ecl *domain.ExpenseClaimLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lines[ecl.ID] = *ecl
+	return nil
+}
+
+func (r *MemoryExpenseClaimLineRepo) ListByClaimID(ctx context.Context, claimID string) ([]domain.ExpenseClaimLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.ExpenseClaimLine
+	for _, ecl := range r.lines {
+		if ecl.ClaimID == claimID {
+			list = append(list, ecl)
+		}
+	}
+	return list, nil
+}
+
+

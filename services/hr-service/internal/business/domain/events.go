@@ -164,6 +164,15 @@ type PerformanceImprovementNeededEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
+type ExpenseSubmittedEvent struct {
+	ExpenseID   string          `json:"expense_id"`
+	EmployeeID  string          `json:"employee_id"`
+	Description string          `json:"description"`
+	Amount      decimal.Decimal `json:"amount"`
+	Timestamp   time.Time       `json:"timestamp"`
+}
+
+
 // ============================================================================
 // CONSUMER EVENTS PAYLOADS
 // ============================================================================

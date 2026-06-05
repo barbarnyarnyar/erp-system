@@ -11,14 +11,18 @@ import (
 )
 
 type EmployeeManagementService struct {
-	repo      domain.EmployeeRepository
-	publisher domain.EventPublisher
+	repo       domain.EmployeeRepository
+	claims     domain.ExpenseClaimRepository
+	claimLines domain.ExpenseClaimLineRepository
+	publisher  domain.EventPublisher
 }
 
-func NewEmployeeManagementService(repo domain.EmployeeRepository, publisher domain.EventPublisher) *EmployeeManagementService {
+func NewEmployeeManagementService(repo domain.EmployeeRepository, claims domain.ExpenseClaimRepository, claimLines domain.ExpenseClaimLineRepository, publisher domain.EventPublisher) *EmployeeManagementService {
 	return &EmployeeManagementService{
-		repo:      repo,
-		publisher: publisher,
+		repo:       repo,
+		claims:     claims,
+		claimLines: claimLines,
+		publisher:  publisher,
 	}
 }
 
@@ -153,3 +157,53 @@ func (s *EmployeeManagementService) DeleteEmployee(ctx context.Context, id strin
 
 	return nil
 }
+
+func (s *EmployeeManagementService) SubmitExpenseClaim(ctx context.Context, employeeID string, claimDate time.Time, lines []domain.ExpenseClaimLine) (*domain.ExpenseClaim, error) {
+	claimID := fmt.Sprintf("exp_%d", time.Now().UnixNano())
+
+	var total decimal.Decimal
+	for i := range lines {
+		lines[i].ID = fmt.Sprintf("expl_%d_%d", time.Now().UnixNano(), i)
+		lines[i].ClaimID = claimID
+		total = total.Add(lines[i].Amount)
+	}
+
+	claim := &domain.ExpenseClaim{
+		ID:          claimID,
+		EmployeeID:  employeeID,
+		ClaimDate:   claimDate,
+		Status:      "SUBMITTED",
+		TotalAmount: total,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	err := s.claims.Create(ctx, claim)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, line := range lines {
+		err = s.claimLines.Create(ctx, &line)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Publish hr.expense.submitted event
+	desc := "Expense claim submission"
+	if len(lines) > 0 {
+		desc = lines[0].Description
+	}
+
+	_ = s.publisher.Publish(ctx, domain.TopicHrExpenseSubmitted, claim.ID, domain.ExpenseSubmittedEvent{
+		ExpenseID:   claim.ID,
+		EmployeeID:  claim.EmployeeID,
+		Description: desc,
+		Amount:      claim.TotalAmount,
+		Timestamp:   time.Now(),
+	})
+
+	return claim, nil
+}
+

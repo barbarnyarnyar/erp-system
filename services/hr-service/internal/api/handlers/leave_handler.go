@@ -121,3 +121,25 @@ func (h *LeaveHandler) RejectLeaveRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": lr})
 }
 
+func (h *LeaveHandler) UpdateLeaveStatus(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		ApprovedBy string `json:"approved_by"`
+		Status     string `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	lr, err := h.svc.UpdateLeaveStatus(c.Request.Context(), id, req.ApprovedBy, req.Status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": lr})
+}
+
+

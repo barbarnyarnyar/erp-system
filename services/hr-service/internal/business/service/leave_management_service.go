@@ -6,16 +6,19 @@ import (
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
+	"github.com/shopspring/decimal"
 )
 
 type LeaveManagementService struct {
 	repo      domain.LeaveRequestRepository
+	balances  domain.LeaveBalanceRepository
 	publisher domain.EventPublisher
 }
 
-func NewLeaveManagementService(repo domain.LeaveRequestRepository, publisher domain.EventPublisher) *LeaveManagementService {
+func NewLeaveManagementService(repo domain.LeaveRequestRepository, balances domain.LeaveBalanceRepository, publisher domain.EventPublisher) *LeaveManagementService {
 	return &LeaveManagementService{
 		repo:      repo,
+		balances:  balances,
 		publisher: publisher,
 	}
 }
@@ -25,6 +28,30 @@ func (s *LeaveManagementService) ListLeaveRequests(ctx context.Context) ([]domai
 }
 
 func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employeeID string, leaveType string, start, end time.Time, reason string) (*domain.LeaveRequest, error) {
+	// Calculate leave duration in days
+	durationDays := decimal.NewFromFloat(end.Sub(start).Hours()/24.0 + 1)
+
+	// Validate leave balance
+	year := start.Year()
+	balance, err := s.balances.GetByEmployeeAndTypeAndYear(ctx, employeeID, leaveType, year)
+	if err != nil {
+		// Auto-initialize a default leave balance for testing/convenience
+		balance = &domain.LeaveBalance{
+			ID:           fmt.Sprintf("bal_%d", time.Now().UnixNano()),
+			EmployeeID:   employeeID,
+			LeaveType:    leaveType,
+			EntitledDays: decimal.NewFromInt(15), // 15 entitled days by default
+			UsedDays:     decimal.Zero,
+			Year:         year,
+		}
+		_ = s.balances.Create(ctx, balance)
+	}
+
+	remaining := balance.EntitledDays.Sub(balance.UsedDays)
+	if remaining.LessThan(durationDays) {
+		return nil, fmt.Errorf("insufficient leave balance: requested %s days, only %s days remaining", durationDays.String(), remaining.String())
+	}
+
 	id := fmt.Sprintf("leave_%d", time.Now().UnixNano())
 
 	lr := &domain.LeaveRequest{
@@ -39,7 +66,7 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 		UpdatedAt:   time.Now(),
 	}
 
-	err := s.repo.Create(ctx, lr)
+	err = s.repo.Create(ctx, lr)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +108,14 @@ func (s *LeaveManagementService) UpdateLeaveRequest(ctx context.Context, id stri
 	return lr, nil
 }
 
-func (s *LeaveManagementService) ApproveLeaveRequest(ctx context.Context, id string, approvedBy string) (*domain.LeaveRequest, error) {
+func (s *LeaveManagementService) UpdateLeaveStatus(ctx context.Context, id string, approvedBy string, status string) (*domain.LeaveRequest, error) {
 	lr, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	lr.Status = "APPROVED"
+	oldStatus := lr.Status
+	lr.Status = status
 	lr.ApprovedBy = &approvedBy
 	lr.UpdatedAt = time.Now()
 
@@ -96,41 +124,44 @@ func (s *LeaveManagementService) ApproveLeaveRequest(ctx context.Context, id str
 		return nil, err
 	}
 
-	// Publish leave approved event
-	_ = s.publisher.Publish(ctx, domain.TopicHrLeaveApproved, lr.ID, domain.LeaveApprovedEvent{
-		LeaveRequestID: lr.ID,
-		EmployeeID:     lr.EmployeeID,
-		ApprovedBy:     approvedBy,
-		Timestamp:      time.Now(),
-	})
+	// If approved, update LeaveBalance
+	if status == "APPROVED" && oldStatus != "APPROVED" {
+		durationDays := decimal.NewFromFloat(lr.EndDate.Sub(lr.StartDate).Hours()/24.0 + 1)
+		balance, err := s.balances.GetByEmployeeAndTypeAndYear(ctx, lr.EmployeeID, lr.LeaveType, lr.StartDate.Year())
+		if err == nil {
+			balance.UsedDays = balance.UsedDays.Add(durationDays)
+			_ = s.balances.Update(ctx, balance)
+		}
+	}
+
+	if status == "APPROVED" {
+		// Publish leave approved event
+		_ = s.publisher.Publish(ctx, domain.TopicHrLeaveApproved, lr.ID, domain.LeaveApprovedEvent{
+			LeaveRequestID: lr.ID,
+			EmployeeID:     lr.EmployeeID,
+			ApprovedBy:     approvedBy,
+			Timestamp:      time.Now(),
+		})
+	} else if status == "REJECTED" {
+		// Publish leave rejected event
+		_ = s.publisher.Publish(ctx, domain.TopicHrLeaveRejected, lr.ID, domain.LeaveRejectedEvent{
+			LeaveRequestID: lr.ID,
+			EmployeeID:     lr.EmployeeID,
+			RejectedBy:     approvedBy,
+			Reason:         "Rejected by manager",
+			Timestamp:      time.Now(),
+		})
+	}
 
 	return lr, nil
+}
+
+func (s *LeaveManagementService) ApproveLeaveRequest(ctx context.Context, id string, approvedBy string) (*domain.LeaveRequest, error) {
+	return s.UpdateLeaveStatus(ctx, id, approvedBy, "APPROVED")
 }
 
 func (s *LeaveManagementService) RejectLeaveRequest(ctx context.Context, id string, rejectedBy string) (*domain.LeaveRequest, error) {
-	lr, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	lr.Status = "REJECTED"
-	lr.ApprovedBy = &rejectedBy
-	lr.UpdatedAt = time.Now()
-
-	err = s.repo.Update(ctx, lr)
-	if err != nil {
-		return nil, err
-	}
-
-	// Publish leave rejected event
-	_ = s.publisher.Publish(ctx, domain.TopicHrLeaveRejected, lr.ID, domain.LeaveRejectedEvent{
-		LeaveRequestID: lr.ID,
-		EmployeeID:     lr.EmployeeID,
-		RejectedBy:     rejectedBy,
-		Reason:         "Rejected by manager",
-		Timestamp:      time.Now(),
-	})
-
-	return lr, nil
+	return s.UpdateLeaveStatus(ctx, id, rejectedBy, "REJECTED")
 }
+
 

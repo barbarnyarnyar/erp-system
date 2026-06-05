@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/erp-system/hr-service/internal/business/domain"
 	"github.com/erp-system/hr-service/internal/business/service"
+	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
 
@@ -103,4 +105,40 @@ func (h *EmployeeHandler) DeleteEmployee(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "employee deleted successfully"})
+}
+
+func (h *EmployeeHandler) SubmitExpenseClaim(c *gin.Context) {
+	employeeID := c.Param("id")
+	var req struct {
+		ClaimDate time.Time `json:"claim_date"`
+		Lines     []struct {
+			Description string `json:"description"`
+			Amount      string `json:"amount"`
+		} `json:"lines"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var claimLines []domain.ExpenseClaimLine
+	for _, l := range req.Lines {
+		amt, err := decimal.NewFromString(l.Amount)
+		if err != nil {
+			amt = decimal.Zero
+		}
+		claimLines = append(claimLines, domain.ExpenseClaimLine{
+			Description: l.Description,
+			Amount:      amt,
+		})
+	}
+
+	claim, err := h.svc.SubmitExpenseClaim(c.Request.Context(), employeeID, req.ClaimDate, claimLines)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": claim})
 }

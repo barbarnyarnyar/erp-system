@@ -82,3 +82,39 @@ type EmployeeDocumentRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+type PayrollDeductionRepository interface {
+	Create(ctx context.Context, pd *PayrollDeduction) error
+	GetByID(ctx context.Context, id string) (*PayrollDeduction, error)
+	ListByPayrollID(ctx context.Context, payrollID string) ([]PayrollDeduction, error)
+}
+
+type LeaveBalanceRepository interface {
+	Create(ctx context.Context, lb *LeaveBalance) error
+	GetByID(ctx context.Context, id string) (*LeaveBalance, error)
+	GetByEmployeeAndTypeAndYear(ctx context.Context, empID string, leaveType string, year int) (*LeaveBalance, error)
+	GetByEmployeeID(ctx context.Context, empID string) ([]LeaveBalance, error)
+	Update(ctx context.Context, lb *LeaveBalance) error
+	List(ctx context.Context) ([]LeaveBalance, error)
+}
+
+type TrainingEnrollmentRepository interface {
+	Create(ctx context.Context, te *TrainingEnrollment) error
+	GetByID(ctx context.Context, id string) (*TrainingEnrollment, error)
+	GetByTrainingAndEmployee(ctx context.Context, trainingID string, empID string) (*TrainingEnrollment, error)
+	Update(ctx context.Context, te *TrainingEnrollment) error
+	List(ctx context.Context) ([]TrainingEnrollment, error)
+}
+
+type ExpenseClaimRepository interface {
+	Create(ctx context.Context, ec *ExpenseClaim) error
+	GetByID(ctx context.Context, id string) (*ExpenseClaim, error)
+	List(ctx context.Context) ([]ExpenseClaim, error)
+	Update(ctx context.Context, ec *ExpenseClaim) error
+}
+
+type ExpenseClaimLineRepository interface {
+	Create(ctx context.Context, ecl *ExpenseClaimLine) error
+	ListByClaimID(ctx context.Context, claimID string) ([]ExpenseClaimLine, error)
+}
+
+

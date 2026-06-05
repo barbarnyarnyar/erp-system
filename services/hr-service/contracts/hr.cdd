@@ -62,6 +62,13 @@ service HR {
         updated_at        timestamp
     }
 
+    entity PayrollDeduction {
+        id                uuid      @primary
+        payroll_id        uuid      @reference(PayrollRecord.id)
+        type              string
+        amount            decimal
+    }
+
     entity TimeEntry {
         id          uuid      @primary
         employee_id uuid      @reference(Employee.id)
@@ -71,6 +78,8 @@ service HR {
         total_hours decimal
         notes       string
         status      string    // e.g., SUBMITTED, APPROVED, REJECTED
+        project_id  uuid      @optional
+        task_id     uuid      @optional
         created_at  timestamp
         updated_at  timestamp
     }
@@ -89,6 +98,15 @@ service HR {
         approved_by    uuid      @reference(Employee.id) @optional
         created_at     timestamp
         updated_at     timestamp
+    }
+
+    entity LeaveBalance {
+        id            uuid      @primary
+        employee_id   uuid      @reference(Employee.id)
+        leave_type    string
+        entitled_days decimal
+        used_days     decimal
+        year          integer
     }
 
     // -------------------------------------------------------------
@@ -128,8 +146,9 @@ service HR {
         review_date    date
         period_start   date
         period_end     date
-        rating         integer
+        rating         integer   // scale 1-5
         feedback       string
+        status         string    // e.g., DRAFT, SUBMITTED, ACKNOWLEDGED
         created_at     timestamp
         updated_at     timestamp
     }
@@ -149,6 +168,15 @@ service HR {
         updated_at     timestamp
     }
 
+    entity TrainingEnrollment {
+        id           uuid      @primary
+        training_id  uuid      @reference(TrainingProgram.id)
+        employee_id  uuid      @reference(Employee.id)
+        enrolled_at  timestamp
+        completed_at timestamp @optional
+        status       string
+    }
+
     // -------------------------------------------------------------
     // DOCUMENT STORAGE ENTITIES
     // -------------------------------------------------------------
@@ -159,6 +187,23 @@ service HR {
         file_name   string
         file_url    string
         uploaded_at timestamp
+    }
+
+    entity ExpenseClaim {
+        id           uuid      @primary
+        employee_id  uuid      @reference(Employee.id)
+        claim_date   date
+        status       string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
+        total_amount decimal
+        created_at   timestamp
+        updated_at   timestamp
+    }
+
+    entity ExpenseClaimLine {
+        id          uuid      @primary
+        claim_id    uuid      @reference(ExpenseClaim.id)
+        description string
+        amount      decimal
     }
 
 
@@ -182,6 +227,9 @@ service HR {
         }
         func deleteEmployee(id: string): void {
             description: "Mark an employee as terminated or delete entry"
+        }
+        func submitExpenseClaim(employeeId: string, claimDate: date, lines: list<object>): ExpenseClaim {
+            description: "Submit a new expense claim with details"
         }
     }
 
@@ -240,8 +288,8 @@ service HR {
         func updateLeaveRequest(id: string, leaveType: string, startDate: date, endDate: date, reason: string): LeaveRequest {
             description: "Update details of a leave request"
         }
-        func approveLeaveRequest(id: string, approvedBy: string): LeaveRequest {
-            description: "Approve or reject a leave request"
+        func updateLeaveStatus(id: string, approvedBy: string, status: string): LeaveRequest {
+            description: "Update leave request status (approve or reject)"
         }
     }
 
@@ -309,6 +357,12 @@ service HR {
         func updateTrainingProgram(id: string, title: string, description: string, trainer: string, startDate: date, endDate: date, status: string): TrainingProgram {
             description: "Update details of a training program"
         }
+        func enrollEmployee(trainingId: string, employeeId: string): TrainingEnrollment {
+            description: "Enroll an employee in a training program"
+        }
+        func completeTraining(enrollmentId: string): TrainingEnrollment {
+            description: "Mark a training enrollment as completed"
+        }
     }
 
     component EmployeeDocumentService {
@@ -328,13 +382,13 @@ service HR {
     component ReportService {
         description: "Generates HR summaries and reports"
 
-        func getHeadcountReport(): string {
+        func getHeadcountReport(): object {
             description: "Generate headcount summary reports"
         }
-        func getPayrollReport(): string {
+        func getPayrollReport(): object {
             description: "Generate payroll cost reports"
         }
-        func getAttendanceReport(): string {
+        func getAttendanceReport(): object {
             description: "Generate attendance summary reports"
         }
     }
@@ -363,6 +417,7 @@ service HR {
         hr.performance.review.completed: PerformanceReviewCompletedEvent
         hr.goal.achieved: GoalAchievedEvent
         hr.performance.improvement.needed: PerformanceImprovementNeededEvent
+        hr.expense.submitted: ExpenseSubmittedEvent
     }
 
     consumer_events {

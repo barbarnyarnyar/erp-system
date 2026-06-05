@@ -82,3 +82,36 @@ func (h *TrainingHandler) UpdateTrainingProgram(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": tp})
 }
+
+func (h *TrainingHandler) EnrollEmployee(c *gin.Context) {
+	trainingID := c.Param("id")
+	var req struct {
+		EmployeeID string `json:"employee_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	enrollment, err := h.svc.EnrollEmployee(c.Request.Context(), trainingID, req.EmployeeID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": enrollment})
+}
+
+func (h *TrainingHandler) CompleteTraining(c *gin.Context) {
+	enrollmentID := c.Param("enrollmentId")
+
+	enrollment, err := h.svc.CompleteTraining(c.Request.Context(), enrollmentID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": enrollment})
+}
+

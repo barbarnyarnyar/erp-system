@@ -58,6 +58,13 @@ CREATE TABLE IF NOT EXISTS payroll_records (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS payroll_deductions (
+    id UUID PRIMARY KEY NOT NULL,
+    payroll_id UUID NOT NULL REFERENCES payroll_records(id),
+    type VARCHAR(255) NOT NULL,
+    amount NUMERIC(15, 4) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS time_entries (
     id UUID PRIMARY KEY NOT NULL,
     employee_id UUID NOT NULL REFERENCES employees(id),
@@ -67,6 +74,8 @@ CREATE TABLE IF NOT EXISTS time_entries (
     total_hours NUMERIC(15, 4) NOT NULL,
     notes TEXT NOT NULL,
     status VARCHAR(255) NOT NULL,
+    project_id UUID,
+    task_id UUID,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -82,6 +91,15 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     approved_by UUID REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS leave_balances (
+    id UUID PRIMARY KEY NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    leave_type VARCHAR(255) NOT NULL,
+    entitled_days NUMERIC(15, 4) NOT NULL,
+    used_days NUMERIC(15, 4) NOT NULL,
+    year INT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS job_postings (
@@ -117,6 +135,7 @@ CREATE TABLE IF NOT EXISTS performance_reviews (
     period_end DATE NOT NULL,
     rating INT NOT NULL,
     feedback VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -133,6 +152,15 @@ CREATE TABLE IF NOT EXISTS training_programs (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS training_enrollments (
+    id UUID PRIMARY KEY NOT NULL,
+    training_id UUID NOT NULL REFERENCES training_programs(id),
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    enrolled_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    status VARCHAR(255) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS employee_documents (
     id UUID PRIMARY KEY NOT NULL,
     employee_id UUID NOT NULL REFERENCES employees(id),
@@ -140,5 +168,22 @@ CREATE TABLE IF NOT EXISTS employee_documents (
     file_name VARCHAR(255) NOT NULL,
     file_url VARCHAR(255) NOT NULL,
     uploaded_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS expense_claims (
+    id UUID PRIMARY KEY NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    claim_date DATE NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    total_amount NUMERIC(15, 4) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS expense_claim_lines (
+    id UUID PRIMARY KEY NOT NULL,
+    claim_id UUID NOT NULL REFERENCES expense_claims(id),
+    description TEXT NOT NULL,
+    amount NUMERIC(15, 4) NOT NULL
 );
 
