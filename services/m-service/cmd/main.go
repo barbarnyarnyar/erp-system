@@ -1,48 +1,108 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
-	"os"
 
+	"github.com/erp-system/m-service/internal/api/handlers"
+	"github.com/erp-system/m-service/internal/api/routes"
+	"github.com/erp-system/m-service/internal/business/domain"
+	"github.com/erp-system/m-service/internal/business/service"
+	"github.com/erp-system/m-service/internal/config"
+	"github.com/erp-system/m-service/internal/data/kafka"
+	"github.com/erp-system/m-service/internal/data/memory"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Get port from environment or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8004"
+	// 1. Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Create Gin router
+	// 2. Initialize Event Publisher (Kafka)
+	publisher := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
+	defer func() {
+		if err := publisher.Close(); err != nil {
+			log.Printf("Failed to close Kafka publisher: %v", err)
+		}
+	}()
+
+	// 3. Initialize Memory Repositories
+	bomRepo := memory.NewMemoryBillOfMaterialsRepo()
+	compRepo := memory.NewMemoryBOMComponentRepo()
+	wcRepo := memory.NewMemoryWorkCenterRepo()
+	routingRepo := memory.NewMemoryRoutingOperationRepo()
+	poRepo := memory.NewMemoryProductionOrderRepo()
+	woRepo := memory.NewMemoryWorkOrderRepo()
+	laborRepo := memory.NewMemoryLaborReportRepo()
+	machineRepo := memory.NewMemoryMachineLogRepo()
+	qualityRepo := memory.NewMemoryQualityInspectionRepo()
+	nonConfRepo := memory.NewMemoryNonConformanceRepo()
+	equipRepo := memory.NewMemoryEquipmentRepo()
+	maintRepo := memory.NewMemoryMaintenanceOrderRepo()
+	costRepo := memory.NewMemoryCostingRecordRepo()
+
+	// Seed some initial data for testing
+	ctx := context.Background()
+	// Seed a default BOM
+	_ = bomRepo.Create(ctx, &domain.BillOfMaterials{
+		ID:          "bom_default",
+		ProductID:   "prod_default",
+		Version:     "V1.0",
+		Status:      "ACTIVE",
+		Description: "Default BOM for Auto-Scheduled Production",
+	})
+
+	// 4. Initialize Services
+	bomSvc := service.NewBOMService(bomRepo, compRepo, wcRepo, routingRepo, publisher)
+	prodSvc := service.NewProductionService(poRepo, woRepo, bomRepo, compRepo, routingRepo, wcRepo, laborRepo, machineRepo, qualityRepo, nonConfRepo, equipRepo, maintRepo, costRepo, publisher)
+
+	// 5. Initialize Handlers
+	bomHandler := handlers.NewBOMHandler(bomSvc)
+	prodHandler := handlers.NewProductionHandler(prodSvc)
+
+	// 5b. Initialize Event Consumer (Kafka)
+	ctxCancel, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, prodSvc)
+	go consumer.Start(ctxCancel)
+	defer func() {
+		if err := consumer.Close(); err != nil {
+			log.Printf("Failed to close Kafka consumer: %v", err)
+		}
+	}()
+
+	// 6. Setup Gin Engine
 	r := gin.Default()
 
-	// Health check endpoint
+	// Health Check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"service": "m-service",
 			"status":  "healthy",
-			"port":    port,
+			"port":    cfg.Server.Port,
 		})
 	})
 
-	// Hello World endpoint
+	// Hello World API
 	r.GET("/api/manufacturing/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Hello World from Manufacturing Service!",
 			"service": "m-service",
-			"port":    port,
+			"port":    cfg.Server.Port,
 		})
 	})
 
-	// Root endpoint
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Manufacturing Service is running",
-			"service": "m-service",
-			"port":    port,
-		})
-	})
+	// Register API Routes
+	routes.RegisterRoutes(r, bomHandler, prodHandler)
 
-	// Start server
-	r.Run(":" + port)}
+	// Start Server
+	log.Printf("Starting Manufacturing Service on port %s...", cfg.Server.Port)
+	if err := r.Run(":" + cfg.Server.Port); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
+}

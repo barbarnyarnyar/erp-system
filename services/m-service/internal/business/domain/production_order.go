@@ -6,12 +6,14 @@ import (
 )
 
 type ProductionOrder struct {
-	ID            string    `json:"id"`
-	BomID         string    `json:"bom_id"`
-	ProductID     string    `json:"product_id"`
-	Quantity      int       `json:"quantity"`
-	Status        string    `json:"status"` // e.g., DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
-	ScheduledDate time.Time `json:"scheduled_date"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            string     `json:"id"`
+	BomID         string     `json:"bom_id"`
+	ProductID     string     `json:"product_id"`
+	Quantity      int        `json:"quantity"`
+	Status        string     `json:"status"` // e.g., DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+	ScheduledDate time.Time  `json:"scheduled_date"`
+	StartDate     *time.Time `json:"start_date"`
+	EndDate       *time.Time `json:"end_date"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }

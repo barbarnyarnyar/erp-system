@@ -4,9 +4,38 @@
 CREATE TABLE IF NOT EXISTS bill_of_materialss (
     id UUID PRIMARY KEY NOT NULL,
     product_id UUID NOT NULL,
+    version VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bomcomponents (
+    id UUID PRIMARY KEY NOT NULL,
+    bom_id UUID NOT NULL REFERENCES bill_of_materialss(id),
+    component_product_id UUID NOT NULL,
+    quantity NUMERIC(15, 4) NOT NULL,
+    waste_factor NUMERIC(15, 4) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS work_centers (
+    id UUID PRIMARY KEY NOT NULL,
+    code VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    capacity_hours NUMERIC(15, 4) NOT NULL,
+    hourly_rate NUMERIC(15, 4) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS routing_operations (
+    id UUID PRIMARY KEY NOT NULL,
+    bom_id UUID NOT NULL REFERENCES bill_of_materialss(id),
+    sequence_number INT NOT NULL,
+    work_center_id UUID NOT NULL REFERENCES work_centers(id),
+    operation_name VARCHAR(255) NOT NULL,
+    setup_time NUMERIC(15, 4) NOT NULL,
+    run_time NUMERIC(15, 4) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS production_orders (
@@ -16,7 +45,86 @@ CREATE TABLE IF NOT EXISTS production_orders (
     quantity INT NOT NULL,
     status VARCHAR(255) NOT NULL,
     scheduled_date TIMESTAMP NOT NULL,
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS work_orders (
+    id UUID PRIMARY KEY NOT NULL,
+    production_order_id UUID NOT NULL REFERENCES production_orders(id),
+    sequence_number INT NOT NULL,
+    work_center_id UUID NOT NULL REFERENCES work_centers(id),
+    scheduled_start TIMESTAMP NOT NULL,
+    scheduled_end TIMESTAMP NOT NULL,
+    actual_start TIMESTAMP,
+    actual_end TIMESTAMP,
+    status VARCHAR(255) NOT NULL,
+    labor_hours NUMERIC(15, 4),
+    machine_hours NUMERIC(15, 4)
+);
+
+CREATE TABLE IF NOT EXISTS labor_reports (
+    id UUID PRIMARY KEY NOT NULL,
+    work_order_id UUID NOT NULL REFERENCES work_orders(id),
+    employee_id UUID NOT NULL,
+    hours_worked NUMERIC(15, 4) NOT NULL,
+    date DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS machine_logs (
+    id UUID PRIMARY KEY NOT NULL,
+    work_center_id UUID NOT NULL REFERENCES work_centers(id),
+    status_code VARCHAR(255) NOT NULL,
+    message VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quality_inspections (
+    id UUID PRIMARY KEY NOT NULL,
+    work_order_id UUID NOT NULL REFERENCES work_orders(id),
+    inspector_id UUID NOT NULL,
+    result VARCHAR(255) NOT NULL,
+    remarks VARCHAR(255) NOT NULL,
+    inspected_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS non_conformances (
+    id UUID PRIMARY KEY NOT NULL,
+    inspection_id UUID NOT NULL REFERENCES quality_inspections(id),
+    description TEXT NOT NULL,
+    severity VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    corrective_action VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS equipments (
+    id UUID PRIMARY KEY NOT NULL,
+    work_center_id UUID NOT NULL REFERENCES work_centers(id),
+    name VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    last_maintenance TIMESTAMP,
+    next_maintenance TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_orders (
+    id UUID PRIMARY KEY NOT NULL,
+    equipment_id UUID NOT NULL REFERENCES equipments(id),
+    description TEXT NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    maintenance_type VARCHAR(255) NOT NULL,
+    completed_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS costing_records (
+    id UUID PRIMARY KEY NOT NULL,
+    production_order_id UUID NOT NULL REFERENCES production_orders(id),
+    standard_material_cost NUMERIC(15, 4) NOT NULL,
+    actual_material_cost NUMERIC(15, 4) NOT NULL,
+    standard_labor_cost NUMERIC(15, 4) NOT NULL,
+    actual_labor_cost NUMERIC(15, 4) NOT NULL,
+    material_variance NUMERIC(15, 4) NOT NULL,
+    labor_variance NUMERIC(15, 4) NOT NULL
 );
 

@@ -8,6 +8,8 @@ import (
 type BillOfMaterials struct {
 	ID          string    `json:"id"`
 	ProductID   string    `json:"product_id"`
+	Version     string    `json:"version"`
+	Status      string    `json:"status"` // e.g., ACTIVE, REVISED, ARCHIVED
 	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
