@@ -6,7 +6,13 @@ import (
 	"github.com/erp-system/fm-service/internal/config"
 )
 
-func SetupRoutes(router *gin.Engine, cfg *config.Config) {
+func SetupRoutes(
+	router *gin.Engine,
+	cfg *config.Config,
+	accHandler *handlers.AccountHandler,
+	txHandler *handlers.TransactionHandler,
+	repHandler *handlers.ReportHandler,
+) {
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -21,30 +27,28 @@ func SetupRoutes(router *gin.Engine, cfg *config.Config) {
 		// Account routes
 		accounts := v1.Group("/accounts")
 		{
-			accounts.GET("", handlers.GetAccounts)
-			accounts.POST("", handlers.CreateAccount)
-			accounts.GET("/:id", handlers.GetAccount)
-			accounts.PUT("/:id", handlers.UpdateAccount)
-			accounts.DELETE("/:id", handlers.DeleteAccount)
-			accounts.GET("/:id/balance", handlers.GetAccountBalance)
+			accounts.GET("", accHandler.GetAccounts)
+			accounts.POST("", accHandler.CreateAccount)
+			accounts.GET("/:id", accHandler.GetAccount)
+			accounts.PUT("/:id", accHandler.UpdateAccount)
+			accounts.DELETE("/:id", accHandler.DeleteAccount)
+			accounts.GET("/:id/balance", accHandler.GetAccountBalance)
 		}
 
 		// Transaction routes
 		transactions := v1.Group("/transactions")
 		{
-			transactions.GET("", handlers.GetTransactions)
-			transactions.POST("", handlers.CreateTransaction)
-			transactions.GET("/:id", handlers.GetTransaction)
-			transactions.POST("/:id/post", handlers.PostTransaction)
-			transactions.POST("/:id/reverse", handlers.ReverseTransaction)
+			transactions.GET("", txHandler.GetTransactions)
+			transactions.POST("", txHandler.CreateTransaction)
+			transactions.GET("/:id", txHandler.GetTransaction)
 		}
 
 		// Reports routes
 		reports := v1.Group("/reports")
 		{
-			reports.GET("/balance-sheet", handlers.GetBalanceSheet)
-			reports.GET("/income-statement", handlers.GetIncomeStatement)
-			reports.GET("/cash-flow", handlers.GetCashFlow)
+			reports.GET("/balance-sheet", repHandler.GetBalanceSheet)
+			reports.GET("/income-statement", repHandler.GetIncomeStatement)
+			reports.GET("/cash-flow", repHandler.GetCashFlow)
 		}
 	}
 }

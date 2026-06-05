@@ -19,4 +19,36 @@ service Auth {
         expires_at    timestamp
         created_at    timestamp
     }
+
+    component IdentityService {
+        description: "Manages authentication, RBAC, and store assignments"
+
+        func authenticateUser(username: string, passwordHash: string): string {
+            description: "Verifies credentials and returns a JWT token"
+        }
+
+        func createUser(user: User, initialStoreId: string, roleIds: list<string>): User {
+            description: "create a user and establish initial store and role relations via junction tables"
+        }
+
+        func updateUser(userId: string, updatedFields: object): User {
+            description: "update a user, preventing passwordHash updates"
+        }
+
+        func updateCredentials(userId: string, newPasswordHash: string): boolean {
+            description: "securely update a user password"
+        }
+
+        func assignUserToStore(userId: string, storeId: string): void {
+            description: "Links a user to a specific branch via UserStore junction"
+        }
+
+        func validatePermissions(userId: string, permission: string): boolean {
+            description: "Checks if a user has the required permission across all assigned roles"
+        }
+
+        func deactivateUser(userId: string): void {
+            description: "Set isActive to false for a user"
+        }
+    }
 }

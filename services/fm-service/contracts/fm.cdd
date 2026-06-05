@@ -1,4 +1,63 @@
 service FM {
+    // -------------------------------------------------------------
+    // PREREQUISITE REFERENCES / INDEPENDENT TABLES
+    // -------------------------------------------------------------
+    entity CurrencyRate {
+        from_currency  string    @primary
+        to_currency    string    @primary
+        rate           decimal
+        effective_date date
+    }
+
+    entity CostCenter {
+        id             uuid      @primary
+        code           string    @unique
+        name           string
+        description    string
+        manager_id     uuid      @optional
+        is_active      boolean
+    }
+
+    entity TaxRate {
+        id             uuid      @primary
+        code           string    @unique
+        name           string
+        rate           decimal
+        is_active      boolean
+    }
+
+    entity Vendor {
+        id             uuid      @primary
+        vendor_code    string    @unique
+        vendor_name    string
+        contact_name   string
+        email          string
+        phone          string
+        is_active      boolean
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    entity BankAccount {
+        id             uuid      @primary
+        account_number string    @unique
+        bank_name      string
+        currency       string
+        current_balance decimal
+    }
+
+    entity CustomerCredit {
+        id             uuid      @primary
+        customer_id    uuid      @unique
+        credit_limit   decimal
+        current_balance decimal
+        is_on_hold     boolean
+        updated_at     timestamp
+    }
+
+    // -------------------------------------------------------------
+    // ACCOUNTS & BUDGETS
+    // -------------------------------------------------------------
     entity Account {
         id             uuid      @primary
         account_number string    @unique
@@ -6,11 +65,27 @@ service FM {
         type           string    // e.g., ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
         parent_id      uuid      @reference(Account.id) @optional
         balance        decimal
+        currency       string    // e.g., "USD", "EUR"
         is_active      boolean
         created_at     timestamp
         updated_at     timestamp
     }
 
+    entity Budget {
+        id               uuid      @primary
+        account_id       uuid      @reference(Account.id)
+        cost_center_id   uuid      @reference(CostCenter.id) @optional
+        fiscal_year      integer
+        period           integer   // Month 1-12
+        allocated_amount decimal
+        spent_amount     decimal
+        created_at       timestamp
+        updated_at       timestamp
+    }
+
+    // -------------------------------------------------------------
+    // GENERAL LEDGER
+    // -------------------------------------------------------------
     entity JournalEntry {
         id          uuid      @primary
         reference   string    @unique
@@ -23,24 +98,244 @@ service FM {
     }
 
     entity JournalEntryLine {
-        id           uuid      @primary
-        entry_id     uuid      @reference(JournalEntry.id)
-        account_id   uuid      @reference(Account.id)
-        debit_amount decimal
-        credit_amount decimal
-        description  string
-        created_at   timestamp
+        id             uuid      @primary
+        entry_id       uuid      @reference(JournalEntry.id)
+        account_id     uuid      @reference(Account.id)
+        debit_amount   decimal
+        credit_amount  decimal
+        description    string
+        cost_center_id uuid      @reference(CostCenter.id) @optional
+        created_at     timestamp
     }
 
-    entity Vendor {
-        id          uuid      @primary
-        vendor_code string    @unique
-        vendor_name string
-        contact_name string
-        email       string
-        phone       string
-        is_active   boolean
-        created_at  timestamp
-        updated_at  timestamp
+    // -------------------------------------------------------------
+    // ACCOUNTS RECEIVABLE (AR)
+    // -------------------------------------------------------------
+    entity Invoice {
+        id             uuid      @primary
+        customer_id    uuid
+        invoice_number string    @unique
+        issue_date     date
+        due_date       date
+        total_amount   decimal
+        tax_amount     decimal
+        status         string    // e.g., DRAFT, SENT, PAID, OVERDUE, VOID
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    entity InvoiceLine {
+        id             uuid      @primary
+        invoice_id     uuid      @reference(Invoice.id)
+        description    string
+        quantity       integer
+        unit_price     decimal
+        tax_rate_id    uuid      @reference(TaxRate.id) @optional
+        line_total     decimal
+    }
+
+    // -------------------------------------------------------------
+    // ACCOUNTS PAYABLE (AP)
+    // -------------------------------------------------------------
+    entity VendorBill {
+        id             uuid      @primary
+        vendor_id      uuid      @reference(Vendor.id)
+        bill_number    string
+        purchase_order_id uuid     @optional
+        issue_date     date
+        due_date       date
+        total_amount   decimal
+        tax_amount     decimal
+        status         string    // e.g., DRAFT, MATCHED, APPROVED, PAID, VOID
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    entity VendorBillLine {
+        id             uuid      @primary
+        bill_id        uuid      @reference(VendorBill.id)
+        description    string
+        quantity       integer
+        unit_price     decimal
+        tax_rate_id    uuid      @reference(TaxRate.id) @optional
+        line_total     decimal
+    }
+
+    // -------------------------------------------------------------
+    // PAYMENTS
+    // -------------------------------------------------------------
+    entity Payment {
+        id             uuid      @primary
+        invoice_id     uuid      @reference(Invoice.id) @optional
+        bill_id        uuid      @reference(VendorBill.id) @optional
+        payment_number string    @unique
+        payment_date   date
+        amount         decimal
+        payment_method string    // e.g., CASH, CHECK, BANK_TRANSFER, CARD
+        status         string    // e.g., PENDING, COMPLETED, FAILED
+        created_at     timestamp
+        updated_at     timestamp
+    }
+
+    // -------------------------------------------------------------
+    // BANK STATEMENTS & CASH MANAGEMENT
+    // -------------------------------------------------------------
+    entity BankStatement {
+        id             uuid      @primary
+        bank_account_id uuid      @reference(BankAccount.id)
+        statement_date date
+        ending_balance decimal
+        is_reconciled  boolean
+    }
+
+    entity BankStatementLine {
+        id             uuid      @primary
+        statement_id   uuid      @reference(BankStatement.id)
+        transaction_date date
+        description    string
+        amount         decimal
+        is_matched     boolean
+    }
+
+    // -------------------------------------------------------------
+    // SUBDOMAIN SERVICES (Refactored Components)
+    // -------------------------------------------------------------
+    
+    component GeneralLedgerService {
+        description: "Manages chart of accounts, journal entry posting, and financial statements"
+
+        func listAccounts(): list<Account> {
+            description: "List all general ledger accounts"
+        }
+        func createAccount(accountNumber: string, name: string, type: string, parentId: string, currency: string): Account {
+            description: "Create a new general ledger account"
+        }
+        func getAccount(id: string): Account {
+            description: "Get account details by ID"
+        }
+        func updateAccount(id: string, name: string, type: string, parentId: string, isActive: boolean): Account {
+            description: "Update account details"
+        }
+        func deleteAccount(id: string): void {
+            description: "Delete a general ledger account"
+        }
+        func listJournalEntries(): list<JournalEntry> {
+            description: "List all journal entries"
+        }
+        func createJournalEntry(reference: string, description: string, lines: list<object>): JournalEntry {
+            description: "Create and post a journal entry"
+        }
+        func getJournalEntry(id: string): JournalEntry {
+            description: "Get journal entry details by ID"
+        }
+        func getTrialBalance(): object {
+            description: "Generate Trial Balance report"
+        }
+        func getIncomeStatement(): object {
+            description: "Generate Profit & Loss (Income Statement)"
+        }
+        func getBalanceSheet(): object {
+            description: "Generate Balance Sheet report"
+        }
+        func getCashFlow(): object {
+            description: "Generate historical Cash Flow report"
+        }
+    }
+
+    component AccountsPayableService {
+        description: "Manages vendors, purchase order bills, and matching"
+
+        func listVendors(): list<Vendor> {
+            description: "List all vendors"
+        }
+        func createVendor(vendorCode: string, vendorName: string, contactName: string, email: string, phone: string): Vendor {
+            description: "Register a new vendor"
+        }
+        func getVendor(id: string): Vendor {
+            description: "Get vendor details"
+        }
+        func updateVendor(id: string, fields: object): Vendor {
+            description: "Update vendor details"
+        }
+        func deleteVendor(id: string): void {
+            description: "Deactivate/delete a vendor"
+        }
+        func listVendorBills(): list<VendorBill> {
+            description: "List all vendor bills"
+        }
+        func createVendorBill(vendorId: string, billNumber: string, poId: string, lines: list<object>): VendorBill {
+            description: "Create a vendor bill"
+        }
+        func matchPurchaseOrder(billId: string, poId: string, goodsReceiptId: string): boolean {
+            description: "3-Way Matching: Matches Purchase Order, Goods Receipt, and Vendor Bill"
+        }
+    }
+
+    component AccountsReceivableService {
+        description: "Manages customer invoices, collections, and credit limits"
+
+        func listInvoices(): list<Invoice> {
+            description: "List customer invoices"
+        }
+        func createInvoice(customerId: string, issueDate: date, dueDate: date, lines: list<object>): Invoice {
+            description: "Generate a customer invoice"
+        }
+        func getInvoice(id: string): Invoice {
+            description: "Get invoice details by ID"
+        }
+        func updateInvoice(id: string, fields: object): Invoice {
+            description: "Update invoice fields"
+        }
+        func deleteInvoice(id: string): void {
+            description: "Delete an invoice"
+        }
+        func sendInvoice(id: string): boolean {
+            description: "Send invoice to customer via email/notification"
+        }
+        func checkCustomerCredit(customerId: string, orderValue: decimal): boolean {
+            description: "Checks if a new order fits within customer credit limit"
+        }
+    }
+
+    component CashManagementService {
+        description: "Manages bank reconciliation and cash flow projections"
+
+        func recordPayment(invoiceId: string, billId: string, paymentDate: date, amount: decimal, paymentMethod: string): Payment {
+            description: "Record a payment (either incoming AR or outgoing AP)"
+        }
+        func listPayments(): list<Payment> {
+            description: "List recorded payments"
+        }
+        func getPayment(id: string): Payment {
+            description: "Get payment details"
+        }
+        func reconcileBankStatement(statementId: string): void {
+            description: "Reconcile a bank statement against general ledger transactions"
+        }
+        func getCashFlowForecast(monthsAhead: integer): object {
+            description: "Generates future cash flow projections"
+        }
+    }
+
+    component BudgetingService {
+        description: "Manages financial budgets and utilization variance tracking"
+
+        func listBudgets(): list<Budget> {
+            description: "List budgets"
+        }
+        func createBudget(accountId: string, costCenterId: string, fiscalYear: integer, period: integer, allocatedAmount: decimal): Budget {
+            description: "Define a budget"
+        }
+        func getBudgetVsActualReport(accountId: string, fiscalYear: integer): object {
+            description: "Generate variance analysis report"
+        }
+    }
+
+    component TaxService {
+        description: "Manages tax rates and compliance registration"
+
+        func createTaxRate(code: string, name: string, rate: decimal): TaxRate {
+            description: "Create a tax rate"
+        }
     }
 }

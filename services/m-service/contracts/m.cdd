@@ -17,4 +17,20 @@ service Manufacturing {
         created_at     timestamp
         updated_at     timestamp
     }
+
+    component ManufacturingService {
+        description: "Manages Bill of Materials and Production Orders"
+
+        func createBillOfMaterials(productId: string, description: string): BillOfMaterials {
+            description: "Defines a new bill of materials for a product"
+        }
+
+        func createProductionOrder(bomId: string, quantity: integer, scheduledDate: timestamp): ProductionOrder {
+            description: "Schedules a production/work order"
+        }
+
+        func updateProductionStatus(orderId: string, status: string): ProductionOrder {
+            description: "Updates production order status (e.g. IN_PROGRESS, COMPLETED)"
+        }
+    }
 }

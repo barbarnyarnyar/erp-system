@@ -68,4 +68,28 @@ service HR {
         created_at  timestamp
         updated_at  timestamp
     }
+
+    component HRService {
+        description: "Manages departments, positions, employee lifecycles, and payroll"
+
+        func createEmployee(firstName: string, lastName: string, email: string, departmentId: string, positionId: string, salary: decimal): Employee {
+            description: "Onboards a new employee"
+        }
+
+        func transferEmployee(employeeId: string, newDepartmentId: string, newPositionId: string): Employee {
+            description: "Transfers an employee to a new department or position"
+        }
+
+        func terminateEmployee(employeeId: string, terminationDate: date): Employee {
+            description: "Terminates an employee contract"
+        }
+
+        func submitTimeEntry(employeeId: string, entryDate: date, clockIn: timestamp, clockOut: timestamp): TimeEntry {
+            description: "Logs daily working hours for an employee"
+        }
+
+        func runPayroll(employeeId: string, start: date, end: date): PayrollRecord {
+            description: "Calculates gross pay, deductions, net pay, and issues a payroll record"
+        }
+    }
 }

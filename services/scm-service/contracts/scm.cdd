@@ -86,4 +86,24 @@ service SCM {
         description       string
         created_at        timestamp
     }
+
+    component SupplyChainService {
+        description: "Manages product catalogs, locations, inventory levels, and purchasing"
+
+        func createProduct(code: string, name: string, standardCost: decimal, listPrice: decimal): Product {
+            description: "Adds a new product to the catalog"
+        }
+
+        func adjustInventory(productId: string, locationId: string, quantity: integer, movementType: string): InventoryItem {
+            description: "Adjusts stock levels and records inventory movement"
+        }
+
+        func createPurchaseOrder(supplierId: string, expectedDelivery: date, lines: list<object>): PurchaseOrder {
+            description: "Issues a new purchase order to a supplier"
+        }
+
+        func receivePurchaseOrder(poId: string): PurchaseOrder {
+            description: "Marks a purchase order as received and updates inventory hand count"
+        }
+    }
 }

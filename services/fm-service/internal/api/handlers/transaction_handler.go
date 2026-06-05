@@ -4,54 +4,83 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/erp-system/fm-service/internal/business/domain"
+	"github.com/erp-system/fm-service/internal/business/service"
+	"github.com/shopspring/decimal"
 )
 
-// GetTransactions retrieves all transactions with optional filtering
-func GetTransactions(c *gin.Context) {
-	// TODO: Implement transaction retrieval logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get transactions endpoint",
-		"data":    []interface{}{},
-	})
+type TransactionHandler struct {
+	svc *service.FinanceService
 }
 
-// CreateTransaction creates a new transaction
-func CreateTransaction(c *gin.Context) {
-	// TODO: Implement transaction creation logic
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Create transaction endpoint",
-	})
+func NewTransactionHandler(svc *service.FinanceService) *TransactionHandler {
+	return &TransactionHandler{svc: svc}
 }
 
-// GetTransaction retrieves a specific transaction by ID
-func GetTransaction(c *gin.Context) {
+func (h *TransactionHandler) GetTransactions(c *gin.Context) {
+	entries, err := h.svc.ListJournalEntries(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": entries})
+}
+
+func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
+	var req struct {
+		Reference   string `json:"reference"`
+		Description string `json:"description"`
+		Lines       []struct {
+			AccountID    string `json:"account_id"`
+			DebitAmount  string `json:"debit_amount"`
+			CreditAmount string `json:"credit_amount"`
+			Description  string `json:"description"`
+		} `json:"lines"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Helper function inside handler to parse decimal inputs safely
+	domainLines := make([]domain.JournalEntryLine, len(req.Lines))
+	for i, l := range req.Lines {
+		debitDec, err := decimal.NewFromString(l.DebitAmount)
+		if err != nil {
+			debitDec = decimal.Zero
+		}
+		creditDec, err := decimal.NewFromString(l.CreditAmount)
+		if err != nil {
+			creditDec = decimal.Zero
+		}
+
+		domainLines[i] = domain.JournalEntryLine{
+			AccountID:    l.AccountID,
+			DebitAmount:  debitDec,
+			CreditAmount: creditDec,
+			Description:  l.Description,
+		}
+	}
+
+	entry, err := h.svc.CreateJournalEntry(c.Request.Context(), req.Reference, req.Description, domainLines)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": entry})
+}
+
+func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 	id := c.Param("id")
-	
-	// TODO: Implement specific transaction retrieval logic
+	entry, lines, err := h.svc.GetJournalEntry(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "journal entry not found"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Get transaction endpoint",
-		"id":      id,
-	})
-}
-
-// PostTransaction posts a pending transaction
-func PostTransaction(c *gin.Context) {
-	id := c.Param("id")
-	
-	// TODO: Implement transaction posting logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Post transaction endpoint",
-		"id":      id,
-	})
-}
-
-// ReverseTransaction reverses a posted transaction
-func ReverseTransaction(c *gin.Context) {
-	id := c.Param("id")
-	
-	// TODO: Implement transaction reversal logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Reverse transaction endpoint",
-		"id":      id,
+		"data":  entry,
+		"lines": lines,
 	})
 }

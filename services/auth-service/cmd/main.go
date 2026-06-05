@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"auth-service/utils"
+	utils "auth-service/common-utils"
 )
 
 func main() {

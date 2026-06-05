@@ -10,12 +10,21 @@ import (
 // Logger is a simple logger implementation
 type Logger struct {
 	serviceName string
+	requestID   string
 }
 
 // NewLogger creates a new logger instance
 func NewLogger(serviceName string) *Logger {
 	return &Logger{
 		serviceName: serviceName,
+	}
+}
+
+// WithRequestID returns a new logger instance with request ID
+func (l *Logger) WithRequestID(requestID string) *Logger {
+	return &Logger{
+		serviceName: l.serviceName,
+		requestID:   requestID,
 	}
 }
 
@@ -42,17 +51,38 @@ func (l *Logger) Warn(message string, args ...interface{}) {
 // log is the internal logging method
 func (l *Logger) log(level, message string, args ...interface{}) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	formattedMessage := fmt.Sprintf(message, args...)
-	logMessage := fmt.Sprintf("[%s] [%s] [%s] %s", timestamp, level, l.serviceName, formattedMessage)
+	var formattedMessage string
+	if len(args) > 0 {
+		formattedMessage = fmt.Sprintf(message, args...)
+	} else {
+		formattedMessage = message
+	}
+	
+	var logMessage string
+	if l.requestID != "" {
+		logMessage = fmt.Sprintf("[%s] [%s] [%s] [%s] %s", timestamp, level, l.serviceName, l.requestID, formattedMessage)
+	} else {
+		logMessage = fmt.Sprintf("[%s] [%s] [%s] %s", timestamp, level, l.serviceName, formattedMessage)
+	}
 	log.Println(logMessage)
 }
 
 // GinLogger returns a Gin middleware for logging HTTP requests
 func (l *Logger) GinLogger() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		return fmt.Sprintf("[%s] [HTTP] [%s] %s %s %d %s \"%s\"\n",
+		requestID := "-"
+		if param.Keys != nil {
+			if reqID, ok := param.Keys["request_id"]; ok {
+				if reqIDStr, ok := reqID.(string); ok {
+					requestID = reqIDStr
+				}
+			}
+		}
+		
+		return fmt.Sprintf("[%s] [HTTP] [%s] [%s] %s %s %d %s \"%s\"\n",
 			param.TimeStamp.Format("2006-01-02 15:04:05"),
 			l.serviceName,
+			requestID,
 			param.ClientIP,
 			param.Method,
 			param.StatusCode,
@@ -64,11 +94,14 @@ func (l *Logger) GinLogger() gin.HandlerFunc {
 
 // RequestIDMiddleware adds a unique request ID to each request
 func RequestIDMiddleware(serviceName string) gin.HandlerFunc {
-	logger := NewLogger(serviceName)
+	baseLogger := NewLogger(serviceName)
 	return func(c *gin.Context) {
 		requestID := generateRequestID()
 		c.Header("X-Request-ID", requestID)
 		c.Set("request_id", requestID)
+		
+		// Create a request-scoped logger
+		logger := baseLogger.WithRequestID(requestID)
 		c.Set("logger", logger)
 		c.Next()
 	}

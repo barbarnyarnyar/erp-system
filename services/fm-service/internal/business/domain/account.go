@@ -24,6 +24,7 @@ type Account struct {
 	Type          AccountType     `json:"type"`
 	ParentID      *string         `json:"parent_id"`
 	Balance       decimal.Decimal `json:"balance"`
+	Currency      string          `json:"currency"`
 	IsActive      bool            `json:"is_active"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`

@@ -4,65 +4,98 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/erp-system/fm-service/internal/business/service"
 )
 
-// GetAccounts retrieves all accounts with optional filtering
-func GetAccounts(c *gin.Context) {
-	// TODO: Implement account retrieval logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get accounts endpoint",
-		"data":    []interface{}{},
-	})
+type AccountHandler struct {
+	svc *service.FinanceService
 }
 
-// CreateAccount creates a new account
-func CreateAccount(c *gin.Context) {
-	// TODO: Implement account creation logic
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Create account endpoint",
-	})
+func NewAccountHandler(svc *service.FinanceService) *AccountHandler {
+	return &AccountHandler{svc: svc}
 }
 
-// GetAccount retrieves a specific account by ID
-func GetAccount(c *gin.Context) {
+func (h *AccountHandler) GetAccounts(c *gin.Context) {
+	accs, err := h.svc.ListAccounts(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": accs})
+}
+
+func (h *AccountHandler) CreateAccount(c *gin.Context) {
+	var req struct {
+		AccountNumber string `json:"account_number"`
+		Name          string `json:"name"`
+		Type          string `json:"type"`
+		ParentID      string `json:"parent_id"`
+		Currency      string `json:"currency"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	acc, err := h.svc.CreateAccount(c.Request.Context(), req.AccountNumber, req.Name, req.Type, req.ParentID, req.Currency)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": acc})
+}
+
+func (h *AccountHandler) GetAccount(c *gin.Context) {
 	id := c.Param("id")
-	
-	// TODO: Implement specific account retrieval logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get account endpoint",
-		"id":      id,
-	})
+	acc, err := h.svc.GetAccount(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": acc})
 }
 
-// UpdateAccount updates an existing account
-func UpdateAccount(c *gin.Context) {
+func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 	id := c.Param("id")
-	
-	// TODO: Implement account update logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Update account endpoint",
-		"id":      id,
-	})
+	var req struct {
+		Name     string `json:"name"`
+		Type     string `json:"type"`
+		ParentID string `json:"parent_id"`
+		IsActive bool   `json:"is_active"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	acc, err := h.svc.UpdateAccount(c.Request.Context(), id, req.Name, req.Type, req.ParentID, req.IsActive)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": acc})
 }
 
-// DeleteAccount deletes an account
-func DeleteAccount(c *gin.Context) {
+func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 	id := c.Param("id")
-	
-	// TODO: Implement account deletion logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Delete account endpoint",
-		"id":      id,
-	})
+	err := h.svc.DeleteAccount(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "account deleted"})
 }
 
-// GetAccountBalance retrieves the current balance of an account
-func GetAccountBalance(c *gin.Context) {
+func (h *AccountHandler) GetAccountBalance(c *gin.Context) {
 	id := c.Param("id")
-	
-	// TODO: Implement account balance retrieval logic
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get account balance endpoint",
-		"id":      id,
-	})
+	balance, err := h.svc.GetAccountBalance(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"balance": balance})
 }

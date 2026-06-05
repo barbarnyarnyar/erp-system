@@ -19,4 +19,28 @@ service CRM {
         created_at  timestamp
         updated_at  timestamp
     }
+
+    component CRMService {
+        description: "Manages customers and opportunities"
+
+        func createCustomer(companyName: string, contactName: string, email: string, phone: string): Customer {
+            description: "Creates a new customer record"
+        }
+
+        func getCustomer(id: string): Customer {
+            description: "Retrieves a customer by ID"
+        }
+
+        func updateCustomer(id: string, fields: object): Customer {
+            description: "Updates customer fields"
+        }
+
+        func createOpportunity(customerId: string, title: string, value: decimal): Opportunity {
+            description: "Creates an sales opportunity for a customer"
+        }
+
+        func updateOpportunityStatus(opportunityId: string, status: string): Opportunity {
+            description: "Updates the status of an opportunity"
+        }
+    }
 }

@@ -22,4 +22,20 @@ service PM {
         created_at  timestamp
         updated_at  timestamp
     }
+
+    component ProjectService {
+        description: "Manages projects and task tracking"
+
+        func createProject(name: string, description: string, startDate: date, endDate: date): Project {
+            description: "Creates a new project profile"
+        }
+
+        func createTask(projectId: string, title: string, description: string, assignedTo: string): Task {
+            description: "Creates a task within a project"
+        }
+
+        func updateTaskStatus(taskId: string, status: string): Task {
+            description: "Updates a task workflow status (e.g. TODO, IN_PROGRESS, DONE)"
+        }
+    }
 }
