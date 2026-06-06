@@ -52,6 +52,14 @@ service CRM {
         updated_at  timestamp
     }
 
+    entity OpportunityStageHistory {
+        id             uuid      @primary
+        opportunity_id uuid      @reference(Opportunity.id)
+        stage          string    // e.g., DISCOVERY, NEGOTIATION
+        changed_at     timestamp
+        changed_by     string
+    }
+
     entity SalesOrder {
         id           uuid      @primary
         customer_id  uuid      @reference(Customer.id)
@@ -129,6 +137,17 @@ service CRM {
         updated_at timestamp
     }
 
+    entity CustomerInteraction {
+        id              uuid      @primary
+        customer_id     uuid      @reference(Customer.id)
+        type            string    // e.g., CALL, EMAIL, MEETING, NOTE
+        subject         string
+        description     string
+        interaction_date timestamp
+        created_by      string
+        created_at      timestamp
+    }
+
     component CustomerService {
         description: "Manages customer master data"
 
@@ -146,6 +165,23 @@ service CRM {
         }
         func deleteCustomer(id: string): void {
             description: "Delete customer record"
+        }
+    }
+
+    component CustomerInteractionService {
+        description: "Manages customer interaction log (calls, emails, meetings)"
+
+        func createCustomerInteraction(customerId: string, type: string, subject: string, description: string, interactionDate: timestamp, createdBy: string): CustomerInteraction {
+            description: "Log a new customer interaction"
+        }
+        func getCustomerInteraction(id: string): CustomerInteraction {
+            description: "Get a customer interaction by ID"
+        }
+        func listCustomerInteractions(customerId: string): list<CustomerInteraction> {
+            description: "List all interactions for a customer"
+        }
+        func deleteCustomerInteraction(id: string): void {
+            description: "Delete a customer interaction record"
         }
     }
 
@@ -206,6 +242,9 @@ service CRM {
         }
         func updateSalesOrder(id: string, status: string): SalesOrder {
             description: "Update sales order status"
+        }
+        func confirmSalesOrder(id: string): SalesOrder {
+            description: "Atomically confirm a DRAFT order. Validates: order exists, status is DRAFT, customer is ACTIVE, order has items with positive quantities. Transitions to CONFIRMED and fires crm.sales.order.confirmed event. Stock availability is verified cross-service via SCM."
         }
         func deleteSalesOrder(id: string): void {
             description: "Cancel/delete sales order"

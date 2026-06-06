@@ -86,3 +86,10 @@ type OpportunityStageHistoryRepository interface {
 	ListByOpportunityID(ctx context.Context, opportunityID string) ([]OpportunityStageHistory, error)
 }
 
+type CustomerInteractionRepository interface {
+	Create(ctx context.Context, ci *CustomerInteraction) error
+	GetByID(ctx context.Context, id string) (*CustomerInteraction, error)
+	ListByCustomerID(ctx context.Context, customerID string) ([]CustomerInteraction, error)
+	Delete(ctx context.Context, id string) error
+}
+

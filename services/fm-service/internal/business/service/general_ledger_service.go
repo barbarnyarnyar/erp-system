@@ -162,15 +162,17 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 	}
 
 	id := fmt.Sprintf("je_%d", time.Now().UnixNano())
+	now := time.Now()
 	entry := &domain.JournalEntry{
 		ID:          id,
 		Reference:   ref,
-		Date:        time.Now(),
+		Date:        now,
 		Description: desc,
-		Status:      "POSTED",
+		Status:      string(domain.JournalEntryStatusPosted),
 		CreatedBy:   "system",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		PostedBy:    "system",
+		PostedAt:    &now,
+		CreatedAt:   now,
 	}
 
 	// Snapshot account states for rollback on failure
@@ -272,7 +274,6 @@ func (s *GeneralLedgerService) ReverseJournalEntry(ctx context.Context, id strin
 	// Update original entry
 	entry.Status = "REVERSED"
 	entry.ReversedBy = &revEntry.ID
-	entry.UpdatedAt = time.Now()
 
 	err = s.entries.Update(ctx, entry, lines)
 	if err != nil {
@@ -378,6 +379,12 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 	if err != nil {
 		return nil, err
 	}
+	if entry.Status != string(domain.JournalEntryStatusPending) {
+		return nil, domain.ErrJournalEntryNotMutable
+	}
+	if err != nil {
+		return nil, err
+	}
 
 	// Snapshot account states for rollback on failure
 	snapshots := make(map[string]domain.Account)
@@ -448,7 +455,6 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 
 	entry.Reference = ref
 	entry.Description = desc
-	entry.UpdatedAt = time.Now()
 
 	err = s.entries.Update(ctx, entry, lines)
 	if err != nil {

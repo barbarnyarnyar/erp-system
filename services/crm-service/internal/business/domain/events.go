@@ -189,6 +189,16 @@ type SalesOrderReceivedEvent struct {
 	Timestamp    time.Time       `json:"timestamp"`
 }
 
+type CustomerInteractionLoggedEvent struct {
+	InteractionID   string    `json:"interaction_id"`
+	CustomerID      string    `json:"customer_id"`
+	Type            string    `json:"type"`
+	Subject         string    `json:"subject"`
+	InteractionDate time.Time `json:"interaction_date"`
+	CreatedBy       string    `json:"created_by"`
+	Timestamp       time.Time `json:"timestamp"`
+}
+
 // Consumed Event Payloads
 
 type InventoryAvailableEvent struct {

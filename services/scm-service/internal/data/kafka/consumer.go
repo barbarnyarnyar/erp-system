@@ -135,8 +135,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		log.Printf("[SCM-CONSUMER] Processing Customer Demand Forecast: Product %s, forecast date: %s, quantity: %d", ev.ProductID, ev.ForecastDate.String(), ev.ForecastQuantity)
-		confidenceDec := decimal.NewFromFloat(ev.ConfidenceLevel)
-		_, err := c.demandSvc.CreateForecast(ctx, ev.ProductID, ev.ForecastDate, ev.ForecastQuantity, confidenceDec, "Auto-created from customer demand forecast event")
+		_, err := c.demandSvc.CreateForecast(ctx, ev.ProductID, ev.ForecastDate, ev.ForecastQuantity, ev.ConfidenceLevel, "Auto-created from customer demand forecast event")
 		return err
 
 	case domain.TopicMfgMaterialRequired:

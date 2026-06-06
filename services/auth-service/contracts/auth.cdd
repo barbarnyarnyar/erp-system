@@ -1,11 +1,26 @@
 service Auth {
+    // =============================================================
+    // ENUM DEFINITIONS
+    // =============================================================
+
+    enum UserRoleType {
+        ADMIN
+        MANAGER
+        EMPLOYEE
+        VIEWER
+    }
+
+    // =============================================================
+    // ENTITY DEFINITIONS
+    // =============================================================
+
     entity User {
         id             uuid      @primary
-        username       string    @unique
-        email          string    @unique
+        username       string    @unique @min_length(3) @max_length(50)
+        email          string    @unique @pattern(email)
         password_hash  string
-        first_name     string
-        last_name      string
+        first_name     string    @min_length(1) @max_length(100)
+        last_name      string    @min_length(1) @max_length(100)
         is_active      boolean
         security_stamp string    @optional
         created_at     timestamp
@@ -15,7 +30,7 @@ service Auth {
     entity Session {
         id            uuid      @primary
         user_id       uuid      @reference(User.id)
-        refresh_token string
+        refresh_token string    @unique
         ip_address    string    @optional
         user_agent    string    @optional
         is_revoked    boolean   @optional
@@ -26,7 +41,7 @@ service Auth {
     entity Role {
         id            uuid      @primary
         name          string    @unique
-        description   string
+        description   string    @max_length(500)
         created_at    timestamp
         updated_at    timestamp
     }
@@ -34,7 +49,7 @@ service Auth {
     entity Permission {
         id            uuid      @primary
         code          string    @unique
-        description   string
+        description   string    @max_length(500)
         created_at    timestamp
         updated_at    timestamp
     }
@@ -67,10 +82,47 @@ service Auth {
     // =============================================================
 
     struct TokenClaims {
-        description: "Canonical typed contract for decoded JWT payload. Replaces the previous `object` return type so that all downstream consumers (gateway, services) get compile-time-checked field access."
+        description: "Canonical typed contract for decoded JWT payload."
         user_id    string
         tenant_id  string
         roles      list<string>
+    }
+
+    // =============================================================
+    // EVENT PAYLOAD DEFINITIONS
+    // =============================================================
+
+    event_payload UserEventPayload {
+        user_id    string
+        username   string
+        email      string
+        is_active  boolean
+        created_at timestamp
+    }
+
+    event_payload UserRoleEventPayload {
+        user_id    string
+        role_id    string
+        role_name  string
+        assigned_by string
+        created_at timestamp
+    }
+
+    event_payload UserStoreEventPayload {
+        user_id    string
+        store_id   string
+        assigned_at timestamp
+    }
+
+    event_payload PasswordChangedEventPayload {
+        user_id    string
+        changed_at timestamp
+    }
+
+    event_payload HREmployeeTerminatedEvent {
+        employee_id string
+        user_id     string
+        terminated_at timestamp
     }
 
     // =============================================================
@@ -90,7 +142,7 @@ service Auth {
             description: "Revoke a session (logout)"
         }
         func validateToken(token: string): TokenClaims {
-            description: "Decodes and validates a JWT token, returning a typed TokenClaims struct (user_id, tenant_id, roles)"
+            description: "Decodes and validates a JWT token, returning a typed TokenClaims struct"
         }
     }
 
@@ -98,13 +150,13 @@ service Auth {
         description: "Manages user accounts and store assignments"
 
         func createUser(user: User, initialStoreId: string, roleIds: list<string>): User {
-            description: "create a user and establish initial store and role relations via junction tables"
+            description: "Create a user and establish initial store and role relations"
         }
         func updateUser(userId: string, firstName: string @optional, lastName: string @optional, email: string @optional, isActive: boolean @optional): User {
-            description: "update user details"
+            description: "Update user details"
         }
         func updateCredentials(userId: string, newPassword: string): boolean {
-            description: "securely update a user password"
+            description: "Securely update a user password"
         }
         func deactivateUser(userId: string): void {
             description: "Deactivate user account"
@@ -147,11 +199,6 @@ service Auth {
     }
 
     consumer_events {
-        // Phase S4.8: close the offboarding loop. When HR terminates an
-        // employee, Auth must deactivate the corresponding user account so
-        // that any in-flight JWT becomes invalid (via security_stamp bump)
-        // and no new sessions can be created. Without this consumer, the
-        // terminated employee's account would remain active indefinitely.
         hr.employee.terminated: HREmployeeTerminatedEvent
     }
 }

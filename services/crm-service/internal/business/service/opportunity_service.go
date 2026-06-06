@@ -11,14 +11,16 @@ import (
 )
 
 type OpportunityService struct {
-	oppRepo   domain.OpportunityRepository
-	publisher domain.EventPublisher
+	oppRepo    domain.OpportunityRepository
+	historyRepo domain.OpportunityStageHistoryRepository
+	publisher  domain.EventPublisher
 }
 
-func NewOpportunityService(oppRepo domain.OpportunityRepository, publisher domain.EventPublisher) *OpportunityService {
+func NewOpportunityService(oppRepo domain.OpportunityRepository, historyRepo domain.OpportunityStageHistoryRepository, publisher domain.EventPublisher) *OpportunityService {
 	return &OpportunityService{
-		oppRepo:   oppRepo,
-		publisher: publisher,
+		oppRepo:    oppRepo,
+		historyRepo: historyRepo,
+		publisher:  publisher,
 	}
 }
 
@@ -46,6 +48,17 @@ func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, 
 		return nil, err
 	}
 
+	history := &domain.OpportunityStageHistory{
+		ID:            fmt.Sprintf("osh_%d", time.Now().UnixNano()),
+		OpportunityID: id,
+		Stage:         stageEnum,
+		ChangedAt:     time.Now(),
+		ChangedBy:     "system",
+	}
+	if err := s.historyRepo.Create(ctx, history); err != nil {
+		log.Printf("ERROR: failed to seed stage history for opportunity %s: %v", id, err)
+	}
+
 	if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityCreated, id, domain.OpportunityCreatedEvent{
 		OpportunityID: id,
 		CustomerID:    customerID,
@@ -67,7 +80,7 @@ func (s *OpportunityService) ListOpportunities(ctx context.Context) ([]domain.Op
 	return s.oppRepo.List(ctx)
 }
 
-func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, title string, value decimal.Decimal, status, stage string, probability decimal.Decimal) (*domain.Opportunity, error) {
+func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, title string, value decimal.Decimal, status, stage string, probability decimal.Decimal, changedBy string) (*domain.Opportunity, error) {
 	stageEnum := domain.OpportunityStage(stage)
 	if !stageEnum.IsValid() {
 		return nil, fmt.Errorf("invalid opportunity stage: %s", stage)
@@ -79,6 +92,7 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 	}
 
 	oldStatus := opp.Status
+	oldStage := opp.Stage
 	opp.Title = title
 	opp.Value = value
 	opp.Status = status
@@ -89,6 +103,19 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 	err = s.oppRepo.Update(ctx, opp)
 	if err != nil {
 		return nil, err
+	}
+
+	if oldStage != stageEnum {
+		history := &domain.OpportunityStageHistory{
+			ID:            fmt.Sprintf("osh_%d", time.Now().UnixNano()),
+			OpportunityID: id,
+			Stage:         stageEnum,
+			ChangedAt:     time.Now(),
+			ChangedBy:     changedBy,
+		}
+		if err := s.historyRepo.Create(ctx, history); err != nil {
+			log.Printf("ERROR: failed to record stage history for opportunity %s: %v", id, err)
+		}
 	}
 
 	if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityUpdated, id, domain.OpportunityUpdatedEvent{

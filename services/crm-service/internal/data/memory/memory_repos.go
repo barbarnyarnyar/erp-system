@@ -569,3 +569,88 @@ func (r *CampaignRepository) Delete(ctx context.Context, id string) error {
 	delete(r.campaigns, id)
 	return nil
 }
+
+// ==========================================
+// OpportunityStageHistory Memory Repository
+// ==========================================
+
+type OpportunityStageHistoryRepository struct {
+	mu       sync.RWMutex
+	histories map[string]domain.OpportunityStageHistory
+}
+
+func NewOpportunityStageHistoryRepository() *OpportunityStageHistoryRepository {
+	return &OpportunityStageHistoryRepository{
+		histories: make(map[string]domain.OpportunityStageHistory),
+	}
+}
+
+func (r *OpportunityStageHistoryRepository) Create(ctx context.Context, osh *domain.OpportunityStageHistory) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.histories[osh.ID] = *osh
+	return nil
+}
+
+func (r *OpportunityStageHistoryRepository) ListByOpportunityID(ctx context.Context, opportunityID string) ([]domain.OpportunityStageHistory, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.OpportunityStageHistory, 0)
+	for _, h := range r.histories {
+		if h.OpportunityID == opportunityID {
+			list = append(list, h)
+		}
+	}
+	return list, nil
+}
+
+// ==========================================
+// CustomerInteraction Memory Repository
+// ==========================================
+
+type CustomerInteractionRepository struct {
+	mu          sync.RWMutex
+	interactions map[string]domain.CustomerInteraction
+}
+
+func NewCustomerInteractionRepository() *CustomerInteractionRepository {
+	return &CustomerInteractionRepository{
+		interactions: make(map[string]domain.CustomerInteraction),
+	}
+}
+
+func (r *CustomerInteractionRepository) Create(ctx context.Context, ci *domain.CustomerInteraction) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.interactions[ci.ID] = *ci
+	return nil
+}
+
+func (r *CustomerInteractionRepository) GetByID(ctx context.Context, id string) (*domain.CustomerInteraction, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ci, ok := r.interactions[id]
+	if !ok {
+		return nil, fmt.Errorf("customer interaction not found: %s", id)
+	}
+	return &ci, nil
+}
+
+func (r *CustomerInteractionRepository) ListByCustomerID(ctx context.Context, customerID string) ([]domain.CustomerInteraction, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.CustomerInteraction, 0)
+	for _, ci := range r.interactions {
+		if ci.CustomerID == customerID {
+			list = append(list, ci)
+		}
+	}
+	return list, nil
+}
+
+func (r *CustomerInteractionRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.interactions, id)
+	return nil
+}

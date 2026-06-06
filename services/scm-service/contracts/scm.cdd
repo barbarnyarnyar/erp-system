@@ -23,26 +23,95 @@ struct ShipmentLineInput {
 }
 
 service SCM {
-    // -------------------------------------------------------------
+    // =============================================================
+    // ENUM DEFINITIONS
+    // =============================================================
+
+    enum ProductType {
+        RAW_MATERIAL
+        WORK_IN_PROGRESS
+        FINISHED_GOOD
+        CONSUMABLE
+        FIXED_ASSET
+    }
+
+    enum LocationType {
+        WAREHOUSE
+        RETAIL
+        TRANSIT
+        PRODUCTION
+    }
+
+    enum InventoryMovementType {
+        RECEIPT
+        ISSUE
+        TRANSFER
+        ADJUSTMENT
+    }
+
+    enum PurchaseRequisitionStatus {
+        DRAFT
+        SUBMITTED
+        APPROVED
+        REJECTED
+        CANCELLED
+    }
+
+    enum PurchaseOrderStatus {
+        DRAFT
+        SUBMITTED
+        APPROVED
+        SHIPPED
+        DELIVERED
+        CANCELLED
+    }
+
+    enum ReceiptStatus {
+        PENDING
+        RECEIVED
+        CANCELLED
+    }
+
+    enum ShipmentStatus {
+        PENDING
+        SHIPPED
+        DELIVERED
+        CANCELLED
+    }
+
+    enum StockTransferStatus {
+        PENDING
+        TRANSFERRED
+        CANCELLED
+    }
+
+    enum VendorContractStatus {
+        ACTIVE
+        EXPIRED
+        TERMINATED
+    }
+
+    // =============================================================
     // PRODUCT & SUPPLIER ENTITIES
     // -------------------------------------------------------------
+
     entity ProductCategory {
         id          uuid      @primary
         code        string    @unique
-        name        string
-        description string
+        name        string    @min_length(1) @max_length(100)
+        description string    @optional @max_length(500)
     }
 
     entity Product {
         id              uuid      @primary
         product_code    string    @unique
-        product_name    string
-        description     string
-        product_type    string    // e.g., RAW_MATERIAL, WORK_IN_PROGRESS, FINISHED_GOOD
+        product_name    string    @min_length(1) @max_length(200)
+        description     string    @optional @max_length(2000)
+        product_type    ProductType
         category_id     uuid      @reference(ProductCategory.id) @optional
-        unit_of_measure string
-        standard_cost   decimal
-        list_price      decimal
+        unit_of_measure string    @max_length(50)
+        standard_cost   decimal   @min(0)
+        list_price      decimal   @min(0)
         is_active       boolean
         created_at      timestamp
         updated_at      timestamp
@@ -51,8 +120,8 @@ service SCM {
     entity Location {
         id            uuid      @primary
         location_code string    @unique
-        location_name string
-        location_type string    // e.g., WAREHOUSE, RETAIL, TRANSIT
+        location_name string    @min_length(1) @max_length(200)
+        location_type LocationType
         is_active     boolean
         created_at    timestamp
         updated_at    timestamp
@@ -61,10 +130,10 @@ service SCM {
     entity Supplier {
         id            uuid      @primary
         supplier_code string    @unique
-        supplier_name string
-        contact_name  string
-        email         string
-        phone         string
+        supplier_name string    @min_length(1) @max_length(200)
+        contact_name  string    @optional @max_length(200)
+        email         string    @optional @pattern(email)
+        phone         string    @optional
         is_active     boolean
         created_at    timestamp
         updated_at    timestamp
@@ -76,8 +145,8 @@ service SCM {
         supplier_id     uuid      @reference(Supplier.id)
         start_date      date
         end_date        date
-        terms           string
-        status          string    // e.g., ACTIVE, EXPIRED, TERMINATED
+        terms           string    @max_length(5000)
+        status          VendorContractStatus
         created_at      timestamp
         updated_at      timestamp
     }
@@ -85,16 +154,17 @@ service SCM {
     // -------------------------------------------------------------
     // INVENTORY ENTITIES
     // -------------------------------------------------------------
+
     entity InventoryItem {
         id                 uuid      @primary
         product_id         uuid      @reference(Product.id)
         location_id        uuid      @reference(Location.id)
-        quantity_on_hand   integer
-        quantity_reserved   integer
-        quantity_available  integer
-        reorder_point      integer
-        maximum_stock      integer
-        unit_cost          decimal
+        quantity_on_hand   integer   @min(0)
+        quantity_reserved  integer   @min(0)
+        quantity_available integer   @min(0)
+        reorder_point      integer   @min(0)
+        maximum_stock      integer   @min(0)
+        unit_cost          decimal   @min(0)
         created_at         timestamp
         updated_at         timestamp
     }
@@ -103,12 +173,12 @@ service SCM {
         id            uuid      @primary
         product_id    uuid      @reference(Product.id)
         location_id   uuid      @reference(Location.id)
-        movement_type string    // e.g., RECEIPT, ISSUE, TRANSFER, ADJUSTMENT
+        movement_type InventoryMovementType
         quantity      integer
-        unit_cost     decimal
+        unit_cost     decimal   @min(0)
         reference_type string
         reference_id  string
-        notes         string
+        notes         string    @optional @max_length(500)
         created_at    timestamp
     }
 
@@ -117,8 +187,8 @@ service SCM {
         from_location_id uuid      @reference(Location.id)
         to_location_id   uuid      @reference(Location.id)
         product_id       uuid      @reference(Product.id)
-        quantity         integer
-        status           string    // e.g., PENDING, TRANSFERRED, CANCELLED
+        quantity         integer   @positive
+        status           StockTransferStatus
         transferred_at   timestamp @optional
         created_at       timestamp
         updated_at       timestamp
@@ -127,14 +197,15 @@ service SCM {
     // -------------------------------------------------------------
     // PURCHASING & REQUISITION ENTITIES
     // -------------------------------------------------------------
+
     entity PurchaseRequisition {
         id            uuid      @primary
         req_number    string    @unique
         requester_id  uuid      @reference(Employee.id)
         request_date  date
-        status        string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
-        total_amount  decimal
-        notes         string
+        status        PurchaseRequisitionStatus
+        total_amount  decimal   @min(0)
+        notes         string    @optional @max_length(1000)
         created_at    timestamp
         updated_at    timestamp
     }
@@ -143,9 +214,9 @@ service SCM {
         id                      uuid      @primary
         purchase_requisition_id uuid      @reference(PurchaseRequisition.id)
         product_id              uuid      @reference(Product.id)
-        quantity_requested      integer
-        estimated_unit_price    decimal
-        line_total              decimal
+        quantity_requested      integer   @positive
+        estimated_unit_price    decimal   @min(0)
+        line_total              decimal   @min(0)
     }
 
     entity PurchaseOrder {
@@ -154,9 +225,9 @@ service SCM {
         supplier_id       uuid      @reference(Supplier.id)
         order_date        date
         expected_delivery date
-        status            string    // e.g., DRAFT, SUBMITTED, APPROVED, SHIPPED, DELIVERED, CANCELLED
-        total_amount      decimal
-        notes             string
+        status            PurchaseOrderStatus
+        total_amount      decimal   @min(0)
+        notes             string    @optional @max_length(1000)
         created_at        timestamp
         updated_at        timestamp
     }
@@ -165,24 +236,25 @@ service SCM {
         id                uuid      @primary
         purchase_order_id uuid      @reference(PurchaseOrder.id)
         product_id        uuid      @reference(Product.id)
-        quantity_ordered  integer
-        quantity_received integer
-        unit_price        decimal
-        line_total        decimal
-        description       string
+        quantity_ordered  integer   @positive
+        quantity_received integer   @min(0)
+        unit_price        decimal   @min(0)
+        line_total        decimal   @min(0)
+        description       string    @optional @max_length(500)
         created_at        timestamp
     }
 
     // -------------------------------------------------------------
     // WAREHOUSE OPERATIONS ENTITIES
     // -------------------------------------------------------------
+
     entity Receipt {
         id                uuid      @primary
         receipt_number    string    @unique
         purchase_order_id uuid      @reference(PurchaseOrder.id) @optional
         received_date     timestamp
-        status            string    // e.g., PENDING, RECEIVED, CANCELLED
-        notes             string
+        status            ReceiptStatus
+        notes             string    @optional @max_length(500)
         created_at        timestamp
         updated_at        timestamp
     }
@@ -191,21 +263,21 @@ service SCM {
         id                uuid      @primary
         receipt_id        uuid      @reference(Receipt.id)
         product_id        uuid      @reference(Product.id)
-        quantity_received integer
-        unit_cost         decimal   // Landed cost (freight, duties)
+        quantity_received integer   @positive
+        unit_cost         decimal   @min(0)
         created_at        timestamp
     }
 
     entity Shipment {
         id                 uuid      @primary
         shipment_number    string    @unique
-        sales_order_id     uuid      @optional // Links outbound dispatch to CRM sales order
-        carrier            string
-        tracking_number    string
+        sales_order_id     uuid      @optional
+        carrier            string    @max_length(200)
+        tracking_number    string    @optional @max_length(200)
         shipped_date       timestamp
         estimated_delivery timestamp
-        status             string    // e.g., PENDING, SHIPPED, DELIVERED, CANCELLED
-        notes              string
+        status             ShipmentStatus
+        notes              string    @optional @max_length(500)
         created_at         timestamp
         updated_at         timestamp
     }
@@ -214,40 +286,233 @@ service SCM {
         id               uuid      @primary
         shipment_id      uuid      @reference(Shipment.id)
         product_id       uuid      @reference(Product.id)
-        quantity_shipped integer
+        quantity_shipped integer   @positive
         created_at       timestamp
     }
 
     // -------------------------------------------------------------
     // DEMAND PLANNING ENTITIES
     // -------------------------------------------------------------
+
     entity DemandForecast {
         id                uuid      @primary
         product_id        uuid      @reference(Product.id)
         forecast_date     date
-        forecast_quantity integer
-        confidence_level  decimal
-        notes             string
+        forecast_quantity integer   @min(0)
+        confidence_level  decimal   @min(0) @max(100)
+        notes             string    @optional @max_length(500)
         created_at        timestamp
         updated_at        timestamp
     }
 
     // -------------------------------------------------------------
+    // EVENT PAYLOAD DEFINITIONS
+    // -------------------------------------------------------------
+
+    event_payload ProductCreatedEvent {
+        product_id    uuid
+        product_code  string
+        product_name  string
+        created_at    timestamp
+    }
+
+    event_payload ProductUpdatedEvent {
+        product_id    uuid
+        product_name  string
+        updated_at    timestamp
+    }
+
+    event_payload ProductDiscontinuedEvent {
+        product_id      uuid
+        discontinued_at timestamp
+    }
+
+    event_payload InventoryReceivedEvent {
+        inventory_item_id uuid
+        product_id        uuid
+        location_id       uuid
+        quantity          integer
+        received_at       timestamp
+    }
+
+    event_payload InventoryShippedEvent {
+        inventory_item_id uuid
+        product_id        uuid
+        location_id       uuid
+        quantity          integer
+        shipped_at        timestamp
+    }
+
+    event_payload InventoryAdjustedEvent {
+        inventory_item_id uuid
+        product_id        uuid
+        location_id       uuid
+        adjustment        integer
+        adjusted_at       timestamp
+    }
+
+    event_payload InventoryLowStockEvent {
+        inventory_item_id uuid
+        product_id        uuid
+        location_id       uuid
+        current_quantity  integer
+        reorder_point     integer
+        detected_at       timestamp
+    }
+
+    event_payload InventoryOutOfStockEvent {
+        inventory_item_id uuid
+        product_id        uuid
+        location_id       uuid
+        detected_at       timestamp
+    }
+
+    event_payload InventoryValuedEvent {
+        total_value       decimal
+        valuation_date    timestamp
+    }
+
+    event_payload PurchaseOrderCreatedEvent {
+        po_id           uuid
+        supplier_id     uuid
+        total_amount    decimal
+        created_at      timestamp
+    }
+
+    event_payload PurchaseOrderSentEvent {
+        po_id           uuid
+        sent_at         timestamp
+    }
+
+    event_payload PurchaseOrderReceivedEvent {
+        po_id           uuid
+        received_at     timestamp
+    }
+
+    event_payload PurchaseOrderCancelledEvent {
+        po_id           uuid
+        cancelled_at    timestamp
+    }
+
+    event_payload VendorCreatedEvent {
+        supplier_id     uuid
+        supplier_name   string
+        created_at      timestamp
+    }
+
+    event_payload VendorUpdatedEvent {
+        supplier_id     uuid
+        updated_at      timestamp
+    }
+
+    event_payload VendorPerformanceEvaluatedEvent {
+        supplier_id     uuid
+        score           decimal
+        evaluated_at    timestamp
+    }
+
+    event_payload ShipmentCreatedEvent {
+        shipment_id     uuid
+        sales_order_id  uuid
+        created_at      timestamp
+    }
+
+    event_payload ShipmentDispatchedEvent {
+        shipment_id     uuid
+        dispatched_at   timestamp
+    }
+
+    event_payload ShipmentDeliveredEvent {
+        shipment_id     uuid
+        delivered_at    timestamp
+    }
+
+    event_payload ShipmentDelayedEvent {
+        shipment_id     uuid
+        delay_reason    string
+        detected_at     timestamp
+    }
+
+    event_payload SCMTrainingRequiredEvent {
+        employee_id     uuid
+        training_type   string
+        required_at     timestamp
+    }
+
+    event_payload MaterialDeliveredEvent {
+        material_id     uuid
+        quantity        integer
+        delivered_at    timestamp
+    }
+
+    event_payload SalesOrderCreatedEvent {
+        sales_order_id  uuid
+        customer_id     uuid
+        total_amount    decimal
+        created_at      timestamp
+    }
+
+    event_payload CustomerDemandForecastEvent {
+        customer_id     uuid
+        product_id      uuid
+        forecast_date   date
+        forecast_quantity integer
+        confidence_level decimal
+        created_at      timestamp
+    }
+
+    event_payload MaterialRequiredEvent {
+        production_order_id uuid
+        product_id          uuid
+        quantity            decimal
+        required_at         timestamp
+    }
+
+    event_payload MaterialConsumedEvent {
+        production_order_id uuid
+        component_product_id uuid
+        quantity            decimal
+        consumed_at         timestamp
+    }
+
+    event_payload ProductionCompletedEvent {
+        production_order_id uuid
+        product_id          uuid
+        quantity            integer
+        completed_at        timestamp
+    }
+
+    event_payload VendorPaymentProcessedEvent {
+        payment_id    uuid
+        supplier_id   uuid
+        amount        decimal
+        processed_at  timestamp
+    }
+
+    event_payload MaterialRequestedEvent {
+        project_id    uuid
+        product_id    uuid
+        quantity      integer
+        requested_at  timestamp
+    }
+
+    // -------------------------------------------------------------
     // SUBDOMAIN SERVICES (COMPONENTS)
     // -------------------------------------------------------------
+
     component ProductManagementService {
         description: "Manages catalog products, categories, and variants"
 
         func listProducts(): list<Product> {
             description: "List all products"
         }
-        func createProduct(code: string, name: string, desc: string, pType: string, uom: string, cost: decimal, price: decimal, categoryId: string): Product {
+        func createProduct(code: string, name: string, desc: string, pType: ProductType, uom: string, cost: decimal, price: decimal, categoryId: string): Product {
             description: "Create a new product"
         }
         func getProduct(id: string): Product {
             description: "Get product details"
         }
-        func updateProduct(id: string, code: string, name: string, desc: string, pType: string, uom: string, cost: decimal, price: decimal, isActive: boolean, categoryId: string): Product {
+        func updateProduct(id: string, code: string, name: string, desc: string, pType: ProductType, uom: string, cost: decimal, price: decimal, isActive: boolean, categoryId: string): Product {
             description: "Update product details"
         }
         func deleteProduct(id: string): void {
@@ -272,7 +537,6 @@ service SCM {
 
     component SupplierManagementService {
         description: "Manages SCM vendors, supplier qualifications, and contracts"
-        // NOTE: SCM owns Supplier master data; FM references supplier_id cross-service.
 
         func listSuppliers(): list<Supplier> {
             description: "List all suppliers"
@@ -298,7 +562,7 @@ service SCM {
         func getContract(id: string): VendorContract {
             description: "Get vendor contract details"
         }
-        func updateContract(id: string, contractNum: string, supplierId: string, startDate: timestamp, endDate: timestamp, terms: string, status: string): VendorContract {
+        func updateContract(id: string, contractNum: string, supplierId: string, startDate: timestamp, endDate: timestamp, terms: string, status: VendorContractStatus): VendorContract {
             description: "Update vendor contract details"
         }
         func deleteContract(id: string): void {
@@ -330,7 +594,7 @@ service SCM {
         func getPurchaseOrder(id: string): PurchaseOrder {
             description: "Get purchase order details"
         }
-        func updatePurchaseOrderStatus(id: string, status: string): PurchaseOrder {
+        func updatePurchaseOrderStatus(id: string, status: PurchaseOrderStatus): PurchaseOrder {
             description: "Update purchase order status"
         }
     }
@@ -350,7 +614,7 @@ service SCM {
         func updateInventoryItem(id: string, qtyOnHand: integer, qtyReserved: integer, reorderPoint: integer, maxStock: integer, cost: decimal): InventoryItem {
             description: "Update inventory item record"
         }
-        func adjustInventory(productId: string, locationId: string, qty: integer, movementType: string, notes: string): InventoryItem {
+        func adjustInventory(productId: string, locationId: string, qty: integer, movementType: InventoryMovementType, notes: string): InventoryItem {
             description: "Log inventory adjustment movement and update stock level"
         }
         func reserveStock(productId: string, locationId: string, quantity: integer, referenceId: string): void {
@@ -394,7 +658,7 @@ service SCM {
         func getShipment(id: string): Shipment {
             description: "Get shipment details"
         }
-        func updateShipmentStatus(id: string, status: string): Shipment {
+        func updateShipmentStatus(id: string, status: ShipmentStatus): Shipment {
             description: "Update shipment status (dispatched, delivered)"
         }
     }
@@ -431,54 +695,37 @@ service SCM {
     // KAFKA PUB/SUB EVENT TOPICS
     // -------------------------------------------------------------
     producer_events {
-        // Product Events
         scm.product.created: ProductCreatedEvent
         scm.product.updated: ProductUpdatedEvent
         scm.product.discontinued: ProductDiscontinuedEvent
-
-        // Inventory Events
         scm.inventory.received: InventoryReceivedEvent
         scm.inventory.shipped: InventoryShippedEvent
         scm.inventory.adjusted: InventoryAdjustedEvent
         scm.inventory.low.stock: InventoryLowStockEvent
         scm.inventory.out.of.stock: InventoryOutOfStockEvent
         scm.inventory.valued: InventoryValuedEvent
-
-        // Purchase Events
         scm.purchase.order.created: PurchaseOrderCreatedEvent
         scm.purchase.order.sent: PurchaseOrderSentEvent
         scm.purchase.order.received: PurchaseOrderReceivedEvent
         scm.purchase.order.cancelled: PurchaseOrderCancelledEvent
-
-        // Vendor Events
         scm.vendor.created: VendorCreatedEvent
         scm.vendor.updated: VendorUpdatedEvent
         scm.vendor.performance.evaluated: VendorPerformanceEvaluatedEvent
-
-        // Shipment Events
         scm.shipment.created: ShipmentCreatedEvent
         scm.shipment.dispatched: ShipmentDispatchedEvent
         scm.shipment.delivered: ShipmentDeliveredEvent
         scm.shipment.delayed: ShipmentDelayedEvent
-
         scm.training.required: SCMTrainingRequiredEvent
         scm.material.delivered: MaterialDeliveredEvent
     }
 
     consumer_events {
-        // From CRM Module
         crm.sales.order.created: SalesOrderCreatedEvent
         crm.customer.demand.forecast: CustomerDemandForecastEvent
-
-        // From Manufacturing Module
         mfg.material.required: MaterialRequiredEvent
         mfg.material.consumed: MaterialConsumedEvent
         mfg.production.completed: ProductionCompletedEvent
-
-        // From Financial Module
         fin.vendor.payment.processed: VendorPaymentProcessedEvent
-
-        // From Project Module
         prj.material.requested: MaterialRequestedEvent
     }
 }

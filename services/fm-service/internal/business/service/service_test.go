@@ -138,6 +138,12 @@ func TestGeneralLedgerService_UpdateJournalEntry(t *testing.T) {
 		t.Fatalf("unexpected error creating entry: %v", err)
 	}
 
+	storedEntry, storedLines, _ := entries.GetByID(ctx, entry.ID)
+	storedEntry.Status = string(domain.JournalEntryStatusPending)
+	if err := entries.Update(ctx, storedEntry, storedLines); err != nil {
+		t.Fatalf("failed to flip entry to PENDING: %v", err)
+	}
+
 	// Verify initial balances
 	accA, _ = accounts.GetByID(ctx, accA.ID)
 	accB, _ = accounts.GetByID(ctx, accB.ID)

@@ -20,17 +20,20 @@ type SalesOrderItemInput struct {
 type SalesOrderService struct {
 	orderRepo     domain.SalesOrderRepository
 	orderItemRepo domain.SalesOrderItemRepository
+	customerRepo  domain.CustomerRepository
 	publisher     domain.EventPublisher
 }
 
 func NewSalesOrderService(
 	orderRepo domain.SalesOrderRepository,
 	orderItemRepo domain.SalesOrderItemRepository,
+	customerRepo domain.CustomerRepository,
 	publisher domain.EventPublisher,
 ) *SalesOrderService {
 	return &SalesOrderService{
 		orderRepo:     orderRepo,
 		orderItemRepo: orderItemRepo,
+		customerRepo:  customerRepo,
 		publisher:     publisher,
 	}
 }
@@ -147,6 +150,51 @@ func (s *SalesOrderService) UpdateSalesOrder(ctx context.Context, id string, sta
 		}); err != nil {
 			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderCancelled, err)
 		}
+	}
+
+	return order, nil
+}
+
+func (s *SalesOrderService) ConfirmSalesOrder(ctx context.Context, id string) (*domain.SalesOrder, error) {
+	order, err := s.orderRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, domain.ErrOrderNotFound
+	}
+
+	if !order.CanConfirm() {
+		return nil, domain.ErrOrderNotConfirmable
+	}
+
+	customer, err := s.customerRepo.GetByID(ctx, order.CustomerID)
+	if err != nil {
+		return nil, domain.ErrCustomerNotFound
+	}
+	if customer.Status != domain.CustomerStatusActive {
+		return nil, domain.ErrCustomerNotActive
+	}
+
+	items, err := s.orderItemRepo.ListByOrderID(ctx, order.ID)
+	if err != nil || len(items) == 0 {
+		return nil, domain.ErrOrderHasNoItems
+	}
+	for _, it := range items {
+		if it.Quantity <= 0 {
+			return nil, domain.ErrInvalidItemQuantity
+		}
+	}
+
+	order.MarkConfirmed(time.Now())
+	if err := s.orderRepo.Update(ctx, order); err != nil {
+		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderConfirmed, order.ID, domain.SalesOrderConfirmedEvent{
+		SalesOrderID: order.ID,
+		CustomerID:   order.CustomerID,
+		TotalAmount:  order.TotalAmount,
+		Timestamp:    time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderConfirmed, err)
 	}
 
 	return order, nil

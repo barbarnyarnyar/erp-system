@@ -21,14 +21,63 @@ struct InvoiceLineInput {
 }
 
 service FM {
-    // -------------------------------------------------------------
+    // =============================================================
+    // ENUM DEFINITIONS
+    // =============================================================
+
+    enum AccountType {
+        ASSET
+        LIABILITY
+        EQUITY
+        REVENUE
+        EXPENSE
+    }
+
+    enum JournalEntryStatus {
+        DRAFT
+        PENDING
+        POSTED
+        REVERSED
+    }
+
+    enum InvoiceStatus {
+        DRAFT
+        SENT
+        PAID
+        OVERDUE
+        VOID
+    }
+
+    enum PaymentStatus {
+        PENDING
+        COMPLETED
+        FAILED
+    }
+
+    enum PaymentMethod {
+        CASH
+        CHECK
+        BANK_TRANSFER
+        CARD
+    }
+
+    enum VendorBillStatus {
+        DRAFT
+        MATCHED
+        APPROVED
+        PAID
+        VOID
+    }
+
+    // =============================================================
     // PREREQUISITE REFERENCES / INDEPENDENT TABLES
-    // -------------------------------------------------------------
+    // =============================================================
+
     entity CurrencyRate {
         id             uuid      @primary
-        from_currency  string
-        to_currency    string
-        rate           decimal
+        from_currency  string    @min(3) @max(3)
+        to_currency    string    @min(3) @max(3)
+        rate           decimal   @positive
         effective_date date
     }
 
@@ -43,8 +92,8 @@ service FM {
     entity CostCenter {
         id             uuid      @primary
         code           string    @unique
-        name           string
-        description    string
+        name           string    @min_length(1) @max_length(100)
+        description    string    @optional @max_length(500)
         manager_id     uuid      @optional
         is_active      boolean
     }
@@ -52,25 +101,23 @@ service FM {
     entity TaxRate {
         id             uuid      @primary
         code           string    @unique
-        name           string
-        rate           decimal
+        name           string    @min_length(1) @max_length(100)
+        rate           decimal   @min(0) @max(100)
         is_active      boolean
     }
-
-    // NOTE: SCM owns Supplier master data (contracts, lead times, etc.); FM references supplier_id cross-service.
 
     entity BankAccount {
         id             uuid      @primary
         account_number string    @unique
-        bank_name      string
-        currency       string
+        bank_name      string    @min_length(1) @max_length(200)
+        currency       string    @min(3) @max(3)
         current_balance decimal
     }
 
     entity CustomerCredit {
         id             uuid      @primary
         customer_id    uuid      @unique
-        credit_limit   decimal
+        credit_limit   decimal   @min(0)
         current_balance decimal
         is_on_hold     boolean
         updated_at     timestamp
@@ -79,14 +126,15 @@ service FM {
     // -------------------------------------------------------------
     // ACCOUNTS & BUDGETS
     // -------------------------------------------------------------
+
     entity Account {
         id             uuid      @primary
         account_number string    @unique
-        name           string
-        type           string    // e.g., ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+        name           string    @min_length(1) @max_length(200)
+        type           AccountType
         parent_id      uuid      @reference(Account.id) @optional
         balance        decimal
-        currency       string    // e.g., "USD", "EUR"
+        currency       string    @min(3) @max(3)
         is_active      boolean
         created_at     timestamp
         updated_at     timestamp
@@ -97,9 +145,9 @@ service FM {
         account_id       uuid      @reference(Account.id)
         cost_center_id   uuid      @reference(CostCenter.id) @optional
         fiscal_year      integer
-        period           integer   // Month 1-12
-        allocated_amount decimal
-        spent_amount     decimal
+        period           integer   @min(1) @max(12)
+        allocated_amount decimal   @min(0)
+        spent_amount     decimal   @min(0)
         created_at       timestamp
         updated_at       timestamp
     }
@@ -107,44 +155,46 @@ service FM {
     // -------------------------------------------------------------
     // GENERAL LEDGER
     // -------------------------------------------------------------
+
     entity JournalEntry {
         id          uuid      @primary
         reference   string    @unique
         date        timestamp
-        description string
-        status      string    // e.g., PENDING, POSTED, REVERSED
+        description string    @max_length(1000)
+        status      JournalEntryStatus
         created_by  string
+        posted_by   string    @optional
+        posted_at   timestamp @optional
         reversed_by uuid      @reference(JournalEntry.id) @optional
         created_at  timestamp
-        updated_at  timestamp
     }
 
     entity JournalEntryLine {
         id             uuid      @primary
         entry_id       uuid      @reference(JournalEntry.id)
         account_id     uuid      @reference(Account.id)
-        debit_amount   decimal
-        credit_amount  decimal
-        description    string
+        debit_amount   decimal   @min(0)
+        credit_amount  decimal   @min(0)
+        description    string    @max_length(500)
         cost_center_id uuid      @reference(CostCenter.id) @optional
         created_at     timestamp
     }
 
-    // NOTE: Transaction & TransactionLine are a legacy GL entry type (pre-dates JournalEntry).
-    // Both are fully implemented with repo + memory and kept for backward compatibility.
-    // New code should prefer JournalEntry/JournalEntryLine.
+    // Legacy entities - Deprecated
     entity Transaction {
+        @deprecated("Use JournalEntry instead. Will be removed in v2.0.")
         id          uuid      @primary
         reference   string    @unique
         date        timestamp
         description string
-        status      string    // PENDING, POSTED, REVERSED
+        status      string
         created_by  string
         created_at  timestamp
         updated_at  timestamp
     }
 
     entity TransactionLine {
+        @deprecated("Use JournalEntryLine instead. Will be removed in v2.0.")
         id             uuid      @primary
         transaction_id uuid      @reference(Transaction.id)
         account_id     uuid      @reference(Account.id)
@@ -157,15 +207,16 @@ service FM {
     // -------------------------------------------------------------
     // ACCOUNTS RECEIVABLE (AR)
     // -------------------------------------------------------------
+
     entity Invoice {
         id             uuid      @primary
         customer_id    uuid
         invoice_number string    @unique
         issue_date     date
         due_date       date
-        total_amount   decimal
-        tax_amount     decimal
-        status         string    // e.g., DRAFT, SENT, PAID, OVERDUE, VOID
+        total_amount   decimal   @positive
+        tax_amount     decimal   @min(0)
+        status         InvoiceStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -173,26 +224,27 @@ service FM {
     entity InvoiceLine {
         id             uuid      @primary
         invoice_id     uuid      @reference(Invoice.id)
-        description    string
-        quantity       integer
-        unit_price     decimal
+        description    string    @max_length(500)
+        quantity       integer   @positive
+        unit_price     decimal   @min(0)
         tax_rate_id    uuid      @reference(TaxRate.id) @optional
-        line_total     decimal
+        line_total     decimal   @min(0)
     }
 
     // -------------------------------------------------------------
     // ACCOUNTS PAYABLE (AP)
     // -------------------------------------------------------------
+
     entity VendorBill {
         id             uuid      @primary
         supplier_id    uuid      @reference(Supplier.id)
         bill_number    string
-        purchase_order_id uuid     @optional
+        purchase_order_id uuid   @optional
         issue_date     date
         due_date       date
-        total_amount   decimal
-        tax_amount     decimal
-        status         string    // e.g., DRAFT, MATCHED, APPROVED, PAID, VOID
+        total_amount   decimal   @positive
+        tax_amount     decimal   @min(0)
+        status         VendorBillStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -200,26 +252,27 @@ service FM {
     entity VendorBillLine {
         id             uuid      @primary
         bill_id        uuid      @reference(VendorBill.id)
-        description    string
-        quantity       integer
-        unit_price     decimal
+        description    string    @max_length(500)
+        quantity       integer   @positive
+        unit_price     decimal   @min(0)
         tax_rate_id    uuid      @reference(TaxRate.id) @optional
-        line_total     decimal
+        line_total     decimal   @min(0)
     }
 
     // -------------------------------------------------------------
     // PAYMENTS
     // -------------------------------------------------------------
+
     entity Payment {
         id             uuid      @primary
         invoice_id     uuid      @reference(Invoice.id) @optional
         bill_id        uuid      @reference(VendorBill.id) @optional
-        bank_account_id uuid      @reference(BankAccount.id) @optional
+        bank_account_id uuid     @reference(BankAccount.id) @optional
         payment_number string    @unique
         payment_date   date
-        amount         decimal
-        payment_method string    // e.g., CASH, CHECK, BANK_TRANSFER, CARD
-        status         string    // e.g., PENDING, COMPLETED, FAILED
+        amount         decimal   @positive
+        payment_method PaymentMethod
+        status         PaymentStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -227,9 +280,10 @@ service FM {
     // -------------------------------------------------------------
     // BANK STATEMENTS & CASH MANAGEMENT
     // -------------------------------------------------------------
+
     entity BankStatement {
         id             uuid      @primary
-        bank_account_id uuid      @reference(BankAccount.id)
+        bank_account_id uuid     @reference(BankAccount.id)
         statement_date date
         ending_balance decimal
         is_reconciled  boolean
@@ -239,9 +293,160 @@ service FM {
         id             uuid      @primary
         statement_id   uuid      @reference(BankStatement.id)
         transaction_date date
-        description    string
+        description    string    @max_length(500)
         amount         decimal
         is_matched     boolean
+    }
+
+    // -------------------------------------------------------------
+    // EVENT PAYLOAD DEFINITIONS
+    // -------------------------------------------------------------
+
+    event_payload InvoiceEventPayload {
+        invoice_id    uuid
+        customer_id   uuid
+        invoice_number string
+        total_amount  decimal
+        tax_amount    decimal
+        status        InvoiceStatus
+        created_at    timestamp
+    }
+
+    event_payload PaymentEventPayload {
+        payment_id    uuid
+        invoice_id    uuid
+        bill_id       uuid
+        amount        decimal
+        payment_method PaymentMethod
+        status        PaymentStatus
+        created_at    timestamp
+    }
+
+    event_payload BudgetEventPayload {
+        budget_id       uuid
+        account_id      uuid
+        fiscal_year     integer
+        period          integer
+        allocated_amount decimal
+        spent_amount    decimal
+        created_at      timestamp
+    }
+
+    event_payload BudgetApprovedEvent {
+        budget_id       uuid
+        account_id      uuid
+        approved_by     string
+        approved_at     timestamp
+    }
+
+    event_payload VendorBillEventPayload {
+        bill_id       uuid
+        supplier_id   uuid
+        bill_number   string
+        total_amount  decimal
+        status        VendorBillStatus
+        created_at    timestamp
+    }
+
+    event_payload AccountEventPayload {
+        account_id      uuid
+        account_number  string
+        name            string
+        type            AccountType
+        balance         decimal
+        created_at      timestamp
+    }
+
+    event_payload EmployeeCreatedEvent {
+        employee_id   uuid
+        first_name    string
+        last_name     string
+        department_id uuid
+        created_at    timestamp
+    }
+
+    event_payload PayrollProcessedEvent {
+        payroll_id    uuid
+        employee_id   uuid
+        net_pay       decimal
+        pay_period_start date
+        pay_period_end   date
+        processed_at  timestamp
+    }
+
+    event_payload ExpenseSubmittedEvent {
+        expense_claim_id uuid
+        employee_id      uuid
+        total_amount     decimal
+        submitted_at     timestamp
+    }
+
+    event_payload PurchaseOrderCreatedEvent {
+        po_id         uuid
+        supplier_id   uuid
+        total_amount  decimal
+        created_at    timestamp
+    }
+
+    event_payload InvoiceReceivedEvent {
+        invoice_id    uuid
+        supplier_id   uuid
+        total_amount  decimal
+        received_at   timestamp
+    }
+
+    event_payload InventoryValuedEvent {
+        total_value   decimal
+        valuation_date timestamp
+    }
+
+    event_payload SalesOrderConfirmedEvent {
+        sales_order_id uuid
+        customer_id    uuid
+        total_amount   decimal
+        confirmed_at   timestamp
+    }
+
+    event_payload CustomerCreatedEvent {
+        customer_id   uuid
+        company_name  string
+        email         string
+        created_at    timestamp
+    }
+
+    event_payload ProductionCompletedEvent {
+        production_order_id uuid
+        product_id          uuid
+        quantity            integer
+        completed_at        timestamp
+    }
+
+    event_payload MaterialConsumedEvent {
+        production_order_id uuid
+        component_product_id uuid
+        quantity            decimal
+        consumed_at         timestamp
+    }
+
+    event_payload ProjectCreatedEvent {
+        project_id  uuid
+        name        string
+        created_at  timestamp
+    }
+
+    event_payload TimeLoggedEvent {
+        time_entry_id uuid
+        employee_id   uuid
+        project_id    uuid
+        hours         decimal
+        logged_at     timestamp
+    }
+
+    event_payload ProjectExpenseIncurredEvent {
+        expense_id  uuid
+        project_id  uuid
+        amount      decimal
+        incurred_at timestamp
     }
 
     // -------------------------------------------------------------
@@ -254,13 +459,13 @@ service FM {
         func listAccounts(): list<Account> {
             description: "List all general ledger accounts"
         }
-        func createAccount(accountNumber: string, name: string, type: string, parentId: string, currency: string): Account {
+        func createAccount(accountNumber: string, name: string, type: AccountType, parentId: string, currency: string): Account {
             description: "Create a new general ledger account"
         }
         func getAccount(id: string): Account {
             description: "Get account details by ID"
         }
-        func updateAccount(id: string, name: string, type: string, parentId: string, isActive: boolean): Account {
+        func updateAccount(id: string, name: string, type: AccountType, parentId: string, isActive: boolean): Account {
             description: "Update account details"
         }
         func deleteAccount(id: string): void {
@@ -335,7 +540,7 @@ service FM {
     component CashManagementService {
         description: "Manages bank reconciliation and cash flow projections"
 
-        func recordPayment(invoiceId: string, billId: string, paymentDate: date, amount: decimal, paymentMethod: string): Payment {
+        func recordPayment(invoiceId: string, billId: string, paymentDate: date, amount: decimal, paymentMethod: PaymentMethod): Payment {
             description: "Record a payment (either incoming AR or outgoing AP)"
         }
         func listPayments(): list<Payment> {
@@ -419,4 +624,3 @@ service FM {
         prj.expense.incurred: ProjectExpenseIncurredEvent
     }
 }
-

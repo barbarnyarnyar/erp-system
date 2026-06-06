@@ -51,7 +51,7 @@ func TestLeadService_ConvertLead_Success(t *testing.T) {
 	publisher := &MockPublisher{}
 
 	custSvc := service.NewCustomerService(custRepo, publisher)
-	oppSvc := service.NewOpportunityService(oppRepo, publisher)
+	oppSvc := service.NewOpportunityService(oppRepo, memory.NewOpportunityStageHistoryRepository(), publisher)
 	leadSvc := service.NewLeadService(leadRepo, custSvc, oppSvc, publisher)
 
 	ctx := context.Background()
@@ -100,7 +100,7 @@ func TestLeadService_ConvertLead_RollbackOnOpportunityFailure(t *testing.T) {
 	publisher := &MockPublisher{}
 
 	custSvc := service.NewCustomerService(custRepo, publisher)
-	oppSvc := service.NewOpportunityService(oppRepo, publisher)
+	oppSvc := service.NewOpportunityService(oppRepo, memory.NewOpportunityStageHistoryRepository(), publisher)
 	leadSvc := service.NewLeadService(leadRepo, custSvc, oppSvc, publisher)
 
 	ctx := context.Background()
@@ -144,7 +144,7 @@ func TestLeadService_ConvertLead_RollbackOnPublishFailure(t *testing.T) {
 	publisher := &MockPublisher{FailPublish: true}
 
 	custSvc := service.NewCustomerService(custRepo, publisher)
-	oppSvc := service.NewOpportunityService(oppRepo, publisher)
+	oppSvc := service.NewOpportunityService(oppRepo, memory.NewOpportunityStageHistoryRepository(), publisher)
 	leadSvc := service.NewLeadService(leadRepo, custSvc, oppSvc, publisher)
 
 	ctx := context.Background()

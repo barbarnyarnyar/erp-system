@@ -186,10 +186,10 @@ type SalesOrderCreatedEvent struct {
 }
 
 type CustomerDemandForecastEvent struct {
-	ProductID        string    `json:"product_id"`
-	ForecastDate     time.Time `json:"forecast_date"`
-	ForecastQuantity int       `json:"forecast_quantity"`
-	ConfidenceLevel  float64   `json:"confidence_level"`
+	ProductID        string          `json:"product_id"`
+	ForecastDate     time.Time       `json:"forecast_date"`
+	ForecastQuantity int             `json:"forecast_quantity"`
+	ConfidenceLevel  decimal.Decimal `json:"confidence_level"`
 	Timestamp        time.Time `json:"timestamp"`
 }
 

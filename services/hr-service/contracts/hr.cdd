@@ -4,14 +4,99 @@ struct ExpenseClaimLineInput {
 }
 
 service HR {
-    // -------------------------------------------------------------
+    // =============================================================
+    // ENUM DEFINITIONS
+    // =============================================================
+
+    enum EmployeeStatus {
+        ACTIVE
+        TERMINATED
+        LEAVE
+        SUSPENDED
+    }
+
+    enum LeaveType {
+        ANNUAL
+        SICK
+        UNPAID
+        MATERNITY
+        PATERNITY
+    }
+
+    enum LeaveRequestStatus {
+        PENDING
+        APPROVED
+        REJECTED
+        CANCELLED
+    }
+
+    enum PayrollStatus {
+        DRAFT
+        APPROVED
+        PAID
+        FAILED
+    }
+
+    enum TimesheetStatus {
+        SUBMITTED
+        APPROVED
+        REJECTED
+    }
+
+    enum RecruitmentStatus {
+        DRAFT
+        OPEN
+        CLOSED
+        ON_HOLD
+    }
+
+    enum ApplicationStatus {
+        APPLIED
+        SCREENING
+        INTERVIEW
+        OFFER
+        REJECTED
+        WITHDRAWN
+    }
+
+    enum PerformanceReviewStatus {
+        DRAFT
+        SUBMITTED
+        ACKNOWLEDGED
+    }
+
+    enum TrainingStatus {
+        SCHEDULED
+        ACTIVE
+        COMPLETED
+        CANCELLED
+    }
+
+    enum DocumentType {
+        CONTRACT
+        ID_PROOF
+        CERTIFICATE
+        PERFORMANCE_REVIEW
+        OTHER
+    }
+
+    enum ExpenseClaimStatus {
+        DRAFT
+        SUBMITTED
+        APPROVED
+        REJECTED
+        PAID
+    }
+
+    // =============================================================
     // ORGANIZATIONAL ENTITIES
     // -------------------------------------------------------------
+
     entity Department {
         id             uuid      @primary
         code           string    @unique
-        name           string
-        description    string
+        name           string    @min_length(1) @max_length(100)
+        description    string    @optional @max_length(500)
         manager_id     uuid      @optional
         parent_dept_id uuid      @reference(Department.id) @optional
         is_active      boolean
@@ -22,11 +107,11 @@ service HR {
     entity Position {
         id            uuid      @primary
         code          string    @unique
-        title         string
-        description   string
+        title         string    @min_length(1) @max_length(100)
+        description   string    @optional @max_length(500)
         department_id uuid      @reference(Department.id)
-        min_salary    decimal
-        max_salary    decimal
+        min_salary    decimal   @min(0)
+        max_salary    decimal   @min(0)
         is_active     boolean
         created_at    timestamp
         updated_at    timestamp
@@ -35,17 +120,17 @@ service HR {
     entity Employee {
         id            uuid      @primary
         employee_id   string    @unique
-        first_name    string
-        last_name     string
-        email         string    @unique
-        phone         string
+        first_name    string    @min_length(1) @max_length(100)
+        last_name     string    @min_length(1) @max_length(100)
+        email         string    @unique @pattern(email)
+        phone         string    @optional
         hire_date     date
         term_date     date      @optional
         department_id uuid      @reference(Department.id)
         position_id   uuid      @reference(Position.id)
         manager_id    uuid      @reference(Employee.id) @optional
-        status        string    // e.g., ACTIVE, TERMINATED, LEAVE
-        salary        decimal
+        status        EmployeeStatus
+        salary        decimal   @min(0)
         created_at    timestamp
         updated_at    timestamp
     }
@@ -53,25 +138,26 @@ service HR {
     entity EmployeeCompensationHistory {
         id             uuid      @primary
         employee_id    uuid      @reference(Employee.id)
-        salary         decimal
+        salary         decimal   @min(0)
         effective_date date
-        changed_by     uuid      // Auth User ID reference
+        changed_by     uuid
         created_at     timestamp
     }
 
     // -------------------------------------------------------------
     // PAYROLL & TIME ENTRY ENTITIES
     // -------------------------------------------------------------
+
     entity PayrollRecord {
         id                uuid      @primary
         employee_id       uuid      @reference(Employee.id)
         pay_period_start  date
         pay_period_end    date
-        regular_hours     decimal
-        overtime_hours    decimal
-        gross_pay         decimal
-        net_pay           decimal
-        status            string    // e.g., DRAFT, APPROVED, PAID
+        regular_hours     decimal   @min(0)
+        overtime_hours    decimal   @min(0)
+        gross_pay         decimal   @min(0)
+        net_pay           decimal   @min(0)
+        status            PayrollStatus
         created_at        timestamp
         updated_at        timestamp
     }
@@ -79,8 +165,8 @@ service HR {
     entity PayrollDeduction {
         id                uuid      @primary
         payroll_id        uuid      @reference(PayrollRecord.id)
-        type              string
-        amount            decimal
+        type              string    @max_length(100)
+        amount            decimal   @min(0)
     }
 
     entity AttendanceEntry {
@@ -88,10 +174,10 @@ service HR {
         employee_id uuid      @reference(Employee.id)
         entry_date  date
         clock_in    timestamp
-        clock_out   timestamp
-        total_hours decimal
-        notes       string
-        status      string    // e.g., SUBMITTED, APPROVED, REJECTED
+        clock_out   timestamp @optional
+        total_hours decimal   @min(0)
+        notes       string    @optional @max_length(500)
+        status      TimesheetStatus
         project_id  uuid      @reference(Project.id) @optional
         task_id     uuid      @reference(Task.id) @optional
         created_at  timestamp
@@ -101,14 +187,15 @@ service HR {
     // -------------------------------------------------------------
     // LEAVE MANAGEMENT ENTITIES
     // -------------------------------------------------------------
+
     entity LeaveRequest {
         id             uuid      @primary
         employee_id    uuid      @reference(Employee.id)
-        leave_type     string    // e.g., ANNUAL, SICK, UNPAID
+        leave_type     LeaveType
         start_date     date
         end_date       date
-        reason         string
-        status         string    // e.g., PENDING, APPROVED, REJECTED
+        reason         string    @optional @max_length(1000)
+        status         LeaveRequestStatus
         approved_by    uuid      @reference(Employee.id) @optional
         created_at     timestamp
         updated_at     timestamp
@@ -117,23 +204,24 @@ service HR {
     entity LeaveBalance {
         id            uuid      @primary
         employee_id   uuid      @reference(Employee.id)
-        leave_type    string
-        entitled_days decimal
-        used_days     decimal
+        leave_type    LeaveType
+        entitled_days decimal   @min(0)
+        used_days     decimal   @min(0)
         year          integer
     }
 
     // -------------------------------------------------------------
     // RECRUITMENT ENTITIES
     // -------------------------------------------------------------
+
     entity JobPosting {
         id             uuid      @primary
-        title          string
-        description    string
+        title          string    @min_length(1) @max_length(200)
+        description    string    @max_length(5000)
         department_id  uuid      @reference(Department.id)
-        location       string
-        salary_range   string
-        status         string    // e.g., DRAFT, OPEN, CLOSED
+        location       string    @max_length(200)
+        salary_range   string    @optional @max_length(50)
+        status         RecruitmentStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -141,11 +229,11 @@ service HR {
     entity JobApplication {
         id             uuid      @primary
         job_posting_id uuid      @reference(JobPosting.id)
-        applicant_name string
-        email          string
-        phone          string
-        resume_url     string
-        status         string    // e.g., APPLIED, SCREENING, INTERVIEW, OFFER, REJECTED
+        applicant_name string    @min_length(1) @max_length(200)
+        email          string    @pattern(email)
+        phone          string    @optional
+        resume_url     string    @optional
+        status         ApplicationStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -153,6 +241,7 @@ service HR {
     // -------------------------------------------------------------
     // PERFORMANCE ENTITIES
     // -------------------------------------------------------------
+
     entity PerformanceReview {
         id             uuid      @primary
         employee_id    uuid      @reference(Employee.id)
@@ -160,10 +249,10 @@ service HR {
         review_date    date
         period_start   date
         period_end     date
-        rating         integer   // scale 1-5
-        rating_scale   string    // e.g., 1-5, 1-10
-        feedback       string
-        status         string    // e.g., DRAFT, SUBMITTED, ACKNOWLEDGED
+        rating         integer   @min(1) @max(5)
+        rating_scale   string    @max_length(10)
+        feedback       string    @max_length(2000)
+        status         PerformanceReviewStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -171,14 +260,15 @@ service HR {
     // -------------------------------------------------------------
     // TRAINING ENTITIES
     // -------------------------------------------------------------
+
     entity TrainingProgram {
         id             uuid      @primary
-        title          string
-        description    string
-        trainer        string
+        title          string    @min_length(1) @max_length(200)
+        description    string    @max_length(2000)
+        trainer        string    @max_length(200)
         start_date     date
         end_date       date
-        status         string    // e.g., SCHEDULED, ACTIVE, COMPLETED
+        status         TrainingStatus
         created_at     timestamp
         updated_at     timestamp
     }
@@ -195,11 +285,12 @@ service HR {
     // -------------------------------------------------------------
     // DOCUMENT STORAGE ENTITIES
     // -------------------------------------------------------------
+
     entity EmployeeDocument {
         id          uuid      @primary
         employee_id uuid      @reference(Employee.id)
-        doc_type    string    // e.g., CONTRACT, ID_PROOF, CERTIFICATE
-        file_name   string
+        doc_type    DocumentType
+        file_name   string    @max_length(255)
         file_url    string
         uploaded_at timestamp
     }
@@ -208,8 +299,8 @@ service HR {
         id           uuid      @primary
         employee_id  uuid      @reference(Employee.id)
         claim_date   date
-        status       string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
-        total_amount decimal
+        status       ExpenseClaimStatus
+        total_amount decimal   @min(0)
         created_at   timestamp
         updated_at   timestamp
     }
@@ -217,14 +308,200 @@ service HR {
     entity ExpenseClaimLine {
         id          uuid      @primary
         claim_id    uuid      @reference(ExpenseClaim.id)
-        description string
-        amount      decimal
+        description string    @max_length(500)
+        amount      decimal   @min(0)
     }
 
+    // -------------------------------------------------------------
+    // EVENT PAYLOAD DEFINITIONS
+    // -------------------------------------------------------------
+
+    event_payload EmployeeCreatedEvent {
+        employee_id   uuid
+        first_name    string
+        last_name     string
+        department_id uuid
+        position_id   uuid
+        created_at    timestamp
+    }
+
+    event_payload EmployeeUpdatedEvent {
+        employee_id   uuid
+        first_name    string
+        last_name     string
+        updated_at    timestamp
+    }
+
+    event_payload EmployeeTerminatedEvent {
+        employee_id   uuid
+        terminated_at timestamp
+    }
+
+    event_payload EmployeePromotedEvent {
+        employee_id    uuid
+        old_position_id uuid
+        new_position_id uuid
+        promoted_at    timestamp
+    }
+
+    event_payload PayrollProcessedEvent {
+        payroll_id    uuid
+        employee_id   uuid
+        net_pay       decimal
+        pay_period_start date
+        pay_period_end   date
+        processed_at  timestamp
+    }
+
+    event_payload PayrollFailedEvent {
+        payroll_id    uuid
+        employee_id   uuid
+        error_message string
+        failed_at     timestamp
+    }
+
+    event_payload SalaryChangedEvent {
+        employee_id   uuid
+        old_salary    decimal
+        new_salary    decimal
+        changed_by    uuid
+        changed_at    timestamp
+    }
+
+    event_payload TimesheetSubmittedEvent {
+        timesheet_id  uuid
+        employee_id   uuid
+        entry_date    date
+        total_hours   decimal
+        submitted_at  timestamp
+    }
+
+    event_payload TimesheetApprovedEvent {
+        timesheet_id  uuid
+        employee_id   uuid
+        approved_by   uuid
+        approved_at   timestamp
+    }
+
+    event_payload OvertimeRecordedEvent {
+        employee_id   uuid
+        hours         decimal
+        recorded_at   timestamp
+    }
+
+    event_payload LeaveRequestedEvent {
+        leave_request_id uuid
+        employee_id      uuid
+        leave_type       LeaveType
+        start_date       date
+        end_date         date
+        requested_at     timestamp
+    }
+
+    event_payload LeaveApprovedEvent {
+        leave_request_id uuid
+        employee_id      uuid
+        approved_by      uuid
+        approved_at      timestamp
+    }
+
+    event_payload LeaveRejectedEvent {
+        leave_request_id uuid
+        employee_id      uuid
+        rejected_by      uuid
+        rejected_at      timestamp
+    }
+
+    event_payload TrainingCompletedEvent {
+        training_id  uuid
+        employee_id  uuid
+        completed_at timestamp
+    }
+
+    event_payload CertificationEarnedEvent {
+        employee_id      uuid
+        certification    string
+        earned_at        timestamp
+    }
+
+    event_payload SkillAcquiredEvent {
+        employee_id uuid
+        skill       string
+        acquired_at timestamp
+    }
+
+    event_payload PerformanceReviewCompletedEvent {
+        review_id    uuid
+        employee_id  uuid
+        reviewer_id  uuid
+        rating       integer
+        completed_at timestamp
+    }
+
+    event_payload GoalAchievedEvent {
+        employee_id   uuid
+        goal          string
+        achieved_at   timestamp
+    }
+
+    event_payload PerformanceImprovementNeededEvent {
+        employee_id   uuid
+        review_id     uuid
+        identified_at timestamp
+    }
+
+    event_payload ExpenseSubmittedEvent {
+        expense_claim_id uuid
+        employee_id      uuid
+        total_amount     decimal
+        submitted_at     timestamp
+    }
+
+    event_payload EmployeeAvailableEvent {
+        employee_id   uuid
+        available_at  timestamp
+    }
+
+    event_payload EmployeeSkillsUpdatedEvent {
+        employee_id   uuid
+        skills        list<string>
+        updated_at    timestamp
+    }
+
+    event_payload ProjectCreatedEvent {
+        project_id  uuid
+        name        string
+        created_at  timestamp
+    }
+
+    event_payload TaskAssignedEvent {
+        task_id     uuid
+        employee_id uuid
+        assigned_at timestamp
+    }
+
+    event_payload BudgetAllocatedEvent {
+        budget_id      uuid
+        department_id  uuid
+        amount         decimal
+        allocated_at   timestamp
+    }
+
+    event_payload ProductionScheduledEvent {
+        production_order_id uuid
+        scheduled_date      timestamp
+    }
+
+    event_payload SCMTrainingRequiredEvent {
+        employee_id   uuid
+        training_type string
+        required_at   timestamp
+    }
 
     // -------------------------------------------------------------
     // SUBDOMAIN SERVICES (COMPONENTS)
     // -------------------------------------------------------------
+
     component EmployeeManagementService {
         description: "Manages employee lifecycles and positions"
 
@@ -237,7 +514,7 @@ service HR {
         func getEmployee(id: string): Employee {
             description: "Get employee details by ID"
         }
-        func updateEmployee(id: string, firstName: string, lastName: string, email: string, departmentId: string, positionId: string, salary: decimal, status: string): Employee {
+        func updateEmployee(id: string, firstName: string @optional, lastName: string @optional, email: string @optional, departmentId: string @optional, positionId: string @optional, status: EmployeeStatus @optional): Employee {
             description: "Update employee details"
         }
         func deleteEmployee(id: string): void {
@@ -260,7 +537,7 @@ service HR {
         func getPayrollRecord(id: string): PayrollRecord {
             description: "Get payroll record details"
         }
-        func updatePayrollRecord(id: string, status: string): PayrollRecord {
+        func updatePayrollRecord(id: string, status: PayrollStatus): PayrollRecord {
             description: "Update payroll record status"
         }
         func getEmployeePayroll(employeeId: string): list<PayrollRecord> {
@@ -294,13 +571,13 @@ service HR {
         func listLeaveRequests(): list<LeaveRequest> {
             description: "List all leave requests"
         }
-        func createLeaveRequest(employeeId: string, leaveType: string, startDate: date, endDate: date, reason: string): LeaveRequest {
+        func createLeaveRequest(employeeId: string, leaveType: LeaveType, startDate: date, endDate: date, reason: string): LeaveRequest {
             description: "Submit a new leave request"
         }
         func getLeaveRequest(id: string): LeaveRequest {
             description: "Get leave request details"
         }
-        func updateLeaveRequest(id: string, leaveType: string, startDate: date, endDate: date, reason: string): LeaveRequest {
+        func updateLeaveRequest(id: string, leaveType: LeaveType, startDate: date, endDate: date, reason: string): LeaveRequest {
             description: "Update details of a leave request"
         }
         func approveLeaveRequest(id: string, approvedBy: string): LeaveRequest {
@@ -323,7 +600,7 @@ service HR {
         func getJobPosting(id: string): JobPosting {
             description: "Get job posting details"
         }
-        func updateJobPosting(id: string, title: string, description: string, location: string, salaryRange: string, status: string): JobPosting {
+        func updateJobPosting(id: string, title: string, description: string, location: string, salaryRange: string, status: RecruitmentStatus): JobPosting {
             description: "Update job posting details"
         }
         func deleteJobPosting(id: string): void {
@@ -338,7 +615,7 @@ service HR {
         func getApplication(id: string): JobApplication {
             description: "Get application details"
         }
-        func updateApplication(id: string, status: string): JobApplication {
+        func updateApplication(id: string, status: ApplicationStatus): JobApplication {
             description: "Update recruitment application status"
         }
     }
@@ -372,7 +649,7 @@ service HR {
         func getTrainingProgram(id: string): TrainingProgram {
             description: "Get training program details"
         }
-        func updateTrainingProgram(id: string, title: string, description: string, trainer: string, startDate: date, endDate: date, status: string): TrainingProgram {
+        func updateTrainingProgram(id: string, title: string, description: string, trainer: string, startDate: date, endDate: date, status: TrainingStatus): TrainingProgram {
             description: "Update details of a training program"
         }
         func enrollEmployee(trainingId: string, employeeId: string): TrainingEnrollment {
@@ -389,7 +666,7 @@ service HR {
         func listDocuments(employeeId: string): list<EmployeeDocument> {
             description: "List all documents for an employee"
         }
-        func uploadDocument(employeeId: string, docType: string, fileName: string, fileUrl: string): EmployeeDocument {
+        func uploadDocument(employeeId: string, docType: DocumentType, fileName: string, fileUrl: string): EmployeeDocument {
             description: "Attach a new document reference"
         }
         func deleteDocument(id: string): void {

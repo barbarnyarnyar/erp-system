@@ -88,6 +88,7 @@ type UpdateOpportunityReq struct {
 	Status      string          `json:"status" binding:"required"`
 	Stage       string          `json:"stage" binding:"required"`
 	Probability decimal.Decimal `json:"probability" binding:"required"`
+	ChangedBy   string          `json:"changed_by" binding:"required"`
 }
 
 func (h *SalesOpportunityHandler) UpdateOpportunity(c *gin.Context) {
@@ -98,7 +99,7 @@ func (h *SalesOpportunityHandler) UpdateOpportunity(c *gin.Context) {
 		return
 	}
 
-	opp, err := h.oppSvc.UpdateOpportunity(c.Request.Context(), id, req.Title, req.Value, req.Status, req.Stage, req.Probability)
+	opp, err := h.oppSvc.UpdateOpportunity(c.Request.Context(), id, req.Title, req.Value, req.Status, req.Stage, req.Probability, req.ChangedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

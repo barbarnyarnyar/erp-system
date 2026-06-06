@@ -31,6 +31,7 @@ const (
 	TopicCrmEmailOpened            = "crm.email.opened"
 	TopicCrmEmailClicked           = "crm.email.clicked"
 	TopicCrmSalesOrderReceived     = "crm.sales.order.received"
+	TopicCrmCustomerInteractionLogged = "crm.customer.interaction.logged"
 
 	// Consumer Events
 	TopicScmInventoryAvailable   = "scm.inventory.available"

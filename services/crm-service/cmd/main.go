@@ -32,6 +32,7 @@ func main() {
 	custRepo := memory.NewCustomerRepository()
 	leadRepo := memory.NewLeadRepository()
 	oppRepo := memory.NewOpportunityRepository()
+	oppStageHistoryRepo := memory.NewOpportunityStageHistoryRepository()
 	orderRepo := memory.NewSalesOrderRepository()
 	orderItemRepo := memory.NewSalesOrderItemRepository()
 	quoteRepo := memory.NewQuoteRepository()
@@ -40,6 +41,7 @@ func main() {
 	priceListItemRepo := memory.NewPriceListItemRepository()
 	ticketRepo := memory.NewServiceTicketRepository()
 	campaignRepo := memory.NewCampaignRepository()
+	custInteractionRepo := memory.NewCustomerInteractionRepository()
 
 	// 3. Initialize Kafka publisher
 	kafkaPub := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
@@ -47,12 +49,14 @@ func main() {
 
 	// 4. Initialize subdivided business services
 	custSvc := service.NewCustomerService(custRepo, kafkaPub)
-	oppSvc := service.NewOpportunityService(oppRepo, kafkaPub)
+	oppSvc := service.NewOpportunityService(oppRepo, oppStageHistoryRepo, kafkaPub)
 	leadSvc := service.NewLeadService(leadRepo, custSvc, oppSvc, kafkaPub)
-	orderSvc := service.NewSalesOrderService(orderRepo, orderItemRepo, kafkaPub)
+	orderSvc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, kafkaPub)
 	quoteSvc := service.NewQuoteService(quoteRepo, quoteItemRepo, kafkaPub)
 	ticketSvc := service.NewServiceTicketService(ticketRepo, kafkaPub)
 	campSvc := service.NewCampaignService(campaignRepo, kafkaPub)
+	custInteractionSvc := service.NewCustomerInteractionService(custInteractionRepo, kafkaPub)
+	_ = custInteractionSvc
 	plSvc := service.NewPriceListService(priceListRepo, priceListItemRepo)
 
 	// 5. Seed initial mock data
