@@ -18,10 +18,9 @@ func NewBOMHandler(svc *service.BOMService) *BOMHandler {
 
 func (h *BOMHandler) CreateBillOfMaterials(c *gin.Context) {
 	var req struct {
-		ProductID   string                      `json:"product_id"`
-		Version     string                      `json:"version"`
-		Description string                      `json:"description"`
-		Components  []service.BOMComponentInput `json:"components"`
+		ProductID   string `json:"product_id"`
+		Version     string `json:"version"`
+		Description string `json:"description"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -29,7 +28,7 @@ func (h *BOMHandler) CreateBillOfMaterials(c *gin.Context) {
 		return
 	}
 
-	bom, err := h.svc.CreateBillOfMaterials(c.Request.Context(), req.ProductID, req.Version, req.Description, req.Components)
+	bom, err := h.svc.CreateBillOfMaterials(c.Request.Context(), req.ProductID, req.Version, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -87,6 +86,60 @@ func (h *BOMHandler) DeleteBillOfMaterials(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "BOM deleted successfully"})
+}
+
+func (h *BOMHandler) GetBOMComponents(c *gin.Context) {
+	bomID := c.Param("id")
+	components, err := h.svc.GetBOMComponents(c.Request.Context(), bomID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": components})
+}
+
+func (h *BOMHandler) AddBOMComponent(c *gin.Context) {
+	bomID := c.Param("id")
+	var req struct {
+		ComponentProductID string `json:"component_product_id"`
+		Quantity           string `json:"quantity"`
+		WasteFactor        string `json:"waste_factor"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	qtyDec, err := decimal.NewFromString(req.Quantity)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid quantity decimal"})
+		return
+	}
+	wasteDec, err := decimal.NewFromString(req.WasteFactor)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid waste_factor decimal"})
+		return
+	}
+
+	comp, err := h.svc.AddBOMComponent(c.Request.Context(), bomID, req.ComponentProductID, qtyDec, wasteDec)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": comp})
+}
+
+func (h *BOMHandler) RemoveBOMComponent(c *gin.Context) {
+	bomID := c.Param("id")
+	componentID := c.Param("componentId")
+	err := h.svc.RemoveBOMComponent(c.Request.Context(), bomID, componentID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "BOM component removed successfully"})
 }
 
 func (h *BOMHandler) CreateWorkCenter(c *gin.Context) {

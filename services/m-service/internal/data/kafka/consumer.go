@@ -79,7 +79,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 
 		// Auto-schedule production order using a default BOM (or fallback/mock logic)
 		bomID := "bom_default"
-		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, time.Now().AddDate(0, 0, 7))
+		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, time.Now().AddDate(0, 0, 7), ev.SalesOrderID)
 		if err != nil {
 			log.Printf("Failed to auto-schedule production order for Sales Order %s: %v", ev.SalesOrderID, err)
 		}
@@ -126,7 +126,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		
 		// Auto-schedule production order for custom product
 		bomID := "bom_default"
-		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, ev.RequiredBy)
+		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, ev.RequiredBy, "")
 		if err != nil {
 			log.Printf("Failed to auto-schedule production order for Project Custom Order %s: %v", ev.ProjectID, err)
 		}

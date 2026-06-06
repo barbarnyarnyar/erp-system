@@ -12,6 +12,8 @@ type CostingRecord struct {
 	ActualMaterialCost   decimal.Decimal `json:"actual_material_cost"`
 	StandardLaborCost    decimal.Decimal `json:"standard_labor_cost"`
 	ActualLaborCost      decimal.Decimal `json:"actual_labor_cost"`
+	OverheadCost         decimal.Decimal `json:"overhead_cost"` // factory rent, utilities, depreciation
 	MaterialVariance     decimal.Decimal `json:"material_variance"`
 	LaborVariance        decimal.Decimal `json:"labor_variance"`
+	OverheadVariance     decimal.Decimal `json:"overhead_variance"`
 }

@@ -223,3 +223,10 @@ type MaterialRequestedEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
+type MaterialConsumedEvent struct {
+	ProductionOrderID string          `json:"production_order_id"`
+	ProductID         string          `json:"product_id"`
+	Quantity          decimal.Decimal `json:"quantity"`
+	Timestamp         time.Time       `json:"timestamp"`
+}
+

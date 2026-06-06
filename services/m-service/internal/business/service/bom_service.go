@@ -9,12 +9,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type BOMComponentInput struct {
-	ComponentProductID string          `json:"component_product_id"`
-	Quantity           decimal.Decimal `json:"quantity"`
-	WasteFactor        decimal.Decimal `json:"waste_factor"`
-}
-
 type BOMService struct {
 	bomRepo     domain.BillOfMaterialsRepository
 	compRepo    domain.BOMComponentRepository
@@ -39,7 +33,7 @@ func NewBOMService(
 	}
 }
 
-func (s *BOMService) CreateBillOfMaterials(ctx context.Context, productID string, version string, description string, components []BOMComponentInput) (*domain.BillOfMaterials, error) {
+func (s *BOMService) CreateBillOfMaterials(ctx context.Context, productID string, version string, description string) (*domain.BillOfMaterials, error) {
 	bomID := fmt.Sprintf("bom_%d", time.Now().UnixNano())
 	bom := &domain.BillOfMaterials{
 		ID:          bomID,
@@ -54,18 +48,6 @@ func (s *BOMService) CreateBillOfMaterials(ctx context.Context, productID string
 	err := s.bomRepo.Create(ctx, bom)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, c := range components {
-		compID := fmt.Sprintf("bomc_%d", time.Now().UnixNano())
-		comp := &domain.BOMComponent{
-			ID:                 compID,
-			BomID:              bomID,
-			ComponentProductID: c.ComponentProductID,
-			Quantity:           c.Quantity,
-			WasteFactor:        c.WasteFactor,
-		}
-		_ = s.compRepo.Create(ctx, comp)
 	}
 
 	return bom, nil
@@ -99,6 +81,31 @@ func (s *BOMService) UpdateBillOfMaterials(ctx context.Context, id string, produ
 
 func (s *BOMService) DeleteBillOfMaterials(ctx context.Context, id string) error {
 	return s.bomRepo.Delete(ctx, id)
+}
+
+func (s *BOMService) GetBOMComponents(ctx context.Context, bomID string) ([]domain.BOMComponent, error) {
+	return s.compRepo.ListByBOMID(ctx, bomID)
+}
+
+func (s *BOMService) AddBOMComponent(ctx context.Context, bomID string, componentProductID string, quantity decimal.Decimal, wasteFactor decimal.Decimal) (*domain.BOMComponent, error) {
+	compID := fmt.Sprintf("bomc_%d", time.Now().UnixNano())
+	comp := &domain.BOMComponent{
+		ID:                   compID,
+		BomID:                bomID,
+		ComponentProductID:   componentProductID,
+		Quantity:             quantity,
+		WasteFactor:          wasteFactor,
+	}
+
+	err := s.compRepo.Create(ctx, comp)
+	if err != nil {
+		return nil, err
+	}
+	return comp, nil
+}
+
+func (s *BOMService) RemoveBOMComponent(ctx context.Context, bomID string, componentID string) error {
+	return s.compRepo.Delete(ctx, componentID)
 }
 
 func (s *BOMService) CreateWorkCenter(ctx context.Context, code string, name string, capacity decimal.Decimal, hourlyRate decimal.Decimal) (*domain.WorkCenter, error) {

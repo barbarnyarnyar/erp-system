@@ -14,6 +14,7 @@ type ProductionOrder struct {
 	ScheduledDate time.Time  `json:"scheduled_date"`
 	StartDate     *time.Time `json:"start_date"`
 	EndDate       *time.Time `json:"end_date"`
+	SalesOrderID  *string    `json:"sales_order_id"` // Links make-to-order manufacturing to CRM SalesOrder
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }

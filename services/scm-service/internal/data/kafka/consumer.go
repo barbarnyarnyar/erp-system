@@ -30,6 +30,7 @@ func NewKafkaConsumer(
 		domain.TopicCrmSalesOrderCreated,
 		domain.TopicCrmCustomerDemandForecast,
 		domain.TopicMfgMaterialRequired,
+		domain.TopicMfgMaterialConsumed,
 		domain.TopicMfgProductionCompleted,
 		domain.TopicFinVendorPaymentProcessed,
 		domain.TopicPrjMaterialRequested,
@@ -108,6 +109,19 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			EstimatedUnitPrice: decimal.NewFromFloat(50.00),
 		}
 		_, err := c.poSvc.CreatePurchaseRequisition(ctx, "mfg-system", ev.RequiredBy, "Auto-generated from mfg.material.required event", []service.RequisitionLineInput{line})
+		return err
+
+	case domain.TopicMfgMaterialConsumed:
+		var ev domain.MaterialConsumedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("[SCM-CONSUMER] Processing Material Consumed (WIP issue): Product %s, quantity consumed: %s", ev.ProductID, ev.Quantity.String())
+		qtyInt := int(ev.Quantity.IntPart())
+		if qtyInt == 0 && !ev.Quantity.IsZero() {
+			qtyInt = 1
+		}
+		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", qtyInt, "ISSUE", "Raw material issued for manufacturing production order "+ev.ProductionOrderID)
 		return err
 
 	case domain.TopicMfgProductionCompleted:

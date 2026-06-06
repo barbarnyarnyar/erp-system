@@ -11,5 +11,7 @@ type LaborReport struct {
 	WorkOrderID string          `json:"work_order_id"`
 	EmployeeID  string          `json:"employee_id"`
 	HoursWorked decimal.Decimal `json:"hours_worked"`
+	HourlyRate  decimal.Decimal `json:"hourly_rate"` // snapshotted at time of work
+	TotalCost   decimal.Decimal `json:"total_cost"`  // snapshotted labor cost
 	Date        time.Time       `json:"date"`
 }

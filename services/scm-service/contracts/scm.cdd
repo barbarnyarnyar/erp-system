@@ -448,6 +448,7 @@ service SCM {
 
         // From Manufacturing Module
         mfg.material.required: MaterialRequiredEvent
+        mfg.material.consumed: MaterialConsumedEvent
         mfg.production.completed: ProductionCompletedEvent
 
         // From Financial Module

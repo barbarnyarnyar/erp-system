@@ -30,6 +30,7 @@ const (
 	TopicCrmSalesOrderCreated      = "crm.sales.order.created"
 	TopicCrmCustomerDemandForecast = "crm.customer.demand.forecast"
 	TopicMfgMaterialRequired       = "mfg.material.required"
+	TopicMfgMaterialConsumed       = "mfg.material.consumed"
 	TopicMfgProductionCompleted    = "mfg.production.completed"
 	TopicFinVendorPaymentProcessed = "fin.vendor.payment.processed"
 	TopicPrjMaterialRequested      = "prj.material.requested"

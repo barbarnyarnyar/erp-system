@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS production_orders (
     scheduled_date TIMESTAMP NOT NULL,
     start_date TIMESTAMP,
     end_date TIMESTAMP,
+    sales_order_id UUID,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -70,6 +71,8 @@ CREATE TABLE IF NOT EXISTS labor_reports (
     work_order_id UUID NOT NULL REFERENCES work_orders(id),
     employee_id UUID NOT NULL,
     hours_worked NUMERIC(15, 4) NOT NULL,
+    hourly_rate NUMERIC(15, 4) NOT NULL,
+    total_cost NUMERIC(15, 4) NOT NULL,
     date DATE NOT NULL
 );
 
@@ -78,6 +81,7 @@ CREATE TABLE IF NOT EXISTS machine_logs (
     work_center_id UUID NOT NULL REFERENCES work_centers(id),
     status_code VARCHAR(255) NOT NULL,
     message VARCHAR(255) NOT NULL,
+    severity VARCHAR(255) NOT NULL,
     timestamp TIMESTAMP NOT NULL
 );
 
@@ -124,7 +128,9 @@ CREATE TABLE IF NOT EXISTS costing_records (
     actual_material_cost NUMERIC(15, 4) NOT NULL,
     standard_labor_cost NUMERIC(15, 4) NOT NULL,
     actual_labor_cost NUMERIC(15, 4) NOT NULL,
+    overhead_cost NUMERIC(15, 4) NOT NULL,
     material_variance NUMERIC(15, 4) NOT NULL,
-    labor_variance NUMERIC(15, 4) NOT NULL
+    labor_variance NUMERIC(15, 4) NOT NULL,
+    overhead_variance NUMERIC(15, 4) NOT NULL
 );
 

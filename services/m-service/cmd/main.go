@@ -56,13 +56,20 @@ func main() {
 		Description: "Default BOM for Auto-Scheduled Production",
 	})
 
-	// 4. Initialize Services
+	// 4. Initialize Services (Split Components)
 	bomSvc := service.NewBOMService(bomRepo, compRepo, wcRepo, routingRepo, publisher)
-	prodSvc := service.NewProductionService(poRepo, woRepo, bomRepo, compRepo, routingRepo, wcRepo, laborRepo, machineRepo, qualityRepo, nonConfRepo, equipRepo, maintRepo, costRepo, publisher)
+	prodSvc := service.NewProductionService(poRepo, woRepo, bomRepo, compRepo, routingRepo, wcRepo, laborRepo, costRepo, publisher)
+	qualitySvc := service.NewQualityService(qualityRepo, nonConfRepo, woRepo, publisher)
+	qualitySvc.SetProductionService(prodSvc)
+	maintSvc := service.NewMaintenanceService(machineRepo, equipRepo, maintRepo, publisher)
+	costingSvc := service.NewCostingService(costRepo, poRepo, compRepo, publisher)
 
 	// 5. Initialize Handlers
 	bomHandler := handlers.NewBOMHandler(bomSvc)
 	prodHandler := handlers.NewProductionHandler(prodSvc)
+	qualityHandler := handlers.NewQualityHandler(qualitySvc)
+	maintHandler := handlers.NewMaintenanceHandler(maintSvc)
+	costingHandler := handlers.NewCostingHandler(costingSvc)
 
 	// 5b. Initialize Event Consumer (Kafka)
 	ctxCancel, cancel := context.WithCancel(context.Background())
@@ -98,7 +105,7 @@ func main() {
 	})
 
 	// Register API Routes
-	routes.RegisterRoutes(r, bomHandler, prodHandler)
+	routes.RegisterRoutes(r, bomHandler, prodHandler, qualityHandler, maintHandler, costingHandler)
 
 	// Start Server
 	log.Printf("Starting Manufacturing Service on port %s...", cfg.Server.Port)

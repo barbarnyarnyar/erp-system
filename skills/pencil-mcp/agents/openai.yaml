@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pencil MCP"
+  short_description: "Design and edit .pen files"
+  default_prompt: "Use Pencil MCP to inspect, edit, and validate this design task end-to-end."

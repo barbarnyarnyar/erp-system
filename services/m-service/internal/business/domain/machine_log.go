@@ -10,5 +10,6 @@ type MachineLog struct {
 	WorkCenterID string    `json:"work_center_id"`
 	StatusCode   string    `json:"status_code"`
 	Message      string    `json:"message"`
+	Severity     string    `json:"severity"` // INFO, WARNING, ERROR, CRITICAL
 	Timestamp    time.Time `json:"timestamp"`
 }
