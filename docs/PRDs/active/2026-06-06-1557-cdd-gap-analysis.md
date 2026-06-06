@@ -318,10 +318,10 @@ Fix: add `entity CustomerInteraction { id, customer_id, type (CALL, MEETING, EMA
 - [x] JWT secret moved to environment variable
 - [x] Kafka publish errors at least logged (not discarded with `_ =`)
 - [x] **2.7 resolved**: InventoryItem invariant enforced via `assertInventoryInvariant()` helper in `inventory_service.go` called at all 6 mutation sites (CreateInventoryItem, UpdateInventoryItem, AdjustInventory, ReserveStock, ReleaseReservation, ExecuteStockTransfer). Also fixed bug in AdjustInventory that mutated both `QuantityOnHand` and `QuantityAvailable` by the same delta (broke invariant when `QuantityReserved > 0`); now only mutates `QuantityOnHand` and recomputes `QuantityAvailable = on_hand - reserved`. 8 unit tests pass in `inventory_invariant_test.go` (see Phase S4.5 doc).
-- [ ] **2.8 resolved**: All raw string enum fields replaced with typed constants in domain layer
+- [x] **2.8 resolved**: All raw string enum fields replaced with typed constants in domain layer
 - [ ] **2.9 resolved**: `UpdateJournalEntry` enforces debit=credit balance; account updates + entry save wrapped in atomic operation
 - [ ] **2.11 resolved**: `ConvertLead()` wrapped in transaction — Customer + Opportunity creation is atomic
-- [ ] **2.12 resolved**: TrainingEnrollment has composite unique constraint on `(training_id, employee_id)` and duplicate check before create
+- [x] **2.12 resolved**: `TrainingService.EnrollEmployee()` now calls `enrollments.GetByTrainingAndEmployee(trainingID, employeeID)` before `Create()`. Active enrollments (status `ENROLLED`/`IN_PROGRESS`) for the same `(training, employee)` pair are rejected with a descriptive error. Re-enrollment is permitted only after the prior enrollment transitions to `CANCELLED` or `COMPLETED` — matching real-world LMS behavior. 2 unit tests pass in `training_enrollment_test.go` (see Phase S4.6 doc).
 - [ ] **2.13 resolved**: PositionHistory + DepartmentHistory entities exist with event-driven audit trails
 - [ ] **2.14 resolved**: `CustomerDemandForecastEvent.ConfidenceLevel` uses `decimal.Decimal` (not `float64`)
 - [ ] **2.15 resolved**: JournalEntry has `posted_by` + `posted_at` fields; `updated_at` removed from JournalEntry; `Update` blocked on POSTED entries

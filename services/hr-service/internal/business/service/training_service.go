@@ -91,6 +91,21 @@ func (s *TrainingService) UpdateTrainingProgram(ctx context.Context, id string, 
 }
 
 func (s *TrainingService) EnrollEmployee(ctx context.Context, trainingID string, employeeID string) (*domain.TrainingEnrollment, error) {
+	// Guard: prevent duplicate active enrollments for the same (training, employee) pair.
+	// An employee may be re-enrolled only if their previous enrollment is CANCELLED or
+	// COMPLETED. This stops a real bug where the same employee could be enrolled in the
+	// same training program multiple times (repo's GetByTrainingAndEmployee existed but
+	// was never called by this service).
+	existing, err := s.enrollments.GetByTrainingAndEmployee(ctx, trainingID, employeeID)
+	if err == nil && existing != nil {
+		switch existing.Status {
+		case "ENROLLED", "IN_PROGRESS":
+			return nil, fmt.Errorf("employee %s is already enrolled in training %s (enrollment %s, status %s)",
+				employeeID, trainingID, existing.ID, existing.Status)
+		}
+		// For CANCELLED or COMPLETED, fall through and create a new enrollment.
+	}
+
 	id := fmt.Sprintf("enr_%d", time.Now().UnixNano())
 	te := &domain.TrainingEnrollment{
 		ID:         id,
@@ -100,7 +115,7 @@ func (s *TrainingService) EnrollEmployee(ctx context.Context, trainingID string,
 		Status:     "ENROLLED",
 	}
 
-	err := s.enrollments.Create(ctx, te)
+	err = s.enrollments.Create(ctx, te)
 	if err != nil {
 		return nil, err
 	}

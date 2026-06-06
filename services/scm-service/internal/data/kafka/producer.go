@@ -15,8 +15,9 @@ type KafkaPublisher struct {
 
 func NewKafkaPublisher(brokers []string) *KafkaPublisher {
 	writer := &kafka.Writer{
-		Addr:     kafka.TCP(brokers...),
-		Balancer: &kafka.LeastBytes{},
+		Addr:                   kafka.TCP(brokers...),
+		Balancer:               &kafka.LeastBytes{},
+		AllowAutoTopicCreation: true,
 	}
 	return &KafkaPublisher{writer: writer}
 }

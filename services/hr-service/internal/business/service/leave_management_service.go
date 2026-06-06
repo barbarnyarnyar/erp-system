@@ -29,18 +29,23 @@ func (s *LeaveManagementService) ListLeaveRequests(ctx context.Context) ([]domai
 }
 
 func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employeeID string, leaveType string, start, end time.Time, reason string) (*domain.LeaveRequest, error) {
+	typeEnum := domain.LeaveType(leaveType)
+	if !typeEnum.IsValid() {
+		return nil, fmt.Errorf("invalid leave type: %s", leaveType)
+	}
+
 	// Calculate leave duration in days
 	durationDays := decimal.NewFromFloat(end.Sub(start).Hours()/24.0 + 1)
 
 	// Validate leave balance
 	year := start.Year()
-	balance, err := s.balances.GetByEmployeeAndTypeAndYear(ctx, employeeID, leaveType, year)
+	balance, err := s.balances.GetByEmployeeAndTypeAndYear(ctx, employeeID, typeEnum, year)
 	if err != nil {
 		// Auto-initialize a default leave balance for testing/convenience
 		balance = &domain.LeaveBalance{
 			ID:           fmt.Sprintf("bal_%d", time.Now().UnixNano()),
 			EmployeeID:   employeeID,
-			LeaveType:    leaveType,
+			LeaveType:    typeEnum,
 			EntitledDays: decimal.NewFromInt(15), // 15 entitled days by default
 			UsedDays:     decimal.Zero,
 			Year:         year,
@@ -58,11 +63,11 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 	lr := &domain.LeaveRequest{
 		ID:          id,
 		EmployeeID:  employeeID,
-		LeaveType:   leaveType,
+		LeaveType:   typeEnum,
 		StartDate:   start,
 		EndDate:     end,
 		Reason:      reason,
-		Status:      "PENDING",
+		Status:      domain.LeaveStatusPending,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -76,7 +81,7 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 	if err := s.publisher.Publish(ctx, domain.TopicHrLeaveRequested, lr.ID, domain.LeaveRequestedEvent{
 		LeaveRequestID: lr.ID,
 		EmployeeID:     lr.EmployeeID,
-		LeaveType:      lr.LeaveType,
+		LeaveType:      string(lr.LeaveType),
 		StartDate:      lr.StartDate,
 		EndDate:        lr.EndDate,
 		Timestamp:      time.Now(),
@@ -92,12 +97,17 @@ func (s *LeaveManagementService) GetLeaveRequest(ctx context.Context, id string)
 }
 
 func (s *LeaveManagementService) UpdateLeaveRequest(ctx context.Context, id string, leaveType string, start, end time.Time, reason string) (*domain.LeaveRequest, error) {
+	typeEnum := domain.LeaveType(leaveType)
+	if !typeEnum.IsValid() {
+		return nil, fmt.Errorf("invalid leave type: %s", leaveType)
+	}
+
 	lr, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	lr.LeaveType = leaveType
+	lr.LeaveType = typeEnum
 	lr.StartDate = start
 	lr.EndDate = end
 	lr.Reason = reason
@@ -112,13 +122,18 @@ func (s *LeaveManagementService) UpdateLeaveRequest(ctx context.Context, id stri
 }
 
 func (s *LeaveManagementService) UpdateLeaveStatus(ctx context.Context, id string, approvedBy string, status string) (*domain.LeaveRequest, error) {
+	statusEnum := domain.LeaveStatus(status)
+	if !statusEnum.IsValid() {
+		return nil, fmt.Errorf("invalid leave status: %s", status)
+	}
+
 	lr, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
 	oldStatus := lr.Status
-	lr.Status = status
+	lr.Status = statusEnum
 	lr.ApprovedBy = &approvedBy
 	lr.UpdatedAt = time.Now()
 
@@ -128,7 +143,7 @@ func (s *LeaveManagementService) UpdateLeaveStatus(ctx context.Context, id strin
 	}
 
 	// If approved, update LeaveBalance
-	if status == "APPROVED" && oldStatus != "APPROVED" {
+	if statusEnum == domain.LeaveStatusApproved && oldStatus != domain.LeaveStatusApproved {
 		durationDays := decimal.NewFromFloat(lr.EndDate.Sub(lr.StartDate).Hours()/24.0 + 1)
 		balance, err := s.balances.GetByEmployeeAndTypeAndYear(ctx, lr.EmployeeID, lr.LeaveType, lr.StartDate.Year())
 		if err == nil {

@@ -78,7 +78,7 @@ func (s *ProductionService) CreateProductionOrder(ctx context.Context, bomID str
 		BomID:         bomID,
 		ProductID:     bom.ProductID,
 		Quantity:      quantity,
-		Status:        "PLANNED",
+		Status:        domain.ProductionOrderStatusPlanned,
 		ScheduledDate: scheduledDate,
 		SalesOrderID:  salesOrderPtr,
 		CreatedAt:     time.Now(),
@@ -115,7 +115,7 @@ func (s *ProductionService) CreateProductionOrder(ctx context.Context, bomID str
 			WorkCenterID:        op.WorkCenterID,
 			ScheduledStart:      scheduledDate,
 			ScheduledEnd:        scheduledDate.Add(2 * time.Hour),
-			Status:              "PENDING",
+			Status:              domain.WorkOrderStatusPending,
 			LaborHours:          &decimal.Zero,
 			MachineHours:        &decimal.Zero,
 		}
@@ -153,7 +153,7 @@ func (s *ProductionService) StartWorkOrder(ctx context.Context, id string) (*dom
 	}
 
 	now := time.Now()
-	wo.Status = "IN_PROGRESS"
+	wo.Status = domain.WorkOrderStatusInProgress
 	wo.ActualStart = &now
 	_ = s.woRepo.Update(ctx, wo)
 
@@ -166,8 +166,8 @@ func (s *ProductionService) StartWorkOrder(ctx context.Context, id string) (*dom
 	}
 
 	po, err := s.poRepo.GetByID(ctx, wo.ProductionOrderID)
-	if err == nil && po.Status == "PLANNED" {
-		po.Status = "IN_PROGRESS"
+	if err == nil && po.Status == domain.ProductionOrderStatusPlanned {
+		po.Status = domain.ProductionOrderStatusInProgress
 		po.StartDate = &now
 		po.UpdatedAt = now
 		_ = s.poRepo.Update(ctx, po)
@@ -285,7 +285,7 @@ func (s *ProductionService) CompleteWorkOrder(ctx context.Context, id string) (*
 	}
 
 	now := time.Now()
-	wo.Status = "COMPLETED"
+	wo.Status = domain.WorkOrderStatusCompleted
 	wo.ActualEnd = &now
 	_ = s.woRepo.Update(ctx, wo)
 
@@ -307,7 +307,7 @@ func (s *ProductionService) CompleteProductionOrder(ctx context.Context, id stri
 	}
 
 	now := time.Now()
-	po.Status = "COMPLETED"
+	po.Status = domain.ProductionOrderStatusCompleted
 	po.EndDate = &now
 	po.UpdatedAt = now
 
@@ -382,6 +382,11 @@ func (s *ProductionService) GetProductionPlan(ctx context.Context, id string) (*
 }
 
 func (s *ProductionService) UpdateProductionPlan(ctx context.Context, id string, quantity int, scheduledDate time.Time, status string) (*domain.ProductionOrder, error) {
+	statusEnum := domain.ProductionOrderStatus(status)
+	if !statusEnum.IsValid() {
+		return nil, fmt.Errorf("invalid production order status: %s", status)
+	}
+
 	po, err := s.poRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -390,7 +395,7 @@ func (s *ProductionService) UpdateProductionPlan(ctx context.Context, id string,
 	oldDate := po.ScheduledDate
 	po.Quantity = quantity
 	po.ScheduledDate = scheduledDate
-	po.Status = status
+	po.Status = statusEnum
 	po.UpdatedAt = time.Now()
 
 	err = s.poRepo.Update(ctx, po)
@@ -398,7 +403,7 @@ func (s *ProductionService) UpdateProductionPlan(ctx context.Context, id string,
 		return nil, err
 	}
 
-	if status == "DELAYED" || scheduledDate.After(oldDate) {
+	if statusEnum == domain.ProductionOrderStatusDelayed || scheduledDate.After(oldDate) {
 		if err := s.publisher.Publish(ctx, domain.TopicMfgProductionDelayed, po.ID, domain.ProductionDelayedEvent{
 			ProductionOrderID: po.ID,
 			Reason:            fmt.Sprintf("Schedule updated to %s (Status: %s)", scheduledDate.Format(time.RFC3339), status),
@@ -429,7 +434,7 @@ func (s *ProductionService) CreateWorkOrder(ctx context.Context, poID string, se
 		WorkCenterID:        workCenterID,
 		ScheduledStart:      start,
 		ScheduledEnd:        end,
-		Status:              "PENDING",
+		Status:              domain.WorkOrderStatusPending,
 		LaborHours:          &decimal.Zero,
 		MachineHours:        &decimal.Zero,
 	}
@@ -445,12 +450,17 @@ func (s *ProductionService) GetWorkOrder(ctx context.Context, id string) (*domai
 }
 
 func (s *ProductionService) UpdateWorkOrder(ctx context.Context, id string, status string, start, end time.Time, actStart, actEnd *time.Time) (*domain.WorkOrder, error) {
+	statusEnum := domain.WorkOrderStatus(status)
+	if !statusEnum.IsValid() {
+		return nil, fmt.Errorf("invalid work order status: %s", status)
+	}
+
 	wo, err := s.woRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	wo.Status = status
+	wo.Status = statusEnum
 	wo.ScheduledStart = start
 	wo.ScheduledEnd = end
 	wo.ActualStart = actStart

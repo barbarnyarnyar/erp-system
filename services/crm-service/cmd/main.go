@@ -131,7 +131,7 @@ func seedMockData(custSvc *service.CustomerService, leadSvc *service.LeadService
 	_, _ = leadSvc.CreateLead(ctx, "Bob", "Johnson", "Umbrella Corp", "bob@umbrella.com", "+1-555-0120", "CAMPAIGN")
 
 	// Seed opportunity
-	_, _ = oppSvc.CreateOpportunity(ctx, cust.ID, "Upgrade Database Infrastructure", decimal.NewFromFloat(45000.00), "PROPOSAL")
+	_, _ = oppSvc.CreateOpportunity(ctx, cust.ID, "Upgrade Database Infrastructure", decimal.NewFromFloat(45000.00), "NEGOTIATION")
 
 	log.Println("CRM mock data seeded successfully.")
 }

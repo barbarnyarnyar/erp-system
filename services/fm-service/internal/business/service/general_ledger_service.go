@@ -35,12 +35,17 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 		return nil, errors.New("account number, name, and type are required")
 	}
 
+	typeEnum := domain.AccountType(accType)
+	if !typeEnum.IsValid() {
+		return nil, fmt.Errorf("invalid account type: %s", accType)
+	}
+
 	id := fmt.Sprintf("acc_%d", time.Now().UnixNano())
 	acc := &domain.Account{
 		ID:            id,
 		AccountNumber: accNum,
 		Name:          name,
-		Type:          accType,
+		Type:          typeEnum,
 		Balance:       decimal.Zero,
 		Currency:      currency,
 		IsActive:      true,
@@ -82,13 +87,18 @@ func (s *GeneralLedgerService) GetAccountByNumber(ctx context.Context, accNum st
 }
 
 func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accType, parentID string, isActive bool) (*domain.Account, error) {
+	typeEnum := domain.AccountType(accType)
+	if !typeEnum.IsValid() {
+		return nil, fmt.Errorf("invalid account type: %s", accType)
+	}
+
 	acc, err := s.accounts.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
 	acc.Name = name
-	acc.Type = accType
+	acc.Type = typeEnum
 	acc.IsActive = isActive
 	acc.UpdatedAt = time.Now()
 

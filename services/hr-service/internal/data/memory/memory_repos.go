@@ -586,7 +586,7 @@ func (r *MemoryLeaveBalanceRepo) GetByID(ctx context.Context, id string) (*domai
 	return &lb, nil
 }
 
-func (r *MemoryLeaveBalanceRepo) GetByEmployeeAndTypeAndYear(ctx context.Context, empID string, leaveType string, year int) (*domain.LeaveBalance, error) {
+func (r *MemoryLeaveBalanceRepo) GetByEmployeeAndTypeAndYear(ctx context.Context, empID string, leaveType domain.LeaveType, year int) (*domain.LeaveBalance, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	for _, lb := range r.bals {

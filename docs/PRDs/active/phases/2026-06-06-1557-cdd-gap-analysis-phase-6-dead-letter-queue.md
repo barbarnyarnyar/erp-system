@@ -3,7 +3,7 @@
 **Source PRD**: docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: 6 of 6 (Optional, post-PRD)
-**Status**: Draft
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -126,11 +126,11 @@ func (c *Consumer) handleWithDLQ(topic string, msg []byte, handler func([]byte) 
 
 ## Definition of Done
 
-- [ ] Task 1: `DeadLetterMessage` type defined
-- [ ] Task 2: DLQ topic constants added to all 6 consuming services
-- [ ] Task 3: All consumer handlers wrapped with DLQ
-- [ ] Task 4: Manual test confirms DLQ messages arrive
-- [ ] `make build` passes for all services
+- [x] Task 1: `DeadLetterMessage` type defined
+- [x] Task 2: DLQ topic constants added to all 6 consuming services
+- [x] Task 3: All consumer handlers wrapped with DLQ
+- [x] Task 4: Manual test confirms DLQ messages arrive
+- [x] `make build` passes for all services
 
 ---
 

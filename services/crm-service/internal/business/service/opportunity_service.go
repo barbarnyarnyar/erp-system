@@ -23,6 +23,11 @@ func NewOpportunityService(oppRepo domain.OpportunityRepository, publisher domai
 }
 
 func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, title string, value decimal.Decimal, stage string) (*domain.Opportunity, error) {
+	stageEnum := domain.OpportunityStage(stage)
+	if !stageEnum.IsValid() {
+		return nil, fmt.Errorf("invalid opportunity stage: %s", stage)
+	}
+
 	id := fmt.Sprintf("opp_%d", time.Now().UnixNano())
 	opp := &domain.Opportunity{
 		ID:          id,
@@ -30,7 +35,7 @@ func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, 
 		Title:       title,
 		Value:       value,
 		Status:      "NEW",
-		Stage:       stage,
+		Stage:       stageEnum,
 		Probability: decimal.NewFromFloat(0.10),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -63,6 +68,11 @@ func (s *OpportunityService) ListOpportunities(ctx context.Context) ([]domain.Op
 }
 
 func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, title string, value decimal.Decimal, status, stage string, probability decimal.Decimal) (*domain.Opportunity, error) {
+	stageEnum := domain.OpportunityStage(stage)
+	if !stageEnum.IsValid() {
+		return nil, fmt.Errorf("invalid opportunity stage: %s", stage)
+	}
+
 	opp, err := s.oppRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -72,7 +82,7 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 	opp.Title = title
 	opp.Value = value
 	opp.Status = status
-	opp.Stage = stage
+	opp.Stage = stageEnum
 	opp.Probability = probability
 	opp.UpdatedAt = time.Now()
 

@@ -91,7 +91,7 @@ type PayrollDeductionRepository interface {
 type LeaveBalanceRepository interface {
 	Create(ctx context.Context, lb *LeaveBalance) error
 	GetByID(ctx context.Context, id string) (*LeaveBalance, error)
-	GetByEmployeeAndTypeAndYear(ctx context.Context, empID string, leaveType string, year int) (*LeaveBalance, error)
+	GetByEmployeeAndTypeAndYear(ctx context.Context, empID string, leaveType LeaveType, year int) (*LeaveBalance, error)
 	GetByEmployeeID(ctx context.Context, empID string) ([]LeaveBalance, error)
 	Update(ctx context.Context, lb *LeaveBalance) error
 	List(ctx context.Context) ([]LeaveBalance, error)

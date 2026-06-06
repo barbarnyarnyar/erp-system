@@ -6,11 +6,29 @@ import (
 	"time"
 )
 
+type AccountType string
+
+const (
+	AccountTypeAsset     AccountType = "ASSET"
+	AccountTypeLiability AccountType = "LIABILITY"
+	AccountTypeEquity    AccountType = "EQUITY"
+	AccountTypeRevenue   AccountType = "REVENUE"
+	AccountTypeExpense   AccountType = "EXPENSE"
+)
+
+func (t AccountType) IsValid() bool {
+	switch t {
+	case AccountTypeAsset, AccountTypeLiability, AccountTypeEquity, AccountTypeRevenue, AccountTypeExpense:
+		return true
+	}
+	return false
+}
+
 type Account struct {
 	ID            string          `json:"id"`
 	AccountNumber string          `json:"account_number"`
 	Name          string          `json:"name"`
-	Type          string          `json:"type"` // e.g., ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+	Type          AccountType     `json:"type"` // e.g., ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
 	ParentID      *string         `json:"parent_id"`
 	Balance       decimal.Decimal `json:"balance"`
 	Currency      string          `json:"currency"` // e.g., "USD", "EUR"

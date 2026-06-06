@@ -135,7 +135,7 @@ func (s *LeadService) ConvertLead(ctx context.Context, id string) (*domain.Oppor
 	}
 
 	// Create Opportunity via OpportunityService
-	opp, err := s.oppSvc.CreateOpportunity(ctx, cust.ID, "Opportunity from Lead "+lead.Company, decimal.NewFromFloat(5000.00), "QUALIFIED")
+	opp, err := s.oppSvc.CreateOpportunity(ctx, cust.ID, "Opportunity from Lead "+lead.Company, decimal.NewFromFloat(5000.00), "DISCOVERY")
 	if err != nil {
 		return nil, err
 	}

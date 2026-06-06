@@ -5,15 +5,47 @@ import (
 	"time"
 )
 
+type LeaveType string
+
+const (
+	LeaveTypeAnnual LeaveType = "ANNUAL"
+	LeaveTypeSick   LeaveType = "SICK"
+	LeaveTypeUnpaid LeaveType = "UNPAID"
+)
+
+func (t LeaveType) IsValid() bool {
+	switch t {
+	case LeaveTypeAnnual, LeaveTypeSick, LeaveTypeUnpaid:
+		return true
+	}
+	return false
+}
+
+type LeaveStatus string
+
+const (
+	LeaveStatusPending  LeaveStatus = "PENDING"
+	LeaveStatusApproved LeaveStatus = "APPROVED"
+	LeaveStatusRejected LeaveStatus = "REJECTED"
+)
+
+func (s LeaveStatus) IsValid() bool {
+	switch s {
+	case LeaveStatusPending, LeaveStatusApproved, LeaveStatusRejected:
+		return true
+	}
+	return false
+}
+
 type LeaveRequest struct {
-	ID         string    `json:"id"`
-	EmployeeID string    `json:"employee_id"`
-	LeaveType  string    `json:"leave_type"` // e.g., ANNUAL, SICK, UNPAID
-	StartDate  time.Time `json:"start_date"`
-	EndDate    time.Time `json:"end_date"`
-	Reason     string    `json:"reason"`
-	Status     string    `json:"status"` // e.g., PENDING, APPROVED, REJECTED
-	ApprovedBy *string   `json:"approved_by"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         string      `json:"id"`
+	EmployeeID string      `json:"employee_id"`
+	LeaveType  LeaveType   `json:"leave_type"` // e.g., ANNUAL, SICK, UNPAID
+	StartDate  time.Time   `json:"start_date"`
+	EndDate    time.Time   `json:"end_date"`
+	Reason     string      `json:"reason"`
+	Status     LeaveStatus `json:"status"` // e.g., PENDING, APPROVED, REJECTED
+	ApprovedBy *string     `json:"approved_by"`
+	CreatedAt  time.Time   `json:"created_at"`
+	UpdatedAt  time.Time   `json:"updated_at"`
 }

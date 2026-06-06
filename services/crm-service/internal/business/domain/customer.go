@@ -5,15 +5,32 @@ import (
 	"time"
 )
 
+type CustomerStatus string
+
+const (
+	CustomerStatusLead     CustomerStatus = "LEAD"
+	CustomerStatusProspect CustomerStatus = "PROSPECT"
+	CustomerStatusActive   CustomerStatus = "ACTIVE"
+	CustomerStatusInactive CustomerStatus = "INACTIVE"
+)
+
+func (s CustomerStatus) IsValid() bool {
+	switch s {
+	case CustomerStatusLead, CustomerStatusProspect, CustomerStatusActive, CustomerStatusInactive:
+		return true
+	}
+	return false
+}
+
 type Customer struct {
-	ID               string    `json:"id"`
-	CompanyName      string    `json:"company_name"`
-	ContactName      string    `json:"contact_name"`
-	Email            string    `json:"email"`
-	Phone            string    `json:"phone"`
-	Status           string    `json:"status"`   // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
-	Category         string    `json:"category"` // e.g., RETAIL, WHOLESALE
-	ParentCustomerID *string   `json:"parent_customer_id"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               string         `json:"id"`
+	CompanyName      string         `json:"company_name"`
+	ContactName      string         `json:"contact_name"`
+	Email            string         `json:"email"`
+	Phone            string         `json:"phone"`
+	Status           CustomerStatus `json:"status"`   // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
+	Category         string         `json:"category"` // e.g., RETAIL, WHOLESALE
+	ParentCustomerID *string        `json:"parent_customer_id"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }

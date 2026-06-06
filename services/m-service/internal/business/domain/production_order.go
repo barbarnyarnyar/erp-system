@@ -5,16 +5,35 @@ import (
 	"time"
 )
 
+type ProductionOrderStatus string
+
+const (
+	ProductionOrderStatusDraft      ProductionOrderStatus = "DRAFT"
+	ProductionOrderStatusPlanned    ProductionOrderStatus = "PLANNED"
+	ProductionOrderStatusInProgress ProductionOrderStatus = "IN_PROGRESS"
+	ProductionOrderStatusCompleted  ProductionOrderStatus = "COMPLETED"
+	ProductionOrderStatusCancelled  ProductionOrderStatus = "CANCELLED"
+	ProductionOrderStatusDelayed    ProductionOrderStatus = "DELAYED"
+)
+
+func (s ProductionOrderStatus) IsValid() bool {
+	switch s {
+	case ProductionOrderStatusDraft, ProductionOrderStatusPlanned, ProductionOrderStatusInProgress, ProductionOrderStatusCompleted, ProductionOrderStatusCancelled, ProductionOrderStatusDelayed:
+		return true
+	}
+	return false
+}
+
 type ProductionOrder struct {
-	ID            string     `json:"id"`
-	BomID         string     `json:"bom_id"`
-	ProductID     string     `json:"product_id"`
-	Quantity      int        `json:"quantity"`
-	Status        string     `json:"status"` // e.g., DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
-	ScheduledDate time.Time  `json:"scheduled_date"`
-	StartDate     *time.Time `json:"start_date"`
-	EndDate       *time.Time `json:"end_date"`
-	SalesOrderID  *string    `json:"sales_order_id"` // Links make-to-order manufacturing to CRM SalesOrder
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            string                `json:"id"`
+	BomID         string                `json:"bom_id"`
+	ProductID     string                `json:"product_id"`
+	Quantity      int                   `json:"quantity"`
+	Status        ProductionOrderStatus `json:"status"` // e.g., DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+	ScheduledDate time.Time             `json:"scheduled_date"`
+	StartDate     *time.Time            `json:"start_date"`
+	EndDate       *time.Time            `json:"end_date"`
+	SalesOrderID  *string               `json:"sales_order_id"` // Links make-to-order manufacturing to CRM SalesOrder
+	CreatedAt     time.Time             `json:"created_at"`
+	UpdatedAt     time.Time             `json:"updated_at"`
 }

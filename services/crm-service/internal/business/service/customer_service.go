@@ -29,7 +29,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, conta
 		ContactName: contactName,
 		Email:       email,
 		Phone:       phone,
-		Status:      "ACTIVE",
+		Status:      domain.CustomerStatusActive,
 		Category:    category,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -72,6 +72,11 @@ func (s *CustomerService) ListCustomers(ctx context.Context) ([]domain.Customer,
 }
 
 func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, companyName, contactName, email, phone, status, category string) (*domain.Customer, error) {
+	statusEnum := domain.CustomerStatus(status)
+	if !statusEnum.IsValid() {
+		return nil, fmt.Errorf("invalid customer status: %s", status)
+	}
+
 	cust, err := s.customerRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -82,7 +87,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 	cust.ContactName = contactName
 	cust.Email = email
 	cust.Phone = phone
-	cust.Status = status
+	cust.Status = statusEnum
 	cust.Category = category
 	cust.UpdatedAt = time.Now()
 
@@ -100,15 +105,15 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerUpdated, err)
 	}
 
-	if oldStatus != status {
-		if status == "ACTIVE" {
+	if oldStatus != statusEnum {
+		if statusEnum == domain.CustomerStatusActive {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),
 			}); err != nil {
 				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerActivated, err)
 			}
-		} else if status == "INACTIVE" {
+		} else if statusEnum == domain.CustomerStatusInactive {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerDeactivated, id, domain.CustomerDeactivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),

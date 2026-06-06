@@ -6,6 +6,23 @@ import (
 	"time"
 )
 
+type WorkOrderStatus string
+
+const (
+	WorkOrderStatusPending    WorkOrderStatus = "PENDING"
+	WorkOrderStatusInProgress WorkOrderStatus = "IN_PROGRESS"
+	WorkOrderStatusCompleted  WorkOrderStatus = "COMPLETED"
+	WorkOrderStatusBlocked    WorkOrderStatus = "BLOCKED"
+)
+
+func (s WorkOrderStatus) IsValid() bool {
+	switch s {
+	case WorkOrderStatusPending, WorkOrderStatusInProgress, WorkOrderStatusCompleted, WorkOrderStatusBlocked:
+		return true
+	}
+	return false
+}
+
 type WorkOrder struct {
 	ID                string           `json:"id"`
 	ProductionOrderID string           `json:"production_order_id"`
@@ -15,7 +32,7 @@ type WorkOrder struct {
 	ScheduledEnd      time.Time        `json:"scheduled_end"`
 	ActualStart       *time.Time       `json:"actual_start"`
 	ActualEnd         *time.Time       `json:"actual_end"`
-	Status            string           `json:"status"` // e.g., PENDING, IN_PROGRESS, COMPLETED, BLOCKED
+	Status            WorkOrderStatus  `json:"status"` // e.g., PENDING, IN_PROGRESS, COMPLETED, BLOCKED
 	LaborHours        *decimal.Decimal `json:"labor_hours"`
 	MachineHours      *decimal.Decimal `json:"machine_hours"`
 }
