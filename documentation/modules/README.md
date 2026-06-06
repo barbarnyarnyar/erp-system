@@ -988,7 +988,7 @@ These utilities are **available but not used** by any service — all services u
 
 - [System Architecture](../architecture/services-overview.md) — Service structure and endpoints
 - [Event Architecture](../architecture/event-architecture.md) — Full Kafka event catalog with 85+ topics
-- [Common Issues](../architecture/common-issues.md) — 41 known problems across the codebase
+- [Common Issues](../getting-started/common-issues.md) — 41 known problems across the codebase
 - [API Design](../architecture/api-design.md) — Gateway routing and conventions
 - [Operations](../operations/README.md) — Deployment, configuration, and troubleshooting
 - [Getting Started](../getting-started/README.md) — Setup and development workflow

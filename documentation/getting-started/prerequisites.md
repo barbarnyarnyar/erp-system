@@ -7,14 +7,8 @@ System requirements and required software for running the ERP system.
 **Minimum Development Environment:**
 - **Operating System**: macOS 10.15+, Ubuntu 20.04+, or Windows 10 with WSL2
 - **RAM**: 8GB minimum, 16GB recommended
-- **Storage**: 20GB free space for development environment
+- **Storage**: 10GB free space for development environment
 - **CPU**: 4 cores recommended for optimal Docker performance
-
-**Production Environment:**
-- **Kubernetes**: 1.25 or later
-- **Cloud Provider**: AWS, GCP, Azure, or on-premises
-- **Load Balancer**: With SSL/TLS termination
-- **Monitoring**: Prometheus and Grafana compatible
 
 ## Required Software
 
@@ -26,9 +20,6 @@ brew install git
 # Ubuntu/Debian
 sudo apt-get install git
 
-# Windows (use Git for Windows)
-# Download from: https://git-scm.com/download/win
-
 # Verify installation
 git --version
 ```
@@ -37,7 +28,6 @@ git --version
 ```bash
 # macOS
 brew install --cask docker
-# Start Docker Desktop application
 
 # Ubuntu/Debian
 sudo apt-get update
@@ -73,20 +63,6 @@ export PATH=$PATH:$GOPATH/bin
 go version
 ```
 
-### Node.js and npm
-```bash
-# macOS
-brew install node@18
-
-# Ubuntu/Debian
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verify installation
-node --version
-npm --version
-```
-
 ### Make (Build Automation)
 ```bash
 # macOS (usually pre-installed)
@@ -101,8 +77,6 @@ make --version
 
 ## Optional Development Tools
 
-These tools enhance the development experience but aren't required:
-
 ### Go-specific Tools
 ```bash
 # Go linter
@@ -111,18 +85,8 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 # Hot reload for Go development
 go install github.com/cosmtrek/air@latest
 
-# Database migration tool
+# Database migration tool (for future PostgreSQL migration)
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-```
-
-### Database Tools
-```bash
-# PostgreSQL client (optional, for direct database access)
-# macOS
-brew install postgresql@15
-
-# Ubuntu/Debian
-sudo apt-get install postgresql-client-15
 ```
 
 ## Verification
@@ -135,7 +99,6 @@ git --version
 docker --version
 docker-compose --version
 go version
-node --version
 make --version
 
 # Test Docker

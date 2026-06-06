@@ -627,5 +627,5 @@ cd api-gateway && go run cmd/main.go  # gateway must be started separately
 - [Deployment Architecture](deployment-architecture.md) — Docker Compose and build pipeline
 - [Security Architecture](security-architecture.md) — Auth service, JWT, RBAC, gaps
 - [Performance Architecture](performance-architecture.md) — Concurrency, caching, bottlenecks
-- [Common Issues](common-issues.md) — 41 known problems across the codebase
+- [Common Issues](../getting-started/common-issues.md) — 41 known problems across the codebase
 - [Business Modules](../modules/README.md) — Module capabilities by domain

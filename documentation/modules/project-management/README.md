@@ -38,22 +38,15 @@ graph TB
 
 ## Documentation Structure
 
-### Core Features
-- [Portfolio Management](portfolio-management.md) - Program and portfolio oversight
-- [Project Planning](project-planning.md) - Project creation and lifecycle
-- [Task Management](task-management.md) - WBS, dependencies, and assignments
-- [Resource Management](resource-management.md) - Allocation and capacity
-- [Time & Expense Tracking](time-expense-tracking.md) - Time entries, expenses, approvals
-- [Collaboration](collaboration.md) - Documents, issues, change requests
+### Features Covered in This Document
 
-### Integration and APIs
-- [API Reference](api-reference.md) - Complete REST API documentation
-- [Integration Patterns](integration-patterns.md) - Cross-module event flows
-- [Event Architecture](event-architecture.md) - Domain events and messaging
-
-### Implementation
-- [Database Schema](database-schema.md) - Data models and relationships
-- [Project Workflows](project-workflows.md) - Project lifecycle processes
+This README documents the following PM features inline:
+- Portfolio Management — Program and portfolio oversight
+- Project Planning — Project creation and lifecycle
+- Task Management — WBS, dependencies, and assignments
+- Resource Management — Allocation and capacity
+- Time & Expense Tracking — Time entries, expenses, approvals
+- Collaboration — Documents, issues, change requests
 
 ## Domain Models (12 types)
 

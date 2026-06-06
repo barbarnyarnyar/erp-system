@@ -19,6 +19,7 @@ Technical overview of the ERP system architecture — covering current implement
 - [Deployment Architecture](deployment-architecture.md) — Docker Compose configuration and build details
 - [Security Architecture](security-architecture.md) — Auth service, JWT, RBAC, current gaps
 - [Performance Architecture](performance-architecture.md) — Concurrency, caching, bottlenecks
+- [CDD Contract Reference](cdd-reference.md) — Map `.cdd` files to generated Go code
 
 ## Key Architecture Decisions
 
@@ -39,5 +40,6 @@ See [System Overview → Architecture Decision Records](system-overview.md#archi
 ## Next Steps
 
 After understanding the architecture:
+- [Getting Started](../getting-started/README.md) — Prerequisites, installation, development setup
 - [Business Modules](../modules/README.md) — Per-module domain models, endpoints, events
 - [Operations](../operations/README.md) — Deploy and maintain the system

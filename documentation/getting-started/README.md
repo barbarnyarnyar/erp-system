@@ -20,7 +20,6 @@ For developers working on the codebase:
 
 Having issues? Check these guides:
 - [Common Setup Issues](common-issues.md) - Solutions to frequent problems
-- [Performance Optimization](performance-setup.md) - Speed up your development environment
 
 ## Next Steps
 

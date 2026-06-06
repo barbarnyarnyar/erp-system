@@ -37,23 +37,16 @@ graph TB
 
 ## Documentation Structure
 
-### Core Features
-- [Bill of Materials](bill-of-materials.md) - Product structure and component management
-- [Routing Operations](routing-operations.md) - Production steps and work centers
-- [Work Orders](work-orders.md) - Execution tracking and labor reporting
-- [Production Planning](production-planning.md) - Scheduling and MRP
-- [Quality Control](quality-control.md) - Inspections and non-conformance
-- [Equipment Maintenance](equipment-maintenance.md) - Maintenance scheduling
-- [Costing](costing.md) - Production cost tracking
+### Features Covered in This Document
 
-### Integration and APIs
-- [API Reference](api-reference.md) - Complete REST API documentation
-- [Integration Patterns](integration-patterns.md) - Cross-module event flows
-- [Event Architecture](event-architecture.md) - Domain events and messaging
-
-### Implementation
-- [Database Schema](database-schema.md) - Data models and relationships
-- [Workflows](workflows.md) - Production process workflows
+This README documents the following Manufacturing features inline:
+- Bill of Materials — Product structure and component management
+- Routing Operations — Production steps and work centers
+- Work Orders — Execution tracking and labor reporting
+- Production Planning — Scheduling and MRP
+- Quality Control — Inspections and non-conformance
+- Equipment Maintenance — Maintenance scheduling
+- Costing — Production cost tracking
 
 ## Domain Models (14 types)
 

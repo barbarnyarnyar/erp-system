@@ -1,564 +1,116 @@
 # Production Deployment
 
-Deploy the ERP system to production environments using Kubernetes, Docker Swarm, or cloud platforms.
+Deploy the ERP system to production using Docker Compose. The current codebase has no Kubernetes manifests, Helm charts, Terraform configurations, or cloud deployment scripts.
 
-## Deployment Options
+## Current Deployment
 
-### Kubernetes (Recommended)
-Best for enterprise deployments requiring high availability, auto-scaling, and advanced orchestration.
+### Docker Compose (Only Deployment Method)
 
-### Docker Swarm  
-Good for smaller deployments that need container orchestration without Kubernetes complexity.
-
-### Cloud Platforms
-Native cloud services like AWS ECS, Google Cloud Run, or Azure Container Instances.
-
-## Kubernetes Deployment
-
-### Prerequisites
-- Kubernetes cluster 1.25+
-- kubectl configured for cluster access
-- Helm 3.0+ (recommended)
-- Ingress controller (NGINX, Traefik, or cloud provider)
-- Storage class for persistent volumes
-
-### Step 1: Create Namespace and Secrets
 ```bash
-# Create namespace
-kubectl create namespace erp-system
+# Start all services
+make run
 
-# Create database credentials
-kubectl create secret generic db-credentials \
-  --from-literal=username=postgres \
-  --from-literal=password=production-db-password \
-  --namespace=erp-system
+# Build all services
+make build
 
-# Create Redis authentication
-kubectl create secret generic redis-auth \
-  --from-literal=password=redis-auth-token \
-  --namespace=erp-system
+# Stop all services
+make stop
 
-# Create JWT secret
-kubectl create secret generic jwt-secret \
-  --from-literal=secret=jwt-signing-secret-256-bit \
-  --namespace=erp-system
+# Full cleanup (removes images, volumes, orphans)
+make clean
 ```
 
-### Step 2: Deploy Infrastructure Services
-```yaml
-# infrastructure.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: postgres
-  namespace: erp-system
-spec:
-  serviceName: postgres
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        ports:
-        - containerPort: 5432
-        env:
-        - name: POSTGRES_DB
-          value: "erp_system"
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: username
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1"
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-storage
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
+### Infrastructure Dependencies
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: erp-system
-spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
-```
+The system requires these infrastructure services, all defined in `docker-compose.yml`:
 
-### Step 3: Deploy Application Services
-```yaml
-# services.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: fm-service
-  namespace: erp-system
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: fm-service
-  template:
-    metadata:
-      labels:
-        app: fm-service
-    spec:
-      containers:
-      - name: fm-service
-        image: erp-system/fm-service:v1.0.0
-        ports:
-        - containerPort: 8001
-        env:
-        - name: ENVIRONMENT
-          value: "production"
-        - name: DB_HOST
-          value: "postgres"
-        - name: DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: username
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: jwt-secret
-              key: secret
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8001
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8001
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-```
+| Service | Image | Port | Purpose | Used By |
+|---------|-------|------|---------|---------|
+| `postgres` | `postgres:13` | 5432 | Relational database | **Not connected** — all services use in-memory |
+| `redis` | `redis:6` | 6379 | Cache and session store | **Not connected** — no Redis client in any go.mod |
+| `zookeeper` | `confluentinc/cp-zookeeper:7.0.1` | 2181 | Kafka coordination | Kafka |
+| `kafka` | `confluentinc/cp-kafka:7.0.1` | 9092, 29092 | Event messaging | All services for fire-and-forget event publishing |
 
-### Step 4: Configure Ingress
-```yaml
-# ingress.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: erp-ingress
-  namespace: erp-system
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rate-limit: "100"
-spec:
-  tls:
-  - hosts:
-    - erp.company.com
-    secretName: erp-tls
-  rules:
-  - host: erp.company.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: api-gateway
-            port:
-              number: 80
-```
+### Application Services
 
-### Step 5: Deploy with Kubectl
+| Service | Build Context | Port | Default Config |
+|---------|-------------|------|----------------|
+| `auth-service` | `./services/auth-service` | 8000 | `PORT=8000` |
+| `fm-service` | `./services/fm-service` | 8001 | `PORT=8001` |
+| `crm-service` | `./services/crm-service` | 8002 | `PORT=8002` |
+| `hr-service` | `./services/hr-service` | 8003 | `PORT=8003` |
+| `m-service` | `./services/m-service` | 8004 | `PORT=8004` |
+| `pm-service` | `./services/pm-service` | 8005 | `PORT=8005` |
+| `scm-service` | `./services/scm-service` | 8006 | `PORT=8006` |
+
+> **Important**: The API Gateway is **not included** in docker-compose.yml. It must be built and run separately.
+
+### Starting the API Gateway
+
 ```bash
-# Deploy infrastructure
-kubectl apply -f infrastructure.yaml
+# From repository root (required — gateway needs shared/ module)
+cd api-gateway
+go run cmd/main.go
 
-# Wait for infrastructure to be ready
-kubectl wait --for=condition=ready pod -l app=postgres --timeout=300s -n erp-system
-
-# Deploy services
-kubectl apply -f services.yaml
-
-# Deploy ingress
-kubectl apply -f ingress.yaml
-
-# Verify deployment
-kubectl get pods -n erp-system
-kubectl get services -n erp-system
-kubectl get ingress -n erp-system
+# Or build and run
+cd api-gateway && go build -o bin/main cmd/main.go && ./bin/main
 ```
 
-## Docker Swarm Deployment
+> The gateway Dockerfile expects the build context to include both `shared/` and `api-gateway/`:
+> ```bash
+> # Build from repo root
+> docker build -f api-gateway/Dockerfile .
+> ```
 
-### Step 1: Initialize Swarm Cluster
+## Health Checks
+
 ```bash
-# On first manager node
-docker swarm init --advertise-addr <MANAGER-IP>
+# Check all services via Makefile
+make health
 
-# Join additional managers
-docker swarm join-token manager
-# Run output command on other manager nodes
+# Check individual service directly
+curl http://localhost:8000/health   # Auth
+curl http://localhost:8001/health   # FM
+curl http://localhost:8002/health   # CRM
+curl http://localhost:8003/health   # HR
+curl http://localhost:8004/health   # M
+curl http://localhost:8005/health   # PM
+curl http://localhost:8006/health   # SCM
 
-# Join worker nodes
-docker swarm join-token worker
-# Run output command on worker nodes
-
-# Verify cluster
-docker node ls
+# Via API Gateway
+curl http://localhost:8080/health
 ```
 
-### Step 2: Create Networks and Secrets
-```bash
-# Create overlay networks
-docker network create --driver overlay --attachable erp-backend
-docker network create --driver overlay --attachable erp-database
+## Known Deployment Issues
 
-# Create secrets
-echo "production-db-password" | docker secret create db_password -
-echo "jwt-signing-secret-256-bit" | docker secret create jwt_secret -
-```
+1. **API Gateway not in docker-compose.yml**: The gateway must be built and run separately — `docker compose up` does not start it.
 
-### Step 3: Deploy Stack
-```yaml
-# docker-compose.prod.yml
-version: '3.8'
+2. **Dockerfile port mismatches**: M-service and PM-service Dockerfiles `EXPOSE 8001` but services default to `8004` and `8006` respectively. Set `PORT` at runtime to override.
 
-services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-      POSTGRES_DB: erp_system
-    secrets:
-      - db_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - erp-database
-    deploy:
-      replicas: 1
-      placement:
-        constraints: [node.role == manager]
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
+3. **Build script naming mismatch**: `scripts/build.sh` uses directory names (`finance`, `manufacturing`, `projects`) that differ from docker-compose service names (`fm-service`, `m-service`, `pm-service`).
 
-  fm-service:
-    image: erp-system/fm-service:${VERSION:-latest}
-    environment:
-      - ENVIRONMENT=production
-      - DB_HOST=postgres
-      - DB_PASSWORD_FILE=/run/secrets/db_password
-      - JWT_SECRET_FILE=/run/secrets/jwt_secret
-    secrets:
-      - db_password
-      - jwt_secret
-    networks:
-      - erp-backend
-      - erp-database
-    deploy:
-      replicas: 3
-      update_config:
-        parallelism: 1
-        delay: 30s
-        failure_action: rollback
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
+4. **Go version discrepancies**: Dockerfiles use `golang:1.21-alpine` but `go.mod` files specify `go 1.23.0`. The builder auto-downloads the newer toolchain at build time.
 
-  api-gateway:
-    image: erp-system/api-gateway:${VERSION:-latest}
-    environment:
-      - ENVIRONMENT=production
-      - FM_SERVICE_URL=http://fm-service:8001
-      - JWT_SECRET_FILE=/run/secrets/jwt_secret
-    secrets:
-      - jwt_secret
-    ports:
-      - "80:8080"
-      - "443:8443"
-    networks:
-      - erp-backend
-    deploy:
-      replicas: 2
+5. **No database persistence**: All services use in-memory storage. No service connects to PostgreSQL at runtime. Data is lost on container restart.
 
-volumes:
-  postgres_data:
+6. **Port discrepancies between code defaults and documented ports**:
 
-networks:
-  erp-backend:
-    external: true
-  erp-database:
-    external: true
+   | Service | Code Default | Docker Compose Port |
+   |---------|-------------|-------------------|
+   | HR | 8003 | 8003 |
+   | CRM | 8002 | 8002 |
+   | SCM | 8006 | 8006 |
 
-secrets:
-  db_password:
-    external: true
-  jwt_secret:
-    external: true
-```
+## Security
 
-### Step 4: Deploy Stack
-```bash
-# Deploy the stack
-export VERSION=v1.0.0
-docker stack deploy -c docker-compose.prod.yml erp
+The deployed API Gateway has **no authentication**. All endpoints are publicly accessible. See [Security Configuration](security.md) for details on the inactive JWT auth system.
 
-# Verify deployment
-docker stack ps erp
-docker service ls
-```
+## Monitoring
 
-## AWS ECS Deployment
-
-### Prerequisites
-- AWS CLI configured
-- ECS Cluster created
-- Application Load Balancer
-- RDS PostgreSQL instance
-- ElastiCache Redis cluster
-
-### Step 1: Create Task Definition
-```json
-{
-  "family": "fm-service",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "512",
-  "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::ACCOUNT:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::ACCOUNT:role/ecsTaskRole",
-  "containerDefinitions": [
-    {
-      "name": "fm-service",
-      "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/erp-system/fm-service:latest",
-      "portMappings": [
-        {
-          "containerPort": 8001,
-          "protocol": "tcp"
-        }
-      ],
-      "environment": [
-        {
-          "name": "ENVIRONMENT",
-          "value": "production"
-        },
-        {
-          "name": "DB_HOST", 
-          "value": "erp-postgres.cluster-xyz.us-west-2.rds.amazonaws.com"
-        }
-      ],
-      "secrets": [
-        {
-          "name": "DB_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:erp/db/password"
-        }
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/fm-service",
-          "awslogs-region": "us-west-2",
-          "awslogs-stream-prefix": "ecs"
-        }
-      }
-    }
-  ]
-}
-```
-
-### Step 2: Create ECS Service
-```bash
-# Create service for Financial Management
-aws ecs create-service \
-  --cluster erp-production \
-  --service-name fm-service \
-  --task-definition fm-service:1 \
-  --desired-count 2 \
-  --launch-type FARGATE \
-  --network-configuration "awsvpcConfiguration={subnets=[subnet-12345,subnet-67890],securityGroups=[sg-abcdef],assignPublicIp=DISABLED}" \
-  --load-balancers "targetGroupArn=arn:aws:elasticloadbalancing:us-west-2:ACCOUNT:targetgroup/fm-service/123456,containerName=fm-service,containerPort=8001"
-```
-
-## Environment Configuration
-
-### Production Environment Variables
-```bash
-# Application Configuration
-ENVIRONMENT=production
-LOG_LEVEL=warn
-
-# Database Configuration  
-DB_HOST=prod-postgresql.company.com
-DB_PORT=5432
-DB_USERNAME=erp_user
-DB_PASSWORD_FILE=/run/secrets/db_password
-
-# Cache Configuration
-REDIS_HOST=prod-redis.company.com
-REDIS_AUTH_FILE=/run/secrets/redis_password
-
-# Message Queue Configuration
-KAFKA_BROKERS=prod-kafka1.company.com:9092,prod-kafka2.company.com:9092
-
-# Security Configuration
-JWT_SECRET_FILE=/run/secrets/jwt_secret
-RATE_LIMIT_REQUESTS=100
-RATE_LIMIT_WINDOW=300s
-
-# TLS Configuration
-TLS_ENABLED=true
-TLS_CERT_FILE=/certs/tls.crt
-TLS_KEY_FILE=/certs/tls.key
-```
-
-## Health Checks and Readiness
-
-### Service Health Check
-All services expose health endpoints:
-```bash
-# Check service health
-curl https://erp.company.com/api/v1/finance/health
-```
-
-Expected response:
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-03-15T10:30:00Z",
-  "services": {
-    "database": {
-      "status": "up",
-      "response_time_ms": 2
-    },
-    "redis": {
-      "status": "up", 
-      "response_time_ms": 1
-    }
-  },
-  "version": "1.0.0"
-}
-```
-
-### Kubernetes Probes
-```yaml
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 8001
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /health
-    port: 8001
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  timeoutSeconds: 3
-  failureThreshold: 2
-```
-
-## Deployment Verification
-
-### Post-Deployment Checklist
-- [ ] All services are running and healthy
-- [ ] Database connections are working
-- [ ] API endpoints are responding
-- [ ] Authentication is working
-- [ ] SSL/TLS certificates are valid
-- [ ] Monitoring and logging are operational
-- [ ] Backup procedures are in place
-
-### Verification Commands
-```bash
-# Check all services
-kubectl get pods -n erp-system
-
-# Verify ingress
-kubectl get ingress -n erp-system
-
-# Test API endpoints
-curl -k https://erp.company.com/api/v1/finance/accounts
-
-# Check logs
-kubectl logs -f deployment/fm-service -n erp-system
-```
-
-## Rollback Procedures
-
-### Kubernetes Rollback
-```bash
-# Check rollout status
-kubectl rollout status deployment/fm-service -n erp-system
-
-# View rollout history
-kubectl rollout history deployment/fm-service -n erp-system
-
-# Rollback to previous version
-kubectl rollout undo deployment/fm-service -n erp-system
-
-# Rollback to specific revision
-kubectl rollout undo deployment/fm-service --to-revision=2 -n erp-system
-```
-
-### Docker Swarm Rollback
-```bash
-# Rollback service to previous image
-docker service rollback erp_fm-service
-
-# Update to specific version
-docker service update --image erp-system/fm-service:v1.0.1 erp_fm-service
-```
+There is **no monitoring infrastructure** deployed. See [Monitoring and Alerting](monitoring.md) for current state and recommendations.
 
 ## Next Steps
 
-After successful deployment:
-- [Configure Monitoring](monitoring.md) - Set up metrics and alerting
-- [Security Configuration](security.md) - Harden your deployment
-- [Backup and Recovery](backup-recovery.md) - Protect your data
-- [Performance Optimization](performance.md) - Tune for optimal performance
+- [Configuration Management](configuration.md) — Environment-specific settings
+- [Troubleshooting](troubleshooting.md) — Common issues and solutions
+- [System Maintenance](maintenance.md) — Routine tasks

@@ -37,23 +37,17 @@ graph TB
 
 ## Documentation Structure
 
-### Core Features
-- [Customer Management](customer-management.md) - Account and contact management
-- [Lead Management](lead-management.md) - Capture, qualification, and conversion
-- [Opportunity Management](opportunity-management.md) - Pipeline and forecasting
-- [Quote Management](quote-management.md) - Pricing and configuration
-- [Sales Orders](sales-orders.md) - Order processing and lifecycle
-- [Service Tickets](service-tickets.md) - Customer support and resolution
-- [Campaigns](campaigns.md) - Marketing activities
-- [Price Lists](price-lists.md) - Product pricing configuration
+### Features Covered in This Document
 
-### Integration and APIs
-- [API Reference](api-reference.md) - Complete REST API documentation
-- [Event Architecture](event-architecture.md) - Domain events and messaging
-
-### Implementation
-- [Database Schema](database-schema.md) - Data models and relationships
-- [Sales Workflows](sales-workflows.md) - Lead-to-cash process
+This README documents the following CRM features inline:
+- Customer Management — Accounts, contacts, and segmentation
+- Lead Management — Capture, qualification, and conversion
+- Opportunity Management — Pipeline and forecasting
+- Quote Management — Pricing and configuration
+- Sales Orders — Order processing and lifecycle
+- Service Tickets — Customer support and resolution
+- Campaigns — Marketing activities
+- Price Lists — Product pricing configuration
 
 ## Domain Models (11 types)
 
