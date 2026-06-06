@@ -9,6 +9,7 @@ func SetupCRMRoutes(
 	r *gin.Engine,
 	custLeadHandler *handlers.CustomerLeadHandler,
 	salesOppHandler *handlers.SalesOpportunityHandler,
+	custInteractionHandler *handlers.CustomerInteractionHandler,
 ) {
 	v1 := r.Group("/api/v1")
 	{
@@ -18,6 +19,12 @@ func SetupCRMRoutes(
 		v1.GET("/customers/:id", custLeadHandler.GetCustomer)
 		v1.PUT("/customers/:id", custLeadHandler.UpdateCustomer)
 		v1.DELETE("/customers/:id", custLeadHandler.DeleteCustomer)
+
+		// Customer Interactions
+		v1.GET("/customer-interactions", custInteractionHandler.ListCustomerInteractions)
+		v1.POST("/customer-interactions", custInteractionHandler.CreateCustomerInteraction)
+		v1.GET("/customer-interactions/:id", custInteractionHandler.GetCustomerInteraction)
+		v1.DELETE("/customer-interactions/:id", custInteractionHandler.DeleteCustomerInteraction)
 
 		// Leads
 		v1.GET("/leads", custLeadHandler.ListLeads)
@@ -33,6 +40,7 @@ func SetupCRMRoutes(
 		v1.GET("/opportunities/:id", salesOppHandler.GetOpportunity)
 		v1.PUT("/opportunities/:id", salesOppHandler.UpdateOpportunity)
 		v1.DELETE("/opportunities/:id", salesOppHandler.DeleteOpportunity)
+		v1.GET("/opportunities/:id/stage-history", salesOppHandler.GetOpportunityStageHistory)
 
 		// Sales Orders
 		v1.GET("/sales-orders", salesOppHandler.ListSalesOrders)

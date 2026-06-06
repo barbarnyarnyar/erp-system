@@ -9,6 +9,7 @@ import (
 	"github.com/erp-system/crm-service/internal/business/domain"
 	"github.com/erp-system/crm-service/internal/business/service"
 	"github.com/erp-system/crm-service/internal/data/memory"
+	"github.com/shopspring/decimal"
 )
 
 // MockPublisher tracks events for testing
@@ -184,5 +185,44 @@ func TestLeadService_ConvertLead_RollbackOnPublishFailure(t *testing.T) {
 	opps, _ := oppRepo.List(ctx)
 	if len(opps) != 0 {
 		t.Errorf("expected 0 opportunities, got %d", len(opps))
+	}
+}
+
+func TestOpportunityStageHistory(t *testing.T) {
+	oppRepo := memory.NewOpportunityRepository()
+	historyRepo := memory.NewOpportunityStageHistoryRepository()
+	publisher := &MockPublisher{}
+
+	svc := service.NewOpportunityService(oppRepo, historyRepo, publisher)
+	ctx := context.Background()
+
+	// 1. Create an opportunity
+	opp, err := svc.CreateOpportunity(ctx, "cust_123", "Acme Sale", decimal.NewFromInt(1000), "DISCOVERY")
+	if err != nil {
+		t.Fatalf("failed to create opportunity: %v", err)
+	}
+
+	// Verify initial history entry
+	hist, _ := svc.ListOpportunityStageHistory(ctx, opp.ID)
+	if len(hist) != 1 {
+		t.Fatalf("expected 1 history record, got %d", len(hist))
+	}
+	if hist[0].Stage != domain.OpportunityStageDiscovery {
+		t.Errorf("expected stage DISCOVERY, got %s", hist[0].Stage)
+	}
+
+	// 2. Update stage: DISCOVERY -> NEGOTIATION
+	_, err = svc.UpdateOpportunity(ctx, opp.ID, "Acme Sale", decimal.NewFromInt(1000), "NEW", "NEGOTIATION", decimal.NewFromFloat(0.50), "sales_rep_1")
+	if err != nil {
+		t.Fatalf("failed to update opportunity: %v", err)
+	}
+
+	// Verify stage history record added
+	hist, _ = svc.ListOpportunityStageHistory(ctx, opp.ID)
+	if len(hist) != 2 {
+		t.Fatalf("expected 2 history records, got %d", len(hist))
+	}
+	if hist[1].Stage != domain.OpportunityStageNegotiation || hist[1].ChangedBy != "sales_rep_1" {
+		t.Errorf("unexpected stage history entry: %+v", hist[1])
 	}
 }

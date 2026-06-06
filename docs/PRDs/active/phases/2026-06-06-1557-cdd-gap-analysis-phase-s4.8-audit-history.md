@@ -3,7 +3,7 @@
 **Source PRD**: [cdd-gap-analysis.md](file:///Users/sithuhlaing/Projects/erp-system/docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md)
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: S4.8
-**Status**: Ready for Implementation
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -90,9 +90,9 @@ make test
 
 ## Definition of Done
 
-- [ ] `PositionHistory` and `DepartmentHistory` entities and repos are implemented.
-- [ ] Direct salary updates in `UpdateEmployee` are blocked.
-- [ ] Dedicated `UpdateCompensation` method updates `EmployeeCompensationHistory`.
-- [ ] `OpportunityStageHistory` logs transitions during opportunity updates.
-- [ ] All unit and integration tests compile and pass.
-- [ ] Gap analysis checklists `2.13`, `2.16`, and `2.19` are marked complete.
+- [x] `PositionHistory` and `DepartmentHistory` entities and repos are implemented.
+- [x] Direct salary updates in `UpdateEmployee` are blocked.
+- [x] Dedicated `UpdateCompensation` method updates `EmployeeCompensationHistory`.
+- [x] `OpportunityStageHistory` logs transitions during opportunity updates.
+- [x] All unit and integration tests compile and pass.
+- [x] Gap analysis checklists `2.13`, `2.16`, and `2.19` are marked complete.

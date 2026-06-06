@@ -379,11 +379,9 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 	if err != nil {
 		return nil, err
 	}
+
 	if entry.Status != string(domain.JournalEntryStatusPending) {
 		return nil, domain.ErrJournalEntryNotMutable
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	// Snapshot account states for rollback on failure

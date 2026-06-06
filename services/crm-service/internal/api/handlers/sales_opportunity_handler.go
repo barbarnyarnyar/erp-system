@@ -119,6 +119,17 @@ func (h *SalesOpportunityHandler) DeleteOpportunity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Opportunity deleted successfully"})
 }
 
+func (h *SalesOpportunityHandler) GetOpportunityStageHistory(c *gin.Context) {
+	id := c.Param("id")
+	history, err := h.oppSvc.ListOpportunityStageHistory(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
+}
+
 // Sales Orders
 
 type CreateSalesOrderReq struct {

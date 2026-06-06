@@ -154,3 +154,7 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 func (s *OpportunityService) DeleteOpportunity(ctx context.Context, id string) error {
 	return s.oppRepo.Delete(ctx, id)
 }
+
+func (s *OpportunityService) ListOpportunityStageHistory(ctx context.Context, opportunityID string) ([]domain.OpportunityStageHistory, error) {
+	return s.historyRepo.ListByOpportunityID(ctx, opportunityID)
+}

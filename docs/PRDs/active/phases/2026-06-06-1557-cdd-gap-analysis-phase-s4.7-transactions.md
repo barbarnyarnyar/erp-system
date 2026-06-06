@@ -115,10 +115,10 @@ make test
 
 ## Definition of Done
 
-- [ ] `UpdateJournalEntry` rejects unbalanced entries.
-- [ ] `UpdateJournalEntry` correctly reverses old lines and applies new lines to GL accounts.
-- [ ] `UpdateJournalEntry` successfully rolls back account balances on save error.
-- [ ] `ConvertLead` rolls back lead status and deletes created customers if opportunity creation fails.
-- [ ] FM and CRM unit tests pass.
-- [ ] Full ERP system builds and compiles cleanly.
-- [ ] PRD gap analysis checklist items `2.9` and `2.11` are checked off.
+- [x] `UpdateJournalEntry` rejects unbalanced entries.
+- [x] `UpdateJournalEntry` correctly reverses old lines and applies new lines to GL accounts.
+- [x] `UpdateJournalEntry` successfully rolls back account balances on save error.
+- [x] `ConvertLead` rolls back lead status and deletes created customers if opportunity creation fails.
+- [x] FM and CRM unit tests pass.
+- [x] Full ERP system builds and compiles cleanly.
+- [x] PRD gap analysis checklist items `2.9` and `2.11` are checked off.

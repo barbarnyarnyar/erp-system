@@ -56,7 +56,6 @@ func main() {
 	ticketSvc := service.NewServiceTicketService(ticketRepo, kafkaPub)
 	campSvc := service.NewCampaignService(campaignRepo, kafkaPub)
 	custInteractionSvc := service.NewCustomerInteractionService(custInteractionRepo, kafkaPub)
-	_ = custInteractionSvc
 	plSvc := service.NewPriceListService(priceListRepo, priceListItemRepo)
 
 	// 5. Seed initial mock data
@@ -87,8 +86,9 @@ func main() {
 
 	custLeadHandler := handlers.NewCustomerLeadHandler(custSvc, leadSvc)
 	salesOppHandler := handlers.NewSalesOpportunityHandler(oppSvc, orderSvc, quoteSvc, ticketSvc, campSvc, plSvc)
+	custInteractionHandler := handlers.NewCustomerInteractionHandler(custInteractionSvc)
 
-	routes.SetupCRMRoutes(r, custLeadHandler, salesOppHandler)
+	routes.SetupCRMRoutes(r, custLeadHandler, salesOppHandler, custInteractionHandler)
 
 	// 8. Start HTTP server with graceful shutdown
 	server := &http.Server{
