@@ -34,7 +34,7 @@ func main() {
 	taskRepo := memory.NewTaskRepository()
 	depRepo := memory.NewTaskDependencyRepository()
 	allocRepo := memory.NewResourceAllocationRepository()
-	timeRepo := memory.NewTimeEntryRepository()
+	timeRepo := memory.NewProjectTimeEntryRepository()
 	expenseRepo := memory.NewProjectExpenseRepository()
 	docRepo := memory.NewProjectDocumentRepository()
 	issueRepo := memory.NewProjectIssueRepository()

@@ -32,11 +32,11 @@ type PayrollRecordRepository interface {
 	GetByEmployeeID(ctx context.Context, empID string) ([]PayrollRecord, error)
 }
 
-type TimeEntryRepository interface {
-	Create(ctx context.Context, te *TimeEntry) error
-	GetByID(ctx context.Context, id string) (*TimeEntry, error)
-	List(ctx context.Context) ([]TimeEntry, error)
-	Update(ctx context.Context, te *TimeEntry) error
+type AttendanceEntryRepository interface {
+	Create(ctx context.Context, te *AttendanceEntry) error
+	GetByID(ctx context.Context, id string) (*AttendanceEntry, error)
+	List(ctx context.Context) ([]AttendanceEntry, error)
+	Update(ctx context.Context, te *AttendanceEntry) error
 }
 
 type LeaveRequestRepository interface {

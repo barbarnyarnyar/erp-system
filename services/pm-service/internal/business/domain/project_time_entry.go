@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type TimeEntry struct {
+type ProjectTimeEntry struct {
 	ID          string          `json:"id"`
 	ProjectID   string          `json:"project_id"`
 	TaskID      string          `json:"task_id"`

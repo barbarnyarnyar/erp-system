@@ -10,13 +10,13 @@ import (
 )
 
 type TimeExpenseService struct {
-	timeRepo    domain.TimeEntryRepository
+	timeRepo    domain.ProjectTimeEntryRepository
 	expenseRepo domain.ProjectExpenseRepository
 	publisher   domain.EventPublisher
 }
 
 func NewTimeExpenseService(
-	timeRepo domain.TimeEntryRepository,
+	timeRepo domain.ProjectTimeEntryRepository,
 	expenseRepo domain.ProjectExpenseRepository,
 	publisher domain.EventPublisher,
 ) *TimeExpenseService {
@@ -27,9 +27,9 @@ func NewTimeExpenseService(
 	}
 }
 
-func (s *TimeExpenseService) LogTime(ctx context.Context, projectID, taskID, userID string, entryDate time.Time, hours decimal.Decimal, description string) (*domain.TimeEntry, error) {
+func (s *TimeExpenseService) LogTime(ctx context.Context, projectID, taskID, userID string, entryDate time.Time, hours decimal.Decimal, description string) (*domain.ProjectTimeEntry, error) {
 	id := fmt.Sprintf("time_%d", time.Now().UnixNano())
-	entry := &domain.TimeEntry{
+	entry := &domain.ProjectTimeEntry{
 		ID:          id,
 		ProjectID:   projectID,
 		TaskID:      taskID,
@@ -59,7 +59,7 @@ func (s *TimeExpenseService) LogTime(ctx context.Context, projectID, taskID, use
 	return entry, nil
 }
 
-func (s *TimeExpenseService) ApproveTime(ctx context.Context, entryID string, approvedBy string) (*domain.TimeEntry, error) {
+func (s *TimeExpenseService) ApproveTime(ctx context.Context, entryID string, approvedBy string) (*domain.ProjectTimeEntry, error) {
 	entry, err := s.timeRepo.GetByID(ctx, entryID)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (s *TimeExpenseService) ApproveTime(ctx context.Context, entryID string, ap
 	return entry, nil
 }
 
-func (s *TimeExpenseService) ListTimeEntries(ctx context.Context, projectID string) ([]domain.TimeEntry, error) {
+func (s *TimeExpenseService) ListTimeEntries(ctx context.Context, projectID string) ([]domain.ProjectTimeEntry, error) {
 	return s.timeRepo.ListByProject(ctx, projectID)
 }
 

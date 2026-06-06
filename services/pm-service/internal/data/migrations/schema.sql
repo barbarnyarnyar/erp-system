@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS resource_allocations (
     updated_at TIMESTAMP NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS time_entries (
+CREATE TABLE IF NOT EXISTS project_time_entries (
     id UUID PRIMARY KEY NOT NULL,
     project_id UUID NOT NULL REFERENCES projects(id),
     task_id UUID NOT NULL REFERENCES tasks(id),

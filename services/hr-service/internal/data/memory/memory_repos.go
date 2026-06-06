@@ -203,44 +203,44 @@ func (r *MemoryPayrollRecordRepo) GetByEmployeeID(ctx context.Context, empID str
 	return list, nil
 }
 
-// MemoryTimeEntryRepo implements domain.TimeEntryRepository
-type MemoryTimeEntryRepo struct {
+// MemoryAttendanceEntryRepo implements domain.AttendanceEntryRepository
+type MemoryAttendanceEntryRepo struct {
 	mu  sync.RWMutex
-	tes map[string]domain.TimeEntry
+	tes map[string]domain.AttendanceEntry
 }
 
-func NewMemoryTimeEntryRepo() *MemoryTimeEntryRepo {
-	return &MemoryTimeEntryRepo{tes: make(map[string]domain.TimeEntry)}
+func NewMemoryAttendanceEntryRepo() *MemoryAttendanceEntryRepo {
+	return &MemoryAttendanceEntryRepo{tes: make(map[string]domain.AttendanceEntry)}
 }
 
-func (r *MemoryTimeEntryRepo) Create(ctx context.Context, te *domain.TimeEntry) error {
+func (r *MemoryAttendanceEntryRepo) Create(ctx context.Context, te *domain.AttendanceEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.tes[te.ID] = *te
 	return nil
 }
 
-func (r *MemoryTimeEntryRepo) GetByID(ctx context.Context, id string) (*domain.TimeEntry, error) {
+func (r *MemoryAttendanceEntryRepo) GetByID(ctx context.Context, id string) (*domain.AttendanceEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	te, ok := r.tes[id]
 	if !ok {
-		return nil, errors.New("time entry not found")
+		return nil, errors.New("attendance entry not found")
 	}
 	return &te, nil
 }
 
-func (r *MemoryTimeEntryRepo) List(ctx context.Context) ([]domain.TimeEntry, error) {
+func (r *MemoryAttendanceEntryRepo) List(ctx context.Context) ([]domain.AttendanceEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	list := make([]domain.TimeEntry, 0, len(r.tes))
+	list := make([]domain.AttendanceEntry, 0, len(r.tes))
 	for _, t := range r.tes {
 		list = append(list, t)
 	}
 	return list, nil
 }
 
-func (r *MemoryTimeEntryRepo) Update(ctx context.Context, te *domain.TimeEntry) error {
+func (r *MemoryAttendanceEntryRepo) Update(ctx context.Context, te *domain.AttendanceEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.tes[te.ID] = *te

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type TimeEntry struct {
+type AttendanceEntry struct {
 	ID         string          `json:"id"`
 	EmployeeID string          `json:"employee_id"`
 	EntryDate  time.Time       `json:"entry_date"`

@@ -290,41 +290,41 @@ func (r *ResourceAllocationRepository) Delete(ctx context.Context, id string) er
 }
 
 // ==========================================
-// TimeEntry Memory Repository
+// ProjectTimeEntry Memory Repository
 // ==========================================
 
-type TimeEntryRepository struct {
+type ProjectTimeEntryRepository struct {
 	mu      sync.RWMutex
-	entries map[string]domain.TimeEntry
+	entries map[string]domain.ProjectTimeEntry
 }
 
-func NewTimeEntryRepository() *TimeEntryRepository {
-	return &TimeEntryRepository{
-		entries: make(map[string]domain.TimeEntry),
+func NewProjectTimeEntryRepository() *ProjectTimeEntryRepository {
+	return &ProjectTimeEntryRepository{
+		entries: make(map[string]domain.ProjectTimeEntry),
 	}
 }
 
-func (r *TimeEntryRepository) Create(ctx context.Context, entry *domain.TimeEntry) error {
+func (r *ProjectTimeEntryRepository) Create(ctx context.Context, entry *domain.ProjectTimeEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.entries[entry.ID] = *entry
 	return nil
 }
 
-func (r *TimeEntryRepository) GetByID(ctx context.Context, id string) (*domain.TimeEntry, error) {
+func (r *ProjectTimeEntryRepository) GetByID(ctx context.Context, id string) (*domain.ProjectTimeEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	e, ok := r.entries[id]
 	if !ok {
-		return nil, fmt.Errorf("time entry not found: %s", id)
+		return nil, fmt.Errorf("project time entry not found: %s", id)
 	}
 	return &e, nil
 }
 
-func (r *TimeEntryRepository) ListByProject(ctx context.Context, projectID string) ([]domain.TimeEntry, error) {
+func (r *ProjectTimeEntryRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ProjectTimeEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.TimeEntry
+	var list []domain.ProjectTimeEntry
 	for _, e := range r.entries {
 		if e.ProjectID == projectID {
 			list = append(list, e)
@@ -333,17 +333,17 @@ func (r *TimeEntryRepository) ListByProject(ctx context.Context, projectID strin
 	return list, nil
 }
 
-func (r *TimeEntryRepository) Update(ctx context.Context, entry *domain.TimeEntry) error {
+func (r *ProjectTimeEntryRepository) Update(ctx context.Context, entry *domain.ProjectTimeEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.entries[entry.ID]; !ok {
-		return fmt.Errorf("time entry not found: %s", entry.ID)
+		return fmt.Errorf("project time entry not found: %s", entry.ID)
 	}
 	r.entries[entry.ID] = *entry
 	return nil
 }
 
-func (r *TimeEntryRepository) Delete(ctx context.Context, id string) error {
+func (r *ProjectTimeEntryRepository) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.entries, id)

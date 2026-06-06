@@ -33,7 +33,7 @@ func main() {
 	empRepo := memory.NewMemoryEmployeeRepo()
 	payrollRepo := memory.NewMemoryPayrollRecordRepo()
 	deductionRepo := memory.NewMemoryPayrollDeductionRepo()
-	timesheetRepo := memory.NewMemoryTimeEntryRepo()
+	timesheetRepo := memory.NewMemoryAttendanceEntryRepo()
 	leaveRepo := memory.NewMemoryLeaveRequestRepo()
 	leaveBalanceRepo := memory.NewMemoryLeaveBalanceRepo()
 	jobPostingRepo := memory.NewMemoryJobPostingRepo()

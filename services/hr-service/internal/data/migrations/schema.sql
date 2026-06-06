@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS payroll_deductions (
     amount NUMERIC(15, 4) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS time_entries (
+CREATE TABLE IF NOT EXISTS attendance_entries (
     id UUID PRIMARY KEY NOT NULL,
     employee_id UUID NOT NULL REFERENCES employees(id),
     entry_date DATE NOT NULL,

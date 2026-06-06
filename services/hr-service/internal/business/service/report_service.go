@@ -10,13 +10,13 @@ import (
 type ReportService struct {
 	empRepo       domain.EmployeeRepository
 	payrollRepo   domain.PayrollRecordRepository
-	timesheetRepo domain.TimeEntryRepository
+	timesheetRepo domain.AttendanceEntryRepository
 }
 
 func NewReportService(
 	empRepo domain.EmployeeRepository,
 	payrollRepo domain.PayrollRecordRepository,
-	timesheetRepo domain.TimeEntryRepository,
+	timesheetRepo domain.AttendanceEntryRepository,
 ) *ReportService {
 	return &ReportService{
 		empRepo:       empRepo,

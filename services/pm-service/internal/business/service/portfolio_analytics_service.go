@@ -10,14 +10,14 @@ import (
 type PortfolioAnalyticsService struct {
 	projectRepo domain.ProjectRepository
 	taskRepo    domain.TaskRepository
-	timeRepo    domain.TimeEntryRepository
+	timeRepo    domain.ProjectTimeEntryRepository
 	expenseRepo domain.ProjectExpenseRepository
 }
 
 func NewPortfolioAnalyticsService(
 	projectRepo domain.ProjectRepository,
 	taskRepo domain.TaskRepository,
-	timeRepo domain.TimeEntryRepository,
+	timeRepo domain.ProjectTimeEntryRepository,
 	expenseRepo domain.ProjectExpenseRepository,
 ) *PortfolioAnalyticsService {
 	return &PortfolioAnalyticsService{

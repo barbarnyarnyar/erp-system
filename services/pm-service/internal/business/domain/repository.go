@@ -40,11 +40,11 @@ type ResourceAllocationRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type TimeEntryRepository interface {
-	Create(ctx context.Context, entry *TimeEntry) error
-	GetByID(ctx context.Context, id string) (*TimeEntry, error)
-	ListByProject(ctx context.Context, projectID string) ([]TimeEntry, error)
-	Update(ctx context.Context, entry *TimeEntry) error
+type ProjectTimeEntryRepository interface {
+	Create(ctx context.Context, entry *ProjectTimeEntry) error
+	GetByID(ctx context.Context, id string) (*ProjectTimeEntry, error)
+	ListByProject(ctx context.Context, projectID string) ([]ProjectTimeEntry, error)
+	Update(ctx context.Context, entry *ProjectTimeEntry) error
 	Delete(ctx context.Context, id string) error
 }
 

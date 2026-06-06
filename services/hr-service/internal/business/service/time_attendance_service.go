@@ -10,29 +10,29 @@ import (
 )
 
 type TimeAttendanceService struct {
-	repo      domain.TimeEntryRepository
+	repo      domain.AttendanceEntryRepository
 	publisher domain.EventPublisher
 }
 
-func NewTimeAttendanceService(repo domain.TimeEntryRepository, publisher domain.EventPublisher) *TimeAttendanceService {
+func NewTimeAttendanceService(repo domain.AttendanceEntryRepository, publisher domain.EventPublisher) *TimeAttendanceService {
 	return &TimeAttendanceService{
 		repo:      repo,
 		publisher: publisher,
 	}
 }
 
-func (s *TimeAttendanceService) ListTimesheets(ctx context.Context) ([]domain.TimeEntry, error) {
+func (s *TimeAttendanceService) ListTimesheets(ctx context.Context) ([]domain.AttendanceEntry, error) {
 	return s.repo.List(ctx)
 }
 
-func (s *TimeAttendanceService) CreateTimesheet(ctx context.Context, employeeID string, entryDate time.Time, clockIn, clockOut time.Time, notes string) (*domain.TimeEntry, error) {
+func (s *TimeAttendanceService) CreateTimesheet(ctx context.Context, employeeID string, entryDate time.Time, clockIn, clockOut time.Time, notes string) (*domain.AttendanceEntry, error) {
 	id := fmt.Sprintf("te_%d", time.Now().UnixNano())
 
 	// Calculate total hours
 	diff := clockOut.Sub(clockIn)
 	hours := decimal.NewFromFloat(diff.Hours())
 
-	te := &domain.TimeEntry{
+	te := &domain.AttendanceEntry{
 		ID:          id,
 		EmployeeID:  employeeID,
 		EntryDate:   entryDate,
@@ -64,11 +64,11 @@ func (s *TimeAttendanceService) CreateTimesheet(ctx context.Context, employeeID 
 	return te, nil
 }
 
-func (s *TimeAttendanceService) GetTimesheet(ctx context.Context, id string) (*domain.TimeEntry, error) {
+func (s *TimeAttendanceService) GetTimesheet(ctx context.Context, id string) (*domain.AttendanceEntry, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *TimeAttendanceService) UpdateTimesheet(ctx context.Context, id string, clockIn, clockOut time.Time, notes string) (*domain.TimeEntry, error) {
+func (s *TimeAttendanceService) UpdateTimesheet(ctx context.Context, id string, clockIn, clockOut time.Time, notes string) (*domain.AttendanceEntry, error) {
 	te, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (s *TimeAttendanceService) UpdateTimesheet(ctx context.Context, id string, 
 	return te, nil
 }
 
-func (s *TimeAttendanceService) SubmitTimesheet(ctx context.Context, id string) (*domain.TimeEntry, error) {
+func (s *TimeAttendanceService) SubmitTimesheet(ctx context.Context, id string) (*domain.AttendanceEntry, error) {
 	te, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (s *TimeAttendanceService) SubmitTimesheet(ctx context.Context, id string) 
 	return te, nil
 }
 
-func (s *TimeAttendanceService) ApproveTimesheet(ctx context.Context, id string, approvedBy string) (*domain.TimeEntry, error) {
+func (s *TimeAttendanceService) ApproveTimesheet(ctx context.Context, id string, approvedBy string) (*domain.AttendanceEntry, error) {
 	te, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err

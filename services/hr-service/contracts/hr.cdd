@@ -69,7 +69,7 @@ service HR {
         amount            decimal
     }
 
-    entity TimeEntry {
+    entity AttendanceEntry {
         id          uuid      @primary
         employee_id uuid      @reference(Employee.id)
         entry_date  date
@@ -256,19 +256,19 @@ service HR {
     component TimeAttendanceService {
         description: "Tracks daily timesheets and logger entries"
 
-        func listTimesheets(): list<TimeEntry> {
+        func listTimesheets(): list<AttendanceEntry> {
             description: "List all timesheet entries"
         }
-        func createTimesheet(employeeId: string, entryDate: date, clockIn: timestamp, clockOut: timestamp, notes: string): TimeEntry {
+        func createTimesheet(employeeId: string, entryDate: date, clockIn: timestamp, clockOut: timestamp, notes: string): AttendanceEntry {
             description: "Create a new timesheet record"
         }
-        func getTimesheet(id: string): TimeEntry {
+        func getTimesheet(id: string): AttendanceEntry {
             description: "Get timesheet details"
         }
-        func updateTimesheet(id: string, clockIn: timestamp, clockOut: timestamp, notes: string): TimeEntry {
+        func updateTimesheet(id: string, clockIn: timestamp, clockOut: timestamp, notes: string): AttendanceEntry {
             description: "Update clock-in/out and notes for a timesheet"
         }
-        func submitTimesheet(id: string): TimeEntry {
+        func submitTimesheet(id: string): AttendanceEntry {
             description: "Submit timesheet for manager review"
         }
     }

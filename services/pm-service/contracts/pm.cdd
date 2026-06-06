@@ -56,7 +56,7 @@ service PM {
         updated_at            timestamp
     }
 
-    entity TimeEntry {
+    entity ProjectTimeEntry {
         id          uuid      @primary
         project_id  uuid      @reference(Project.id)
         task_id     uuid      @reference(Task.id)
@@ -190,13 +190,13 @@ service PM {
     component TimeExpenseService {
         description: "Manages timesheet logging and project expense tracking"
 
-        func logTime(projectId: string, taskId: string, userId: string, entryDate: timestamp, hours: decimal, description: string): TimeEntry {
+        func logTime(projectId: string, taskId: string, userId: string, entryDate: timestamp, hours: decimal, description: string): ProjectTimeEntry {
             description: "Logs time spent on a task"
         }
-        func approveTime(entryId: string, approvedBy: string): TimeEntry {
+        func approveTime(entryId: string, approvedBy: string): ProjectTimeEntry {
             description: "Approves a time log entry"
         }
-        func listTimeEntries(projectId: string): list<TimeEntry> {
+        func listTimeEntries(projectId: string): list<ProjectTimeEntry> {
             description: "Lists all logged time entries for a project"
         }
         func logExpense(projectId: string, taskId: string, userId: string, amount: decimal, currency: string, expenseDate: timestamp, category: string, description: string): ProjectExpense {
