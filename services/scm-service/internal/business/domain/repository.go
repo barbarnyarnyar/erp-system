@@ -120,3 +120,10 @@ type PurchaseRequisitionLineRepository interface {
 	DeleteByRequisitionID(ctx context.Context, reqID string) error
 }
 
+type StockTransferRepository interface {
+	Create(ctx context.Context, st *StockTransfer) error
+	GetByID(ctx context.Context, id string) (*StockTransfer, error)
+	List(ctx context.Context) ([]StockTransfer, error)
+	Update(ctx context.Context, st *StockTransfer) error
+}
+

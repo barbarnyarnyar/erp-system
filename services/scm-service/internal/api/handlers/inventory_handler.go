@@ -101,3 +101,99 @@ func (h *InventoryHandler) DeleteInventoryItem(c *gin.Context) {
 	// In-memory repositories support CRUD, so this is fully functional
 	c.JSON(http.StatusOK, gin.H{"message": "inventory tracker deleted successfully. ID: " + id})
 }
+
+func (h *InventoryHandler) ReserveStock(c *gin.Context) {
+	var req struct {
+		ProductID   string `json:"product_id"`
+		LocationID  string `json:"location_id"`
+		Quantity    int    `json:"quantity"`
+		ReferenceID string `json:"reference_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.svc.ReserveStock(c.Request.Context(), req.ProductID, req.LocationID, req.Quantity, req.ReferenceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "stock reserved successfully"})
+}
+
+func (h *InventoryHandler) ReleaseReservation(c *gin.Context) {
+	var req struct {
+		ReferenceID string `json:"reference_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.svc.ReleaseReservation(c.Request.Context(), req.ReferenceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "stock reservation released successfully"})
+}
+
+func (h *InventoryHandler) CreateStockTransfer(c *gin.Context) {
+	var req struct {
+		FromLocationID string `json:"from_location_id"`
+		ToLocationID   string `json:"to_location_id"`
+		ProductID      string `json:"product_id"`
+		Quantity       int    `json:"quantity"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	st, err := h.svc.CreateStockTransfer(c.Request.Context(), req.FromLocationID, req.ToLocationID, req.ProductID, req.Quantity)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": st})
+}
+
+func (h *InventoryHandler) GetStockTransfer(c *gin.Context) {
+	id := c.Param("id")
+	st, err := h.svc.GetStockTransfer(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "stock transfer not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": st})
+}
+
+func (h *InventoryHandler) GetStockTransfers(c *gin.Context) {
+	list, err := h.svc.ListStockTransfers(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+
+func (h *InventoryHandler) ExecuteStockTransfer(c *gin.Context) {
+	id := c.Param("id")
+	st, err := h.svc.ExecuteStockTransfer(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": st})
+}
+

@@ -35,17 +35,7 @@ service FM {
         is_active      boolean
     }
 
-    entity Vendor {
-        id             uuid      @primary
-        vendor_code    string    @unique
-        vendor_name    string
-        contact_name   string
-        email          string
-        phone          string
-        is_active      boolean
-        created_at     timestamp
-        updated_at     timestamp
-    }
+    // NOTE: SCM owns Supplier master data (contracts, lead times, etc.); FM references supplier_id cross-service.
 
     entity BankAccount {
         id             uuid      @primary
@@ -149,7 +139,7 @@ service FM {
     // -------------------------------------------------------------
     entity VendorBill {
         id             uuid      @primary
-        vendor_id      uuid      @reference(Vendor.id)
+        supplier_id    uuid      // Cross-service reference to SCM's Supplier
         bill_number    string
         purchase_order_id uuid     @optional
         issue_date     date
@@ -259,25 +249,10 @@ service FM {
     component AccountsPayableService {
         description: "Manages vendors, purchase order bills, and matching"
 
-        func listVendors(): list<Vendor> {
-            description: "List all vendors"
-        }
-        func createVendor(vendorCode: string, vendorName: string, contactName: string, email: string, phone: string): Vendor {
-            description: "Register a new vendor"
-        }
-        func getVendor(id: string): Vendor {
-            description: "Get vendor details"
-        }
-        func updateVendor(id: string, fields: object): Vendor {
-            description: "Update vendor details"
-        }
-        func deleteVendor(id: string): void {
-            description: "Deactivate/delete a vendor"
-        }
         func listVendorBills(): list<VendorBill> {
             description: "List all vendor bills"
         }
-        func createVendorBill(vendorId: string, billNumber: string, poId: string, lines: list<object>): VendorBill {
+        func createVendorBill(supplierId: string, billNumber: string, poId: string, lines: list<object>): VendorBill {
             description: "Create a vendor bill"
         }
         func matchPurchaseOrder(billId: string, poId: string, goodsReceiptId: string): boolean {
@@ -372,8 +347,6 @@ service FM {
         fin.payment.received: PaymentEventPayload
         fin.payment.processed: PaymentEventPayload
         fin.payment.failed: PaymentEventPayload
-        fin.vendor.created: VendorEventPayload
-        fin.vendor.updated: VendorEventPayload
         fin.vendor.payment.due: VendorBillEventPayload
         fin.budget.created: BudgetEventPayload
         fin.budget.updated: BudgetEventPayload

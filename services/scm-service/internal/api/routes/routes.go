@@ -68,6 +68,14 @@ func RegisterRoutes(
 		v1.GET("/inventory/:id", invHandler.GetInventoryItem)
 		v1.PUT("/inventory/:id", invHandler.UpdateInventoryItem)
 		v1.DELETE("/inventory/:id", invHandler.DeleteInventoryItem)
+		v1.POST("/inventory/reserve", invHandler.ReserveStock)
+		v1.POST("/inventory/release", invHandler.ReleaseReservation)
+
+		// Stock Transfers
+		v1.GET("/stock-transfers", invHandler.GetStockTransfers)
+		v1.POST("/stock-transfers", invHandler.CreateStockTransfer)
+		v1.GET("/stock-transfers/:id", invHandler.GetStockTransfer)
+		v1.POST("/stock-transfers/:id/execute", invHandler.ExecuteStockTransfer)
 
 		// Warehouse Operations - Receipts
 		v1.GET("/receipts", whHandler.GetReceipts)

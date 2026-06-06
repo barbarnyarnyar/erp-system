@@ -34,18 +34,6 @@ CREATE TABLE IF NOT EXISTS tax_rates (
     is_active BOOLEAN NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS vendors (
-    id UUID PRIMARY KEY NOT NULL,
-    vendor_code VARCHAR(255) UNIQUE NOT NULL,
-    vendor_name VARCHAR(255) NOT NULL,
-    contact_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(255) NOT NULL,
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS bank_accounts (
     id UUID PRIMARY KEY NOT NULL,
     account_number VARCHAR(255) UNIQUE NOT NULL,
@@ -136,7 +124,7 @@ CREATE TABLE IF NOT EXISTS invoice_lines (
 
 CREATE TABLE IF NOT EXISTS vendor_bills (
     id UUID PRIMARY KEY NOT NULL,
-    vendor_id UUID NOT NULL REFERENCES vendors(id),
+    supplier_id UUID NOT NULL,
     bill_number VARCHAR(255) NOT NULL,
     purchase_order_id UUID,
     issue_date DATE NOT NULL,

@@ -84,10 +84,22 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
     created_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS stock_transfers (
+    id UUID PRIMARY KEY NOT NULL,
+    from_location_id UUID NOT NULL REFERENCES locations(id),
+    to_location_id UUID NOT NULL REFERENCES locations(id),
+    product_id UUID NOT NULL REFERENCES products(id),
+    quantity INT NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    transferred_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS purchase_requisitions (
     id UUID PRIMARY KEY NOT NULL,
     req_number VARCHAR(255) UNIQUE NOT NULL,
-    requester_id VARCHAR(255) NOT NULL,
+    requester_id UUID NOT NULL,
     request_date DATE NOT NULL,
     status VARCHAR(255) NOT NULL,
     total_amount NUMERIC(15, 4) NOT NULL,
@@ -146,12 +158,14 @@ CREATE TABLE IF NOT EXISTS receipt_lines (
     receipt_id UUID NOT NULL REFERENCES receipts(id),
     product_id UUID NOT NULL REFERENCES products(id),
     quantity_received INT NOT NULL,
+    unit_cost NUMERIC(15, 4) NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS shipments (
     id UUID PRIMARY KEY NOT NULL,
     shipment_number VARCHAR(255) UNIQUE NOT NULL,
+    sales_order_id UUID,
     carrier VARCHAR(255) NOT NULL,
     tracking_number VARCHAR(255) NOT NULL,
     shipped_date TIMESTAMP NOT NULL,

@@ -30,7 +30,6 @@ func main() {
 	entryRepo := memory.NewMemoryJournalEntryRepo()
 	invoiceRepo := memory.NewMemoryInvoiceRepo()
 	paymentRepo := memory.NewMemoryPaymentRepo()
-	vendorRepo := memory.NewMemoryVendorRepo()
 	budgetRepo := memory.NewMemoryBudgetRepo()
 	vendorBillRepo := memory.NewMemoryVendorBillRepo()
 
@@ -50,7 +49,6 @@ func main() {
 		kafkaPublisher,
 	)
 	accountsPayableSvc := service.NewAccountsPayableService(
-		vendorRepo,
 		vendorBillRepo,
 		kafkaPublisher,
 	)

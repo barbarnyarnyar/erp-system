@@ -8,6 +8,7 @@ import (
 type Shipment struct {
 	ID                string    `json:"id"`
 	ShipmentNumber    string    `json:"shipment_number"`
+	SalesOrderID      *string   `json:"sales_order_id"` // Links outbound dispatch to CRM sales order
 	Carrier           string    `json:"carrier"`
 	TrackingNumber    string    `json:"tracking_number"`
 	ShippedDate       time.Time `json:"shipped_date"`

@@ -88,13 +88,25 @@ service SCM {
         created_at    timestamp
     }
 
+    entity StockTransfer {
+        id               uuid      @primary
+        from_location_id uuid      @reference(Location.id)
+        to_location_id   uuid      @reference(Location.id)
+        product_id       uuid      @reference(Product.id)
+        quantity         integer
+        status           string    // e.g., PENDING, TRANSFERRED, CANCELLED
+        transferred_at   timestamp @optional
+        created_at       timestamp
+        updated_at       timestamp
+    }
+
     // -------------------------------------------------------------
     // PURCHASING & REQUISITION ENTITIES
     // -------------------------------------------------------------
     entity PurchaseRequisition {
         id            uuid      @primary
         req_number    string    @unique
-        requester_id  string
+        requester_id  uuid      // Reference to hr.Employee.id / Auth User
         request_date  date
         status        string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
         total_amount  decimal
@@ -156,12 +168,14 @@ service SCM {
         receipt_id        uuid      @reference(Receipt.id)
         product_id        uuid      @reference(Product.id)
         quantity_received integer
+        unit_cost         decimal   // Landed cost (freight, duties)
         created_at        timestamp
     }
 
     entity Shipment {
         id                 uuid      @primary
         shipment_number    string    @unique
+        sales_order_id     uuid      @optional // Links outbound dispatch to CRM sales order
         carrier            string
         tracking_number    string
         shipped_date       timestamp
@@ -199,30 +213,194 @@ service SCM {
     // -------------------------------------------------------------
     component ProductManagementService {
         description: "Manages catalog products, categories, and variants"
+
+        func listProducts(): list<Product> {
+            description: "List all products"
+        }
+        func createProduct(code: string, name: string, desc: string, pType: string, uom: string, cost: decimal, price: decimal, categoryId: string): Product {
+            description: "Create a new product"
+        }
+        func getProduct(id: string): Product {
+            description: "Get product details"
+        }
+        func updateProduct(id: string, code: string, name: string, desc: string, pType: string, uom: string, cost: decimal, price: decimal, isActive: boolean, categoryId: string): Product {
+            description: "Update product details"
+        }
+        func deleteProduct(id: string): void {
+            description: "Delete a product"
+        }
+        func listCategories(): list<ProductCategory> {
+            description: "List all product categories"
+        }
+        func createCategory(code: string, name: string, desc: string): ProductCategory {
+            description: "Create a product category"
+        }
+        func getCategory(id: string): ProductCategory {
+            description: "Get product category details"
+        }
+        func updateCategory(id: string, code: string, name: string, desc: string): ProductCategory {
+            description: "Update product category details"
+        }
+        func deleteCategory(id: string): void {
+            description: "Delete a product category"
+        }
     }
 
     component SupplierManagementService {
         description: "Manages SCM vendors, supplier qualifications, and contracts"
+        // NOTE: SCM owns Supplier master data; FM references supplier_id cross-service.
+
+        func listSuppliers(): list<Supplier> {
+            description: "List all suppliers"
+        }
+        func createSupplier(code: string, name: string, contact: string, email: string, phone: string): Supplier {
+            description: "Create a new supplier"
+        }
+        func getSupplier(id: string): Supplier {
+            description: "Get supplier details"
+        }
+        func updateSupplier(id: string, code: string, name: string, contact: string, email: string, phone: string, isActive: boolean): Supplier {
+            description: "Update supplier details"
+        }
+        func deleteSupplier(id: string): void {
+            description: "Delete a supplier"
+        }
+        func listContracts(): list<VendorContract> {
+            description: "List all contracts"
+        }
+        func createContract(contractNum: string, supplierId: string, startDate: timestamp, endDate: timestamp, terms: string): VendorContract {
+            description: "Create a vendor contract"
+        }
+        func getContract(id: string): VendorContract {
+            description: "Get vendor contract details"
+        }
+        func updateContract(id: string, contractNum: string, supplierId: string, startDate: timestamp, endDate: timestamp, terms: string, status: string): VendorContract {
+            description: "Update vendor contract details"
+        }
+        func deleteContract(id: string): void {
+            description: "Delete a vendor contract"
+        }
     }
 
     component PurchaseOrderService {
         description: "Manages purchase requisitions and purchase orders lifecycle"
+
+        func listRequisitions(): list<PurchaseRequisition> {
+            description: "List all purchase requisitions"
+        }
+        func createRequisition(requesterId: string, notes: string, lines: list<object>): PurchaseRequisition {
+            description: "Create a purchase requisition"
+        }
+        func getRequisition(id: string): PurchaseRequisition {
+            description: "Get purchase requisition details"
+        }
+        func approveRequisition(id: string): PurchaseRequisition {
+            description: "Approve a purchase requisition"
+        }
+        func listPurchaseOrders(): list<PurchaseOrder> {
+            description: "List all purchase orders"
+        }
+        func createPurchaseOrder(supplierId: string, expectedDelivery: timestamp, notes: string, lines: list<object>): PurchaseOrder {
+            description: "Create a purchase order"
+        }
+        func getPurchaseOrder(id: string): PurchaseOrder {
+            description: "Get purchase order details"
+        }
+        func updatePurchaseOrderStatus(id: string, status: string): PurchaseOrder {
+            description: "Update purchase order status"
+        }
     }
 
     component InventoryService {
         description: "Manages warehouse location stock levels, values, and cycle counting"
+
+        func listInventory(): list<InventoryItem> {
+            description: "List all inventory items"
+        }
+        func createInventoryItem(productId: string, locationId: string, qtyOnHand: integer, reorderPoint: integer, maxStock: integer, cost: decimal): InventoryItem {
+            description: "Initialize an inventory item record"
+        }
+        func getInventoryItem(id: string): InventoryItem {
+            description: "Get inventory item by ID"
+        }
+        func updateInventoryItem(id: string, qtyOnHand: integer, qtyReserved: integer, reorderPoint: integer, maxStock: integer, cost: decimal): InventoryItem {
+            description: "Update inventory item record"
+        }
+        func adjustInventory(productId: string, locationId: string, qty: integer, movementType: string, notes: string): InventoryItem {
+            description: "Log inventory adjustment movement and update stock level"
+        }
+        func reserveStock(productId: string, locationId: string, quantity: integer, referenceId: string): void {
+            description: "Reserve inventory for sales orders or manufacturing runs"
+        }
+        func releaseReservation(referenceId: string): void {
+            description: "Release previously reserved inventory back to available stock"
+        }
+        func createStockTransfer(fromLocationId: string, toLocationId: string, productId: string, quantity: integer): StockTransfer {
+            description: "Create a new warehouse-to-warehouse stock transfer requisition"
+        }
+        func getStockTransfer(id: string): StockTransfer {
+            description: "Get stock transfer details"
+        }
+        func listStockTransfers(): list<StockTransfer> {
+            description: "List all stock transfers"
+        }
+        func executeStockTransfer(id: string): StockTransfer {
+            description: "Fulfill a stock transfer, adjusting source and destination inventory counts"
+        }
     }
 
     component WarehouseService {
         description: "Manages warehouse receipts and outbound shipments"
+
+        func listReceipts(): list<Receipt> {
+            description: "List warehouse receipts"
+        }
+        func createReceipt(purchaseOrderId: string, notes: string, lines: list<object>): Receipt {
+            description: "Receive goods matching a Purchase Order"
+        }
+        func getReceipt(id: string): Receipt {
+            description: "Get receipt details"
+        }
+        func listShipments(): list<Shipment> {
+            description: "List outbound shipments"
+        }
+        func createShipment(salesOrderId: string, carrier: string, trackingNumber: string, estimatedDelivery: timestamp, notes: string, lines: list<object>): Shipment {
+            description: "Create outbound shipment matching a CRM sales order"
+        }
+        func getShipment(id: string): Shipment {
+            description: "Get shipment details"
+        }
+        func updateShipmentStatus(id: string, status: string): Shipment {
+            description: "Update shipment status (dispatched, delivered)"
+        }
     }
 
     component DemandPlanningService {
         description: "Manages future stock demand forecasts and safety stock"
+
+        func listForecastsByProduct(productId: string): list<DemandForecast> {
+            description: "List forecasts for a product"
+        }
+        func createForecast(productId: string, forecastDate: timestamp, forecastQuantity: integer, confidenceLevel: decimal, notes: string): DemandForecast {
+            description: "Record a demand forecast entry"
+        }
+        func getForecast(id: string): DemandForecast {
+            description: "Get forecast details"
+        }
     }
 
     component ReportService {
         description: "Generates inventory level, vendor performance, and procurement reports"
+
+        func getInventoryReport(): object {
+            description: "Generate warehouse stock levels and valuation reports"
+        }
+        func getVendorPerformanceReport(): object {
+            description: "Generate supplier performance analytics (fulfillment rate, lead times)"
+        }
+        func getProcurementReport(): object {
+            description: "Generate purchasing behavior and PO summaries"
+        }
     }
 
     // -------------------------------------------------------------

@@ -254,64 +254,6 @@ func (r *MemoryPaymentRepo) List(ctx context.Context) ([]domain.Payment, error) 
 	return list, nil
 }
 
-// MemoryVendorRepo implements domain.VendorRepository
-type MemoryVendorRepo struct {
-	mu      sync.RWMutex
-	vendors map[string]domain.Vendor
-}
-
-func NewMemoryVendorRepo() *MemoryVendorRepo {
-	return &MemoryVendorRepo{
-		vendors: make(map[string]domain.Vendor),
-	}
-}
-
-func (r *MemoryVendorRepo) Create(ctx context.Context, vendor *domain.Vendor) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	
-	r.vendors[vendor.ID] = *vendor
-	return nil
-}
-
-func (r *MemoryVendorRepo) GetByID(ctx context.Context, id string) (*domain.Vendor, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	ven, ok := r.vendors[id]
-	if !ok {
-		return nil, errors.New("vendor not found")
-	}
-	return &ven, nil
-}
-
-func (r *MemoryVendorRepo) Update(ctx context.Context, vendor *domain.Vendor) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	
-	r.vendors[vendor.ID] = *vendor
-	return nil
-}
-
-func (r *MemoryVendorRepo) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	
-	delete(r.vendors, id)
-	return nil
-}
-
-func (r *MemoryVendorRepo) List(ctx context.Context) ([]domain.Vendor, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	list := make([]domain.Vendor, 0, len(r.vendors))
-	for _, ven := range r.vendors {
-		list = append(list, ven)
-	}
-	return list, nil
-}
-
 // MemoryBudgetRepo implements domain.BudgetRepository
 type MemoryBudgetRepo struct {
 	mu      sync.RWMutex

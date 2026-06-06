@@ -778,3 +778,48 @@ func (r *MemoryPurchaseRequisitionLineRepo) DeleteByRequisitionID(ctx context.Co
 	}
 	return nil
 }
+
+// MemoryStockTransferRepo implements domain.StockTransferRepository
+type MemoryStockTransferRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.StockTransfer
+}
+
+func NewMemoryStockTransferRepo() *MemoryStockTransferRepo {
+	return &MemoryStockTransferRepo{data: make(map[string]domain.StockTransfer)}
+}
+
+func (r *MemoryStockTransferRepo) Create(ctx context.Context, st *domain.StockTransfer) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[st.ID] = *st
+	return nil
+}
+
+func (r *MemoryStockTransferRepo) GetByID(ctx context.Context, id string) (*domain.StockTransfer, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	st, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("stock transfer not found")
+	}
+	return &st, nil
+}
+
+func (r *MemoryStockTransferRepo) List(ctx context.Context) ([]domain.StockTransfer, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.StockTransfer, 0, len(r.data))
+	for _, st := range r.data {
+		list = append(list, st)
+	}
+	return list, nil
+}
+
+func (r *MemoryStockTransferRepo) Update(ctx context.Context, st *domain.StockTransfer) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[st.ID] = *st
+	return nil
+}
+

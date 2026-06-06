@@ -39,15 +39,6 @@ type PaymentRepository interface {
 	List(ctx context.Context) ([]Payment, error)
 }
 
-// VendorRepository defines operations for vendors
-type VendorRepository interface {
-	Create(ctx context.Context, vendor *Vendor) error
-	GetByID(ctx context.Context, id string) (*Vendor, error)
-	Update(ctx context.Context, vendor *Vendor) error
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context) ([]Vendor, error)
-}
-
 // BudgetRepository defines operations for budgets
 type BudgetRepository interface {
 	Create(ctx context.Context, budget *Budget) error

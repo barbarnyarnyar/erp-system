@@ -47,6 +47,7 @@ func main() {
 	shipRepo := memory.NewMemoryShipmentRepo()
 	shipLRepo := memory.NewMemoryShipmentLineRepo()
 	forecastRepo := memory.NewMemoryDemandForecastRepo()
+	transferRepo := memory.NewMemoryStockTransferRepo()
 
 	// Seed default warehouse location
 	_ = locRepo.Create(context.Background(), &domain.Location{
@@ -61,7 +62,7 @@ func main() {
 	prodSvc := service.NewProductManagementService(prodRepo, catRepo)
 	supSvc := service.NewSupplierManagementService(supRepo, contRepo)
 	poSvc := service.NewPurchaseOrderService(poRepo, lineRepo, reqRepo, reqLineRepo, publisher)
-	invSvc := service.NewInventoryService(invRepo, moveRepo, publisher)
+	invSvc := service.NewInventoryService(invRepo, moveRepo, transferRepo, publisher)
 	whSvc := service.NewWarehouseService(recRepo, recLRepo, shipRepo, shipLRepo, poRepo, lineRepo, invSvc)
 	demandSvc := service.NewDemandPlanningService(forecastRepo)
 	reportSvc := service.NewReportService(prodRepo, invRepo, supRepo, poRepo, moveRepo, forecastRepo)

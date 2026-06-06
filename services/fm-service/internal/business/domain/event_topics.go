@@ -11,8 +11,6 @@ const (
 	TopicFinPaymentReceived       = "fin.payment.received"
 	TopicFinPaymentProcessed      = "fin.payment.processed"
 	TopicFinPaymentFailed         = "fin.payment.failed"
-	TopicFinVendorCreated         = "fin.vendor.created"
-	TopicFinVendorUpdated         = "fin.vendor.updated"
 	TopicFinVendorPaymentDue      = "fin.vendor.payment.due"
 	TopicFinBudgetCreated         = "fin.budget.created"
 	TopicFinBudgetUpdated         = "fin.budget.updated"

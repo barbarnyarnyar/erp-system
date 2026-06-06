@@ -213,13 +213,6 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		// Create a VendorBill in AP.
-		// First verify if vendor exists, if not create a mock vendor.
-		_, err := c.ap.GetVendor(ctx, ev.VendorID)
-		if err != nil {
-			_, _ = c.ap.CreateVendor(ctx, ev.VendorID[:8], "Vendor "+ev.VendorID[:8], "", "", "")
-		}
-
 		lines := []domain.VendorBillLine{
 			{
 				ID:          "vbl_" + ev.InvoiceNo,
@@ -229,7 +222,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 				LineTotal:   ev.TotalAmount,
 			},
 		}
-		_, err = c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
+		_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
 		return err
 
 	case "scm.inventory.valued":
