@@ -418,6 +418,8 @@ service HR {
         hr.goal.achieved: GoalAchievedEvent
         hr.performance.improvement.needed: PerformanceImprovementNeededEvent
         hr.expense.submitted: ExpenseSubmittedEvent
+        hr.employee.available: EmployeeAvailableEvent
+        hr.employee.skills.updated: EmployeeSkillsUpdatedEvent
     }
 
     consumer_events {

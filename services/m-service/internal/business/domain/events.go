@@ -148,6 +148,14 @@ type EquipmentUpEvent struct {
 	Timestamp    time.Time `json:"timestamp"`
 }
 
+type CustomProductionCompletedEvent struct {
+	ProjectID         string    `json:"project_id"`
+	ProductionOrderID string    `json:"production_order_id"`
+	CustomItemID      string    `json:"custom_item_id"`
+	Quantity          int       `json:"quantity"`
+	Timestamp         time.Time `json:"timestamp"`
+}
+
 type SCMMaterialReceivedEvent struct {
 	PurchaseOrderID string          `json:"purchase_order_id"`
 	ProductID       string          `json:"product_id"`

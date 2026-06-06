@@ -20,6 +20,7 @@ const (
 	TopicFinAccountCreated        = "fin.account.created"
 	TopicFinAccountUpdated        = "fin.account.updated"
 	TopicFinAccountBalanceChanged = "fin.account.balance.changed"
+	TopicFinBudgetApproved        = "fin.budget.approved"
 
 	// Consumer Events
 	TopicHrEmployeeCreated       = "hr.employee.created"

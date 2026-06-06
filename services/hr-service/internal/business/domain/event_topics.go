@@ -23,6 +23,8 @@ const (
 	TopicHrGoalAchieved                 = "hr.goal.achieved"
 	TopicHrPerformanceImprovementNeeded = "hr.performance.improvement.needed"
 	TopicHrExpenseSubmitted             = "hr.expense.submitted"
+	TopicHrEmployeeAvailable            = "hr.employee.available"
+	TopicHrEmployeeSkillsUpdated        = "hr.employee.skills.updated"
 
 	// Consumer Events
 	TopicPrjProjectCreated      = "prj.project.created"

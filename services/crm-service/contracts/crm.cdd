@@ -307,6 +307,7 @@ service CRM {
         crm.email.sent: EmailSentEvent
         crm.email.opened: EmailOpenedEvent
         crm.email.clicked: EmailClickedEvent
+        crm.sales.order.received: SalesOrderReceivedEvent
     }
 
     consumer_events {

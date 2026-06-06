@@ -182,6 +182,13 @@ type EmailClickedEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type SalesOrderReceivedEvent struct {
+	SalesOrderID string          `json:"sales_order_id"`
+	CustomerID   string          `json:"customer_id"`
+	TotalAmount  decimal.Decimal `json:"total_amount"`
+	Timestamp    time.Time       `json:"timestamp"`
+}
+
 // Consumed Event Payloads
 
 type InventoryAvailableEvent struct {

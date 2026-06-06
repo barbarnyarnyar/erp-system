@@ -21,6 +21,7 @@ const (
 	TopicMfgMaintenanceCompleted          = "mfg.maintenance.completed"
 	TopicMfgEquipmentDown                 = "mfg.equipment.down"
 	TopicMfgEquipmentUp                   = "mfg.equipment.up"
+	TopicMfgCustomProductionCompleted     = "mfg.custom.production.completed"
 
 	// Consumer Events
 	TopicScmMaterialReceived    = "scm.material.received"

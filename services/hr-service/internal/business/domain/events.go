@@ -172,6 +172,17 @@ type ExpenseSubmittedEvent struct {
 	Timestamp   time.Time       `json:"timestamp"`
 }
 
+type EmployeeAvailableEvent struct {
+	EmployeeID string    `json:"employee_id"`
+	Status     string    `json:"status"` // e.g. AVAILABLE, BUSY
+	Timestamp  time.Time `json:"timestamp"`
+}
+
+type EmployeeSkillsUpdatedEvent struct {
+	EmployeeID string   `json:"employee_id"`
+	Skills     []string `json:"skills"`
+	Timestamp  time.Time `json:"timestamp"`
+}
 
 // ============================================================================
 // CONSUMER EVENTS PAYLOADS

@@ -260,6 +260,7 @@ service SCM {
         scm.shipment.delayed: ShipmentDelayedEvent
 
         scm.training.required: SCMTrainingRequiredEvent
+        scm.material.delivered: MaterialDeliveredEvent
     }
 
     consumer_events {

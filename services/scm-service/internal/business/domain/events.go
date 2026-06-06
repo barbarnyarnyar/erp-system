@@ -168,6 +168,14 @@ type ShipmentDelayedEvent struct {
 	Timestamp        time.Time `json:"timestamp"`
 }
 
+type MaterialDeliveredEvent struct {
+	ProjectID    string    `json:"project_id"`
+	TaskID       string    `json:"task_id"`
+	ShipmentID   string    `json:"shipment_id"`
+	DeliveryDate time.Time `json:"delivery_date"`
+	Timestamp    time.Time `json:"timestamp"`
+}
+
 // Consumer Events payloads
 
 type SalesOrderCreatedEvent struct {

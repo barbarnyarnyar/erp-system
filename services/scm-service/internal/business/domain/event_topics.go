@@ -24,6 +24,7 @@ const (
 	TopicScmShipmentDelivered          = "scm.shipment.delivered"
 	TopicScmShipmentDelayed            = "scm.shipment.delayed"
 	TopicScmTrainingRequired           = "scm.training.required"
+	TopicScmMaterialDelivered          = "scm.material.delivered"
 
 	// Consumer Events
 	TopicCrmSalesOrderCreated      = "crm.sales.order.created"

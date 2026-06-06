@@ -73,6 +73,13 @@ type VendorBillEventPayload struct {
 	Timestamp  time.Time       `json:"timestamp"`
 }
 
+type BudgetApprovedEvent struct {
+	ProjectID    string          `json:"project_id"`
+	TotalBudget  decimal.Decimal `json:"total_budget"`
+	ApprovedDate time.Time       `json:"approved_date"`
+	Timestamp    time.Time       `json:"timestamp"`
+}
+
 // -----------------------------------------------------------------
 // CONSUMED EVENTS PAYLOADS
 // -----------------------------------------------------------------
