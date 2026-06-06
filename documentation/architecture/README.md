@@ -8,6 +8,7 @@ Understanding the system from different perspectives:
 - [System Overview](system-overview.md) - High-level architecture and components
 - [Technology Stack](technology-stack.md) - Technologies, frameworks, and tools used
 - [Microservices Architecture](microservices-architecture.md) - Service design and communication
+- [Services Overview](services-overview.md) - API endpoints, domain models, and events for all 6 services
 
 ## Data and Storage
 

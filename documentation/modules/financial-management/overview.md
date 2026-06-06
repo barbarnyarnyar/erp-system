@@ -1,226 +1,148 @@
 # Financial Management Overview
 
-Comprehensive accounting and financial management capabilities for complete financial lifecycle management.
+General ledger, accounts receivable, accounts payable, cash management, and budgeting with double-entry accounting.
 
 ## Core Features Summary
 
 ### General Ledger and Chart of Accounts
-**Purpose**: Central repository for all financial transactions with hierarchical account structure
+**Purpose**: Central repository for all financial accounts with hierarchical structure and balance tracking.
 
-**Key Features:**
-- **Flexible Account Hierarchy**: Support for unlimited account levels and sub-accounts
-- **Account Types**: Asset, Liability, Equity, Revenue, and Expense classifications
-- **Account Codes**: Configurable numbering schemes for different account types
-- **Balance Tracking**: Real-time balance calculations with historical tracking
-- **Multi-dimensional Analysis**: Department, project, and cost center tracking
-
-See detailed documentation: [General Ledger](general-ledger.md)
+**Implemented Features:**
+- Account CRUD with type classification (ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE)
+- Account number and name management
+- Parent-child account hierarchy
+- Balance tracking with `decimal.Decimal` precision
+- Currency field per account (string only — no conversion logic)
+- Active/inactive status management
+- Account-level balance retrieval
+- Journal entries with double-entry balance validation (debits = credits)
+- Automatic balance update on journal posting (type-aware: debit-increase for ASSET/EXPENSE)
+- Reversal entries with debit/credit swap
+- Trial balance report grouped by debit-type vs credit-type accounts
+- Balance sheet report grouped by ASSET/LIABILITY/EQUITY types
+- Kafka events on account create/update and balance change
 
 ### Journal Entry Management
-**Purpose**: Record all financial transactions with proper audit trails and validation
+**Purpose**: Record financial transactions with balance validation.
 
-**Key Features:**
-- **Double-Entry Bookkeeping**: Automatic validation that debits equal credits
-- **Batch Processing**: Support for multiple transactions in single entry
-- **Approval Workflows**: Configurable approval processes based on amount thresholds
-- **Reversing Entries**: Ability to reverse posted entries with audit trail
-- **Source Tracking**: Track originating module for each entry
-
-**Workflow Example:**
-```mermaid
-flowchart TD
-    A[Create Journal Entry] --> B[Validate Entry Balance]
-    B --> C{Debits = Credits?}
-    C -->|No| D[Return Validation Error]
-    C -->|Yes| E{Requires Approval?}
-    E -->|Yes| F[Submit for Approval]
-    E -->|No| G[Post Entry]
-    F --> H{Approved?}
-    H -->|Yes| G
-    H -->|No| I[Return to Draft]
-    G --> J[Update Account Balances]
-    J --> K[Create Audit Trail]
-    K --> L[Publish Domain Event]
+```json
+// POST /api/v1/journal-entries
+{
+  "reference": "JE-2024-001",
+  "description": "Monthly rent payment",
+  "lines": [
+    {"account_id": "acc_123", "debit_amount": "2500.00", "credit_amount": "0", "description": "Rent expense"},
+    {"account_id": "acc_456", "debit_amount": "0", "credit_amount": "2500.00", "description": "Cash payment"}
+  ]
+}
 ```
 
-See detailed documentation: [Journal Entries](journal-entries.md)
-
-### Accounts Payable
-**Purpose**: Manage vendor relationships and payment processes
-
-**Key Features:**
-- **Vendor Management**: Comprehensive vendor database with payment terms
-- **Invoice Processing**: Three-way matching (PO, receipt, invoice)
-- **Payment Processing**: Batch payments, ACH, wire transfers, checks
-- **Aging Analysis**: Track overdue payments and cash flow planning
-- **Approval Workflows**: Multi-level approval for large payments
-- **1099 Processing**: Year-end tax reporting for vendors
-
-See detailed documentation: [Accounts Payable](accounts-payable.md)
+**Validation Rules:**
+- Minimum 2 lines per entry
+- Total debits must equal total credits
+- All referenced accounts must exist
+- Status: always POSTED on creation (no draft/approval workflow)
+- Reversal supported: swaps debit/credit amounts, links original entry
 
 ### Accounts Receivable
-**Purpose**: Manage customer billing and collection processes
+**Purpose**: Manage customer invoices.
 
-**Key Features:**
-- **Customer Management**: Customer database with credit limits
-- **Invoice Generation**: Automated and manual invoice creation
-- **Payment Application**: Apply customer payments to invoices
-- **Collections Management**: Automated dunning and collection workflows
-- **Credit Management**: Credit limit monitoring and enforcement
-- **Aging Analysis**: Track outstanding receivables
+**Implemented Features:**
+- Invoice CRUD with line items (description, quantity, unit price)
+- Line total auto-calculation (quantity × unit price)
+- Invoice send action (status toggle only — no actual email delivery)
+- Invoice event publishing
 
-See detailed documentation: [Accounts Receivable](accounts-receivable.md)
+**Not implemented:** Credit limits, payment terms tracking, dunning/collections, aging analysis.
+
+### Accounts Payable
+**Purpose**: Manage vendor bills.
+
+A `VendorBill` domain model and `AccountsPayableService` are defined with basic CRUD methods. The `VendorBillHandler` is defined but **not wired** into routes — there are no `/api/v1/vendor-bills` endpoints.
+
+### Cash Management
+**Purpose**: Record and track payments.
+
+```json
+// POST /api/v1/payments
+{
+  "invoice_id": "inv_123",
+  "amount": "2500.00",
+  "payment_method": "bank_transfer"
+}
+```
+
+**Implemented Features:**
+- Payment recording against invoices or bills
+- Payment listing and retrieval
+- Payment event publishing
+
+**Not implemented:** Bank reconciliation, cash flow forecasting (endpoint returns hardcoded stub), payment batch processing.
+
+### Budgeting
+**Purpose**: Budget planning and monitoring.
+
+A `Budget` domain model, `BudgetingService`, and `MemoryBudgetRepo` exist with full CRUD. Supports budget allocation, variance calculation, and cross-service consumption (PM, HR, MFG listen for budget events).
 
 ### Financial Reporting
-**Purpose**: Generate comprehensive financial statements and analysis
 
-**Standard Reports:**
-- **Balance Sheet**: Assets, liabilities, and equity at point in time
-- **Income Statement**: Revenue and expenses for period
-- **Cash Flow Statement**: Operating, investing, and financing activities
-- **Trial Balance**: All account balances with debit/credit totals
-- **General Ledger Detail**: Transaction-level detail for all accounts
+| Report | Implementation |
+|--------|---------------|
+| **Balance Sheet** | Real — iterates accounts, classifies by type (ASSET/LIABILITY/EQUITY), sums balances |
+| **Income Statement** | Stub — returns hardcoded success message, no actual revenue/expense calculation |
+| **Cash Flow** | Stub — returns hardcoded success message, no cash flow logic |
 
-**Advanced Analytics:**
-- **Budget vs. Actual**: Variance analysis with drill-down capabilities
-- **Trend Analysis**: Multi-period comparisons and trending
-- **Ratio Analysis**: Financial ratios and benchmarking
-- **Cash Flow Forecasting**: Projected cash flows based on AR/AP
-- **Profitability Analysis**: By department, product, or customer
+## Implementation Details
 
-See detailed documentation: [Financial Reporting](financial-reporting.md)
-
-## Implementation Examples
-
-### Account Creation Service
-```go
-type Account struct {
-    ID              string          `json:"id"`
-    AccountCode     string          `json:"account_code"`
-    AccountName     string          `json:"account_name"`
-    AccountType     AccountType     `json:"account_type"`
-    ParentAccountID *string         `json:"parent_account_id,omitempty"`
-    AccountLevel    int             `json:"account_level"`
-    NormalSide      string          `json:"normal_side"`
-    CurrentBalance  decimal.Decimal `json:"current_balance"`
-    IsActive        bool            `json:"is_active"`
-    AllowPosting    bool            `json:"allow_posting"`
-}
-
-func (s *AccountService) CreateAccount(ctx context.Context, req CreateAccountRequest) (*Account, error) {
-    // Validate account code uniqueness
-    if exists, _ := s.repo.ExistsWithCode(ctx, req.AccountCode); exists {
-        return nil, ErrAccountCodeExists
-    }
-    
-    // Calculate account level based on parent
-    level := 1
-    if req.ParentAccountID != nil {
-        parent, err := s.repo.GetByID(ctx, *req.ParentAccountID)
-        if err != nil {
-            return nil, err
-        }
-        level = parent.AccountLevel + 1
-    }
-    
-    account := &Account{
-        ID:              uuid.New().String(),
-        AccountCode:     req.AccountCode,
-        AccountName:     req.AccountName,
-        AccountType:     req.AccountType,
-        ParentAccountID: req.ParentAccountID,
-        AccountLevel:    level,
-        NormalSide:      req.NormalSide,
-        IsActive:        true,
-        AllowPosting:    req.AllowPosting,
-    }
-    
-    return s.repo.Create(ctx, account)
-}
+### Account Type Rules
+```
+ASSET, EXPENSE     → Debit-increase (debits add, credits subtract)
+LIABILITY, EQUITY,
+REVENUE            → Credit-increase (debits subtract, credits add)
 ```
 
-### Invoice Processing Service
-```go
-type VendorInvoice struct {
-    ID              string          `json:"id"`
-    VendorID        string          `json:"vendor_id"`
-    InvoiceNumber   string          `json:"invoice_number"`
-    InvoiceDate     time.Time       `json:"invoice_date"`
-    DueDate         time.Time       `json:"due_date"`
-    Amount          decimal.Decimal `json:"amount"`
-    Status          InvoiceStatus   `json:"status"`
-    PurchaseOrderID *string         `json:"purchase_order_id"`
-    ReceiptID       *string         `json:"receipt_id"`
-}
-
-func (s *APService) ProcessInvoice(ctx context.Context, invoice *VendorInvoice) error {
-    // Three-way matching
-    if invoice.PurchaseOrderID != nil && invoice.ReceiptID != nil {
-        if err := s.validateThreeWayMatch(ctx, invoice); err != nil {
-            return err
-        }
-    }
-    
-    // Create journal entry
-    entry := &JournalEntry{
-        Description: fmt.Sprintf("Vendor Invoice %s", invoice.InvoiceNumber),
-        Lines: []JournalEntryLine{
-            {
-                AccountCode:   "5000", // Expense account
-                DebitAmount:   invoice.Amount,
-                CreditAmount:  decimal.Zero,
-            },
-            {
-                AccountCode:   "2000", // Accounts Payable
-                DebitAmount:   decimal.Zero,
-                CreditAmount:  invoice.Amount,
-            },
-        },
-    }
-    
-    return s.journalService.CreateEntry(ctx, entry)
-}
+### Trial Balance
+```
+ASSET + EXPENSE    → debit side
+LIABILITY + EQUITY + REVENUE → credit side
 ```
 
-## Business Rules and Validation
-
-### Account Management Rules
-- Account codes must be unique within the chart of accounts
-- Parent accounts cannot be deleted if they have child accounts
-- Posting accounts cannot have child accounts
-- Account types must follow standard accounting classifications
-
-### Journal Entry Rules
-- All journal entries must balance (debits = credits)
-- Entries above threshold require approval workflow
-- Posted entries cannot be modified (only reversed)
-- Each entry must have minimum two lines
-
-### Multi-Currency Rules
-- Exchange rates updated daily from external service
-- Currency gains/losses calculated automatically
-- Base currency configurable per organization
-- Historical exchange rates maintained for reporting
+### Balance Sheet
+```
+Accounts where Type == "ASSET"     → assets
+Accounts where Type == "LIABILITY" → liabilities
+Accounts where Type == "EQUITY"    → equity
+Revenue and Expense accounts are NOT included in the balance sheet (no income statement integration).
+```
 
 ## Integration Points
 
 ### Internal Module Integration
-- **HR Module**: Payroll expense allocation and employee expense processing
-- **SCM Module**: Purchase order processing and inventory valuation
-- **CRM Module**: Customer invoicing and commission calculations
-- **Project Module**: Project cost allocation and billing
-- **Manufacturing Module**: Production cost accounting and inventory movements
+- **HR Module**: Consumes `hr.payroll.processed` → creates salary journal entries
+- **SCM Module**: Consumes `scm.purchase.order.created` → creates inventory-in-transit entries
+- **SCM Module**: Consumes `scm.invoice.received` → creates AP entries
+- **SCM Module**: Consumes `scm.inventory.valued` → updates inventory GL balance
+- **CRM Module**: Consumes `crm.sale.completed` → creates revenue entries
+- **MFG Module**: Consumes `mfg.production.completed` → creates WIP→finished goods entries
+- **MFG Module**: Consumes `mfg.material.consumed` → creates raw material issue entries
+- **PM Module**: Consumes `prj.time.logged` → creates unbilled receivable entries
 
-### External System Integration
-- **Banking Systems**: Electronic payments, account reconciliation, cash management
-- **Payment Processors**: Credit card processing, online payment gateways
-- **Tax Services**: Automated tax calculations and compliance reporting
-- **Audit Systems**: External auditor access and documentation export
+### Kafka Events Published (16 topics)
+`fin.invoice.created`, `fin.invoice.updated`, `fin.invoice.sent`, `fin.invoice.paid`, `fin.invoice.overdue`, `fin.payment.received`, `fin.payment.processed`, `fin.payment.failed`, `fin.vendor.payment.due`, `fin.account.created`, `fin.account.updated`, `fin.account.balance.changed`, `fin.budget.created`, `fin.budget.updated`, `fin.budget.exceeded`, `fin.budget.approved`, `fin.budget.allocated`, `fin.cost.budget.allocated`
 
-## Next Steps
+## Implementation Status vs Documentation
 
-Learn about specific areas:
-- [General Ledger](general-ledger.md) - Detailed account management
-- [Journal Entries](journal-entries.md) - Transaction processing
-- [API Reference](api-reference.md) - Integration specifications
-- [Database Schema](database-schema.md) - Data model details
+| Feature Claimed | Actual Status |
+|----------------|--------------|
+| Multi-currency support | Domain model has `Currency` field — no conversion logic, all USD |
+| Accounts Payable (vendor bills) | Domain model + service exist — no routes wired |
+| Bank reconciliation | `BankAccount`, `BankStatement` models exist — no logic |
+| Income statement | Stub endpoint — no revenue/expense aggregation |
+| Cash flow statement | Stub endpoint — no cash flow calculation |
+| Budget variance | Implemented — `GetBudgetVariance` with actual vs budget comparison |
+| Double-entry accounting | Fully implemented — balance validation, type-aware posting, reversal |
+| Trial balance | Implemented — by debit-type vs credit-type classification |
+| Balance sheet | Implemented — by ASSET/LIABILITY/EQUITY classification |
+| Three-way matching | Not implemented |
+| 1099 processing | Not implemented |
+| Payment batch processing | Not implemented |

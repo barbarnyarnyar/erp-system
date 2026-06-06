@@ -1,496 +1,464 @@
 # Financial Management API Reference
 
-Complete REST API documentation for the Financial Management module.
+Complete REST API documentation for the Financial Management module. Port **8001**.
 
 ## Base URL
 ```
-/api/v1/finance
+http://localhost:8001/api/v1
 ```
 
-## Authentication
-All endpoints require JWT authentication via Authorization header:
-```
-Authorization: Bearer <your-jwt-token>
+## Response Format
+
+All endpoints return JSON:
+```json
+{
+  "data": { ... },
+  "error": "..."  // only on errors
+}
 ```
 
-## Account Management API
+Error responses include HTTP status codes:
+- `400 Bad Request` — validation error
+- `404 Not Found` — resource not found
+- `500 Internal Server Error` — server error
+
+> **Note**: There is no authentication on any endpoint. No rate limiting is applied.
+
+---
+
+## Account Management
 
 ### List Accounts
 ```http
-GET /api/v1/finance/accounts
+GET /api/v1/accounts
 ```
 
-**Query Parameters:**
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Results per page (default: 20, max: 100)
-- `type` (optional): Filter by account type (ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE)
-- `active` (optional): Filter by active status (true/false)
-- `parent_id` (optional): Filter by parent account
-- `include_balances` (optional): Include current balances (true/false)
-
-**Response:**
+Response:
 ```json
 {
   "data": [
     {
-      "id": "acc-123",
-      "account_code": "1000",
-      "account_name": "Cash - Operating",
-      "account_type": "ASSET",
-      "parent_account_id": null,
-      "account_level": 1,
-      "normal_side": "DEBIT",
-      "current_balance": "25000.00",
+      "id": "acc_1234567890",
+      "account_number": "1100",
+      "name": "Cash - Operating",
+      "type": "ASSET",
+      "parent_id": null,
+      "balance": "50000.00",
+      "currency": "USD",
       "is_active": true,
-      "allow_posting": true,
       "created_at": "2024-01-15T10:30:00Z",
       "updated_at": "2024-03-15T14:25:00Z"
     }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "per_page": 20,
-    "total_pages": 5,
-    "total_items": 95
-  }
+  ]
 }
 ```
 
 ### Create Account
 ```http
-POST /api/v1/finance/accounts
+POST /api/v1/accounts
 Content-Type: application/json
 
 {
-  "account_code": "1100",
-  "account_name": "Accounts Receivable",
-  "account_type": "ASSET",
-  "parent_account_id": "acc-123",
-  "normal_side": "DEBIT",
-  "allow_posting": true,
-  "description": "Customer receivables from sales"
+  "account_number": "1100",
+  "name": "Cash - Operating",
+  "type": "ASSET",
+  "parent_id": "",
+  "currency": "USD"
 }
 ```
 
-**Response:**
+Response `201 Created`:
 ```json
 {
-  "id": "acc-124",
-  "account_code": "1100",
-  "account_name": "Accounts Receivable",
-  "account_type": "ASSET",
-  "parent_account_id": "acc-123",
-  "account_level": 2,
-  "normal_side": "DEBIT",
-  "current_balance": "0.00",
-  "is_active": true,
-  "allow_posting": true,
-  "created_at": "2024-03-15T14:25:00Z",
-  "updated_at": "2024-03-15T14:25:00Z"
+  "data": {
+    "id": "acc_1234567890",
+    "account_number": "1100",
+    "name": "Cash - Operating",
+    "type": "ASSET",
+    "parent_id": null,
+    "balance": "0",
+    "currency": "USD",
+    "is_active": true,
+    "created_at": "2024-03-15T14:25:00Z",
+    "updated_at": "2024-03-15T14:25:00Z"
+  }
 }
 ```
 
-### Get Account Details
+### Get Account
 ```http
-GET /api/v1/finance/accounts/{account_id}
+GET /api/v1/accounts/:id
 ```
 
-**Response:**
+Response:
 ```json
 {
-  "id": "acc-124",
-  "account_code": "1100",
-  "account_name": "Accounts Receivable",
-  "account_type": "ASSET",
-  "parent_account_id": "acc-123",
-  "account_level": 2,
-  "normal_side": "DEBIT",
-  "current_balance": "15000.00",
-  "is_active": true,
-  "allow_posting": true,
-  "child_accounts": [
-    {
-      "id": "acc-125",
-      "account_code": "1110",
-      "account_name": "Trade Receivables"
-    }
-  ],
-  "recent_transactions": [
-    {
-      "id": "je-456",
-      "date": "2024-03-15",
-      "description": "Customer Invoice #1001",
-      "debit_amount": "1000.00",
-      "credit_amount": "0.00"
-    }
-  ]
+  "data": {
+    "id": "acc_1234567890",
+    "account_number": "1100",
+    "name": "Cash - Operating",
+    "type": "ASSET",
+    "parent_id": null,
+    "balance": "50000.00",
+    "currency": "USD",
+    "is_active": true,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-03-15T14:25:00Z"
+  }
 }
 ```
 
 ### Update Account
 ```http
-PUT /api/v1/finance/accounts/{account_id}
+PUT /api/v1/accounts/:id
 Content-Type: application/json
 
 {
-  "account_name": "Accounts Receivable - Trade",
-  "description": "Trade receivables from customers",
+  "name": "Cash - Operating Account",
+  "type": "ASSET",
+  "parent_id": "",
   "is_active": true
+}
+```
+
+### Delete Account
+```http
+DELETE /api/v1/accounts/:id
+```
+
+Response:
+```json
+{
+  "message": "account deleted"
 }
 ```
 
 ### Get Account Balance
 ```http
-GET /api/v1/finance/accounts/{account_id}/balance
+GET /api/v1/accounts/:id/balance
 ```
 
-**Query Parameters:**
-- `as_of_date` (optional): Balance as of specific date (YYYY-MM-DD)
-- `include_pending` (optional): Include unposted transactions (true/false)
-
-**Response:**
+Response:
 ```json
 {
-  "account_id": "acc-124",
-  "account_code": "1100",
-  "account_name": "Accounts Receivable",
-  "current_balance": "15000.00",
-  "as_of_date": "2024-03-15",
-  "balance_breakdown": {
-    "beginning_balance": "12000.00",
-    "period_debits": "5000.00",
-    "period_credits": "2000.00",
-    "ending_balance": "15000.00"
-  },
-  "currency": "USD"
+  "balance": "50000.00"
 }
 ```
 
-## Journal Entry API
+---
+
+## Journal Entries
 
 ### List Journal Entries
 ```http
-GET /api/v1/finance/journal-entries
+GET /api/v1/journal-entries
 ```
 
-**Query Parameters:**
-- `date_from` (optional): Start date filter (YYYY-MM-DD)
-- `date_to` (optional): End date filter (YYYY-MM-DD)
-- `status` (optional): Filter by status (DRAFT, POSTED, REVERSED)
-- `account_id` (optional): Filter by account
-- `source_module` (optional): Filter by originating module
-- `page` (optional): Page number
-- `limit` (optional): Results per page
-
-**Response:**
+Response:
 ```json
 {
   "data": [
     {
-      "id": "je-456",
-      "entry_number": "JE-2024-001",
-      "entry_date": "2024-03-15",
-      "posting_date": "2024-03-15T14:30:00Z",
+      "id": "je_1234567890",
+      "reference": "JE-2024-001",
+      "date": "2024-03-15T14:30:00Z",
       "description": "Monthly rent payment",
-      "reference": "RENT-MAR-2024",
-      "source_module": "finance",
-      "total_amount": "2500.00",
       "status": "POSTED",
-      "created_by": "user-123",
-      "lines": [
-        {
-          "account_code": "5000",
-          "account_name": "Rent Expense",
-          "debit_amount": "2500.00",
-          "credit_amount": "0.00"
-        },
-        {
-          "account_code": "1000",
-          "account_name": "Cash",
-          "debit_amount": "0.00",
-          "credit_amount": "2500.00"
-        }
-      ]
+      "created_by": "system",
+      "reversed_by": null,
+      "created_at": "2024-03-15T14:30:00Z",
+      "updated_at": "2024-03-15T14:30:00Z"
     }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "per_page": 20,
-    "total_pages": 12,
-    "total_items": 235
-  }
+  ]
 }
 ```
 
 ### Create Journal Entry
 ```http
-POST /api/v1/finance/journal-entries
+POST /api/v1/journal-entries
 Content-Type: application/json
 
 {
-  "entry_date": "2024-03-15",
+  "reference": "JE-2024-001",
   "description": "Monthly rent payment",
-  "reference": "RENT-MAR-2024",
-  "source_module": "finance",
   "lines": [
     {
-      "account_id": "acc-500",
-      "description": "Rent expense",
+      "account_id": "acc_500",
       "debit_amount": "2500.00",
-      "credit_amount": "0.00",
-      "department_code": "ADMIN",
-      "cost_center": "CC001"
+      "credit_amount": "0",
+      "description": "Rent expense"
     },
     {
-      "account_id": "acc-100",
-      "description": "Cash payment",
-      "debit_amount": "0.00",
-      "credit_amount": "2500.00"
+      "account_id": "acc_100",
+      "debit_amount": "0",
+      "credit_amount": "2500.00",
+      "description": "Cash payment"
     }
   ]
 }
 ```
 
-**Response:**
+Validation rules:
+- Minimum 2 lines
+- Total debits must equal total credits
+- All account IDs must exist
+
+Response `201 Created`:
 ```json
 {
-  "id": "je-457",
-  "entry_number": "JE-2024-002",
-  "entry_date": "2024-03-15",
-  "posting_date": null,
-  "description": "Monthly rent payment",
-  "reference": "RENT-MAR-2024",
-  "source_module": "finance",
-  "total_amount": "2500.00",
-  "status": "DRAFT",
-  "requires_approval": false,
-  "created_by": "user-123",
-  "created_at": "2024-03-15T14:30:00Z",
+  "data": {
+    "id": "je_1234567890",
+    "reference": "JE-2024-001",
+    "date": "2024-03-15T14:30:00Z",
+    "description": "Monthly rent payment",
+    "status": "POSTED",
+    "created_by": "system",
+    "reversed_by": null,
+    "created_at": "2024-03-15T14:30:00Z",
+    "updated_at": "2024-03-15T14:30:00Z"
+  }
+}
+```
+
+### Get Journal Entry
+```http
+GET /api/v1/journal-entries/:id
+```
+
+Response:
+```json
+{
+  "data": {
+    "id": "je_1234567890",
+    "reference": "JE-2024-001",
+    "date": "2024-03-15T14:30:00Z",
+    "description": "Monthly rent payment",
+    "status": "POSTED",
+    "created_by": "system",
+    "reversed_by": null,
+    "created_at": "2024-03-15T14:30:00Z",
+    "updated_at": "2024-03-15T14:30:00Z"
+  },
   "lines": [
     {
-      "id": "jel-789",
-      "account_id": "acc-500",
-      "account_code": "5000",
-      "description": "Rent expense",
+      "id": "jel_0_1234567890",
+      "entry_id": "je_1234567890",
+      "account_id": "acc_500",
       "debit_amount": "2500.00",
-      "credit_amount": "0.00",
-      "department_code": "ADMIN",
-      "cost_center": "CC001"
+      "credit_amount": "0",
+      "description": "Rent expense"
     },
     {
-      "id": "jel-790",
-      "account_id": "acc-100",
-      "account_code": "1000",
-      "description": "Cash payment",
-      "debit_amount": "0.00",
-      "credit_amount": "2500.00"
+      "id": "jel_1_1234567890",
+      "entry_id": "je_1234567890",
+      "account_id": "acc_100",
+      "debit_amount": "0",
+      "credit_amount": "2500.00",
+      "description": "Cash payment"
     }
   ]
 }
 ```
 
-### Post Journal Entry
+### Update Journal Entry
 ```http
-POST /api/v1/finance/journal-entries/{entry_id}/post
+PUT /api/v1/journal-entries/:id
 Content-Type: application/json
 
 {
-  "posting_date": "2024-03-15T14:30:00Z",
-  "notes": "Posting approved by manager"
+  "reference": "JE-2024-001-UPDATED",
+  "description": "Updated description",
+  "lines": [...]
+}
+```
+
+### Delete Journal Entry
+```http
+DELETE /api/v1/journal-entries/:id
+```
+
+Response:
+```json
+{
+  "message": "journal entry deleted successfully"
 }
 ```
 
 ### Reverse Journal Entry
+There is no dedicated endpoint. Reversal is performed through service logic — see general ledger implementation.
+
+---
+
+## Invoices
+
+### List Invoices
 ```http
-POST /api/v1/finance/journal-entries/{entry_id}/reverse
+GET /api/v1/invoices
+```
+
+### Create Invoice
+```http
+POST /api/v1/invoices
 Content-Type: application/json
 
 {
-  "reversal_date": "2024-03-16",
-  "reason": "Correction required",
-  "notes": "Incorrect amount posted"
+  "customer_id": "cust_001",
+  "issue_date": "2024-03-15T00:00:00Z",
+  "due_date": "2024-04-15T00:00:00Z",
+  "lines": [
+    {
+      "description": "Widget A",
+      "quantity": 10,
+      "unit_price": "25.00"
+    }
+  ]
 }
 ```
 
-## Financial Reports API
+### Get Invoice
+```http
+GET /api/v1/invoices/:id
+```
+
+### Update Invoice
+```http
+PUT /api/v1/invoices/:id
+Content-Type: application/json
+
+{
+  "customer_id": "cust_002"
+}
+```
+
+### Delete Invoice
+```http
+DELETE /api/v1/invoices/:id
+```
+
+### Send Invoice
+```http
+POST /api/v1/invoices/:id/send
+```
+
+Response:
+```json
+{
+  "message": "invoice sent successfully"
+}
+```
+> **Note**: No email is actually sent — this toggles `is_sent` status and publishes a Kafka event.
+
+---
+
+## Payments
+
+### List Payments
+```http
+GET /api/v1/payments
+```
+
+### Record Payment
+```http
+POST /api/v1/payments
+Content-Type: application/json
+
+{
+  "invoice_id": "inv_123",
+  "bill_id": "",
+  "bank_account_id": "",
+  "amount": "2500.00",
+  "payment_method": "bank_transfer"
+}
+```
+
+### Get Payment
+```http
+GET /api/v1/payments/:id
+```
+
+---
+
+## Reports
 
 ### Balance Sheet
 ```http
-GET /api/v1/finance/reports/balance-sheet
+GET /api/v1/reports/balance-sheet
 ```
 
-**Query Parameters:**
-- `as_of_date`: Balance sheet date (YYYY-MM-DD) - Required
-- `format` (optional): Response format (json, pdf, excel) - Default: json
-- `include_zero_balances` (optional): Include accounts with zero balances (true/false)
-- `consolidate_subsidiaries` (optional): Include subsidiary data (true/false)
-
-**Response:**
+Response:
 ```json
 {
-  "report_title": "Balance Sheet",
-  "as_of_date": "2024-03-31",
-  "currency": "USD",
-  "assets": {
-    "current_assets": {
-      "cash_and_equivalents": "50000.00",
-      "accounts_receivable": "75000.00",
-      "inventory": "100000.00",
-      "prepaid_expenses": "10000.00",
-      "total_current_assets": "235000.00"
-    },
-    "fixed_assets": {
-      "property_plant_equipment": "500000.00",
-      "accumulated_depreciation": "-150000.00",
-      "net_ppe": "350000.00",
-      "intangible_assets": "25000.00",
-      "total_fixed_assets": "375000.00"
-    },
-    "total_assets": "610000.00"
-  },
-  "liabilities": {
-    "current_liabilities": {
-      "accounts_payable": "45000.00",
-      "accrued_expenses": "15000.00",
-      "current_portion_ltd": "20000.00",
-      "total_current_liabilities": "80000.00"
-    },
-    "long_term_liabilities": {
-      "long_term_debt": "150000.00",
-      "total_long_term_liabilities": "150000.00"
-    },
-    "total_liabilities": "230000.00"
-  },
-  "equity": {
-    "share_capital": "200000.00",
-    "retained_earnings": "180000.00",
-    "total_equity": "380000.00"
-  },
-  "total_liabilities_and_equity": "610000.00"
+  "report": {
+    "assets": {"Cash - Operating": "50000.00"},
+    "total_assets": "50000.00",
+    "liabilities": {"Accounts Payable": "15000.00"},
+    "total_liabilities": "15000.00",
+    "equity": {"Retained Earnings": "35000.00"},
+    "total_equity": "35000.00"
+  }
 }
 ```
 
-### Income Statement
+### Income Statement (Stub)
 ```http
-GET /api/v1/finance/reports/income-statement
+GET /api/v1/reports/income-statement
 ```
 
-**Query Parameters:**
-- `period_start`: Start of period (YYYY-MM-DD) - Required
-- `period_end`: End of period (YYYY-MM-DD) - Required
-- `format` (optional): Response format (json, pdf, excel) - Default: json
-- `comparison_period` (optional): Include prior period comparison (true/false)
+Returns hardcoded message — no actual revenue/expense aggregation.
 
-### Trial Balance
+### Cash Flow Report (Stub)
 ```http
-GET /api/v1/finance/reports/trial-balance
+GET /api/v1/reports/cash-flow
 ```
 
-**Query Parameters:**
-- `as_of_date`: Trial balance date (YYYY-MM-DD) - Required
-- `include_zero_balances` (optional): Include zero balance accounts (true/false)
-- `account_type` (optional): Filter by account type
-- `format` (optional): Response format (json, pdf, excel)
+Returns hardcoded message — no actual cash flow calculation.
 
-### General Ledger
+---
+
+## Health Check
+
 ```http
-GET /api/v1/finance/reports/general-ledger
+GET /health
 ```
 
-**Query Parameters:**
-- `account_id`: Specific account ID - Required
-- `date_from`: Start date (YYYY-MM-DD) - Required
-- `date_to`: End date (YYYY-MM-DD) - Required
-- `include_beginning_balance` (optional): Include opening balance (true/false)
-
-## Vendor Management API
-
-### List Vendors
-```http
-GET /api/v1/finance/vendors
-```
-
-### Create Vendor
-```http
-POST /api/v1/finance/vendors
-Content-Type: application/json
-
+Response:
+```json
 {
-  "vendor_code": "VEN001",
-  "vendor_name": "Office Supplies Inc",
-  "contact_name": "John Smith",
-  "email": "john@officesupplies.com",
-  "phone": "+1-555-123-4567",
-  "address": {
-    "street": "123 Business St",
-    "city": "Business City",
-    "state": "CA",
-    "postal_code": "12345",
-    "country": "US"
-  },
-  "payment_terms": "NET_30",
-  "credit_limit": "50000.00"
+  "status": "healthy",
+  "service": "fm-service"
 }
 ```
+
+---
+
+## Webhook/Event Subscriptions
+
+No webhook support. Events are published to Kafka topics only.
 
 ## Error Responses
 
-### Validation Error
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input provided",
-    "details": [
-      {
-        "field": "account_code",
-        "message": "Account code must be unique"
-      },
-      {
-        "field": "debit_amount",
-        "message": "Debit amount must be positive"
-      }
-    ]
-  },
-  "timestamp": "2024-03-15T14:30:00Z",
-  "request_id": "req-abc123"
+  "error": "account not found"
 }
 ```
 
-### Business Rule Error
 ```json
 {
-  "error": {
-    "code": "BUSINESS_RULE_VIOLATION",
-    "message": "Journal entry does not balance",
-    "details": [
-      {
-        "rule": "DEBIT_CREDIT_BALANCE",
-        "message": "Total debits (2500.00) must equal total credits (2000.00)"
-      }
-    ]
-  },
-  "timestamp": "2024-03-15T14:30:00Z",
-  "request_id": "req-def456"
+  "error": "journal entry is unbalanced: debits=2500.00, credits=2000.00"
 }
 ```
 
-## Rate Limits
-
-- **Standard Users**: 1000 requests per hour
-- **Premium Users**: 5000 requests per hour
-- **Reporting Endpoints**: 100 requests per hour (due to processing overhead)
-
-Rate limit headers included in responses:
-```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1640995200
+```json
+{
+  "error": "a journal entry must have at least 2 lines"
+}
 ```
 
-## Next Steps
+---
 
-- [Overview](overview.md) - Module features and capabilities
-- [General Ledger](general-ledger.md) - Account management details
-- [Journal Entries](journal-entries.md) - Transaction processing
-- [Database Schema](database-schema.md) - Data model implementation
+## Related Documentation
+
+- [Overview](overview.md) — Module features and capabilities
+- [General Ledger](general-ledger.md) — Account management details
+- [Service Architecture](../../architecture/services-overview.md) — Integration with other services
