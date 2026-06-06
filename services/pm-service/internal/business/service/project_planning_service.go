@@ -159,3 +159,55 @@ func (s *ProjectPlanningService) RequestCustomOrder(ctx context.Context, project
 		Timestamp:    time.Now(),
 	})
 }
+
+func (s *ProjectPlanningService) DelayProject(ctx context.Context, projectID string, delayDays int) (*domain.Project, error) {
+	proj, err := s.projectRepo.GetByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	proj.Status = "DELAYED"
+	proj.UpdatedAt = time.Now()
+
+	err = s.projectRepo.Update(ctx, proj)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicPrjProjectDelayed, projectID, domain.ProjectDelayedEvent{
+		ProjectID: projectID,
+		DelayDays: delayDays,
+		Timestamp: time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectDelayed, err)
+	}
+
+	return proj, nil
+}
+
+func (s *ProjectPlanningService) AchieveMilestone(ctx context.Context, projectID, milestoneID, name string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicPrjMilestoneAchieved, milestoneID, domain.MilestoneAchievedEvent{
+		ProjectID:   projectID,
+		MilestoneID: milestoneID,
+		Name:        name,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneAchieved, err)
+		return err
+	}
+	return nil
+}
+
+func (s *ProjectPlanningService) DelayMilestone(ctx context.Context, projectID, milestoneID, name string, targetDate time.Time) error {
+	if err := s.publisher.Publish(ctx, domain.TopicPrjMilestoneDelayed, milestoneID, domain.MilestoneDelayedEvent{
+		ProjectID:   projectID,
+		MilestoneID: milestoneID,
+		Name:        name,
+		TargetDate:  targetDate,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneDelayed, err)
+		return err
+	}
+	return nil
+}

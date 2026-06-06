@@ -24,7 +24,8 @@ func NewKafkaConsumer(
 	topics := []string{
 		domain.TopicPrjProjectCreated,
 		domain.TopicPrjTaskAssigned,
-		domain.TopicFinBudgetAllocated,
+		// TODO: connect when fm/fin publishes fin.budget.allocated
+		// domain.TopicFinBudgetAllocated,
 		domain.TopicMfgProductionScheduled,
 		domain.TopicScmTrainingRequired,
 	}
@@ -85,6 +86,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
 		return nil
 
+	// TODO: connect when fm/fin publishes fin.budget.allocated
+	/*
 	case domain.TopicFinBudgetAllocated:
 		var ev domain.BudgetAllocatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -92,6 +95,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Budget Allocated: updating salary budgets for Dept %s, Allocated Amount: %s, Period: %s", ev.DepartmentID, ev.Amount.String(), ev.Period)
 		return nil
+	*/
 
 	case domain.TopicMfgProductionScheduled:
 		var ev domain.ProductionScheduledEvent

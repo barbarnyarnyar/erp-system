@@ -131,6 +131,7 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 		return nil, err
 	}
 
+	oldStatus := po.Status
 	po.ExpectedDelivery = expectedDelivery
 	po.Status = status
 	po.Notes = notes
@@ -139,6 +140,28 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 	err = s.poRepo.Update(ctx, po)
 	if err != nil {
 		return nil, err
+	}
+
+	if (status == "DELIVERED" || status == "RECEIVED") && oldStatus != "DELIVERED" && oldStatus != "RECEIVED" {
+		if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderReceived, po.ID, domain.PurchaseOrderReceivedEvent{
+			PurchaseOrderID: po.ID,
+			PONumber:        po.PoNumber,
+			ReceivedDate:    time.Now(),
+			Timestamp:       time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderReceived, err)
+		}
+	}
+
+	if status == "CANCELLED" && oldStatus != "CANCELLED" {
+		if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderCancelled, po.ID, domain.PurchaseOrderCancelledEvent{
+			PurchaseOrderID: po.ID,
+			PONumber:        po.PoNumber,
+			Reason:          notes,
+			Timestamp:       time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderCancelled, err)
+		}
 	}
 
 	return po, nil
@@ -173,6 +196,15 @@ func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string)
 		Timestamp:       time.Now(),
 	}); err != nil {
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderCreated, err)
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderSent, po.ID, domain.PurchaseOrderSentEvent{
+		PurchaseOrderID: po.ID,
+		PONumber:        po.PoNumber,
+		SupplierID:      po.SupplierID,
+		Timestamp:       time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderSent, err)
 	}
 
 	return po, nil

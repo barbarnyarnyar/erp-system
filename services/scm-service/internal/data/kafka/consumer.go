@@ -32,7 +32,8 @@ func NewKafkaConsumer(
 		domain.TopicMfgMaterialRequired,
 		domain.TopicMfgMaterialConsumed,
 		domain.TopicMfgProductionCompleted,
-		domain.TopicFinVendorPaymentProcessed,
+		// TODO: connect when fin/fm publishes fin.vendor.payment.processed
+		// domain.TopicFinVendorPaymentProcessed,
 		domain.TopicPrjMaterialRequested,
 	}
 
@@ -134,6 +135,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", ev.QuantityProduced, "RECEIPT", "Finished goods receipt from manufacturing completed")
 		return err
 
+	// TODO: connect when fin/fm publishes fin.vendor.payment.processed
+	/*
 	case domain.TopicFinVendorPaymentProcessed:
 		var ev domain.VendorPaymentProcessedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -141,6 +144,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("[SCM-CONSUMER] Processing Vendor Payment Processed: Vendor ID %s, payment amount: %s, status: %s", ev.VendorID, ev.AmountPaid.String(), ev.Status)
 		return nil
+	*/
 
 	case domain.TopicPrjMaterialRequested:
 		var ev domain.MaterialRequestedEvent

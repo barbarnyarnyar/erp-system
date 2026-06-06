@@ -132,6 +132,67 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 		return nil, err
 	}
 
+	// Publish specific events
+	if movementType == "RECEIPT" || movementType == "ADJUSTMENT_ADD" {
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryReceived, ii.ID, domain.InventoryReceivedEvent{
+			InventoryItemID: ii.ID,
+			ProductID:       ii.ProductID,
+			LocationID:      ii.LocationID,
+			Quantity:        qty,
+			Timestamp:       time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryReceived, err)
+		}
+	} else if movementType == "ISSUE" || movementType == "ADJUSTMENT_SUB" {
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryShipped, ii.ID, domain.InventoryShippedEvent{
+			InventoryItemID: ii.ID,
+			ProductID:       ii.ProductID,
+			LocationID:      ii.LocationID,
+			Quantity:        qty,
+			Timestamp:       time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryShipped, err)
+		}
+	}
+
+	// Always publish adjusted
+	qtyChange := qty
+	if movementType == "ISSUE" || movementType == "ADJUSTMENT_SUB" {
+		qtyChange = -qty
+	}
+	if err := s.publisher.Publish(ctx, domain.TopicScmInventoryAdjusted, ii.ID, domain.InventoryAdjustedEvent{
+		InventoryItemID: ii.ID,
+		ProductID:       ii.ProductID,
+		LocationID:      ii.LocationID,
+		QuantityChange:  qtyChange,
+		NewQuantity:     ii.QuantityOnHand,
+		Reason:          notes,
+		Timestamp:       time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryAdjusted, err)
+	}
+
+	// Check low stock / out of stock
+	if ii.QuantityOnHand == 0 {
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryOutOfStock, ii.ProductID, domain.InventoryOutOfStockEvent{
+			ProductID:  ii.ProductID,
+			LocationID: ii.LocationID,
+			Timestamp:  time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryOutOfStock, err)
+		}
+	} else if ii.QuantityOnHand < ii.ReorderPoint {
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryLowStock, ii.ProductID, domain.InventoryLowStockEvent{
+			ProductID:      ii.ProductID,
+			LocationID:     ii.LocationID,
+			QuantityOnHand: ii.QuantityOnHand,
+			ReorderPoint:   ii.ReorderPoint,
+			Timestamp:      time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryLowStock, err)
+		}
+	}
+
 	// Create movement log
 	move := &domain.InventoryMovement{
 		ID:            fmt.Sprintf("move_%d", time.Now().UnixNano()),

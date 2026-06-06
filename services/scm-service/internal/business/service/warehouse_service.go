@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
@@ -16,6 +17,7 @@ type WarehouseService struct {
 	poRepo     domain.PurchaseOrderRepository
 	poLRepo    domain.PurchaseOrderLineRepository
 	invService *InventoryService
+	publisher  domain.EventPublisher
 }
 
 func NewWarehouseService(
@@ -26,6 +28,7 @@ func NewWarehouseService(
 	poRepo domain.PurchaseOrderRepository,
 	poLRepo domain.PurchaseOrderLineRepository,
 	invService *InventoryService,
+	publisher domain.EventPublisher,
 ) *WarehouseService {
 	return &WarehouseService{
 		recRepo:    recRepo,
@@ -35,6 +38,7 @@ func NewWarehouseService(
 		poRepo:     poRepo,
 		poLRepo:    poLRepo,
 		invService: invService,
+		publisher:  publisher,
 	}
 }
 
@@ -154,6 +158,19 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 		}
 	}
 
+	// Publish material delivered event for each line
+	for _, l := range savedLines {
+		if err := s.publisher.Publish(ctx, domain.TopicScmMaterialDelivered, l.ProductID, domain.MaterialDeliveredEvent{
+			ProjectID:    "",
+			TaskID:       "",
+			ShipmentID:   rec.ID,
+			DeliveryDate: rec.ReceivedDate,
+			Timestamp:    time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmMaterialDelivered, err)
+		}
+	}
+
 	return &ReceiptDetails{
 		Receipt: *rec,
 		Lines:   savedLines,
@@ -250,6 +267,24 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 		_, _ = s.invService.AdjustInventory(ctx, l.ProductID, locationID, l.QuantityShipped, "ISSUE", "Shipped stock out via "+shipNum)
 	}
 
+	if err := s.publisher.Publish(ctx, domain.TopicScmShipmentCreated, ship.ID, domain.ShipmentCreatedEvent{
+		ShipmentID:     ship.ID,
+		ShipmentNumber: ship.ShipmentNumber,
+		Carrier:        ship.Carrier,
+		TrackingNumber: ship.TrackingNumber,
+		Timestamp:      time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentCreated, err)
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicScmShipmentDispatched, ship.ID, domain.ShipmentDispatchedEvent{
+		ShipmentID:   ship.ID,
+		DispatchedAt: ship.ShippedDate,
+		Timestamp:    time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentDispatched, err)
+	}
+
 	return &ShipmentDetails{
 		Shipment: *ship,
 		Lines:    savedLines,
@@ -279,6 +314,7 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 		return nil, err
 	}
 
+	oldStatus := ship.Status
 	ship.Status = status
 	ship.Notes = notes
 	ship.UpdatedAt = time.Now()
@@ -286,6 +322,27 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 	err = s.shipRepo.Update(ctx, ship)
 	if err != nil {
 		return nil, err
+	}
+
+	if status == "DELIVERED" && oldStatus != "DELIVERED" {
+		if err := s.publisher.Publish(ctx, domain.TopicScmShipmentDelivered, ship.ID, domain.ShipmentDeliveredEvent{
+			ShipmentID:  ship.ID,
+			DeliveredAt: time.Now(),
+			Timestamp:   time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentDelivered, err)
+		}
+	}
+
+	if status == "DELAYED" && oldStatus != "DELAYED" {
+		if err := s.publisher.Publish(ctx, domain.TopicScmShipmentDelayed, ship.ID, domain.ShipmentDelayedEvent{
+			ShipmentID:        ship.ID,
+			NewEstimatedDeliv: ship.EstimatedDelivery.AddDate(0, 0, 2), // estimate 2 days delay
+			Reason:            notes,
+			Timestamp:         time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentDelayed, err)
+		}
 	}
 
 	return ship, nil
@@ -297,4 +354,16 @@ func (s *WarehouseService) ListReceiptLines(ctx context.Context, receiptID strin
 
 func (s *WarehouseService) ListShipmentLines(ctx context.Context, shipmentID string) ([]domain.ShipmentLine, error) {
 	return s.shipLRepo.ListByShipmentID(ctx, shipmentID)
+}
+
+func (s *WarehouseService) TriggerTrainingRequired(ctx context.Context, deptID string, topic string, deadline time.Time) error {
+	if err := s.publisher.Publish(ctx, domain.TopicScmTrainingRequired, deptID, domain.SCMTrainingRequiredEvent{
+		DepartmentID: deptID,
+		Topic:        topic,
+		Deadline:     deadline,
+		Timestamp:    time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmTrainingRequired, err)
+	}
+	return nil
 }

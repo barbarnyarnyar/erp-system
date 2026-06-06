@@ -56,7 +56,7 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, "fin.vendor.payment.due", bill.ID, domain.VendorBillEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFinVendorPaymentDue, bill.ID, domain.VendorBillEventPayload{
 		ID:         bill.ID,
 		VendorID:   bill.SupplierID,
 		BillNumber: bill.BillNumber,
@@ -64,7 +64,7 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 		DueDate:    bill.DueDate,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", "fin.vendor.payment.due", err)
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinVendorPaymentDue, err)
 	}
 
 	return bill, nil

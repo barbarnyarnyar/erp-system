@@ -3,7 +3,7 @@
 **Source PRD**: docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: 0.5 of 6 (parallel Track B)
-**Status**: Ready
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -145,10 +145,10 @@ done
 
 ## Definition of Done
 
-- [ ] Task 1: Audit complete (baseline count recorded)
-- [ ] Task 2a–2g: All 7 services converted
-- [ ] Zero `_ = publisher.Publish(...)` patterns remain
-- [ ] `go build ./...` passes for all services
+- [x] Task 1: Audit complete (baseline count recorded)
+- [x] Task 2a–2g: All 7 services converted
+- [x] Zero `_ = publisher.Publish(...)` patterns remain
+- [x] `go build ./...` passes for all services
 
 ---
 

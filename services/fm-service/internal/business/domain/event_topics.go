@@ -27,7 +27,7 @@ const (
 	TopicScmPurchaseOrderCreated = "scm.purchase.order.created"
 	TopicScmInvoiceReceived      = "scm.invoice.received"
 	TopicScmInventoryValued      = "scm.inventory.valued"
-	TopicCrmSaleCompleted        = "crm.sale.completed"
+	TopicCrmSalesOrderConfirmed  = "crm.sales.order.confirmed"
 	TopicCrmCustomerCreated      = "crm.customer.created"
 	TopicMfgProductionCompleted  = "mfg.production.completed"
 	TopicMfgMaterialConsumed     = "mfg.material.consumed"

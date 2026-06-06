@@ -33,19 +33,20 @@ func NewKafkaConsumer(
 	budget *service.BudgetingService,
 ) *KafkaConsumer {
 	topics := []string{
-		"hr.employee.created",
-		"hr.payroll.processed",
-		"hr.expense.submitted",
-		"scm.purchase.order.created",
-		"scm.invoice.received",
-		"scm.inventory.valued",
-		"crm.sale.completed",
-		"crm.customer.created",
-		"mfg.production.completed",
-		"mfg.material.consumed",
-		"prj.project.created",
-		"prj.time.logged",
-		"prj.expense.incurred",
+		domain.TopicHrEmployeeCreated,
+		domain.TopicHrPayrollProcessed,
+		domain.TopicHrExpenseSubmitted,
+		domain.TopicScmPurchaseOrderCreated,
+		// TODO: connect when scm publishes scm.invoice.received
+		// domain.TopicScmInvoiceReceived,
+		domain.TopicScmInventoryValued,
+		domain.TopicCrmSalesOrderConfirmed,
+		domain.TopicCrmCustomerCreated,
+		domain.TopicMfgProductionCompleted,
+		domain.TopicMfgMaterialConsumed,
+		domain.TopicPrjProjectCreated,
+		domain.TopicPrjTimeLogged,
+		domain.TopicPrjExpenseIncurred,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -101,7 +102,7 @@ func (c *KafkaConsumer) getOrCreateAccount(ctx context.Context, accNum, name, ac
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	case "hr.employee.created":
+	case domain.TopicHrEmployeeCreated:
 		var ev domain.EmployeeCreatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -112,7 +113,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.getOrCreateAccount(ctx, accNum, accName, "LIABILITY", "", "USD")
 		return err
 
-	case "hr.payroll.processed":
+	case domain.TopicHrPayrollProcessed:
 		var ev domain.PayrollProcessedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -144,7 +145,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "PAY-"+ev.PayrollID, "Record payroll processed entries", lines)
 		return err
 
-	case "hr.expense.submitted":
+	case domain.TopicHrExpenseSubmitted:
 		var ev domain.ExpenseSubmittedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -176,7 +177,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "EXP-"+ev.ExpenseID, "Process employee expense reimbursement", lines)
 		return err
 
-	case "scm.purchase.order.created":
+	case domain.TopicScmPurchaseOrderCreated:
 		var ev domain.PurchaseOrderCreatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -208,7 +209,9 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "PO-LIAB-"+ev.PurchaseOrderID, "Create AP liability for PO "+ev.PONumber, lines)
 		return err
 
-	case "scm.invoice.received":
+	// TODO: connect when SCM publishes scm.invoice.received
+	/*
+	case domain.TopicScmInvoiceReceived:
 		var ev domain.InvoiceReceivedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -224,8 +227,9 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
 		return err
+	*/
 
-	case "scm.inventory.valued":
+	case domain.TopicScmInventoryValued:
 		var ev domain.InventoryValuedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -257,7 +261,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "INV-VAL-"+ev.LocationID, "Update inventory accounts valuation", lines)
 		return err
 
-	case "crm.sale.completed":
+	case domain.TopicCrmSalesOrderConfirmed:
 		var ev domain.SaleCompletedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -265,7 +269,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		// Generate customer invoice
 		lines := []domain.InvoiceLine{
 			{
-				Description: "CRM Completed Sale: " + ev.OrderID,
+				Description: "CRM Completed Sale: " + ev.SalesOrderID,
 				Quantity:    1,
 				UnitPrice:   ev.TotalAmount,
 				LineTotal:   ev.TotalAmount,
@@ -274,7 +278,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.ar.CreateInvoice(ctx, ev.CustomerID, ev.Timestamp, ev.Timestamp.AddDate(0, 1, 0), lines)
 		return err
 
-	case "crm.customer.created":
+	case domain.TopicCrmCustomerCreated:
 		var ev domain.CustomerCreatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -285,7 +289,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.getOrCreateAccount(ctx, accNum, accName, "ASSET", "", "USD")
 		return err
 
-	case "mfg.production.completed":
+	case domain.TopicMfgProductionCompleted:
 		var ev domain.ProductionCompletedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -317,7 +321,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "MFG-COMP-"+ev.ProductionOrderID, "MFG Update Finished Goods and WIP", lines)
 		return err
 
-	case "mfg.material.consumed":
+	case domain.TopicMfgMaterialConsumed:
 		var ev domain.MaterialConsumedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -349,7 +353,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "MFG-CONS-"+ev.ProductionOrderID, "MFG Material Consumption", lines)
 		return err
 
-	case "prj.project.created":
+	case domain.TopicPrjProjectCreated:
 		var ev domain.ProjectCreatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -360,7 +364,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.getOrCreateAccount(ctx, accNum, accName, "EXPENSE", "", "USD")
 		return err
 
-	case "prj.time.logged":
+	case domain.TopicPrjTimeLogged:
 		var ev domain.TimeLoggedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -393,7 +397,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "PRJ-TIME-"+ev.TimeLogID, "Record project billable time entries", lines)
 		return err
 
-	case "prj.expense.incurred":
+	case domain.TopicPrjExpenseIncurred:
 		var ev domain.ProjectExpenseIncurredEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err

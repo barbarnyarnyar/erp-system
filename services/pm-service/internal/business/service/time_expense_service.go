@@ -173,3 +173,55 @@ func (s *TimeExpenseService) ApproveExpense(ctx context.Context, expenseID strin
 func (s *TimeExpenseService) ListExpenses(ctx context.Context, projectID string) ([]domain.ProjectExpense, error) {
 	return s.expenseRepo.ListByProject(ctx, projectID)
 }
+
+func (s *TimeExpenseService) RejectTime(ctx context.Context, entryID string, rejectedBy string, reason string) (*domain.ProjectTimeEntry, error) {
+	entry, err := s.timeRepo.GetByID(ctx, entryID)
+	if err != nil {
+		return nil, err
+	}
+
+	entry.Status = "REJECTED"
+	entry.UpdatedAt = time.Now()
+
+	err = s.timeRepo.Update(ctx, entry)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicPrjTimeRejected, entryID, domain.TimeRejectedEvent{
+		TimeLogID:  entryID,
+		RejectedBy: rejectedBy,
+		Reason:     reason,
+		Timestamp:  time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTimeRejected, err)
+	}
+
+	return entry, nil
+}
+
+func (s *TimeExpenseService) RejectExpense(ctx context.Context, expenseID string, rejectedBy string, reason string) (*domain.ProjectExpense, error) {
+	exp, err := s.expenseRepo.GetByID(ctx, expenseID)
+	if err != nil {
+		return nil, err
+	}
+
+	exp.Status = "REJECTED"
+	exp.UpdatedAt = time.Now()
+
+	err = s.expenseRepo.Update(ctx, exp)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicPrjExpenseRejected, expenseID, domain.ExpenseRejectedEvent{
+		ExpenseID:  expenseID,
+		RejectedBy: rejectedBy,
+		Reason:     reason,
+		Timestamp:  time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseRejected, err)
+	}
+
+	return exp, nil
+}

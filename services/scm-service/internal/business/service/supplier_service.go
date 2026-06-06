@@ -3,20 +3,24 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
+	"github.com/shopspring/decimal"
 )
 
 type SupplierManagementService struct {
-	repo     domain.SupplierRepository
-	contRepo domain.VendorContractRepository
+	repo      domain.SupplierRepository
+	contRepo  domain.VendorContractRepository
+	publisher domain.EventPublisher
 }
 
-func NewSupplierManagementService(repo domain.SupplierRepository, contRepo domain.VendorContractRepository) *SupplierManagementService {
+func NewSupplierManagementService(repo domain.SupplierRepository, contRepo domain.VendorContractRepository, publisher domain.EventPublisher) *SupplierManagementService {
 	return &SupplierManagementService{
-		repo:     repo,
-		contRepo: contRepo,
+		repo:      repo,
+		contRepo:  contRepo,
+		publisher: publisher,
 	}
 }
 
@@ -42,6 +46,15 @@ func (s *SupplierManagementService) CreateSupplier(ctx context.Context, code, na
 	err := s.repo.Create(ctx, sup)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicScmVendorCreated, sup.ID, domain.VendorCreatedEvent{
+		VendorID:   sup.ID,
+		VendorCode: sup.SupplierCode,
+		VendorName: sup.SupplierName,
+		Timestamp:  time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmVendorCreated, err)
 	}
 
 	return sup, nil
@@ -70,11 +83,34 @@ func (s *SupplierManagementService) UpdateSupplier(ctx context.Context, id, code
 		return nil, err
 	}
 
+	if err := s.publisher.Publish(ctx, domain.TopicScmVendorUpdated, sup.ID, domain.VendorUpdatedEvent{
+		VendorID:   sup.ID,
+		VendorCode: sup.SupplierCode,
+		VendorName: sup.SupplierName,
+		IsActive:   sup.IsActive,
+		Timestamp:  time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmVendorUpdated, err)
+	}
+
 	return sup, nil
 }
 
 func (s *SupplierManagementService) DeleteSupplier(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *SupplierManagementService) EvaluatePerformance(ctx context.Context, vendorID string, completionRate, totalSpend, score decimal.Decimal) error {
+	if err := s.publisher.Publish(ctx, domain.TopicScmVendorPerformanceEvaluated, vendorID, domain.VendorPerformanceEvaluatedEvent{
+		VendorID:       vendorID,
+		CompletionRate: completionRate,
+		TotalSpend:     totalSpend,
+		Score:          score,
+		Timestamp:      time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmVendorPerformanceEvaluated, err)
+	}
+	return nil
 }
 
 // Vendor Contracts CRUD

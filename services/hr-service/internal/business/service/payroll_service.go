@@ -125,3 +125,17 @@ func (s *PayrollService) UpdatePayrollRecord(ctx context.Context, id, status str
 func (s *PayrollService) GetEmployeePayroll(ctx context.Context, employeeID string) ([]domain.PayrollRecord, error) {
 	return s.repo.GetByEmployeeID(ctx, employeeID)
 }
+
+func (s *PayrollService) FailPayroll(ctx context.Context, employeeID string, start, end time.Time, reason string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicHrPayrollFailed, employeeID, domain.PayrollFailedEvent{
+		EmployeeID:  employeeID,
+		PeriodStart: start,
+		PeriodEnd:   end,
+		Reason:      reason,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPayrollFailed, err)
+		return err
+	}
+	return nil
+}

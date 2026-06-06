@@ -162,3 +162,16 @@ func (s *SalesOrderService) DeleteSalesOrder(ctx context.Context, id string) err
 	}
 	return s.orderRepo.Delete(ctx, id)
 }
+
+func (s *SalesOrderService) ReceiveSalesOrder(ctx context.Context, salesOrderID, customerID string, totalAmount decimal.Decimal) error {
+	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderReceived, salesOrderID, domain.SalesOrderReceivedEvent{
+		SalesOrderID: salesOrderID,
+		CustomerID:   customerID,
+		TotalAmount:  totalAmount,
+		Timestamp:    time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderReceived, err)
+		return err
+	}
+	return nil
+}

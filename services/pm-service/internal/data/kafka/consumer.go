@@ -27,11 +27,13 @@ func NewKafkaConsumer(
 	topics := []string{
 		domain.TopicHrEmployeeAvailable,
 		domain.TopicHrEmployeeSkillsUpdated,
-		domain.TopicFinBudgetApproved,
+		// TODO: connect when fm/fin publishes fin.budget.approved
+		// domain.TopicFinBudgetApproved,
 		domain.TopicFinPaymentReceived,
 		domain.TopicCrmSalesOrderReceived,
 		domain.TopicScmMaterialDelivered,
-		domain.TopicMfgCustomProductionCompleted,
+		// TODO: connect when mfg/m publishes mfg.custom.production.completed
+		// domain.TopicMfgCustomProductionCompleted,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -91,6 +93,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Processing HR Employee Skills Updated: Employee %s skills updated to %v. Re-mapping project resource capabilities.", ev.EmployeeID, ev.Skills)
 		return nil
 
+	// TODO: connect when fm/fin publishes fin.budget.approved
+	/*
 	case domain.TopicFinBudgetApproved:
 		var ev domain.BudgetApprovedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -98,6 +102,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Finance Budget Approved: Project %s budget approved for amount %s. Updating project planning budget ceiling.", ev.ProjectID, ev.TotalBudget.String())
 		return nil
+	*/
 
 	case domain.TopicFinPaymentReceived:
 		var ev domain.PaymentReceivedEvent
@@ -139,6 +144,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Processing SCM Material Delivered: Material delivered for project %s, task %s (Shipment: %s). Updating task resource status.", ev.ProjectID, ev.TaskID, ev.ShipmentID)
 		return nil
 
+	// TODO: connect when mfg/m publishes mfg.custom.production.completed
+	/*
 	case domain.TopicMfgCustomProductionCompleted:
 		var ev domain.CustomProductionCompletedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -146,6 +153,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Manufacturing Custom Production Completed: Custom production completed for project %s, Item %s. Marking production order %s resolved.", ev.ProjectID, ev.CustomItemID, ev.ProductionOrderID)
 		return nil
+	*/
 	}
 
 	return nil

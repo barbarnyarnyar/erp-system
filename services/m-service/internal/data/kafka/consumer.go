@@ -23,10 +23,14 @@ func NewKafkaConsumer(
 ) *KafkaConsumer {
 	topics := []string{
 		domain.TopicCrmSalesOrderCreated,
-		domain.TopicScmMaterialReceived,
-		domain.TopicScmInventoryUpdated,
-		domain.TopicFinCostBudgetAllocated,
-		domain.TopicHrEmployeeScheduled,
+		// TODO: connect when scm publishes scm.material.received
+		// domain.TopicScmMaterialReceived,
+		// TODO: connect when scm publishes scm.inventory.updated
+		// domain.TopicScmInventoryUpdated,
+		// TODO: connect when fm/fin publishes fin.cost.budget.allocated
+		// domain.TopicFinCostBudgetAllocated,
+		// TODO: connect when hr publishes hr.employee.scheduled
+		// domain.TopicHrEmployeeScheduled,
 		domain.TopicPrjCustomOrderCreated,
 	}
 
@@ -85,6 +89,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		return nil
 
+	// TODO: connect when scm publishes scm.material.received
+	/*
 	case domain.TopicScmMaterialReceived:
 		var ev domain.SCMMaterialReceivedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -92,7 +98,10 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing SCM Material Received: Material Product %s received for PO %s, quantity: %s. Updating material availability.", ev.ProductID, ev.PurchaseOrderID, ev.Quantity.String())
 		return nil
+	*/
 
+	// TODO: connect when scm publishes scm.inventory.updated
+	/*
 	case domain.TopicScmInventoryUpdated:
 		var ev domain.SCMInventoryUpdatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -100,7 +109,10 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing SCM Inventory Updated: Product %s changed by type %s at location %s. New QOH: %s. Updating production material status.", ev.ProductID, ev.ChangeType, ev.LocationID, ev.QuantityOnHand.String())
 		return nil
+	*/
 
+	// TODO: connect when fin/fm publishes fin.cost.budget.allocated
+	/*
 	case domain.TopicFinCostBudgetAllocated:
 		var ev domain.FinCostBudgetAllocatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -108,7 +120,10 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Financial Cost Budget Allocated: Allocated budget amount: %s to Project: %s (Dept: %s).", ev.Amount.String(), ev.ProjectID, ev.DepartmentID)
 		return nil
+	*/
 
+	// TODO: connect when hr publishes hr.employee.scheduled
+	/*
 	case domain.TopicHrEmployeeScheduled:
 		var ev domain.HREmployeeScheduledEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -116,6 +131,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing HR Employee Scheduled: Employee %s scheduled for Work Center %s from %s to %s. Updating labor capacity.", ev.EmployeeID, ev.WorkCenterID, ev.ShiftStart, ev.ShiftEnd)
 		return nil
+	*/
 
 	case domain.TopicPrjCustomOrderCreated:
 		var ev domain.PrjCustomOrderCreatedEvent

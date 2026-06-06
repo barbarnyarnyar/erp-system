@@ -22,13 +22,13 @@ func NewKafkaConsumer(
 	orderSvc *service.SalesOrderService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicScmInventoryAvailable,
+		// domain.TopicScmInventoryAvailable,
 		domain.TopicScmShipmentDelivered,
 		domain.TopicFinPaymentReceived,
-		domain.TopicFinCreditCheckCompleted,
+		// domain.TopicFinCreditCheckCompleted,
 		domain.TopicMfgProductionCompleted,
 		domain.TopicPrjProjectCompleted,
-		domain.TopicHrEmployeePerformance,
+		// domain.TopicHrEmployeePerformance,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -71,6 +71,8 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
+	// TODO: connect when scm publishes scm.inventory.available
+	/*
 	case domain.TopicScmInventoryAvailable:
 		var ev domain.InventoryAvailableEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -78,6 +80,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing SCM Inventory Available: Product %s is available with quantity %s. Updating CRM sales catalog availability.", ev.ProductID, ev.QuantityOnHand.String())
 		return nil
+	*/
 
 	case domain.TopicScmShipmentDelivered:
 		var ev domain.ShipmentDeliveredEvent
@@ -99,6 +102,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
 		return nil
 
+	// TODO: connect when fm/fin publishes fin.credit.check.completed
+	/*
 	case domain.TopicFinCreditCheckCompleted:
 		var ev domain.CreditCheckCompletedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -106,6 +111,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Financial Credit Check Completed: Customer %s credit status: %s. Updating customer credit history.", ev.CustomerID, ev.CreditStatus)
 		return nil
+	*/
 
 	case domain.TopicMfgProductionCompleted:
 		var ev domain.ProductionCompletedEvent
@@ -123,6 +129,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Processing Project Completed: Custom project %s completed. Updating status of project-linked sales orders.", ev.ProjectID)
 		return nil
 
+	// TODO: connect when hr publishes hr.employee.performance
+	/*
 	case domain.TopicHrEmployeePerformance:
 		var ev domain.EmployeePerformanceEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -130,6 +138,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing HR Employee Performance: Employee %s rated %s. Updating sales representative metrics in CRM.", ev.EmployeeID, ev.Rating.String())
 		return nil
+	*/
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
@@ -10,16 +11,18 @@ import (
 )
 
 type ProductManagementService struct {
-	repo    domain.ProductRepository
-	catRepo domain.ProductCategoryRepository
-	locRepo domain.LocationRepository
+	repo      domain.ProductRepository
+	catRepo   domain.ProductCategoryRepository
+	locRepo   domain.LocationRepository
+	publisher domain.EventPublisher
 }
 
-func NewProductManagementService(repo domain.ProductRepository, catRepo domain.ProductCategoryRepository, locRepo domain.LocationRepository) *ProductManagementService {
+func NewProductManagementService(repo domain.ProductRepository, catRepo domain.ProductCategoryRepository, locRepo domain.LocationRepository, publisher domain.EventPublisher) *ProductManagementService {
 	return &ProductManagementService{
-		repo:    repo,
-		catRepo: catRepo,
-		locRepo: locRepo,
+		repo:      repo,
+		catRepo:   catRepo,
+		locRepo:   locRepo,
+		publisher: publisher,
 	}
 }
 
@@ -48,6 +51,16 @@ func (s *ProductManagementService) CreateProduct(ctx context.Context, code, name
 	err := s.repo.Create(ctx, p)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicScmProductCreated, p.ID, domain.ProductCreatedEvent{
+		ProductID:   p.ID,
+		ProductCode: p.ProductCode,
+		ProductName: p.ProductName,
+		ProductType: p.ProductType,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmProductCreated, err)
 	}
 
 	return p, nil
@@ -79,11 +92,33 @@ func (s *ProductManagementService) UpdateProduct(ctx context.Context, id, code, 
 		return nil, err
 	}
 
+	if err := s.publisher.Publish(ctx, domain.TopicScmProductUpdated, p.ID, domain.ProductUpdatedEvent{
+		ProductID:   p.ID,
+		ProductCode: p.ProductCode,
+		ProductName: p.ProductName,
+		IsActive:    p.IsActive,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmProductUpdated, err)
+	}
+
 	return p, nil
 }
 
 func (s *ProductManagementService) DeleteProduct(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	err := s.repo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicScmProductDiscontinued, id, domain.ProductDiscontinuedEvent{
+		ProductID: id,
+		Timestamp: time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmProductDiscontinued, err)
+	}
+
+	return nil
 }
 
 // Product Categories CRUD

@@ -299,3 +299,27 @@ func (s *EmployeeManagementService) CreatePosition(ctx context.Context, code, ti
 	return pos, err
 }
 
+func (s *EmployeeManagementService) UpdateEmployeeAvailability(ctx context.Context, employeeID string, status string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicHrEmployeeAvailable, employeeID, domain.EmployeeAvailableEvent{
+		EmployeeID: employeeID,
+		Status:     status,
+		Timestamp:  time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeAvailable, err)
+		return err
+	}
+	return nil
+}
+
+func (s *EmployeeManagementService) UpdateEmployeeSkills(ctx context.Context, employeeID string, skills []string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicHrEmployeeSkillsUpdated, employeeID, domain.EmployeeSkillsUpdatedEvent{
+		EmployeeID: employeeID,
+		Skills:     skills,
+		Timestamp:  time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeSkillsUpdated, err)
+		return err
+	}
+	return nil
+}
+

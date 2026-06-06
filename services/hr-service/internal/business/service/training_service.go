@@ -135,3 +135,29 @@ func (s *TrainingService) CompleteTraining(ctx context.Context, enrollmentID str
 	return te, nil
 }
 
+func (s *TrainingService) EarnCertification(ctx context.Context, employeeID, certificationName string, expiryDate time.Time) error {
+	if err := s.publisher.Publish(ctx, domain.TopicHrCertificationEarned, employeeID, domain.CertificationEarnedEvent{
+		EmployeeID:        employeeID,
+		CertificationName: certificationName,
+		ExpiryDate:        expiryDate,
+		Timestamp:         time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrCertificationEarned, err)
+		return err
+	}
+	return nil
+}
+
+func (s *TrainingService) AcquireSkill(ctx context.Context, employeeID, skillName, proficiency string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicHrSkillAcquired, employeeID, domain.SkillAcquiredEvent{
+		EmployeeID:  employeeID,
+		SkillName:   skillName,
+		Proficiency: proficiency,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrSkillAcquired, err)
+		return err
+	}
+	return nil
+}
+

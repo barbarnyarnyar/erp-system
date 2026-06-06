@@ -53,7 +53,7 @@ func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, customerI
 	}
 	
 	// Publish event
-	if err := s.publisher.Publish(ctx, "fin.invoice.created", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceCreated, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
@@ -61,7 +61,7 @@ func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, customerI
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.created", err)
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinInvoiceCreated, err)
 	}
 	
 	return inv, nil
@@ -88,7 +88,7 @@ func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string
 	}
 	
 	// Publish event
-	if err := s.publisher.Publish(ctx, "fin.invoice.updated", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceUpdated, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
@@ -96,7 +96,7 @@ func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.updated", err)
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinInvoiceUpdated, err)
 	}
 	
 	return inv, nil
@@ -119,7 +119,7 @@ func (s *AccountsReceivableService) SendInvoice(ctx context.Context, id string) 
 	}
 	
 	// Publish event
-	if err := s.publisher.Publish(ctx, "fin.invoice.sent", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceSent, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
@@ -127,7 +127,7 @@ func (s *AccountsReceivableService) SendInvoice(ctx context.Context, id string) 
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.sent", err)
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinInvoiceSent, err)
 	}
 	
 	return true, nil
@@ -155,7 +155,7 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		return err
 	}
 	
-	if err := s.publisher.Publish(ctx, "fin.invoice.overdue", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceOverdue, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
@@ -163,7 +163,7 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.overdue", err)
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinInvoiceOverdue, err)
 	}
 	return nil
 }

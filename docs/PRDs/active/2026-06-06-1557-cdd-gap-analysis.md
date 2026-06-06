@@ -226,6 +226,26 @@ The `updateJournalEntry` Go method should not exist for posted entries — updat
 
 Without an `OpportunityStageHistory` entity, CRM cannot calculate pipeline velocity (time spent per stage), conversion funnels, or rep-level stage transition metrics. The existing `OpportunityWonEvent` / `OpportunityLostEvent` capture final outcomes but not intermediate progression.
 
+### 2.17 Missing JWT Revocation Mechanism (Auth)
+
+`User` in `auth.cdd:2-12` has no `security_stamp` field. `Session` (lines 14-22) has no `is_revoked` field. When a user is deactivated or roles change, existing JWTs remain valid until expiration:
+
+| Field | Exists? | Notes |
+|-------|---------|-------|
+| `password_hash` | ✅ Line 6 | Password storage |
+| `is_active` | ✅ Line 9 | Toggle for account status |
+| `security_stamp` | ❌ Missing | No version counter to invalidate tokens on state change |
+| `refresh_token` | ✅ Line 17 | Session-level refresh capability |
+| `is_revoked` | ❌ Missing | No per-session kill switch |
+
+`deactivateUser()` at line 96 sets `is_active = false` but cannot invalidate already-issued JWTs. An employee terminated at 10:00 can still access the system until their token expires. Fix: add `security_stamp` to `User` (bumped on deactivation/password change/role change) and `is_revoked` to `Session`; validate both on every token check.
+
+### 2.18 Zombie Account Gap — Missing Auth Consumer (Auth)
+
+Auth has zero `consumer_events` (`auth.cdd:127-134`). When HR processes an offboarding via `EmployeeService.deleteEmployee()` and publishes `hr.employee.terminated`, Auth never consumes it — the terminated employee's account remains active indefinitely.
+
+Our previous design decision ("No consumer needed — auth events are fire-and-forget") only considered whether *downstream* services need auth events. It missed the reverse direction: Auth needs to consume `hr.employee.terminated` to deactivate accounts. This is a security vulnerability, not an intentional design choice.
+
 ## 3. Definition of Done
 
 - [x] **2.0 resolved**: Transaction + TransactionLine entities added to `fm.cdd` (not removed — they have full repo+memory implementations)
@@ -249,13 +269,16 @@ Without an `OpportunityStageHistory` entity, CRM cannot calculate pipeline veloc
 - [ ] **2.14 resolved**: `CustomerDemandForecastEvent.ConfidenceLevel` uses `decimal.Decimal` (not `float64`)
 - [ ] **2.15 resolved**: JournalEntry has `posted_by` + `posted_at` fields; `updated_at` removed from JournalEntry; `Update` blocked on POSTED entries
 - [ ] **2.16 resolved**: OpportunityStageHistory entity exists with stage, changed_at, changed_by; stage transitions recorded on every `updateOpportunity`
+- [ ] **2.17 resolved**: User has `security_stamp` bumped on deactivation/role change/password change; Session has `is_revoked`; JWT validation checks both
+- [ ] **2.18 resolved**: Auth consumer subscribes to `hr.employee.terminated` and calls `deactivateUser` on termination events
 - [ ] All changes verified by `make test` passing
 
 ## 3.5 Resolved Design Decisions
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| Auth Service Kafka consumer? | **No consumer needed** — auth events are fire-and-forget, CDD shows no `consumer_events` | Document as intentional; no code change |
+| Auth Service Kafka consumer? | ~~**No consumer needed** — auth events are fire-and-forget, CDD shows no `consumer_events`~~ | **REVISED: Add `hr.employee.terminated` consumer** — original decision only considered downstream needs; missed the zombie account threat from HR offboarding |
+| Auth `security_stamp`? | **Add `security_stamp` to User + `is_revoked` to Session** — enables immediate JWT invalidation on deactivation/role change | No mechanism currently exists to revoke stateless tokens mid-lifecycle |
 | FM `Transaction` entity? | **Add to `fm.cdd`** — it's a legitimate domain concept with repo+memory | Matches pattern of other entities; no code change needed |
 | URL prefix convention? | **`/finance/`, `/manufacturing/`, `/projects/`** — match existing `make test` scripts | Avoids breaking test suite; `server.go` adjusts to `main.go` convention |
 | Auth events purpose? | **Fire-and-forget notifications** — no downstream service currently needs auth events | If a future service needs `auth.user.created` / `auth.user.deactivated`, add consumer then |
@@ -282,6 +305,8 @@ Without an `OpportunityStageHistory` entity, CRM cannot calculate pipeline veloc
 | 6 | Phase S4: Move JWT secret to env var | 0.5d | Hardcoded `super-secret-key-123` |
 | 7 | Phase S4.5: Enforce InventoryItem invariant (`available = on_hand - reserved`) | 1d | Data can silently drift — `AdjustInventory` path breaks if `reserved > 0` |
 | 8 | **Phase S4.6: TrainingEnrollment duplicate enrollment protection** | **0.5d** | **Real bug — `GetByTrainingAndEmployee` repo method exists but is never called; duplicates silently created** |
+| 9 | **Phase S4.7: Add `security_stamp` to User + `is_revoked` to Session + validate on JWT check** | **1d** | **No mechanism to invalidate stateless JWTs mid-lifecycle; terminated employees retain access** |
+| 10 | **Phase S4.8: Add Auth consumer for `hr.employee.terminated` → `deactivateUser`** | **1d** | **HR offboarding leaves zombie accounts active; Auth never learns of terminations** |
 
 ### P2 — Functional Completeness (CDD spec + accounting + atomicity)
 

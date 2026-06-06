@@ -190,3 +190,28 @@ func (s *TaskManagementService) RequestMaterial(ctx context.Context, projectID, 
 		Timestamp:   time.Now(),
 	})
 }
+
+func (s *TaskManagementService) MarkTaskOverdue(ctx context.Context, taskID string) (*domain.Task, error) {
+	task, err := s.taskRepo.GetByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	var dueDate time.Time
+	if task.EndDate != nil {
+		dueDate = *task.EndDate
+	} else {
+		dueDate = time.Now().Add(-24 * time.Hour)
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicPrjTaskOverdue, taskID, domain.TaskOverdueEvent{
+		TaskID:    taskID,
+		ProjectID: task.ProjectID,
+		DueDate:   dueDate,
+		Timestamp: time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskOverdue, err)
+	}
+
+	return task, nil
+}

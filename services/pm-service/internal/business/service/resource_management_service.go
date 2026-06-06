@@ -57,3 +57,39 @@ func (s *ResourceManagementService) AllocateResource(ctx context.Context, projec
 func (s *ResourceManagementService) ListAllocations(ctx context.Context, projectID string) ([]domain.ResourceAllocation, error) {
 	return s.allocRepo.ListByProject(ctx, projectID)
 }
+
+func (s *ResourceManagementService) ReleaseResource(ctx context.Context, allocationID string) error {
+	alloc, err := s.allocRepo.GetByID(ctx, allocationID)
+	if err != nil {
+		return err
+	}
+
+	err = s.allocRepo.Delete(ctx, allocationID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicPrjResourceReleased, allocationID, domain.ResourceReleasedEvent{
+		AllocationID: allocationID,
+		ProjectID:    alloc.ProjectID,
+		UserID:       alloc.UserID,
+		Timestamp:    time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjResourceReleased, err)
+	}
+
+	return nil
+}
+
+func (s *ResourceManagementService) CheckResourceOverallocation(ctx context.Context, userID, projectID string, totalCapacity int) error {
+	if err := s.publisher.Publish(ctx, domain.TopicPrjResourceOverallocated, userID, domain.ResourceOverallocatedEvent{
+		UserID:        userID,
+		ProjectID:     projectID,
+		TotalCapacity: totalCapacity,
+		Timestamp:     time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjResourceOverallocated, err)
+		return err
+	}
+	return nil
+}

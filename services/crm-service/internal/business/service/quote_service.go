@@ -126,3 +126,26 @@ func (s *QuoteService) SendQuote(ctx context.Context, id string) (*domain.Quote,
 
 	return quote, nil
 }
+
+func (s *QuoteService) OpenEmail(ctx context.Context, emailID string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicCrmEmailOpened, emailID, domain.EmailOpenedEvent{
+		EmailID:   emailID,
+		Timestamp: time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmEmailOpened, err)
+		return err
+	}
+	return nil
+}
+
+func (s *QuoteService) ClickEmail(ctx context.Context, emailID string, url string) error {
+	if err := s.publisher.Publish(ctx, domain.TopicCrmEmailClicked, emailID, domain.EmailClickedEvent{
+		EmailID:   emailID,
+		URL:       url,
+		Timestamp: time.Now(),
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmEmailClicked, err)
+		return err
+	}
+	return nil
+}
