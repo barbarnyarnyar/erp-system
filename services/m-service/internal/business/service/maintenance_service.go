@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -85,21 +86,25 @@ func (s *MaintenanceService) ScheduleMaintenance(ctx context.Context, equipmentI
 	}
 
 	// Publish Maintenance Scheduled Event
-	_ = s.publisher.Publish(ctx, domain.TopicMfgMaintenanceScheduled, mo.ID, domain.MaintenanceScheduledEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicMfgMaintenanceScheduled, mo.ID, domain.MaintenanceScheduledEvent{
 		MaintenanceOrderID: mo.ID,
 		EquipmentID:        equipmentID,
 		ScheduledDate:      time.Now(), // Mock scheduled date
 		Timestamp:          time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaintenanceScheduled, err)
+	}
 
 	// Publish Equipment Down Event
 	if eq != nil {
-		_ = s.publisher.Publish(ctx, domain.TopicMfgEquipmentDown, equipmentID, domain.EquipmentDownEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgEquipmentDown, equipmentID, domain.EquipmentDownEvent{
 			EquipmentID:  equipmentID,
 			WorkCenterID: eq.WorkCenterID,
 			Reason:       description,
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgEquipmentDown, err)
+		}
 	}
 
 	return mo, nil
@@ -126,19 +131,23 @@ func (s *MaintenanceService) CompleteMaintenance(ctx context.Context, id string)
 	}
 
 	// Publish Maintenance Completed Event
-	_ = s.publisher.Publish(ctx, domain.TopicMfgMaintenanceCompleted, mo.ID, domain.MaintenanceCompletedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicMfgMaintenanceCompleted, mo.ID, domain.MaintenanceCompletedEvent{
 		MaintenanceOrderID: mo.ID,
 		EquipmentID:        mo.EquipmentID,
 		Timestamp:          now,
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaintenanceCompleted, err)
+	}
 
 	// Publish Equipment Up Event
 	if eq != nil {
-		_ = s.publisher.Publish(ctx, domain.TopicMfgEquipmentUp, mo.EquipmentID, domain.EquipmentUpEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgEquipmentUp, mo.EquipmentID, domain.EquipmentUpEvent{
 			EquipmentID:  mo.EquipmentID,
 			WorkCenterID: eq.WorkCenterID,
 			Timestamp:    now,
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgEquipmentUp, err)
+		}
 	}
 
 	return mo, nil

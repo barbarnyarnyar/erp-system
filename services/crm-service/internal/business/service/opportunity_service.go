@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -40,13 +41,15 @@ func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, 
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmOpportunityCreated, id, domain.OpportunityCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityCreated, id, domain.OpportunityCreatedEvent{
 		OpportunityID: id,
 		CustomerID:    customerID,
 		Title:         title,
 		Value:         value,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityCreated, err)
+	}
 
 	return opp, nil
 }
@@ -78,27 +81,33 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmOpportunityUpdated, id, domain.OpportunityUpdatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityUpdated, id, domain.OpportunityUpdatedEvent{
 		OpportunityID: id,
 		Status:        status,
 		Stage:         stage,
 		Value:         value,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityUpdated, err)
+	}
 
 	if oldStatus != status {
 		if status == "WON" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmOpportunityWon, id, domain.OpportunityWonEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityWon, id, domain.OpportunityWonEvent{
 				OpportunityID: id,
 				CustomerID:    opp.CustomerID,
 				Value:         value,
 				Timestamp:     time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityWon, err)
+			}
 		} else if status == "LOST" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmOpportunityLost, id, domain.OpportunityLostEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityLost, id, domain.OpportunityLostEvent{
 				OpportunityID: id,
 				Timestamp:     time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityLost, err)
+			}
 		}
 	}
 

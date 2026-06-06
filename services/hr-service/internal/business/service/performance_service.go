@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -46,22 +47,26 @@ func (s *PerformanceService) CreatePerformanceReview(ctx context.Context, employ
 	}
 
 	// Publish performance review completed event
-	_ = s.publisher.Publish(ctx, domain.TopicHrPerformanceReviewCompleted, pr.ID, domain.PerformanceReviewCompletedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceReviewCompleted, pr.ID, domain.PerformanceReviewCompletedEvent{
 		ReviewID:   pr.ID,
 		EmployeeID: pr.EmployeeID,
 		ReviewerID: pr.ReviewerID,
 		Rating:     pr.Rating,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceReviewCompleted, err)
+	}
 
 	// Publish performance improvement needed if rating is low (e.g., < 3)
 	if pr.Rating < 3 {
-		_ = s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
 			EmployeeID: pr.EmployeeID,
 			ReviewID:    pr.ID,
 			Details:     fmt.Sprintf("Low performance review rating of %d: %s", pr.Rating, pr.Feedback),
 			Timestamp:   time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceImprovementNeeded, err)
+		}
 	}
 
 	return pr, nil
@@ -87,22 +92,26 @@ func (s *PerformanceService) UpdatePerformanceReview(ctx context.Context, id str
 	}
 
 	// Publish performance review completed event again for updates
-	_ = s.publisher.Publish(ctx, domain.TopicHrPerformanceReviewCompleted, pr.ID, domain.PerformanceReviewCompletedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceReviewCompleted, pr.ID, domain.PerformanceReviewCompletedEvent{
 		ReviewID:   pr.ID,
 		EmployeeID: pr.EmployeeID,
 		ReviewerID: pr.ReviewerID,
 		Rating:     pr.Rating,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceReviewCompleted, err)
+	}
 
 	// Publish performance improvement needed if updated rating is low
 	if pr.Rating < 3 {
-		_ = s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
 			EmployeeID: pr.EmployeeID,
 			ReviewID:    pr.ID,
 			Details:     fmt.Sprintf("Low performance review rating updated to %d: %s", pr.Rating, pr.Feedback),
 			Timestamp:   time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceImprovementNeeded, err)
+		}
 	}
 
 	return pr, nil

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -42,18 +43,22 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, conta
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmCustomerCreated, id, domain.CustomerCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerCreated, id, domain.CustomerCreatedEvent{
 		CustomerID:  id,
 		CompanyName: companyName,
 		ContactName: contactName,
 		Email:       email,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerCreated, err)
+	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
 		CustomerID: id,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerActivated, err)
+	}
 
 	return cust, nil
 }
@@ -86,24 +91,30 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmCustomerUpdated, id, domain.CustomerUpdatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerUpdated, id, domain.CustomerUpdatedEvent{
 		CustomerID:  id,
 		CompanyName: companyName,
 		Status:      status,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerUpdated, err)
+	}
 
 	if oldStatus != status {
 		if status == "ACTIVE" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerActivated, err)
+			}
 		} else if status == "INACTIVE" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmCustomerDeactivated, id, domain.CustomerDeactivatedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerDeactivated, id, domain.CustomerDeactivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerDeactivated, err)
+			}
 		}
 	}
 

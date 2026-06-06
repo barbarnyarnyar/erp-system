@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -114,12 +115,14 @@ func (s *QuoteService) SendQuote(ctx context.Context, id string) (*domain.Quote,
 
 	// Publish Email Sent Event
 	emailID := fmt.Sprintf("email_%d", time.Now().UnixNano())
-	_ = s.publisher.Publish(ctx, domain.TopicCrmEmailSent, emailID, domain.EmailSentEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmEmailSent, emailID, domain.EmailSentEvent{
 		EmailID:    emailID,
 		CampaignID: "quote_dispatch",
 		Recipient:  "customer_quote_inbox",
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmEmailSent, err)
+	}
 
 	return quote, nil
 }

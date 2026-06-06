@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -76,12 +77,14 @@ func (s *TrainingService) UpdateTrainingProgram(ctx context.Context, id string, 
 
 	// Publish training completed event if status changed to COMPLETED
 	if status == "COMPLETED" && oldStatus != "COMPLETED" {
-		_ = s.publisher.Publish(ctx, domain.TopicHrTrainingCompleted, tp.ID, domain.TrainingCompletedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrTrainingCompleted, tp.ID, domain.TrainingCompletedEvent{
 			TrainingProgramID: tp.ID,
 			EmployeeID:        "", // Broadcast or individual (left blank for general program completion)
 			CompletionDate:    time.Now(),
 			Timestamp:         time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTrainingCompleted, err)
+		}
 	}
 
 	return tp, nil
@@ -120,12 +123,14 @@ func (s *TrainingService) CompleteTraining(ctx context.Context, enrollmentID str
 	}
 
 	// Publish training completed event for this specific enrollment
-	_ = s.publisher.Publish(ctx, domain.TopicHrTrainingCompleted, te.ID, domain.TrainingCompletedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrTrainingCompleted, te.ID, domain.TrainingCompletedEvent{
 		TrainingProgramID: te.TrainingID,
 		EmployeeID:        te.EmployeeID,
 		CompletionDate:    now,
 		Timestamp:         now,
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTrainingCompleted, err)
+	}
 
 	return te, nil
 }

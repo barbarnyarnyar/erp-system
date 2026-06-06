@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -60,21 +61,25 @@ func (s *TaskManagementService) CreateTask(ctx context.Context, projectID, paren
 	}
 
 	// Publish Task Created Event
-	_ = s.publisher.Publish(ctx, domain.TopicPrjTaskCreated, id, domain.TaskCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjTaskCreated, id, domain.TaskCreatedEvent{
 		TaskID:    id,
 		ProjectID: projectID,
 		Title:     title,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskCreated, err)
+	}
 
 	if assignedTo != "" {
-		_ = s.publisher.Publish(ctx, domain.TopicPrjTaskAssigned, id, domain.TaskAssignedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicPrjTaskAssigned, id, domain.TaskAssignedEvent{
 			TaskID:     id,
 			ProjectID:  projectID,
 			EmployeeID: assignedTo,
 			Workload:   8,
 			Timestamp:  time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskAssigned, err)
+		}
 	}
 
 	return task, nil
@@ -107,17 +112,21 @@ func (s *TaskManagementService) UpdateTaskProgress(ctx context.Context, taskID s
 
 	if oldStatus != status {
 		if status == "IN_PROGRESS" {
-			_ = s.publisher.Publish(ctx, domain.TopicPrjTaskStarted, taskID, domain.TaskStartedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicPrjTaskStarted, taskID, domain.TaskStartedEvent{
 				TaskID:    taskID,
 				ProjectID: task.ProjectID,
 				Timestamp: time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskStarted, err)
+			}
 		} else if status == "DONE" {
-			_ = s.publisher.Publish(ctx, domain.TopicPrjTaskCompleted, taskID, domain.TaskCompletedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicPrjTaskCompleted, taskID, domain.TaskCompletedEvent{
 				TaskID:    taskID,
 				ProjectID: task.ProjectID,
 				Timestamp: time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskCompleted, err)
+			}
 		}
 	}
 
@@ -138,13 +147,15 @@ func (s *TaskManagementService) AssignTask(ctx context.Context, taskID string, e
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicPrjTaskAssigned, taskID, domain.TaskAssignedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjTaskAssigned, taskID, domain.TaskAssignedEvent{
 		TaskID:     taskID,
 		ProjectID:  task.ProjectID,
 		EmployeeID: employeeID,
 		Workload:   8,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskAssigned, err)
+	}
 
 	return task, nil
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -78,12 +79,14 @@ func (s *ProductionService) CreateProductionOrder(ctx context.Context, bomID str
 	components, _ := s.compRepo.ListByBOMID(ctx, bomID)
 	for _, comp := range components {
 		qtyNeeded := decimal.NewFromInt(int64(quantity)).Mul(comp.Quantity).Mul(decimal.NewFromFloat(1.0).Add(comp.WasteFactor))
-		_ = s.publisher.Publish(ctx, domain.TopicMfgMaterialRequired, comp.ComponentProductID, domain.MaterialRequiredEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgMaterialRequired, comp.ComponentProductID, domain.MaterialRequiredEvent{
 			ProductID:  comp.ComponentProductID,
 			Quantity:   qtyNeeded,
 			RequiredBy: scheduledDate,
 			Timestamp:  time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaterialRequired, err)
+		}
 	}
 
 	// 2. Capacity Planning & Work Order Scheduling
@@ -104,22 +107,26 @@ func (s *ProductionService) CreateProductionOrder(ctx context.Context, bomID str
 		_ = s.woRepo.Create(ctx, wo)
 
 		// Publish Work Order Created Event
-		_ = s.publisher.Publish(ctx, domain.TopicMfgWorkOrderCreated, wo.ID, domain.WorkOrderCreatedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgWorkOrderCreated, wo.ID, domain.WorkOrderCreatedEvent{
 			WorkOrderID:       wo.ID,
 			ProductionOrderID: poID,
 			WorkCenterID:      op.WorkCenterID,
 			Timestamp:         time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgWorkOrderCreated, err)
+		}
 	}
 
 	// 3. Publish Production Scheduled Event
-	_ = s.publisher.Publish(ctx, domain.TopicMfgProductionScheduled, po.ID, domain.ProductionScheduledEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicMfgProductionScheduled, po.ID, domain.ProductionScheduledEvent{
 		ProductionOrderID: po.ID,
 		ProductID:         po.ProductID,
 		Quantity:          po.Quantity,
 		ScheduledDate:     po.ScheduledDate,
 		Timestamp:         time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgProductionScheduled, err)
+	}
 
 	return po, nil
 }
@@ -136,10 +143,12 @@ func (s *ProductionService) StartWorkOrder(ctx context.Context, id string) (*dom
 	_ = s.woRepo.Update(ctx, wo)
 
 	// Publish Work Order Started Event
-	_ = s.publisher.Publish(ctx, domain.TopicMfgWorkOrderStarted, wo.ID, domain.WorkOrderStartedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicMfgWorkOrderStarted, wo.ID, domain.WorkOrderStartedEvent{
 		WorkOrderID: wo.ID,
 		Timestamp:   now,
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgWorkOrderStarted, err)
+	}
 
 	po, err := s.poRepo.GetByID(ctx, wo.ProductionOrderID)
 	if err == nil && po.Status == "PLANNED" {
@@ -152,11 +161,13 @@ func (s *ProductionService) StartWorkOrder(ctx context.Context, id string) (*dom
 		_ = s.ConsumeMaterials(ctx, po.ID)
 
 		// Publish Production Started Event
-		_ = s.publisher.Publish(ctx, domain.TopicMfgProductionStarted, po.ID, domain.ProductionStartedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgProductionStarted, po.ID, domain.ProductionStartedEvent{
 			ProductionOrderID: po.ID,
 			ProductID:         po.ProductID,
 			Timestamp:         now,
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgProductionStarted, err)
+		}
 	}
 
 	return wo, nil
@@ -264,10 +275,12 @@ func (s *ProductionService) CompleteWorkOrder(ctx context.Context, id string) (*
 	_ = s.woRepo.Update(ctx, wo)
 
 	// Publish Work Order Completed Event
-	_ = s.publisher.Publish(ctx, domain.TopicMfgWorkOrderCompleted, wo.ID, domain.WorkOrderCompletedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicMfgWorkOrderCompleted, wo.ID, domain.WorkOrderCompletedEvent{
 		WorkOrderID: wo.ID,
 		Timestamp:   now,
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgWorkOrderCompleted, err)
+	}
 
 	return wo, nil
 }
@@ -371,12 +384,14 @@ func (s *ProductionService) UpdateProductionPlan(ctx context.Context, id string,
 	}
 
 	if status == "DELAYED" || scheduledDate.After(oldDate) {
-		_ = s.publisher.Publish(ctx, domain.TopicMfgProductionDelayed, po.ID, domain.ProductionDelayedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgProductionDelayed, po.ID, domain.ProductionDelayedEvent{
 			ProductionOrderID: po.ID,
 			Reason:            fmt.Sprintf("Schedule updated to %s (Status: %s)", scheduledDate.Format(time.RFC3339), status),
 			NewScheduledDate:  scheduledDate,
 			Timestamp:         time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgProductionDelayed, err)
+		}
 	}
 
 	return po, nil
@@ -434,10 +449,12 @@ func (s *ProductionService) UpdateWorkOrder(ctx context.Context, id string, stat
 }
 
 func (s *ProductionService) DeleteWorkOrder(ctx context.Context, id string) error {
-	_ = s.publisher.Publish(ctx, domain.TopicMfgWorkOrderCancelled, id, domain.WorkOrderCancelledEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicMfgWorkOrderCancelled, id, domain.WorkOrderCancelledEvent{
 		WorkOrderID: id,
 		Reason:      "Manual deletion request",
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgWorkOrderCancelled, err)
+	}
 	return s.woRepo.Delete(ctx, id)
 }

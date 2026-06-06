@@ -213,6 +213,19 @@ Only salary changes have an audit trail:
 
 The `updateJournalEntry` Go method should not exist for posted entries — updates should only be allowed on `DRAFT` entries. Once `POSTED`, the only valid mutation is reversal.
 
+### 2.16 Missing Opportunity Stage History (CRM)
+
+`Opportunity` in `crm.cdd:43-53` has a `stage` field (`DISCOVERY, NEGOTIATION`) that is overwritten on every update — no historical tracking exists:
+
+| Field | Exists? | Notes |
+|-------|---------|-------|
+| `stage` | ✅ Line 49 | Current stage only — overwritten by `updateOpportunity` |
+| `updated_at` | ✅ Line 52 | Timestamp of last change but no *what* changed |
+| OpportunityStageHistory entity | ❌ Missing | No ledger of stage transitions |
+| `changed_by` | ❌ Missing | No audit of who moved the deal |
+
+Without an `OpportunityStageHistory` entity, CRM cannot calculate pipeline velocity (time spent per stage), conversion funnels, or rep-level stage transition metrics. The existing `OpportunityWonEvent` / `OpportunityLostEvent` capture final outcomes but not intermediate progression.
+
 ## 3. Definition of Done
 
 - [x] **2.0 resolved**: Transaction + TransactionLine entities added to `fm.cdd` (not removed — they have full repo+memory implementations)
@@ -235,6 +248,7 @@ The `updateJournalEntry` Go method should not exist for posted entries — updat
 - [ ] **2.13 resolved**: PositionHistory + DepartmentHistory entities exist with event-driven audit trails
 - [ ] **2.14 resolved**: `CustomerDemandForecastEvent.ConfidenceLevel` uses `decimal.Decimal` (not `float64`)
 - [ ] **2.15 resolved**: JournalEntry has `posted_by` + `posted_at` fields; `updated_at` removed from JournalEntry; `Update` blocked on POSTED entries
+- [ ] **2.16 resolved**: OpportunityStageHistory entity exists with stage, changed_at, changed_by; stage transitions recorded on every `updateOpportunity`
 - [ ] All changes verified by `make test` passing
 
 ## 3.5 Resolved Design Decisions
@@ -288,7 +302,7 @@ The `updateJournalEntry` Go method should not exist for posted entries — updat
 | 16 | Phase S9: Fix topic naming inconsistency (FM → `crm.sales.order.confirmed`) | 0.5d | Cross-service integration broken |
 | 17 | Phase S9: Migrate fm-service 21 hardcoded topic strings to constants | 0.5d | Code quality: bypasses typed constants |
 | 18 | Phase S9.5: Migrate 7+ raw string enum fields to typed constants + fix `ConfidenceLevel` float64 → decimal (SCM) | 1d | Comments ignored at runtime — invalid values corrupt state silently; float64 bug causes forecast drift |
-| 19 | **Phase S9.6: Add PositionHistory + DepartmentHistory entities with event-driven audit trails** | **1d** | **Only salary changes have audit trail; position/department changes have zero history tracking** |
+| 19 | **Phase S9.6: Add PositionHistory + DepartmentHistory + OpportunityStageHistory audit entities with event-driven trails** | **1.5d** | **Salary and pipeline stage changes are tracked, but position/department/stage changes have zero history** |
 
 ### P4 — Architecture & Remaining Security (works but messy)
 

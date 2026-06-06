@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -52,14 +53,16 @@ func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, customerI
 	}
 	
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.invoice.created", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.invoice.created", inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
 		TotalAmount:    inv.TotalAmount,
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.created", err)
+	}
 	
 	return inv, nil
 }
@@ -85,14 +88,16 @@ func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string
 	}
 	
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.invoice.updated", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.invoice.updated", inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
 		TotalAmount:    inv.TotalAmount,
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.updated", err)
+	}
 	
 	return inv, nil
 }
@@ -114,14 +119,16 @@ func (s *AccountsReceivableService) SendInvoice(ctx context.Context, id string) 
 	}
 	
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.invoice.sent", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.invoice.sent", inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
 		TotalAmount:    inv.TotalAmount,
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.sent", err)
+	}
 	
 	return true, nil
 }
@@ -148,13 +155,15 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		return err
 	}
 	
-	_ = s.publisher.Publish(ctx, "fin.invoice.overdue", inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.invoice.overdue", inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:     inv.CustomerID,
 		InvoiceNumber:  inv.InvoiceNumber,
 		TotalAmount:    inv.TotalAmount,
 		Status:         inv.Status,
 		Timestamp:      time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.overdue", err)
+	}
 	return nil
 }

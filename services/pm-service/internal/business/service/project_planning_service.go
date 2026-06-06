@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -79,12 +80,14 @@ func (s *ProjectPlanningService) CreateProject(ctx context.Context, name, descri
 	}
 
 	// Publish Event
-	_ = s.publisher.Publish(ctx, domain.TopicPrjProjectCreated, id, domain.ProjectCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjProjectCreated, id, domain.ProjectCreatedEvent{
 		ProjectID:   id,
 		ProjectName: name,
 		ManagerID:   "",
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectCreated, err)
+	}
 
 	return proj, nil
 }
@@ -113,27 +116,35 @@ func (s *ProjectPlanningService) UpdateProjectStatus(ctx context.Context, id str
 
 	switch status {
 	case "ACTIVE":
-		_ = s.publisher.Publish(ctx, domain.TopicPrjProjectStarted, id, domain.ProjectStartedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectStarted, id, domain.ProjectStartedEvent{
 			ProjectID: id,
 			Timestamp: time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectStarted, err)
+		}
 	case "COMPLETED":
-		_ = s.publisher.Publish(ctx, domain.TopicPrjProjectCompleted, id, domain.ProjectCompletedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectCompleted, id, domain.ProjectCompletedEvent{
 			ProjectID: id,
 			Timestamp: time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectCompleted, err)
+		}
 	case "CANCELLED":
-		_ = s.publisher.Publish(ctx, domain.TopicPrjProjectCancelled, id, domain.ProjectCancelledEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectCancelled, id, domain.ProjectCancelledEvent{
 			ProjectID: id,
 			Reason:    "Status changed to cancelled",
 			Timestamp: time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectCancelled, err)
+		}
 	default:
-		_ = s.publisher.Publish(ctx, domain.TopicPrjProjectUpdated, id, domain.ProjectUpdatedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectUpdated, id, domain.ProjectUpdatedEvent{
 			ProjectID: id,
 			Status:    status,
 			Timestamp: time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectUpdated, err)
+		}
 	}
 
 	return proj, nil

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -53,12 +54,14 @@ func (s *TimeAttendanceService) CreateTimesheet(ctx context.Context, employeeID 
 	// Calculate and publish overtime if hours > 8
 	if hours.GreaterThan(decimal.NewFromInt(8)) {
 		otHours := hours.Sub(decimal.NewFromInt(8))
-		_ = s.publisher.Publish(ctx, domain.TopicHrOvertimeRecorded, te.EmployeeID, domain.OvertimeRecordedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrOvertimeRecorded, te.EmployeeID, domain.OvertimeRecordedEvent{
 			EmployeeID:    te.EmployeeID,
 			EntryDate:     te.EntryDate,
 			OvertimeHours: otHours,
 			Timestamp:     time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrOvertimeRecorded, err)
+		}
 	}
 
 	return te, nil
@@ -106,13 +109,15 @@ func (s *TimeAttendanceService) SubmitTimesheet(ctx context.Context, id string) 
 	}
 
 	// Publish timesheet submitted event
-	_ = s.publisher.Publish(ctx, domain.TopicHrTimesheetSubmitted, te.ID, domain.TimesheetSubmittedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrTimesheetSubmitted, te.ID, domain.TimesheetSubmittedEvent{
 		TimesheetID: te.ID,
 		EmployeeID:  te.EmployeeID,
 		EntryDate:   te.EntryDate,
 		TotalHours:  te.TotalHours,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTimesheetSubmitted, err)
+	}
 
 	return te, nil
 }
@@ -132,12 +137,14 @@ func (s *TimeAttendanceService) ApproveTimesheet(ctx context.Context, id string,
 	}
 
 	// Publish timesheet approved event
-	_ = s.publisher.Publish(ctx, domain.TopicHrTimesheetApproved, te.ID, domain.TimesheetApprovedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrTimesheetApproved, te.ID, domain.TimesheetApprovedEvent{
 		TimesheetID: te.ID,
 		EmployeeID:  te.EmployeeID,
 		ApprovedBy:  approvedBy,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTimesheetApproved, err)
+	}
 
 	return te, nil
 }

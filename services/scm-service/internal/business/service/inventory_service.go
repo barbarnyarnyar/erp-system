@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"errors"
 	"fmt"
@@ -348,7 +349,7 @@ func (s *InventoryService) ExecuteStockTransfer(ctx context.Context, id string) 
 func (s *InventoryService) publishValuation(ctx context.Context, ii *domain.InventoryItem) {
 	totalVal := ii.UnitCost.Mul(decimal.NewFromInt(int64(ii.QuantityOnHand)))
 
-	_ = s.publisher.Publish(ctx, domain.TopicScmInventoryValued, ii.ID, domain.InventoryValuedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicScmInventoryValued, ii.ID, domain.InventoryValuedEvent{
 		InventoryItemID: ii.ID,
 		ProductID:       ii.ProductID,
 		LocationID:      ii.LocationID,
@@ -356,7 +357,9 @@ func (s *InventoryService) publishValuation(ctx context.Context, ii *domain.Inve
 		UnitCost:        ii.UnitCost,
 		TotalValuation:  totalVal,
 		Timestamp:       time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryValued, err)
+	}
 }
 
 func (s *InventoryService) ListMovements(ctx context.Context) ([]domain.InventoryMovement, error) {

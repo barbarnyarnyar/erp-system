@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -51,12 +52,14 @@ func (s *LeadService) CreateLead(ctx context.Context, firstName, lastName, compa
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmLeadCreated, id, domain.LeadCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmLeadCreated, id, domain.LeadCreatedEvent{
 		LeadID:    id,
 		Company:   company,
 		Email:     email,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadCreated, err)
+	}
 
 	return lead, nil
 }
@@ -90,16 +93,20 @@ func (s *LeadService) UpdateLead(ctx context.Context, id string, firstName, last
 
 	if oldStatus != status {
 		if status == "QUALIFIED" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmLeadQualified, id, domain.LeadQualifiedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmLeadQualified, id, domain.LeadQualifiedEvent{
 				LeadID:    id,
 				Score:     score,
 				Timestamp: time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadQualified, err)
+			}
 		} else if status == "LOST" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmLeadLost, id, domain.LeadLostEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmLeadLost, id, domain.LeadLostEvent{
 				LeadID:    id,
 				Timestamp: time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadLost, err)
+			}
 		}
 	}
 
@@ -133,12 +140,14 @@ func (s *LeadService) ConvertLead(ctx context.Context, id string) (*domain.Oppor
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmLeadConverted, id, domain.LeadConvertedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmLeadConverted, id, domain.LeadConvertedEvent{
 		LeadID:        id,
 		CustomerID:    cust.ID,
 		OpportunityID: opp.ID,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadConverted, err)
+	}
 
 	return opp, nil
 }

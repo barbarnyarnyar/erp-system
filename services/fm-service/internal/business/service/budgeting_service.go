@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"errors"
 	"fmt"
@@ -55,7 +56,7 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 	}
 
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.budget.created", budget.ID, domain.BudgetEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.budget.created", budget.ID, domain.BudgetEventPayload{
 		AccountID:       budget.AccountID,
 		CostCenterID:    budget.CostCenterID,
 		FiscalYear:      budget.FiscalYear,
@@ -63,7 +64,9 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 		AllocatedAmount: budget.AllocatedAmount,
 		SpentAmount:     budget.SpentAmount,
 		Timestamp:       time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.budget.created", err)
+	}
 
 	return budget, nil
 }
@@ -114,7 +117,7 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 	_ = s.budgets.Update(ctx, bud)
 
 	// Publish budget updated event
-	_ = s.publisher.Publish(ctx, "fin.budget.updated", bud.ID, domain.BudgetEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.budget.updated", bud.ID, domain.BudgetEventPayload{
 		AccountID:       bud.AccountID,
 		CostCenterID:    bud.CostCenterID,
 		FiscalYear:      bud.FiscalYear,
@@ -122,11 +125,13 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 		AllocatedAmount: bud.AllocatedAmount,
 		SpentAmount:     bud.SpentAmount,
 		Timestamp:       time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.budget.updated", err)
+	}
 
 	if newSpent.GreaterThan(bud.AllocatedAmount) {
 		// Publish budget exceeded event
-		_ = s.publisher.Publish(ctx, "fin.budget.exceeded", bud.ID, domain.BudgetEventPayload{
+		if err := s.publisher.Publish(ctx, "fin.budget.exceeded", bud.ID, domain.BudgetEventPayload{
 			AccountID:       bud.AccountID,
 			CostCenterID:    bud.CostCenterID,
 			FiscalYear:      bud.FiscalYear,
@@ -134,7 +139,9 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 			AllocatedAmount: bud.AllocatedAmount,
 			SpentAmount:     bud.SpentAmount,
 			Timestamp:       time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", "fin.budget.exceeded", err)
+		}
 	}
 
 	return nil

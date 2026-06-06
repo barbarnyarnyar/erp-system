@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -63,41 +64,49 @@ func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderI
 		_ = s.nonConfRepo.Create(ctx, nc)
 
 		// Publish Quality Inspection Failed Event
-		_ = s.publisher.Publish(ctx, domain.TopicMfgQualityInspectionFailed, id, domain.QualityInspectionFailedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgQualityInspectionFailed, id, domain.QualityInspectionFailedEvent{
 			InspectionID: id,
 			WorkOrderID:  workOrderID,
 			InspectorID:  inspectorID,
 			Remarks:      remarks,
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgQualityInspectionFailed, err)
+		}
 
 		// Publish Non-Conformance Detected Event
-		_ = s.publisher.Publish(ctx, domain.TopicMfgQualityNonConformanceDetected, ncID, domain.QualityNonConformanceDetectedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgQualityNonConformanceDetected, ncID, domain.QualityNonConformanceDetectedEvent{
 			NonConformanceID: ncID,
 			InspectionID:     id,
 			Severity:         "MEDIUM",
 			Description:      nc.Description,
 			Timestamp:        time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgQualityNonConformanceDetected, err)
+		}
 
 		// Publish Material Wasted Event (using mock quantities/reasons)
 		wo, _ := s.woRepo.GetByID(ctx, workOrderID)
-		_ = s.publisher.Publish(ctx, domain.TopicMfgMaterialWasted, workOrderID, domain.MaterialWastedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgMaterialWasted, workOrderID, domain.MaterialWastedEvent{
 			ProductionOrderID: wo.ProductionOrderID,
 			ProductID:         "component_wasted",
 			Quantity:          decimal.NewFromFloat(1.0),
 			Reason:            fmt.Sprintf("Inspection Fail: %s", remarks),
 			Timestamp:         time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaterialWasted, err)
+		}
 
 	} else if result == "PASS" {
 		// Publish Quality Inspection Passed Event
-		_ = s.publisher.Publish(ctx, domain.TopicMfgQualityInspectionPassed, id, domain.QualityInspectionPassedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicMfgQualityInspectionPassed, id, domain.QualityInspectionPassedEvent{
 			InspectionID: id,
 			WorkOrderID:  workOrderID,
 			InspectorID:  inspectorID,
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgQualityInspectionPassed, err)
+		}
 
 		if s.prodSvc != nil {
 			wo, _ := s.woRepo.GetByID(ctx, workOrderID)

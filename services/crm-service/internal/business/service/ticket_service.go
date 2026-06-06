@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -38,13 +39,15 @@ func (s *ServiceTicketService) CreateServiceTicket(ctx context.Context, customer
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmServiceTicketCreated, id, domain.ServiceTicketCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmServiceTicketCreated, id, domain.ServiceTicketCreatedEvent{
 		TicketID:   id,
 		CustomerID: customerID,
 		Title:      title,
 		Priority:   priority,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketCreated, err)
+	}
 
 	return ticket, nil
 }
@@ -73,24 +76,30 @@ func (s *ServiceTicketService) UpdateServiceTicket(ctx context.Context, id strin
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmServiceTicketUpdated, id, domain.ServiceTicketUpdatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmServiceTicketUpdated, id, domain.ServiceTicketUpdatedEvent{
 		TicketID:  id,
 		Status:    status,
 		Priority:  priority,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketUpdated, err)
+	}
 
 	if oldStatus != status {
 		if status == "RESOLVED" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmServiceTicketResolved, id, domain.ServiceTicketResolvedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmServiceTicketResolved, id, domain.ServiceTicketResolvedEvent{
 				TicketID:  id,
 				Timestamp: time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketResolved, err)
+			}
 		} else if status == "ESCALATED" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmServiceTicketEscalated, id, domain.ServiceTicketEscalatedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmServiceTicketEscalated, id, domain.ServiceTicketEscalatedEvent{
 				TicketID:  id,
 				Timestamp: time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketEscalated, err)
+			}
 		}
 	}
 

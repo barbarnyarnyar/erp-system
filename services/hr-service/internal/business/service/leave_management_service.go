@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -72,14 +73,16 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 	}
 
 	// Publish leave requested event
-	_ = s.publisher.Publish(ctx, domain.TopicHrLeaveRequested, lr.ID, domain.LeaveRequestedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrLeaveRequested, lr.ID, domain.LeaveRequestedEvent{
 		LeaveRequestID: lr.ID,
 		EmployeeID:     lr.EmployeeID,
 		LeaveType:      lr.LeaveType,
 		StartDate:      lr.StartDate,
 		EndDate:        lr.EndDate,
 		Timestamp:      time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrLeaveRequested, err)
+	}
 
 	return lr, nil
 }
@@ -136,21 +139,25 @@ func (s *LeaveManagementService) UpdateLeaveStatus(ctx context.Context, id strin
 
 	if status == "APPROVED" {
 		// Publish leave approved event
-		_ = s.publisher.Publish(ctx, domain.TopicHrLeaveApproved, lr.ID, domain.LeaveApprovedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrLeaveApproved, lr.ID, domain.LeaveApprovedEvent{
 			LeaveRequestID: lr.ID,
 			EmployeeID:     lr.EmployeeID,
 			ApprovedBy:     approvedBy,
 			Timestamp:      time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrLeaveApproved, err)
+		}
 	} else if status == "REJECTED" {
 		// Publish leave rejected event
-		_ = s.publisher.Publish(ctx, domain.TopicHrLeaveRejected, lr.ID, domain.LeaveRejectedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrLeaveRejected, lr.ID, domain.LeaveRejectedEvent{
 			LeaveRequestID: lr.ID,
 			EmployeeID:     lr.EmployeeID,
 			RejectedBy:     approvedBy,
 			Reason:         "Rejected by manager",
 			Timestamp:      time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrLeaveRejected, err)
+		}
 	}
 
 	return lr, nil

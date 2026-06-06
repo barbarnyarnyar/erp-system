@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"errors"
 	"fmt"
@@ -55,14 +56,16 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 	}
 
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.vendor.payment.due", bill.ID, domain.VendorBillEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.vendor.payment.due", bill.ID, domain.VendorBillEventPayload{
 		ID:         bill.ID,
 		VendorID:   bill.SupplierID,
 		BillNumber: bill.BillNumber,
 		Amount:     bill.TotalAmount,
 		DueDate:    bill.DueDate,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.vendor.payment.due", err)
+	}
 
 	return bill, nil
 }

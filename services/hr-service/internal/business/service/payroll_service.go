@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -87,14 +88,16 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 	_ = s.deductions.Create(ctx, ded2)
 
 	// Publish payroll processed event to Kafka
-	_ = s.publisher.Publish(ctx, domain.TopicHrPayrollProcessed, pr.ID, domain.PayrollProcessedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrPayrollProcessed, pr.ID, domain.PayrollProcessedEvent{
 		PayrollID:   pr.ID,
 		PeriodStart: pr.PayPeriodStart,
 		PeriodEnd:   pr.PayPeriodEnd,
 		TotalGross:  pr.GrossPay,
 		TotalNet:    pr.NetPay,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPayrollProcessed, err)
+	}
 
 	return pr, nil
 }

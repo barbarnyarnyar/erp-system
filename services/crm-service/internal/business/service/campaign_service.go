@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -67,16 +68,20 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, id string, status 
 
 	if oldStatus != status {
 		if status == "LAUNCHED" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmCampaignLaunched, id, domain.CampaignLaunchedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmCampaignLaunched, id, domain.CampaignLaunchedEvent{
 				CampaignID: id,
 				Name:       camp.Name,
 				Timestamp:  time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCampaignLaunched, err)
+			}
 		} else if status == "COMPLETED" {
-			_ = s.publisher.Publish(ctx, domain.TopicCrmCampaignCompleted, id, domain.CampaignCompletedEvent{
+			if err := s.publisher.Publish(ctx, domain.TopicCrmCampaignCompleted, id, domain.CampaignCompletedEvent{
 				CampaignID: id,
 				Timestamp:  time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCampaignCompleted, err)
+			}
 		}
 	}
 

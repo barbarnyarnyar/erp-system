@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -47,14 +48,16 @@ func (s *TimeExpenseService) LogTime(ctx context.Context, projectID, taskID, use
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicPrjTimeLogged, id, domain.TimeLoggedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjTimeLogged, id, domain.TimeLoggedEvent{
 		TimeLogID:    id,
 		ProjectID:    projectID,
 		EmployeeID:   userID,
 		HoursLogged:  hours,
 		BillableRate: decimal.NewFromFloat(75.00),
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTimeLogged, err)
+	}
 
 	return entry, nil
 }
@@ -75,11 +78,13 @@ func (s *TimeExpenseService) ApproveTime(ctx context.Context, entryID string, ap
 	}
 
 	// Publish Event
-	_ = s.publisher.Publish(ctx, domain.TopicPrjTimeApproved, entryID, domain.TimeApprovedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjTimeApproved, entryID, domain.TimeApprovedEvent{
 		TimeLogID:  entryID,
 		ApprovedBy: approvedBy,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTimeApproved, err)
+	}
 
 	return entry, nil
 }
@@ -113,23 +118,27 @@ func (s *TimeExpenseService) LogExpense(ctx context.Context, projectID, taskID, 
 	}
 
 	// Publish new submit event
-	_ = s.publisher.Publish(ctx, domain.TopicPrjExpenseSubmitted, id, domain.ExpenseSubmittedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjExpenseSubmitted, id, domain.ExpenseSubmittedEvent{
 		ExpenseID: id,
 		ProjectID: projectID,
 		UserID:    userID,
 		Amount:    amount,
 		Currency:  currency,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseSubmitted, err)
+	}
 
 	// Keep old incurrence event for FM service compatibility
-	_ = s.publisher.Publish(ctx, domain.TopicPrjExpenseIncurred, id, domain.ProjectExpenseIncurredEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjExpenseIncurred, id, domain.ProjectExpenseIncurredEvent{
 		ExpenseID:   id,
 		ProjectID:   projectID,
 		Description: description,
 		Amount:      amount,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseIncurred, err)
+	}
 
 	return expense, nil
 }
@@ -150,11 +159,13 @@ func (s *TimeExpenseService) ApproveExpense(ctx context.Context, expenseID strin
 	}
 
 	// Publish Event
-	_ = s.publisher.Publish(ctx, domain.TopicPrjExpenseApproved, expenseID, domain.ExpenseApprovedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjExpenseApproved, expenseID, domain.ExpenseApprovedEvent{
 		ExpenseID:  expenseID,
 		ApprovedBy: approvedBy,
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseApproved, err)
+	}
 
 	return exp, nil
 }

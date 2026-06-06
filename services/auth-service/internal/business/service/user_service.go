@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/auth-service/internal/business/domain"
@@ -60,17 +61,19 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 		_ = s.urRepo.Create(ctx, ur)
 
 		// Publish user role assigned event
-		_ = s.publisher.Publish(ctx, domain.TopicAuthUserRoleAssigned, ur.ID, domain.UserRoleEventPayload{
+		if err := s.publisher.Publish(ctx, domain.TopicAuthUserRoleAssigned, ur.ID, domain.UserRoleEventPayload{
 			ID:         ur.ID,
 			UserID:     ur.UserID,
 			RoleID:     ur.RoleID,
 			AssignedBy: "",
 			Timestamp:  time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserRoleAssigned, err)
+		}
 	}
 
 	// Publish user created event
-	_ = s.publisher.Publish(ctx, domain.TopicAuthUserCreated, u.ID, domain.UserEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicAuthUserCreated, u.ID, domain.UserEventPayload{
 		ID:        u.ID,
 		Username:  u.Username,
 		Email:     u.Email,
@@ -78,7 +81,9 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 		LastName:  u.LastName,
 		IsActive:  u.IsActive,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserCreated, err)
+	}
 
 	return u, nil
 }
@@ -126,10 +131,12 @@ func (s *UserService) UpdateCredentials(ctx context.Context, userID string, newP
 	}
 
 	// Publish password changed event
-	_ = s.publisher.Publish(ctx, domain.TopicAuthPasswordChanged, user.ID, domain.PasswordChangedEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicAuthPasswordChanged, user.ID, domain.PasswordChangedEventPayload{
 		UserID:    user.ID,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthPasswordChanged, err)
+	}
 
 	return true, nil
 }
@@ -148,7 +155,7 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 	}
 
 	// Publish user deactivated event
-	_ = s.publisher.Publish(ctx, domain.TopicAuthUserDeactivated, user.ID, domain.UserEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicAuthUserDeactivated, user.ID, domain.UserEventPayload{
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
@@ -156,7 +163,9 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 		LastName:  user.LastName,
 		IsActive:  user.IsActive,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserDeactivated, err)
+	}
 
 	return nil
 }
@@ -175,12 +184,14 @@ func (s *UserService) AssignUserToStore(ctx context.Context, userID, storeID str
 	}
 
 	// Publish user store assigned event
-	_ = s.publisher.Publish(ctx, domain.TopicAuthUserStoreAssigned, us.ID, domain.UserStoreEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicAuthUserStoreAssigned, us.ID, domain.UserStoreEventPayload{
 		ID:        us.ID,
 		UserID:    us.UserID,
 		StoreID:   us.StoreID,
 		Timestamp: time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserStoreAssigned, err)
+	}
 
 	return nil
 }

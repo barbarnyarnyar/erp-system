@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"time"
 
@@ -44,12 +45,14 @@ func (s *CostingService) RunMRP(ctx context.Context) error {
 			components, _ := s.compRepo.ListByBOMID(ctx, po.BomID)
 			for _, comp := range components {
 				qtyNeeded := decimal.NewFromInt(int64(po.Quantity)).Mul(comp.Quantity).Mul(decimal.NewFromFloat(1.0).Add(comp.WasteFactor))
-				_ = s.publisher.Publish(ctx, domain.TopicMfgMaterialRequired, comp.ComponentProductID, domain.MaterialRequiredEvent{
+				if err := s.publisher.Publish(ctx, domain.TopicMfgMaterialRequired, comp.ComponentProductID, domain.MaterialRequiredEvent{
 					ProductID:  comp.ComponentProductID,
 					Quantity:   qtyNeeded,
 					RequiredBy: po.ScheduledDate,
 					Timestamp:  time.Now(),
-				})
+				}); err != nil {
+					log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaterialRequired, err)
+				}
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"errors"
 	"fmt"
@@ -57,7 +58,7 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 	}
 	
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.account.created", acc.ID, domain.AccountEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.account.created", acc.ID, domain.AccountEventPayload{
 		ID:            acc.ID,
 		AccountNumber: acc.AccountNumber,
 		Name:          acc.Name,
@@ -65,7 +66,9 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 		Balance:       acc.Balance,
 		Currency:      acc.Currency,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.account.created", err)
+	}
 	
 	return acc, nil
 }
@@ -101,7 +104,7 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 	}
 	
 	// Publish event
-	_ = s.publisher.Publish(ctx, "fin.account.updated", acc.ID, domain.AccountEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.account.updated", acc.ID, domain.AccountEventPayload{
 		ID:            acc.ID,
 		AccountNumber: acc.AccountNumber,
 		Name:          acc.Name,
@@ -109,7 +112,9 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 		Balance:       acc.Balance,
 		Currency:      acc.Currency,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.account.updated", err)
+	}
 	
 	return acc, nil
 }
@@ -203,7 +208,7 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 	for _, l := range lines {
 		acc, err := s.accounts.GetByID(ctx, l.AccountID)
 		if err == nil {
-			_ = s.publisher.Publish(ctx, "fin.account.balance.changed", acc.ID, domain.AccountEventPayload{
+			if err := s.publisher.Publish(ctx, "fin.account.balance.changed", acc.ID, domain.AccountEventPayload{
 				ID:            acc.ID,
 				AccountNumber: acc.AccountNumber,
 				Name:          acc.Name,
@@ -211,7 +216,9 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 				Balance:       acc.Balance,
 				Currency:      acc.Currency,
 				Timestamp:     time.Now(),
-			})
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", "fin.account.balance.changed", err)
+			}
 		}
 	}
 	return entry, nil

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -40,13 +41,15 @@ func (s *ResourceManagementService) AllocateResource(ctx context.Context, projec
 	}
 
 	// Publish Event
-	_ = s.publisher.Publish(ctx, domain.TopicPrjResourceAllocated, id, domain.ResourceAllocatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicPrjResourceAllocated, id, domain.ResourceAllocatedEvent{
 		AllocationID: id,
 		ProjectID:    projectID,
 		UserID:       userID,
 		Role:         role,
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjResourceAllocated, err)
+	}
 
 	return alloc, nil
 }

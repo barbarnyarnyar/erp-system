@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -164,13 +165,15 @@ func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string)
 	}
 
 	// Publish PO Created/Submitted event to Kafka
-	_ = s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderCreated, po.ID, domain.PurchaseOrderCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderCreated, po.ID, domain.PurchaseOrderCreatedEvent{
 		PurchaseOrderID: po.ID,
 		PONumber:        po.PoNumber,
 		SupplierID:      po.SupplierID,
 		TotalAmount:     po.TotalAmount,
 		Timestamp:       time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderCreated, err)
+	}
 
 	return po, nil
 }

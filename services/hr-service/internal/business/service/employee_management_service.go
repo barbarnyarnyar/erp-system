@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"errors"
 	"fmt"
@@ -84,14 +85,16 @@ func (s *EmployeeManagementService) CreateEmployee(ctx context.Context, firstNam
 	})
 
 	// Publish employee created event to Kafka
-	_ = s.publisher.Publish(ctx, domain.TopicHrEmployeeCreated, emp.ID, domain.EmployeeCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrEmployeeCreated, emp.ID, domain.EmployeeCreatedEvent{
 		EmployeeID:   emp.ID,
 		FirstName:    emp.FirstName,
 		LastName:     emp.LastName,
 		DepartmentID: emp.DepartmentID,
 		Salary:       emp.Salary,
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeCreated, err)
+	}
 
 	return emp, nil
 }
@@ -126,7 +129,7 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 	}
 
 	// Publish employee updated event
-	_ = s.publisher.Publish(ctx, domain.TopicHrEmployeeUpdated, emp.ID, domain.EmployeeUpdatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrEmployeeUpdated, emp.ID, domain.EmployeeUpdatedEvent{
 		EmployeeID:   emp.ID,
 		FirstName:    emp.FirstName,
 		LastName:     emp.LastName,
@@ -135,7 +138,9 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 		Salary:       emp.Salary,
 		Status:       emp.Status,
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeUpdated, err)
+	}
 
 	// Publish salary changed event and record compensation history if different
 	if salaryChanged {
@@ -149,23 +154,27 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 			CreatedAt:     time.Now(),
 		})
 
-		_ = s.publisher.Publish(ctx, domain.TopicHrSalaryChanged, emp.ID, domain.SalaryChangedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrSalaryChanged, emp.ID, domain.SalaryChangedEvent{
 			EmployeeID: emp.ID,
 			OldSalary:  oldSalary,
 			NewSalary:  emp.Salary,
 			Timestamp:  time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrSalaryChanged, err)
+		}
 	}
 
 	// Publish employee promoted event if position changed
 	if positionChanged {
-		_ = s.publisher.Publish(ctx, domain.TopicHrEmployeePromoted, emp.ID, domain.EmployeePromotedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicHrEmployeePromoted, emp.ID, domain.EmployeePromotedEvent{
 			EmployeeID:    emp.ID,
 			OldPositionID: oldPositionID,
 			NewPositionID: emp.PositionID,
 			NewSalary:     emp.Salary,
 			Timestamp:     time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeePromoted, err)
+		}
 	}
 
 	return emp, nil
@@ -183,12 +192,14 @@ func (s *EmployeeManagementService) DeleteEmployee(ctx context.Context, id strin
 	}
 
 	// Publish employee terminated event
-	_ = s.publisher.Publish(ctx, domain.TopicHrEmployeeTerminated, emp.ID, domain.EmployeeTerminatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrEmployeeTerminated, emp.ID, domain.EmployeeTerminatedEvent{
 		EmployeeID: emp.ID,
 		TermDate:   time.Now(),
 		Reason:     "Deleted / Terminated from management system",
 		Timestamp:  time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeTerminated, err)
+	}
 
 	return nil
 }
@@ -231,13 +242,15 @@ func (s *EmployeeManagementService) SubmitExpenseClaim(ctx context.Context, empl
 		desc = lines[0].Description
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicHrExpenseSubmitted, claim.ID, domain.ExpenseSubmittedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicHrExpenseSubmitted, claim.ID, domain.ExpenseSubmittedEvent{
 		ExpenseID:   claim.ID,
 		EmployeeID:  claim.EmployeeID,
 		Description: desc,
 		Amount:      claim.TotalAmount,
 		Timestamp:   time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrExpenseSubmitted, err)
+	}
 
 	return claim, nil
 }

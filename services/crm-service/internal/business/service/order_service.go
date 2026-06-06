@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -71,12 +72,14 @@ func (s *SalesOrderService) CreateSalesOrder(ctx context.Context, customerID str
 		_ = s.orderItemRepo.Create(ctx, item)
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderCreated, orderID, domain.SalesOrderCreatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderCreated, orderID, domain.SalesOrderCreatedEvent{
 		SalesOrderID: orderID,
 		CustomerID:   customerID,
 		TotalAmount:  total,
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderCreated, err)
+	}
 
 	return order, nil
 }
@@ -103,47 +106,59 @@ func (s *SalesOrderService) UpdateSalesOrder(ctx context.Context, id string, sta
 		return nil, err
 	}
 
-	_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderUpdated, id, domain.SalesOrderUpdatedEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderUpdated, id, domain.SalesOrderUpdatedEvent{
 		SalesOrderID: id,
 		Status:       status,
 		TotalAmount:  order.TotalAmount,
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderUpdated, err)
+	}
 
 	switch status {
 	case "CONFIRMED":
-		_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderConfirmed, id, domain.SalesOrderConfirmedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderConfirmed, id, domain.SalesOrderConfirmedEvent{
 			SalesOrderID: id,
 			CustomerID:   order.CustomerID,
 			TotalAmount:  order.TotalAmount,
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderConfirmed, err)
+		}
 	case "SHIPPED":
-		_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderShipped, id, domain.SalesOrderShippedEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderShipped, id, domain.SalesOrderShippedEvent{
 			SalesOrderID: id,
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderShipped, err)
+		}
 	case "DELIVERED":
-		_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderDelivered, id, domain.SalesOrderDeliveredEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderDelivered, id, domain.SalesOrderDeliveredEvent{
 			SalesOrderID: id,
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderDelivered, err)
+		}
 	case "CANCELLED":
-		_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderCancelled, id, domain.SalesOrderCancelledEvent{
+		if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderCancelled, id, domain.SalesOrderCancelledEvent{
 			SalesOrderID: id,
 			Reason:       "Administrative status update",
 			Timestamp:    time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderCancelled, err)
+		}
 	}
 
 	return order, nil
 }
 
 func (s *SalesOrderService) DeleteSalesOrder(ctx context.Context, id string) error {
-	_ = s.publisher.Publish(ctx, domain.TopicCrmSalesOrderCancelled, id, domain.SalesOrderCancelledEvent{
+	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderCancelled, id, domain.SalesOrderCancelledEvent{
 		SalesOrderID: id,
 		Reason:       "Manual cancellation request",
 		Timestamp:    time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderCancelled, err)
+	}
 	return s.orderRepo.Delete(ctx, id)
 }

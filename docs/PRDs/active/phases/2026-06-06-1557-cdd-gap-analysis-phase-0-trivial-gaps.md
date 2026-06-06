@@ -3,7 +3,7 @@
 **Source PRD**: docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: 0 of 6
-**Status**: Ready
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -193,19 +193,19 @@ make test
 
 ## Definition of Done
 
-- [ ] Task 1: All 6 FM entity groups (7 entities, BankStatementLine bundled) have repo interfaces + memory implementations
-- [ ] Task 2a: `GetIncomeStatement` + `GetCashFlow` implemented
-- [ ] Task 2b: `ListVendorBills` implemented
-- [ ] Task 2c: `ConsumeMaterials` implemented
-- [ ] Task 2d: `ReceiveFinishedGoods` implemented
-- [ ] Task 3a: All 5 Auth entities have HTTP routes
-- [ ] Task 3b: All 9 FM entities have HTTP routes
-- [ ] Task 3c: All 3 HR entities have HTTP routes
-- [ ] Task 3d: All 6 SCM entities have HTTP routes
-- [ ] Task 3e: All 4 M entities have HTTP routes (Equipment deferred to Phase 2)
-- [ ] Task 4: All services start and pass health check
-- [ ] `make build` passes for all services
-- [ ] `make test` passes
+- [x] Task 1: All 6 FM entity groups (7 entities, BankStatementLine bundled) have repo interfaces + memory implementations
+- [x] Task 2a: `GetIncomeStatement` + `GetCashFlow` implemented
+- [x] Task 2b: `ListVendorBills` implemented
+- [x] Task 2c: `ConsumeMaterials` implemented
+- [x] Task 2d: `ReceiveFinishedGoods` implemented
+- [x] Task 3a: All 5 Auth entities have HTTP routes
+- [x] Task 3b: All 9 FM entities have HTTP routes
+- [x] Task 3c: All 3 HR entities have HTTP routes
+- [x] Task 3d: All 6 SCM entities have HTTP routes
+- [x] Task 3e: All 4 M entities have HTTP routes (Equipment deferred to Phase 2)
+- [x] Task 4: All services start and pass health check
+- [x] `make build` passes for all services
+- [x] `make test` passes
 
 ---
 

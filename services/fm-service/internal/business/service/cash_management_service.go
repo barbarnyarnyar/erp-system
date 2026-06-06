@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"context"
 	"fmt"
 	"time"
@@ -57,14 +58,16 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 		_ = s.invoices.Update(ctx, inv)
 
 		// Publish invoice paid event
-		_ = s.publisher.Publish(ctx, "fin.invoice.paid", inv.ID, domain.InvoiceEventPayload{
+		if err := s.publisher.Publish(ctx, "fin.invoice.paid", inv.ID, domain.InvoiceEventPayload{
 			ID:            inv.ID,
 			CustomerID:     inv.CustomerID,
 			InvoiceNumber:  inv.InvoiceNumber,
 			TotalAmount:    inv.TotalAmount,
 			Status:         inv.Status,
 			Timestamp:      time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", "fin.invoice.paid", err)
+		}
 	}
 	if billID != "" {
 		payment.BillID = &billID
@@ -73,7 +76,7 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 	err := s.payments.Create(ctx, payment)
 	if err != nil {
 		// Publish payment failed event
-		_ = s.publisher.Publish(ctx, "fin.payment.failed", payment.ID, domain.PaymentEventPayload{
+		if err := s.publisher.Publish(ctx, "fin.payment.failed", payment.ID, domain.PaymentEventPayload{
 			ID:            payment.ID,
 			InvoiceID:     payment.InvoiceID,
 			BillID:        payment.BillID,
@@ -82,12 +85,14 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 			PaymentMethod: payment.PaymentMethod,
 			Status:        "FAILED",
 			Timestamp:     time.Now(),
-		})
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", "fin.payment.failed", err)
+		}
 		return nil, err
 	}
 
 	// Publish payment received and processed events
-	_ = s.publisher.Publish(ctx, "fin.payment.received", payment.ID, domain.PaymentEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.payment.received", payment.ID, domain.PaymentEventPayload{
 		ID:            payment.ID,
 		InvoiceID:     payment.InvoiceID,
 		BillID:        payment.BillID,
@@ -96,9 +101,11 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 		PaymentMethod: payment.PaymentMethod,
 		Status:        payment.Status,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.payment.received", err)
+	}
 
-	_ = s.publisher.Publish(ctx, "fin.payment.processed", payment.ID, domain.PaymentEventPayload{
+	if err := s.publisher.Publish(ctx, "fin.payment.processed", payment.ID, domain.PaymentEventPayload{
 		ID:            payment.ID,
 		InvoiceID:     payment.InvoiceID,
 		BillID:        payment.BillID,
@@ -107,7 +114,9 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 		PaymentMethod: payment.PaymentMethod,
 		Status:        payment.Status,
 		Timestamp:     time.Now(),
-	})
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", "fin.payment.processed", err)
+	}
 
 	return payment, nil
 }
