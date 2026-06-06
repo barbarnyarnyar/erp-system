@@ -7,6 +7,7 @@ const (
 	TopicHrEmployeeUpdated              = "hr.employee.updated"
 	TopicHrEmployeeTerminated           = "hr.employee.terminated"
 	TopicHrEmployeePromoted             = "hr.employee.promoted"
+	TopicHrEmployeeTransferred          = "hr.employee.transferred"
 	TopicHrPayrollProcessed             = "hr.payroll.processed"
 	TopicHrPayrollFailed                = "hr.payroll.failed"
 	TopicHrSalaryChanged                = "hr.salary.changed"

@@ -583,3 +583,64 @@ func (r *ChangeRequestRepository) Delete(ctx context.Context, id string) error {
 	delete(r.reqs, id)
 	return nil
 }
+
+// ==========================================
+// Milestone Memory Repository (Phase 2.21)
+// ==========================================
+
+type MilestoneRepository struct {
+	mu        sync.RWMutex
+	milestones map[string]domain.Milestone
+}
+
+func NewMilestoneRepository() *MilestoneRepository {
+	return &MilestoneRepository{
+		milestones: make(map[string]domain.Milestone),
+	}
+}
+
+func (r *MilestoneRepository) Create(ctx context.Context, m *domain.Milestone) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.milestones[m.ID] = *m
+	return nil
+}
+
+func (r *MilestoneRepository) GetByID(ctx context.Context, id string) (*domain.Milestone, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	m, ok := r.milestones[id]
+	if !ok {
+		return nil, fmt.Errorf("milestone not found: %s", id)
+	}
+	return &m, nil
+}
+
+func (r *MilestoneRepository) ListByProject(ctx context.Context, projectID string) ([]domain.Milestone, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.Milestone, 0, len(r.milestones))
+	for _, m := range r.milestones {
+		if m.ProjectID == projectID {
+			list = append(list, m)
+		}
+	}
+	return list, nil
+}
+
+func (r *MilestoneRepository) Update(ctx context.Context, m *domain.Milestone) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.milestones[m.ID]; !ok {
+		return fmt.Errorf("milestone not found: %s", m.ID)
+	}
+	r.milestones[m.ID] = *m
+	return nil
+}
+
+func (r *MilestoneRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.milestones, id)
+	return nil
+}

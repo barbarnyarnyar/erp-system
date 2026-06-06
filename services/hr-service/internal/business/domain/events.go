@@ -50,6 +50,13 @@ type EmployeePromotedEvent struct {
 	Timestamp     time.Time       `json:"timestamp"`
 }
 
+type EmployeeTransferredEvent struct {
+	EmployeeID      string    `json:"employee_id"`
+	OldDepartmentID string    `json:"old_department_id"`
+	NewDepartmentID string    `json:"new_department_id"`
+	Timestamp       time.Time `json:"timestamp"`
+}
+
 type PayrollProcessedEvent struct {
 	PayrollID   string          `json:"payroll_id"`
 	EmployeeID  string          `json:"employee_id"`

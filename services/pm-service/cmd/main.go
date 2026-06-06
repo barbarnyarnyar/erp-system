@@ -39,13 +39,14 @@ func main() {
 	docRepo := memory.NewProjectDocumentRepository()
 	issueRepo := memory.NewProjectIssueRepository()
 	changeRepo := memory.NewChangeRequestRepository()
+	milestoneRepo := memory.NewMilestoneRepository()
 
 	// 3. Initialize Kafka publisher
 	kafkaPub := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
 	defer kafkaPub.Close()
 
 	// 4. Initialize subdivided services (matching CDD components)
-	planningSvc := service.NewProjectPlanningService(portfolioRepo, projectRepo, kafkaPub)
+	planningSvc := service.NewProjectPlanningService(portfolioRepo, projectRepo, milestoneRepo, kafkaPub)
 	taskSvc := service.NewTaskManagementService(taskRepo, depRepo, kafkaPub)
 	resourceSvc := service.NewResourceManagementService(allocRepo, kafkaPub)
 	timeSvc := service.NewTimeExpenseService(timeRepo, expenseRepo, kafkaPub)

@@ -80,3 +80,9 @@ type CampaignRepository interface {
 	Update(ctx context.Context, campaign *Campaign) error
 	Delete(ctx context.Context, id string) error
 }
+
+type OpportunityStageHistoryRepository interface {
+	Create(ctx context.Context, osh *OpportunityStageHistory) error
+	ListByOpportunityID(ctx context.Context, opportunityID string) ([]OpportunityStageHistory, error)
+}
+

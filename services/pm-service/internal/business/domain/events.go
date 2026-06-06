@@ -157,10 +157,11 @@ type ExpenseRejectedEvent struct {
 
 // Milestone Events
 type MilestoneAchievedEvent struct {
-	ProjectID   string    `json:"project_id"`
-	MilestoneID string    `json:"milestone_id"`
-	Name        string    `json:"name"`
-	Timestamp   time.Time `json:"timestamp"`
+	ProjectID      string    `json:"project_id"`
+	MilestoneID    string    `json:"milestone_id"`
+	Name           string    `json:"name"`
+	CompletionDate time.Time `json:"completion_date"`
+	Timestamp      time.Time `json:"timestamp"`
 }
 
 type MilestoneDelayedEvent struct {

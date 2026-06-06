@@ -12,13 +12,15 @@ import (
 )
 
 type EmployeeManagementService struct {
-	repo        domain.EmployeeRepository
-	claims      domain.ExpenseClaimRepository
-	claimLines  domain.ExpenseClaimLineRepository
-	historyRepo domain.EmployeeCompensationHistoryRepository
-	depts       domain.DepartmentRepository
-	positions   domain.PositionRepository
-	publisher   domain.EventPublisher
+	repo            domain.EmployeeRepository
+	claims          domain.ExpenseClaimRepository
+	claimLines      domain.ExpenseClaimLineRepository
+	historyRepo     domain.EmployeeCompensationHistoryRepository
+	posHistoryRepo  domain.PositionHistoryRepository
+	deptHistoryRepo domain.DepartmentHistoryRepository
+	depts           domain.DepartmentRepository
+	positions       domain.PositionRepository
+	publisher       domain.EventPublisher
 }
 
 func NewEmployeeManagementService(
@@ -26,18 +28,22 @@ func NewEmployeeManagementService(
 	claims domain.ExpenseClaimRepository,
 	claimLines domain.ExpenseClaimLineRepository,
 	historyRepo domain.EmployeeCompensationHistoryRepository,
+	posHistoryRepo domain.PositionHistoryRepository,
+	deptHistoryRepo domain.DepartmentHistoryRepository,
 	depts domain.DepartmentRepository,
 	positions domain.PositionRepository,
 	publisher domain.EventPublisher,
 ) *EmployeeManagementService {
 	return &EmployeeManagementService{
-		repo:        repo,
-		claims:      claims,
-		claimLines:  claimLines,
-		historyRepo: historyRepo,
-		depts:       depts,
-		positions:   positions,
-		publisher:   publisher,
+		repo:            repo,
+		claims:          claims,
+		claimLines:      claimLines,
+		historyRepo:     historyRepo,
+		posHistoryRepo:  posHistoryRepo,
+		deptHistoryRepo: deptHistoryRepo,
+		depts:           depts,
+		positions:       positions,
+		publisher:       publisher,
 	}
 }
 
@@ -103,23 +109,23 @@ func (s *EmployeeManagementService) GetEmployee(ctx context.Context, id string) 
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firstName, lastName, email, deptID, posID string, salary decimal.Decimal, status string) (*domain.Employee, error) {
+func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firstName, lastName, email, deptID, posID string, status string) (*domain.Employee, error) {
 	emp, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	oldSalary := emp.Salary
-	salaryChanged := !oldSalary.Equal(salary)
 	oldPositionID := emp.PositionID
 	positionChanged := oldPositionID != posID
+
+	oldDepartmentID := emp.DepartmentID
+	departmentChanged := oldDepartmentID != deptID
 
 	emp.FirstName = firstName
 	emp.LastName = lastName
 	emp.Email = email
 	emp.DepartmentID = deptID
 	emp.PositionID = posID
-	emp.Salary = salary
 	emp.Status = status
 	emp.UpdatedAt = time.Now()
 
@@ -142,30 +148,18 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeUpdated, err)
 	}
 
-	// Publish salary changed event and record compensation history if different
-	if salaryChanged {
-		echID := fmt.Sprintf("ech_%d", time.Now().UnixNano())
-		_ = s.historyRepo.Create(ctx, &domain.EmployeeCompensationHistory{
-			ID:            echID,
+	// Record Position History and Publish Promoted Event
+	if positionChanged {
+		phID := fmt.Sprintf("ph_%d", time.Now().UnixNano())
+		_ = s.posHistoryRepo.Create(ctx, &domain.PositionHistory{
+			ID:            phID,
 			EmployeeID:    emp.ID,
-			Salary:        salary,
+			PositionID:    posID,
 			EffectiveDate: time.Now(),
 			ChangedBy:     "system",
 			CreatedAt:     time.Now(),
 		})
 
-		if err := s.publisher.Publish(ctx, domain.TopicHrSalaryChanged, emp.ID, domain.SalaryChangedEvent{
-			EmployeeID: emp.ID,
-			OldSalary:  oldSalary,
-			NewSalary:  emp.Salary,
-			Timestamp:  time.Now(),
-		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrSalaryChanged, err)
-		}
-	}
-
-	// Publish employee promoted event if position changed
-	if positionChanged {
 		if err := s.publisher.Publish(ctx, domain.TopicHrEmployeePromoted, emp.ID, domain.EmployeePromotedEvent{
 			EmployeeID:    emp.ID,
 			OldPositionID: oldPositionID,
@@ -177,7 +171,86 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 		}
 	}
 
+	// Record Department History and Publish Transferred Event
+	if departmentChanged {
+		dhID := fmt.Sprintf("dh_%d", time.Now().UnixNano())
+		_ = s.deptHistoryRepo.Create(ctx, &domain.DepartmentHistory{
+			ID:            dhID,
+			EmployeeID:    emp.ID,
+			DepartmentID:  deptID,
+			EffectiveDate: time.Now(),
+			ChangedBy:     "system",
+			CreatedAt:     time.Now(),
+		})
+
+		if err := s.publisher.Publish(ctx, domain.TopicHrEmployeeTransferred, emp.ID, domain.EmployeeTransferredEvent{
+			EmployeeID:      emp.ID,
+			OldDepartmentID: oldDepartmentID,
+			NewDepartmentID: emp.DepartmentID,
+			Timestamp:       time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeTransferred, err)
+		}
+	}
+
 	return emp, nil
+}
+
+func (s *EmployeeManagementService) UpdateCompensation(ctx context.Context, employeeID string, salary decimal.Decimal, effectiveDate time.Time, changedBy string) (*domain.Employee, error) {
+	emp, err := s.repo.GetByID(ctx, employeeID)
+	if err != nil {
+		return nil, err
+	}
+
+	oldSalary := emp.Salary
+
+	// Record compensation history
+	echID := fmt.Sprintf("ech_%d", time.Now().UnixNano())
+	err = s.historyRepo.Create(ctx, &domain.EmployeeCompensationHistory{
+		ID:            echID,
+		EmployeeID:    emp.ID,
+		Salary:        salary,
+		EffectiveDate: effectiveDate,
+		ChangedBy:     changedBy,
+		CreatedAt:     time.Now(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Update base employee salary
+	emp.Salary = salary
+	emp.UpdatedAt = time.Now()
+	err = s.repo.Update(ctx, emp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Publish salary changed event
+	if !oldSalary.Equal(salary) {
+		if err := s.publisher.Publish(ctx, domain.TopicHrSalaryChanged, emp.ID, domain.SalaryChangedEvent{
+			EmployeeID: emp.ID,
+			OldSalary:  oldSalary,
+			NewSalary:  salary,
+			Timestamp:  time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrSalaryChanged, err)
+		}
+	}
+
+	return emp, nil
+}
+
+func (s *EmployeeManagementService) ListPositionHistory(ctx context.Context, employeeID string) ([]domain.PositionHistory, error) {
+	return s.posHistoryRepo.ListByEmployeeID(ctx, employeeID)
+}
+
+func (s *EmployeeManagementService) ListDepartmentHistory(ctx context.Context, employeeID string) ([]domain.DepartmentHistory, error) {
+	return s.deptHistoryRepo.ListByEmployeeID(ctx, employeeID)
+}
+
+func (s *EmployeeManagementService) ListCompensationHistory(ctx context.Context, employeeID string) ([]domain.EmployeeCompensationHistory, error) {
+	return s.historyRepo.ListByEmployeeID(ctx, employeeID)
 }
 
 func (s *EmployeeManagementService) DeleteEmployee(ctx context.Context, id string) error {

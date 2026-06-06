@@ -136,6 +136,22 @@ service PM {
         updated_at      timestamp
     }
 
+    // Phase 2.21: Milestone entity. Previously referenced by
+    // prj.milestone.achieved / prj.milestone.delayed events but with no
+    // entity backing — the events could never fire from a real state
+    // transition. Now provides a typed record for milestone lifecycle.
+    entity Milestone {
+        id              uuid      @primary
+        project_id      uuid      @reference(Project.id)
+        name            string
+        description     string    @optional
+        target_date     date      @optional
+        completion_date date      @optional
+        status          string    // e.g. PENDING, IN_PROGRESS, ACHIEVED, DELAYED, CANCELLED
+        created_at      timestamp
+        updated_at      timestamp
+    }
+
     component ProjectPlanningService {
         description: "Manages portfolios, projects scheduling and milestones"
 
@@ -159,6 +175,21 @@ service PM {
         }
         func updateProjectStatus(id: string, status: string): Project {
             description: "Updates project status"
+        }
+        func createMilestone(projectId: string, name: string, description: string, targetDate: timestamp): Milestone {
+            description: "Creates a new milestone on a project"
+        }
+        func getMilestone(id: string): Milestone {
+            description: "Retrieves a milestone by ID"
+        }
+        func listMilestonesByProject(projectId: string): list<Milestone> {
+            description: "Lists all milestones for a project"
+        }
+        func completeMilestone(milestoneId: string, completionDate: timestamp): Milestone {
+            description: "Marks a milestone as ACHIEVED and fires prj.milestone.achieved"
+        }
+        func delayMilestone(milestoneId: string, newTargetDate: timestamp): Milestone {
+            description: "Marks a milestone as DELAYED with a new target date and fires prj.milestone.delayed"
         }
     }
 

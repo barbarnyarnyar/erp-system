@@ -78,3 +78,11 @@ type ChangeRequestRepository interface {
 	Update(ctx context.Context, req *ChangeRequest) error
 	Delete(ctx context.Context, id string) error
 }
+
+type MilestoneRepository interface {
+	Create(ctx context.Context, m *Milestone) error
+	GetByID(ctx context.Context, id string) (*Milestone, error)
+	ListByProject(ctx context.Context, projectID string) ([]Milestone, error)
+	Update(ctx context.Context, m *Milestone) error
+	Delete(ctx context.Context, id string) error
+}

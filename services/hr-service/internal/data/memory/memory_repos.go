@@ -782,4 +782,60 @@ func (r *MemoryEmployeeCompensationHistoryRepo) ListByEmployeeID(ctx context.Con
 	return list, nil
 }
 
+type MemoryPositionHistoryRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.PositionHistory
+}
+
+func NewMemoryPositionHistoryRepo() *MemoryPositionHistoryRepo {
+	return &MemoryPositionHistoryRepo{data: make(map[string]domain.PositionHistory)}
+}
+
+func (r *MemoryPositionHistoryRepo) Create(ctx context.Context, ph *domain.PositionHistory) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[ph.ID] = *ph
+	return nil
+}
+
+func (r *MemoryPositionHistoryRepo) ListByEmployeeID(ctx context.Context, empID string) ([]domain.PositionHistory, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.PositionHistory
+	for _, ph := range r.data {
+		if ph.EmployeeID == empID {
+			list = append(list, ph)
+		}
+	}
+	return list, nil
+}
+
+type MemoryDepartmentHistoryRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.DepartmentHistory
+}
+
+func NewMemoryDepartmentHistoryRepo() *MemoryDepartmentHistoryRepo {
+	return &MemoryDepartmentHistoryRepo{data: make(map[string]domain.DepartmentHistory)}
+}
+
+func (r *MemoryDepartmentHistoryRepo) Create(ctx context.Context, dh *domain.DepartmentHistory) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[dh.ID] = *dh
+	return nil
+}
+
+func (r *MemoryDepartmentHistoryRepo) ListByEmployeeID(ctx context.Context, empID string) ([]domain.DepartmentHistory, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.DepartmentHistory
+	for _, dh := range r.data {
+		if dh.EmployeeID == empID {
+			list = append(list, dh)
+		}
+	}
+	return list, nil
+}
+
 

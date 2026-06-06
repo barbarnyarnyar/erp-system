@@ -12,17 +12,20 @@ import (
 type ProjectPlanningService struct {
 	portfolioRepo domain.PortfolioRepository
 	projectRepo   domain.ProjectRepository
+	milestoneRepo domain.MilestoneRepository
 	publisher     domain.EventPublisher
 }
 
 func NewProjectPlanningService(
 	portfolioRepo domain.PortfolioRepository,
 	projectRepo domain.ProjectRepository,
+	milestoneRepo domain.MilestoneRepository,
 	publisher domain.EventPublisher,
 ) *ProjectPlanningService {
 	return &ProjectPlanningService{
 		portfolioRepo: portfolioRepo,
 		projectRepo:   projectRepo,
+		milestoneRepo: milestoneRepo,
 		publisher:     publisher,
 	}
 }
@@ -185,29 +188,106 @@ func (s *ProjectPlanningService) DelayProject(ctx context.Context, projectID str
 	return proj, nil
 }
 
-func (s *ProjectPlanningService) AchieveMilestone(ctx context.Context, projectID, milestoneID, name string) error {
-	if err := s.publisher.Publish(ctx, domain.TopicPrjMilestoneAchieved, milestoneID, domain.MilestoneAchievedEvent{
-		ProjectID:   projectID,
-		MilestoneID: milestoneID,
-		Name:        name,
-		Timestamp:   time.Now(),
-	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneAchieved, err)
-		return err
+// CreateMilestone creates a new milestone on a project (Phase 2.21).
+// Status starts as PENDING; transitions to IN_PROGRESS, ACHIEVED, DELAYED,
+// or CANCELLED as the project evolves.
+func (s *ProjectPlanningService) CreateMilestone(ctx context.Context, projectID, name, description string, targetDate *time.Time) (*domain.Milestone, error) {
+	if _, err := s.projectRepo.GetByID(ctx, projectID); err != nil {
+		return nil, fmt.Errorf("project not found: %w", err)
 	}
-	return nil
+
+	id := fmt.Sprintf("ms_%d", time.Now().UnixNano())
+	m := &domain.Milestone{
+		ID:         id,
+		ProjectID:  projectID,
+		Name:       name,
+		Status:     "PENDING",
+		TargetDate: targetDate,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+	if description != "" {
+		m.Description = &description
+	}
+
+	if err := s.milestoneRepo.Create(ctx, m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
-func (s *ProjectPlanningService) DelayMilestone(ctx context.Context, projectID, milestoneID, name string, targetDate time.Time) error {
+// GetMilestone retrieves a milestone by ID.
+func (s *ProjectPlanningService) GetMilestone(ctx context.Context, id string) (*domain.Milestone, error) {
+	return s.milestoneRepo.GetByID(ctx, id)
+}
+
+// ListMilestonesByProject returns all milestones for a given project.
+func (s *ProjectPlanningService) ListMilestonesByProject(ctx context.Context, projectID string) ([]domain.Milestone, error) {
+	return s.milestoneRepo.ListByProject(ctx, projectID)
+}
+
+// CompleteMilestone marks a milestone as ACHIEVED, records the completion
+// date, and fires the prj.milestone.achieved event. Previously this method
+// published the event without persisting any state — the event payload had
+// no entity behind it. Now the milestone record is updated atomically with
+// the event fire.
+func (s *ProjectPlanningService) CompleteMilestone(ctx context.Context, milestoneID string, completionDate time.Time) (*domain.Milestone, error) {
+	m, err := s.milestoneRepo.GetByID(ctx, milestoneID)
+	if err != nil {
+		return nil, err
+	}
+	if m.Status == "ACHIEVED" {
+		return nil, fmt.Errorf("milestone %s is already achieved", milestoneID)
+	}
+
+	now := time.Now()
+	m.Status = "ACHIEVED"
+	m.CompletionDate = &completionDate
+	m.UpdatedAt = now
+
+	if err := s.milestoneRepo.Update(ctx, m); err != nil {
+		return nil, err
+	}
+
+	if err := s.publisher.Publish(ctx, domain.TopicPrjMilestoneAchieved, milestoneID, domain.MilestoneAchievedEvent{
+		ProjectID:      m.ProjectID,
+		MilestoneID:    milestoneID,
+		Name:           m.Name,
+		CompletionDate: completionDate,
+		Timestamp:      now,
+	}); err != nil {
+		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneAchieved, err)
+	}
+
+	return m, nil
+}
+
+// DelayMilestone marks a milestone as DELAYED with a new target date and
+// fires the prj.milestone.delayed event. Like CompleteMilestone, this
+// replaces the previous event-only stub with a full entity lifecycle.
+func (s *ProjectPlanningService) DelayMilestone(ctx context.Context, milestoneID string, newTargetDate time.Time) (*domain.Milestone, error) {
+	m, err := s.milestoneRepo.GetByID(ctx, milestoneID)
+	if err != nil {
+		return nil, err
+	}
+
+	m.Status = "DELAYED"
+	m.TargetDate = &newTargetDate
+	m.UpdatedAt = time.Now()
+
+	if err := s.milestoneRepo.Update(ctx, m); err != nil {
+		return nil, err
+	}
+
 	if err := s.publisher.Publish(ctx, domain.TopicPrjMilestoneDelayed, milestoneID, domain.MilestoneDelayedEvent{
-		ProjectID:   projectID,
+		ProjectID:   m.ProjectID,
 		MilestoneID: milestoneID,
-		Name:        name,
-		TargetDate:  targetDate,
+		Name:        m.Name,
+		TargetDate:  newTargetDate,
 		Timestamp:   time.Now(),
 	}); err != nil {
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneDelayed, err)
-		return err
 	}
-	return nil
+
+	return m, nil
 }

@@ -74,8 +74,29 @@ func (h *EmployeeHandler) UpdateEmployee(c *gin.Context) {
 		Email        string `json:"email"`
 		DepartmentID string `json:"department_id"`
 		PositionID   string `json:"position_id"`
-		Salary       string `json:"salary"`
 		Status       string `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	emp, err := h.svc.UpdateEmployee(c.Request.Context(), id, req.FirstName, req.LastName, req.Email, req.DepartmentID, req.PositionID, req.Status)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": emp})
+}
+
+func (h *EmployeeHandler) UpdateCompensation(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		Salary        string `json:"salary" binding:"required"`
+		EffectiveDate string `json:"effective_date" binding:"required"`
+		ChangedBy     string `json:"changed_by" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -85,16 +106,56 @@ func (h *EmployeeHandler) UpdateEmployee(c *gin.Context) {
 
 	salaryDec, err := decimal.NewFromString(req.Salary)
 	if err != nil {
-		salaryDec = decimal.Zero
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid salary decimal value"})
+		return
 	}
 
-	emp, err := h.svc.UpdateEmployee(c.Request.Context(), id, req.FirstName, req.LastName, req.Email, req.DepartmentID, req.PositionID, salaryDec, req.Status)
+	effDate, err := time.Parse(time.RFC3339, req.EffectiveDate)
+	if err != nil {
+		effDate, err = time.Parse("2006-01-02", req.EffectiveDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid effective_date format, use RFC3339 or YYYY-MM-DD"})
+			return
+		}
+	}
+
+	emp, err := h.svc.UpdateCompensation(c.Request.Context(), id, salaryDec, effDate, req.ChangedBy)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": emp})
+}
+
+func (h *EmployeeHandler) GetPositionHistory(c *gin.Context) {
+	id := c.Param("id")
+	history, err := h.svc.ListPositionHistory(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": history})
+}
+
+func (h *EmployeeHandler) GetDepartmentHistory(c *gin.Context) {
+	id := c.Param("id")
+	history, err := h.svc.ListDepartmentHistory(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": history})
+}
+
+func (h *EmployeeHandler) GetCompensationHistory(c *gin.Context) {
+	id := c.Param("id")
+	history, err := h.svc.ListCompensationHistory(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": history})
 }
 
 func (h *EmployeeHandler) DeleteEmployee(c *gin.Context) {
