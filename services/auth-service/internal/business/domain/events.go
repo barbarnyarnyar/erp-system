@@ -38,3 +38,14 @@ type PasswordChangedEventPayload struct {
 	UserID    string    `json:"user_id"`
 	Timestamp time.Time `json:"timestamp"`
 }
+
+// HREmployeeTerminatedEvent is the cross-service payload published by HR when
+// an employee is terminated. Per the cross-service @reference convention
+// (see master PRD 2.10), EmployeeID is treated as the Auth User ID for
+// deactivation lookup.
+type HREmployeeTerminatedEvent struct {
+	EmployeeID string    `json:"employee_id"`
+	TermDate   time.Time `json:"term_date"`
+	Reason     string    `json:"reason"`
+	Timestamp  time.Time `json:"timestamp"`
+}

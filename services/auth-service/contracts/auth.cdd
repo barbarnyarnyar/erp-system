@@ -1,14 +1,15 @@
 service Auth {
     entity User {
-        id            uuid      @primary
-        username      string    @unique
-        email         string    @unique
-        password_hash string
-        first_name    string
-        last_name     string
-        is_active     boolean
-        created_at    timestamp
-        updated_at    timestamp
+        id             uuid      @primary
+        username       string    @unique
+        email          string    @unique
+        password_hash  string
+        first_name     string
+        last_name      string
+        is_active      boolean
+        security_stamp string    @optional
+        created_at     timestamp
+        updated_at     timestamp
     }
 
     entity Session {
@@ -17,6 +18,7 @@ service Auth {
         refresh_token string
         ip_address    string    @optional
         user_agent    string    @optional
+        is_revoked    boolean   @optional
         expires_at    timestamp
         created_at    timestamp
     }
@@ -61,6 +63,17 @@ service Auth {
     }
 
     // =============================================================
+    // SHARED VALUE OBJECTS
+    // =============================================================
+
+    struct TokenClaims {
+        description: "Canonical typed contract for decoded JWT payload. Replaces the previous `object` return type so that all downstream consumers (gateway, services) get compile-time-checked field access."
+        user_id    string
+        tenant_id  string
+        roles      list<string>
+    }
+
+    // =============================================================
     // SUBDOMAIN SERVICES (Split Components)
     // =============================================================
 
@@ -76,8 +89,8 @@ service Auth {
         func revokeToken(sessionId: string): void {
             description: "Revoke a session (logout)"
         }
-        func validateToken(token: string): object {
-            description: "Decodes and validates a JWT token returning claims"
+        func validateToken(token: string): TokenClaims {
+            description: "Decodes and validates a JWT token, returning a typed TokenClaims struct (user_id, tenant_id, roles)"
         }
     }
 
@@ -131,5 +144,14 @@ service Auth {
         auth.user.role.assigned: UserRoleEventPayload
         auth.user.store.assigned: UserStoreEventPayload
         auth.password.changed: PasswordChangedEventPayload
+    }
+
+    consumer_events {
+        // Phase S4.8: close the offboarding loop. When HR terminates an
+        // employee, Auth must deactivate the corresponding user account so
+        // that any in-flight JWT becomes invalid (via security_stamp bump)
+        // and no new sessions can be created. Without this consumer, the
+        // terminated employee's account would remain active indefinitely.
+        hr.employee.terminated: HREmployeeTerminatedEvent
     }
 }

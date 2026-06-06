@@ -34,6 +34,10 @@ func NewUserService(
 func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialStoreID string, roleIDs []string) (*domain.User, error) {
 	u.ID = fmt.Sprintf("user_%d", time.Now().UnixNano())
 	u.IsActive = true
+	// Initial security stamp. Every subsequent state change bumps this
+	// value so that any JWT issued before the change is rejected on
+	// ValidateToken (claims.SecurityStamp != user.SecurityStamp).
+	u.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 
@@ -110,8 +114,11 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, firstName, 
 	if email != nil {
 		user.Email = *email
 	}
-	if isActive != nil {
+	if isActive != nil && user.IsActive != *isActive {
+		// Bumping the security_stamp invalidates any in-flight JWTs the
+		// moment the activation flag flips. Critical for offboarding flow.
 		user.IsActive = *isActive
+		user.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
 	}
 	user.UpdatedAt = time.Now()
 
@@ -134,6 +141,8 @@ func (s *UserService) UpdateCredentials(ctx context.Context, userID string, newP
 		return false, fmt.Errorf("failed to hash password: %w", err)
 	}
 	user.PasswordHash = string(hash)
+	// Bump security_stamp: any JWT issued before the password change is now invalid.
+	user.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
 	user.UpdatedAt = time.Now()
 
 	err = s.userRepo.Update(ctx, user)
@@ -159,6 +168,10 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 	}
 
 	user.IsActive = false
+	// Critical: bump the security stamp so that any in-flight JWT becomes
+	// invalid the moment the user is deactivated. Without this, a terminated
+	// employee could keep using their old token until natural expiration.
+	user.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
 	user.UpdatedAt = time.Now()
 	err = s.userRepo.Update(ctx, user)
 	if err != nil {

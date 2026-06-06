@@ -15,6 +15,7 @@ type SessionRepository interface {
 	Create(ctx context.Context, session *Session) error
 	GetByID(ctx context.Context, id string) (*Session, error)
 	GetByRefreshToken(ctx context.Context, token string) (*Session, error)
+	Update(ctx context.Context, session *Session) error
 	DeleteByUserID(ctx context.Context, userID string) error
 	Delete(ctx context.Context, id string) error
 }

@@ -113,6 +113,16 @@ func (r *SessionRepository) GetByRefreshToken(ctx context.Context, token string)
 	return nil, fmt.Errorf("session not found by token")
 }
 
+func (r *SessionRepository) Update(ctx context.Context, s *domain.Session) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.sessions[s.ID]; !ok {
+		return fmt.Errorf("session not found: %s", s.ID)
+	}
+	r.sessions[s.ID] = *s
+	return nil
+}
+
 func (r *SessionRepository) DeleteByUserID(ctx context.Context, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

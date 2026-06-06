@@ -8,4 +8,7 @@ const (
 	TopicAuthUserRoleAssigned  = "auth.user.role.assigned"
 	TopicAuthUserStoreAssigned = "auth.user.store.assigned"
 	TopicAuthPasswordChanged   = "auth.password.changed"
+
+	// Consumer Events
+	TopicHrEmployeeTerminated = "hr.employee.terminated"
 )

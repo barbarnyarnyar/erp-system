@@ -72,6 +72,19 @@ func main() {
 	// 5. Seed initial roles, permissions, and users
 	seedAuthData(userSvc, rbacSvc)
 
+	// 5b. Start Kafka consumer for HR offboarding events (Phase S4.8)
+	// Closes the offboarding loop: when HR publishes hr.employee.terminated,
+	// Auth automatically deactivates the corresponding user.
+	consumerCtx, consumerCancel := context.WithCancel(context.Background())
+	defer consumerCancel()
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, "auth-service", publisher, userSvc)
+	defer func() {
+		if err := consumer.Close(); err != nil {
+			log.Printf("Failed to close Kafka consumer: %v", err)
+		}
+	}()
+	go consumer.Start(consumerCtx)
+
 	// 6. Setup Gin routing
 	if cfg.Server.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)

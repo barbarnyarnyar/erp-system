@@ -11,6 +11,7 @@ type Session struct {
 	RefreshToken string    `json:"refresh_token"`
 	IpAddress    *string   `json:"ip_address"`
 	UserAgent    *string   `json:"user_agent"`
+	IsRevoked    bool      `json:"is_revoked"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	CreatedAt    time.Time `json:"created_at"`
 }

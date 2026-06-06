@@ -359,18 +359,121 @@ func (s *GeneralLedgerService) GetBalanceSheet(ctx context.Context) (map[string]
 }
 
 func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string, ref, desc string, lines []domain.JournalEntryLine) (*domain.JournalEntry, error) {
-	entry, _, err := s.entries.GetByID(ctx, id)
+	if len(lines) < 2 {
+		return nil, errors.New("a journal entry must have at least 2 lines")
+	}
+
+	totalDebits := decimal.Zero
+	totalCredits := decimal.Zero
+	for _, l := range lines {
+		totalDebits = totalDebits.Add(l.DebitAmount)
+		totalCredits = totalCredits.Add(l.CreditAmount)
+	}
+
+	if !totalDebits.Equal(totalCredits) {
+		return nil, fmt.Errorf("journal entry is unbalanced: debits=%s, credits=%s", totalDebits, totalCredits)
+	}
+
+	entry, oldLines, err := s.entries.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
+
+	// Snapshot account states for rollback on failure
+	snapshots := make(map[string]domain.Account)
+
+	getAndSnapshotAccount := func(accountID string) (*domain.Account, error) {
+		acc, err := s.accounts.GetByID(ctx, accountID)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := snapshots[acc.ID]; !ok {
+			snapshots[acc.ID] = *acc
+		}
+		return acc, nil
+	}
+
+	rollback := func() {
+		for _, oldAcc := range snapshots {
+			_ = s.accounts.Update(ctx, &oldAcc)
+		}
+	}
+
+	// Reverse old lines
+	for _, l := range oldLines {
+		acc, err := getAndSnapshotAccount(l.AccountID)
+		if err != nil {
+			rollback()
+			return nil, fmt.Errorf("failed to get account %s: %w", l.AccountID, err)
+		}
+
+		isDebitIncreaseType := acc.Type == "ASSET" || acc.Type == "EXPENSE"
+		if isDebitIncreaseType {
+			acc.Balance = acc.Balance.Sub(l.DebitAmount).Add(l.CreditAmount)
+		} else {
+			acc.Balance = acc.Balance.Add(l.DebitAmount).Sub(l.CreditAmount)
+		}
+
+		err = s.accounts.Update(ctx, acc)
+		if err != nil {
+			rollback()
+			return nil, fmt.Errorf("failed to update balance for account %s: %w", acc.ID, err)
+		}
+	}
+
+	// Apply new lines
+	for i, l := range lines {
+		lines[i].ID = fmt.Sprintf("jel_%d_%d", time.Now().UnixNano(), i)
+		lines[i].EntryID = id
+
+		acc, err := getAndSnapshotAccount(l.AccountID)
+		if err != nil {
+			rollback()
+			return nil, fmt.Errorf("account not found: %s", l.AccountID)
+		}
+
+		isDebitIncreaseType := acc.Type == "ASSET" || acc.Type == "EXPENSE"
+		if isDebitIncreaseType {
+			acc.Balance = acc.Balance.Add(l.DebitAmount).Sub(l.CreditAmount)
+		} else {
+			acc.Balance = acc.Balance.Sub(l.DebitAmount).Add(l.CreditAmount)
+		}
+
+		err = s.accounts.Update(ctx, acc)
+		if err != nil {
+			rollback()
+			return nil, fmt.Errorf("failed to update balance for account %s: %w", acc.ID, err)
+		}
+	}
+
 	entry.Reference = ref
 	entry.Description = desc
 	entry.UpdatedAt = time.Now()
 
 	err = s.entries.Update(ctx, entry, lines)
 	if err != nil {
+		rollback()
 		return nil, err
 	}
+
+	// Publish events only after successful commit
+	for accountID := range snapshots {
+		acc, err := s.accounts.GetByID(ctx, accountID)
+		if err == nil {
+			if err := s.publisher.Publish(ctx, domain.TopicFinAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
+				ID:            acc.ID,
+				AccountNumber: acc.AccountNumber,
+				Name:          acc.Name,
+				Type:          string(acc.Type),
+				Balance:       acc.Balance,
+				Currency:      acc.Currency,
+				Timestamp:     time.Now(),
+			}); err != nil {
+				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinAccountBalanceChanged, err)
+			}
+		}
+	}
+
 	return entry, nil
 }
 

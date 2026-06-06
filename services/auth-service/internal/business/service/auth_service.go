@@ -11,14 +11,28 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type JWTClaims struct {
-	UserID      string   `json:"user_id"`
-	Username    string   `json:"username"`
-	Email       string   `json:"email"`
-	Roles       []string `json:"roles"`
-	Permissions []string `json:"permissions"`
+// TokenClaims is the canonical typed contract for decoded JWT payloads.
+// Mirrors the `struct TokenClaims` declaration in `auth.cdd`:
+//   { user_id, tenant_id, roles }
+// Plus internal-only fields (Username, Email, Permissions, SecurityStamp)
+// used by ValidateToken and downstream consumers.
+type TokenClaims struct {
+	UserID        string   `json:"user_id"`
+	TenantID      string   `json:"tenant_id"`
+	Roles         []string `json:"roles"`
+	Username      string   `json:"username"`
+	Email         string   `json:"email"`
+	Permissions   []string `json:"permissions"`
+	SecurityStamp string   `json:"security_stamp"`
 	jwt.RegisteredClaims
 }
+
+// JWTClaims is a deprecated alias preserved for backward compatibility with
+// any internal callers still referencing the old name. New code should use
+// TokenClaims (the typed contract declared in auth.cdd).
+//
+// Deprecated: use TokenClaims.
+type JWTClaims = TokenClaims
 
 type AuthService struct {
 	userRepo  domain.UserRepository
@@ -64,13 +78,17 @@ func (s *AuthService) AuthenticateUser(ctx context.Context, username, password, 
 		return "", "", err
 	}
 
-	// Generate Access Token (JWT)
-	claims := JWTClaims{
-		UserID:      user.ID,
-		Username:    user.Username,
-		Email:       user.Email,
-		Roles:       roles,
-		Permissions: permissions,
+	// Generate Access Token (JWT) — embeds the user's current security_stamp
+	// so that any subsequent deactivation / password change / role change can
+	// be detected by ValidateToken simply by reloading the user.
+	claims := TokenClaims{
+		UserID:        user.ID,
+		TenantID:      "default", // single-tenant MVP; multi-tenant deferred
+		Roles:         roles,
+		Username:      user.Username,
+		Email:         user.Email,
+		Permissions:   permissions,
+		SecurityStamp: user.SecurityStamp,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(s.cfg.JWT.AccessExpiry) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -136,11 +154,19 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (st
 }
 
 func (s *AuthService) RevokeToken(ctx context.Context, sessionID string) error {
-	return s.sessRepo.Delete(ctx, sessionID)
+	// Mark the session as revoked rather than deleting it. This preserves the
+	// audit trail and lets ValidateToken reject any access token still in
+	// flight for this session even before the security_stamp catches up.
+	session, err := s.sessRepo.GetByID(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+	session.IsRevoked = true
+	return s.sessRepo.Update(ctx, session)
 }
 
-func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*JWTClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*TokenClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -151,11 +177,27 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*JWTC
 		return nil, fmt.Errorf("token invalid: %w", err)
 	}
 
-	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-		return claims, nil
+	claims, ok := token.Claims.(*TokenClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("token invalid")
 	}
 
-	return nil, fmt.Errorf("token invalid")
+	// Reject tokens for deactivated users.
+	user, err := s.userRepo.GetByID(ctx, claims.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("token invalid: user no longer exists")
+	}
+	if !user.IsActive {
+		return nil, fmt.Errorf("token invalid: user account is deactivated")
+	}
+
+	// Reject tokens whose security_stamp has been bumped since issuance
+	// (deactivation, password change, role change, etc.).
+	if claims.SecurityStamp != "" && user.SecurityStamp != "" && claims.SecurityStamp != user.SecurityStamp {
+		return nil, fmt.Errorf("token invalid: security stamp mismatch (user state changed)")
+	}
+
+	return claims, nil
 }
 
 func (s *AuthService) GetSessionByRefreshToken(ctx context.Context, token string) (*domain.Session, error) {

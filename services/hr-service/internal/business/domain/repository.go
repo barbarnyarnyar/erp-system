@@ -122,4 +122,15 @@ type EmployeeCompensationHistoryRepository interface {
 	ListByEmployeeID(ctx context.Context, empID string) ([]EmployeeCompensationHistory, error)
 }
 
+type PositionHistoryRepository interface {
+	Create(ctx context.Context, ph *PositionHistory) error
+	ListByEmployeeID(ctx context.Context, empID string) ([]PositionHistory, error)
+}
+
+type DepartmentHistoryRepository interface {
+	Create(ctx context.Context, dh *DepartmentHistory) error
+	ListByEmployeeID(ctx context.Context, empID string) ([]DepartmentHistory, error)
+}
+
+
 

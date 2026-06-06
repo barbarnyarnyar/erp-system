@@ -123,22 +123,46 @@ func (s *LeadService) ConvertLead(ctx context.Context, id string) (*domain.Oppor
 		return nil, err
 	}
 
+	if lead.Status == "CONVERTED" {
+		return nil, fmt.Errorf("lead has already been converted")
+	}
+
+	originalLead := *lead
+
 	lead.Status = "CONVERTED"
 	lead.UpdatedAt = time.Now()
-	_ = s.leadRepo.Update(ctx, lead)
+	err = s.leadRepo.Update(ctx, lead)
+	if err != nil {
+		return nil, err
+	}
 
-	// Create Customer via CustomerService
+	var createdCustomerID string
+	var createdOpportunityID string
+
+	rollback := func() {
+		_ = s.leadRepo.Update(ctx, &originalLead)
+		if createdCustomerID != "" {
+			_ = s.custSvc.DeleteCustomer(ctx, createdCustomerID)
+		}
+		if createdOpportunityID != "" {
+			_ = s.oppSvc.DeleteOpportunity(ctx, createdOpportunityID)
+		}
+	}
+
 	custName := fmt.Sprintf("%s %s", lead.FirstName, lead.LastName)
 	cust, err := s.custSvc.CreateCustomer(ctx, lead.Company, custName, lead.Email, lead.Phone, "RETAIL", "")
 	if err != nil {
+		rollback()
 		return nil, err
 	}
+	createdCustomerID = cust.ID
 
-	// Create Opportunity via OpportunityService
 	opp, err := s.oppSvc.CreateOpportunity(ctx, cust.ID, "Opportunity from Lead "+lead.Company, decimal.NewFromFloat(5000.00), "DISCOVERY")
 	if err != nil {
+		rollback()
 		return nil, err
 	}
+	createdOpportunityID = opp.ID
 
 	if err := s.publisher.Publish(ctx, domain.TopicCrmLeadConverted, id, domain.LeadConvertedEvent{
 		LeadID:        id,
@@ -147,6 +171,8 @@ func (s *LeadService) ConvertLead(ctx context.Context, id string) (*domain.Oppor
 		Timestamp:     time.Now(),
 	}); err != nil {
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadConverted, err)
+		rollback()
+		return nil, fmt.Errorf("failed to publish lead conversion event: %w", err)
 	}
 
 	return opp, nil
