@@ -75,9 +75,11 @@ func RegisterRoutes(
 		v1.POST("/quality-inspections", qualityHandler.RecordQualityInspection)
 		v1.GET("/quality-inspections/:id", qualityHandler.GetQualityInspectionDetails)
 		v1.PUT("/quality-inspections/:id", qualityHandler.UpdateQualityInspection)
+		v1.GET("/quality-inspections/:id/non-conformance", qualityHandler.GetNonConformances)
 
 		// Costing & MRP
 		v1.GET("/production-plans/:id/costing", costingHandler.GetCosting)
 		v1.POST("/mrp/run", costingHandler.RunMRP)
+		v1.GET("/costing-records/:id", costingHandler.GetCosting)
 	}
 }

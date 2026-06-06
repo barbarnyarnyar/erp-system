@@ -9,7 +9,7 @@ import (
 type PurchaseRequisition struct {
 	ID          string          `json:"id"`
 	ReqNumber   string          `json:"req_number"`
-	RequesterID string          `json:"requester_id"` // Reference to hr.Employee.id / Auth User
+	RequesterID string          `json:"requester_id"`
 	RequestDate time.Time       `json:"request_date"`
 	Status      string          `json:"status"` // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
 	TotalAmount decimal.Decimal `json:"total_amount"`

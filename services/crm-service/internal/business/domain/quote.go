@@ -7,12 +7,13 @@ import (
 )
 
 type Quote struct {
-	ID          string          `json:"id"`
-	CustomerID  string          `json:"customer_id"`
-	Title       string          `json:"title"`
-	ValidUntil  time.Time       `json:"valid_until"`
-	Status      string          `json:"status"` // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
-	TotalAmount decimal.Decimal `json:"total_amount"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ID            string          `json:"id"`
+	CustomerID    string          `json:"customer_id"`
+	Title         string          `json:"title"`
+	ValidUntil    time.Time       `json:"valid_until"`
+	Status        string          `json:"status"` // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
+	TotalAmount   decimal.Decimal `json:"total_amount"`
+	OpportunityID *string         `json:"opportunity_id"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }

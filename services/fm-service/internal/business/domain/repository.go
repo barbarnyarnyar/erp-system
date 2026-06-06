@@ -65,4 +65,60 @@ type TaxRateRepository interface {
 	List(ctx context.Context) ([]TaxRate, error)
 }
 
+// CurrencyRateRepository defines operations for currency rates
+type CurrencyRateRepository interface {
+	Create(ctx context.Context, rate *CurrencyRate) error
+	GetByID(ctx context.Context, id string) (*CurrencyRate, error)
+	List(ctx context.Context) ([]CurrencyRate, error)
+}
+
+// FiscalYearRepository defines operations for fiscal years
+type FiscalYearRepository interface {
+	Create(ctx context.Context, fy *FiscalYear) error
+	GetByID(ctx context.Context, id string) (*FiscalYear, error)
+	Update(ctx context.Context, fy *FiscalYear) error
+	List(ctx context.Context) ([]FiscalYear, error)
+}
+
+// CostCenterRepository defines operations for cost centers
+type CostCenterRepository interface {
+	Create(ctx context.Context, cc *CostCenter) error
+	GetByID(ctx context.Context, id string) (*CostCenter, error)
+	Update(ctx context.Context, cc *CostCenter) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context) ([]CostCenter, error)
+}
+
+// BankAccountRepository defines operations for bank accounts
+type BankAccountRepository interface {
+	Create(ctx context.Context, ba *BankAccount) error
+	GetByID(ctx context.Context, id string) (*BankAccount, error)
+	Update(ctx context.Context, ba *BankAccount) error
+	List(ctx context.Context) ([]BankAccount, error)
+}
+
+// CustomerCreditRepository defines operations for customer credits
+type CustomerCreditRepository interface {
+	Create(ctx context.Context, cc *CustomerCredit) error
+	GetByID(ctx context.Context, id string) (*CustomerCredit, error)
+	Update(ctx context.Context, cc *CustomerCredit) error
+	List(ctx context.Context) ([]CustomerCredit, error)
+}
+
+// BankStatementRepository defines operations for bank statements
+type BankStatementRepository interface {
+	Create(ctx context.Context, bs *BankStatement, lines []BankStatementLine) error
+	GetByID(ctx context.Context, id string) (*BankStatement, []BankStatementLine, error)
+	Update(ctx context.Context, bs *BankStatement, lines []BankStatementLine) error
+	List(ctx context.Context) ([]BankStatement, error)
+}
+
+// TransactionRepository defines operations for transactions
+type TransactionRepository interface {
+	Create(ctx context.Context, tx *Transaction, lines []TransactionLine) error
+	GetByID(ctx context.Context, id string) (*Transaction, []TransactionLine, error)
+	Update(ctx context.Context, tx *Transaction, lines []TransactionLine) error
+	List(ctx context.Context) ([]Transaction, error)
+}
+
 

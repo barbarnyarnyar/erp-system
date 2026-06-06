@@ -754,4 +754,32 @@ func (r *MemoryExpenseClaimLineRepo) ListByClaimID(ctx context.Context, claimID 
 	return list, nil
 }
 
+type MemoryEmployeeCompensationHistoryRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.EmployeeCompensationHistory
+}
+
+func NewMemoryEmployeeCompensationHistoryRepo() *MemoryEmployeeCompensationHistoryRepo {
+	return &MemoryEmployeeCompensationHistoryRepo{data: make(map[string]domain.EmployeeCompensationHistory)}
+}
+
+func (r *MemoryEmployeeCompensationHistoryRepo) Create(ctx context.Context, ech *domain.EmployeeCompensationHistory) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[ech.ID] = *ech
+	return nil
+}
+
+func (r *MemoryEmployeeCompensationHistoryRepo) ListByEmployeeID(ctx context.Context, empID string) ([]domain.EmployeeCompensationHistory, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.EmployeeCompensationHistory
+	for _, ech := range r.data {
+		if ech.EmployeeID == empID {
+			list = append(list, ech)
+		}
+	}
+	return list, nil
+}
+
 

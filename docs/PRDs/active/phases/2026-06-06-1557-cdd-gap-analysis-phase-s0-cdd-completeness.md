@@ -52,18 +52,15 @@ CDD contracts are the authoritative source of truth for the architecture. If the
 **Transaction** (from `transaction.go`):
 ```go
 type Transaction struct {
-    ID            string
-    Reference     string
-    Date          time.Time
-    Description   string
-    Status        string // DRAFT, POSTED, REVERSED
-    TotalDebit    decimal.Decimal
-    TotalCredit   decimal.Decimal
-    CreatedBy     string
-    ReversedBy    *string
-    ReversalRef   *string
-    CreatedAt     time.Time
-    UpdatedAt     time.Time
+    ID          string
+    Reference   string
+    Date        time.Time
+    Description string
+    Status      TransactionStatus // PENDING, POSTED, REVERSED
+    CreatedBy   string
+    CreatedAt   time.Time
+    UpdatedAt   time.Time
+    Lines       []TransactionLine // embedded
 }
 
 type TransactionLine struct {
@@ -73,39 +70,40 @@ type TransactionLine struct {
     DebitAmount   decimal.Decimal
     CreditAmount  decimal.Decimal
     Description   string
-    CostCenterID  *string
     CreatedAt     time.Time
 }
 ```
 
+**Key differences from JournalEntry:**
+- Transaction has NO `TotalDebit`/`TotalCredit` fields (computed from lines)
+- Transaction has NO `ReversedBy`/`ReversalRef` fields (simpler model)
+- TransactionLine has NO `CostCenterID` field
+
 ### Task 2: Add to `fm.cdd`
 
-Insert before the `Account` entity (or after `JournalEntry` since Transaction is a related GL concept):
+Insert after `JournalEntryLine` entity (legacy GL entry, related to JournalEntry):
 
 ```
-@entity Transaction
-- id: uuid @primary
-- reference: string @unique
-- date: date
-- description: string
-- status: string  # DRAFT, POSTED, REVERSED
-- total_debit: decimal
-- total_credit: decimal
-- created_by: string
-- reversed_by: uuid @optional
-- reversal_ref: string @optional
-- created_at: timestamp
-- updated_at: timestamp
+    entity Transaction {
+        id          uuid      @primary
+        reference   string    @unique
+        date        timestamp
+        description string
+        status      string    // PENDING, POSTED, REVERSED
+        created_by  string
+        created_at  timestamp
+        updated_at  timestamp
+    }
 
-@entity TransactionLine
-- id: uuid @primary
-- transaction_id: uuid @reference(Transaction.id)
-- account_id: uuid @reference(Account.id)
-- debit_amount: decimal
-- credit_amount: decimal
-- description: string
-- cost_center_id: uuid @reference(CostCenter.id) @optional
-- created_at: timestamp
+    entity TransactionLine {
+        id             uuid      @primary
+        transaction_id uuid      @reference(Transaction.id)
+        account_id     uuid      @reference(Account.id)
+        debit_amount   decimal
+        credit_amount  decimal
+        description    string
+        created_at     timestamp
+    }
 ```
 
 **Note:** TransactionLine is a line-item entity (like JournalEntryLine, InvoiceLine, VendorBillLine) — bundled CRUD via TransactionRepository, not a standalone repo.
@@ -114,8 +112,8 @@ Insert before the `Account` entity (or after `JournalEntry` since Transaction is
 
 ```bash
 # Verify both entities now in CDD
-grep -c '@entity Transaction' services/fm-service/contracts/fm.cdd
-grep -c '@entity TransactionLine' services/fm-service/contracts/fm.cdd
+grep -c 'entity Transaction {' services/fm-service/contracts/fm.cdd
+grep -c 'entity TransactionLine {' services/fm-service/contracts/fm.cdd
 # Both should return >= 1
 
 # Verify no other Go structs are missing from CDD
@@ -126,8 +124,8 @@ grep -c '@entity TransactionLine' services/fm-service/contracts/fm.cdd
 
 ## Acceptance Criteria
 
-- `fm.cdd` contains `@entity Transaction` with all fields matching the Go struct
-- `fm.cdd` contains `@entity TransactionLine` with all fields matching the Go struct
+- `fm.cdd` contains `entity Transaction` with all fields matching the Go struct
+- `fm.cdd` contains `entity TransactionLine` with all fields matching the Go struct
 - Zero remaining Go domain structs without a corresponding CDD entity
 
 ---
@@ -144,4 +142,4 @@ grep -c '@entity TransactionLine' services/fm-service/contracts/fm.cdd
 - [ ] Task 1: Transaction + TransactionLine structs read and field-mapped
 - [ ] Task 2: Both entities added to `fm.cdd` with correct types and references
 - [ ] Task 3: Zero remaining Go-only domain structs (verified by scan)
-- [ ] `grep '@entity Transaction' services/fm-service/contracts/fm.cdd` passes
+- [x] `grep 'entity Transaction {' services/fm-service/contracts/fm.cdd` passes

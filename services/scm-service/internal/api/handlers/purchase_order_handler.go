@@ -251,3 +251,23 @@ func (h *PurchaseOrderHandler) RejectPurchaseRequisition(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": pr})
 }
 
+func (h *PurchaseOrderHandler) GetPurchaseOrderLines(c *gin.Context) {
+	poID := c.Param("id")
+	lines, err := h.svc.ListPurchaseOrderLines(c.Request.Context(), poID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": lines})
+}
+
+func (h *PurchaseOrderHandler) GetPurchaseRequisitionLines(c *gin.Context) {
+	reqID := c.Param("id")
+	lines, err := h.svc.ListPurchaseRequisitionLines(c.Request.Context(), reqID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": lines})
+}
+

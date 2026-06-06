@@ -148,7 +148,7 @@ func seedMockData(
 	// Seed project
 	startDate := time.Now().AddDate(0, -1, 0) // Started 1 month ago
 	endDate := startDate.AddDate(0, 6, 0)     // Ends in 5 months
-	proj, err := planningSvc.CreateProject(ctx, "Warehouse Automation System", "Design and roll out new automated warehouse storage and picking workflows", startDate, &endDate, portfolio.ID)
+	proj, err := planningSvc.CreateProject(ctx, "Warehouse Automation System", "Design and roll out new automated warehouse storage and picking workflows", startDate, &endDate, portfolio.ID, "")
 	if err != nil {
 		log.Printf("Failed to seed project: %v", err)
 		return
@@ -159,8 +159,8 @@ func seedMockData(
 	_, _ = resourceSvc.AllocateResource(ctx, proj.ID, "emp_pm", "Project Manager", 50, startDate, &endDate)
 
 	// Seed tasks (WBS)
-	t1, _ := taskSvc.CreateTask(ctx, proj.ID, "", "Requirement Gathering & Architecture Design", "Collect warehouse hardware specs and sketch overall software architecture", "", &startDate, nil)
-	t2, _ := taskSvc.CreateTask(ctx, proj.ID, t1.ID, "Database Schema definition", "Draft PostgreSQL schema tables for storage levels and layout", "", &startDate, nil)
+	t1, _ := taskSvc.CreateTask(ctx, proj.ID, "", "Requirement Gathering & Architecture Design", "Collect warehouse hardware specs and sketch overall software architecture", "", &startDate, nil, decimal.NewFromFloat(40.0))
+	t2, _ := taskSvc.CreateTask(ctx, proj.ID, t1.ID, "Database Schema definition", "Draft PostgreSQL schema tables for storage levels and layout", "", &startDate, nil, decimal.NewFromFloat(20.0))
 
 	// Update task progress
 	_, _ = taskSvc.UpdateTaskProgress(ctx, t1.ID, 100, decimal.NewFromFloat(40.0), "DONE")

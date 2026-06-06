@@ -59,7 +59,7 @@ func main() {
 	})
 
 	// 4. Initialize Services
-	prodSvc := service.NewProductManagementService(prodRepo, catRepo)
+	prodSvc := service.NewProductManagementService(prodRepo, catRepo, locRepo)
 	supSvc := service.NewSupplierManagementService(supRepo, contRepo)
 	poSvc := service.NewPurchaseOrderService(poRepo, lineRepo, reqRepo, reqLineRepo, publisher)
 	invSvc := service.NewInventoryService(invRepo, moveRepo, transferRepo, publisher)

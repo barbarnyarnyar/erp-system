@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/erp-system/hr-service/internal/business/domain"
 	"github.com/erp-system/hr-service/internal/business/service"
+	"github.com/gin-gonic/gin"
 )
 
 type LeaveHandler struct {
@@ -23,6 +24,22 @@ func (h *LeaveHandler) GetLeaveRequests(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+
+func (h *LeaveHandler) GetLeaveBalances(c *gin.Context) {
+	employeeID := c.Query("employee_id")
+	var balances []domain.LeaveBalance
+	var err error
+	if employeeID != "" {
+		balances, err = h.svc.GetLeaveBalancesByEmployee(c.Request.Context(), employeeID)
+	} else {
+		balances, err = h.svc.ListLeaveBalances(c.Request.Context())
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": balances})
 }
 
 func (h *LeaveHandler) CreateLeaveRequest(c *gin.Context) {
@@ -113,27 +130,6 @@ func (h *LeaveHandler) RejectLeaveRequest(c *gin.Context) {
 	}
 
 	lr, err := h.svc.RejectLeaveRequest(c.Request.Context(), id, req.RejectedBy)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": lr})
-}
-
-func (h *LeaveHandler) UpdateLeaveStatus(c *gin.Context) {
-	id := c.Param("id")
-	var req struct {
-		ApprovedBy string `json:"approved_by"`
-		Status     string `json:"status"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	lr, err := h.svc.UpdateLeaveStatus(c.Request.Context(), id, req.ApprovedBy, req.Status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

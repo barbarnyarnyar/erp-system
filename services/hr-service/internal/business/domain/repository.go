@@ -117,4 +117,9 @@ type ExpenseClaimLineRepository interface {
 	ListByClaimID(ctx context.Context, claimID string) ([]ExpenseClaimLine, error)
 }
 
+type EmployeeCompensationHistoryRepository interface {
+	Create(ctx context.Context, ech *EmployeeCompensationHistory) error
+	ListByEmployeeID(ctx context.Context, empID string) ([]EmployeeCompensationHistory, error)
+}
+
 

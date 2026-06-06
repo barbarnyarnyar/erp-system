@@ -147,3 +147,7 @@ func (s *QualityService) UpdateQualityInspection(ctx context.Context, id string,
 	}
 	return qi, nil
 }
+
+func (s *QualityService) ListNonConformancesByInspectionID(ctx context.Context, inspectionID string) ([]domain.NonConformance, error) {
+	return s.nonConfRepo.ListByInspectionID(ctx, inspectionID)
+}

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS customers (
     phone VARCHAR(255) NOT NULL,
     status VARCHAR(255) NOT NULL,
     category VARCHAR(255) NOT NULL,
-    parent_customer_id UUID,
+    parent_customer_id UUID REFERENCES customers(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS leads (
     status VARCHAR(255) NOT NULL,
     score INT NOT NULL,
     source VARCHAR(255) NOT NULL,
+    campaign_id UUID REFERENCES campaigns(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
     order_date TIMESTAMP NOT NULL,
     status VARCHAR(255) NOT NULL,
     total_amount NUMERIC(15, 4) NOT NULL,
+    opportunity_id UUID REFERENCES opportunities(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -53,7 +55,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
 CREATE TABLE IF NOT EXISTS sales_order_items (
     id UUID PRIMARY KEY NOT NULL,
     sales_order_id UUID NOT NULL REFERENCES sales_orders(id),
-    product_id UUID NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id),
     quantity INT NOT NULL,
     unit_price NUMERIC(15, 4) NOT NULL,
     discount NUMERIC(15, 4) NOT NULL
@@ -66,6 +68,7 @@ CREATE TABLE IF NOT EXISTS quotes (
     valid_until TIMESTAMP NOT NULL,
     status VARCHAR(255) NOT NULL,
     total_amount NUMERIC(15, 4) NOT NULL,
+    opportunity_id UUID REFERENCES opportunities(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -73,7 +76,7 @@ CREATE TABLE IF NOT EXISTS quotes (
 CREATE TABLE IF NOT EXISTS quote_line_items (
     id UUID PRIMARY KEY NOT NULL,
     quote_id UUID NOT NULL REFERENCES quotes(id),
-    product_id UUID NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id),
     quantity INT NOT NULL,
     unit_price NUMERIC(15, 4) NOT NULL
 );
@@ -90,7 +93,7 @@ CREATE TABLE IF NOT EXISTS price_lists (
 CREATE TABLE IF NOT EXISTS price_list_items (
     id UUID PRIMARY KEY NOT NULL,
     price_list_id UUID NOT NULL REFERENCES price_lists(id),
-    product_id UUID NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id),
     unit_price NUMERIC(15, 4) NOT NULL
 );
 

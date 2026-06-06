@@ -8,7 +8,7 @@ import (
 type ResourceAllocation struct {
 	ID                   string     `json:"id"`
 	ProjectID            string     `json:"project_id"`
-	UserID               string     `json:"user_id"`               // Reference to user/employee in auth/hr
+	UserID               string     `json:"user_id"`
 	Role                 string     `json:"role"`                  // e.g. Manager, Developer, Designer
 	AllocationPercentage int        `json:"allocation_percentage"` // e.g. 50 (for 50% allocation)
 	StartDate            time.Time  `json:"start_date"`

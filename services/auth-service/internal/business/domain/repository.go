@@ -24,6 +24,7 @@ type RoleRepository interface {
 	GetByID(ctx context.Context, id string) (*Role, error)
 	GetByName(ctx context.Context, name string) (*Role, error)
 	List(ctx context.Context) ([]Role, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type PermissionRepository interface {
@@ -31,6 +32,7 @@ type PermissionRepository interface {
 	GetByID(ctx context.Context, id string) (*Permission, error)
 	GetByCode(ctx context.Context, code string) (*Permission, error)
 	List(ctx context.Context) ([]Permission, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type UserRoleRepository interface {
@@ -48,4 +50,5 @@ type UserStoreRepository interface {
 type RolePermissionRepository interface {
 	Create(ctx context.Context, rp *RolePermission) error
 	ListByRoleID(ctx context.Context, roleID string) ([]RolePermission, error)
+	Delete(ctx context.Context, roleID string, permissionID string) error
 }

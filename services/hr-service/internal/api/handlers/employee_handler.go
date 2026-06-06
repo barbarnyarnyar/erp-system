@@ -142,3 +142,70 @@ func (h *EmployeeHandler) SubmitExpenseClaim(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"data": claim})
 }
+
+func (h *EmployeeHandler) GetDepartments(c *gin.Context) {
+	list, err := h.svc.ListDepartments(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+
+func (h *EmployeeHandler) CreateDepartment(c *gin.Context) {
+	var req struct {
+		Code        string `json:"code"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		ManagerID   string `json:"manager_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	dept, err := h.svc.CreateDepartment(c.Request.Context(), req.Code, req.Name, req.Description, req.ManagerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": dept})
+}
+
+func (h *EmployeeHandler) GetPositions(c *gin.Context) {
+	list, err := h.svc.ListPositions(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+
+func (h *EmployeeHandler) CreatePosition(c *gin.Context) {
+	var req struct {
+		Code         string `json:"code"`
+		Title        string `json:"title"`
+		Description  string `json:"description"`
+		DepartmentID string `json:"department_id"`
+		MinSalary    string `json:"min_salary"`
+		MaxSalary    string `json:"max_salary"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	minSalaryDec, _ := decimal.NewFromString(req.MinSalary)
+	maxSalaryDec, _ := decimal.NewFromString(req.MaxSalary)
+
+	pos, err := h.svc.CreatePosition(c.Request.Context(), req.Code, req.Title, req.Description, req.DepartmentID, minSalaryDec, maxSalaryDec)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": pos})
+}

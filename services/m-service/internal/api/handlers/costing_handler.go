@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/erp-system/m-service/internal/business/service"
@@ -26,10 +27,9 @@ func (h *CostingHandler) GetCosting(c *gin.Context) {
 }
 
 func (h *CostingHandler) RunMRP(c *gin.Context) {
-	err := h.svc.RunMRP(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "MRP run completed successfully"})
+	// Run MRP asynchronously in a background goroutine to avoid HTTP thread saturation
+	go func() {
+		_ = h.svc.RunMRP(context.Background())
+	}()
+	c.JSON(http.StatusAccepted, gin.H{"message": "MRP run initiated in the background"})
 }

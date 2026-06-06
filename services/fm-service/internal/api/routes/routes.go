@@ -14,6 +14,7 @@ func SetupRoutes(
 	repHandler *handlers.ReportHandler,
 	invHandler *handlers.InvoiceHandler,
 	payHandler *handlers.PaymentHandler,
+	billHandler *handlers.VendorBillHandler,
 ) {
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -64,6 +65,13 @@ func SetupRoutes(
 			payments.GET("", payHandler.GetPayments)
 			payments.POST("", payHandler.RecordPayment)
 			payments.GET("/:id", payHandler.GetPayment)
+		}
+
+		// Vendor Bills routes
+		vendorBills := v1.Group("/vendor-bills")
+		{
+			vendorBills.GET("", billHandler.GetVendorBills)
+			vendorBills.POST("", billHandler.CreateVendorBill)
 		}
 
 		// Reports routes

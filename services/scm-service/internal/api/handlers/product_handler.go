@@ -185,3 +185,70 @@ func (h *ProductHandler) DeleteCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "category deleted successfully"})
 }
 
+func (h *ProductHandler) GetLocations(c *gin.Context) {
+	list, err := h.svc.ListLocations(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+
+func (h *ProductHandler) CreateLocation(c *gin.Context) {
+	var req struct {
+		LocationCode string `json:"location_code"`
+		LocationName string `json:"location_name"`
+		LocationType string `json:"location_type"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	loc, err := h.svc.CreateLocation(c.Request.Context(), req.LocationCode, req.LocationName, req.LocationType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": loc})
+}
+
+func (h *ProductHandler) GetLocation(c *gin.Context) {
+	id := c.Param("id")
+	loc, err := h.svc.GetLocation(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "location not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": loc})
+}
+
+func (h *ProductHandler) UpdateLocation(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		LocationCode string `json:"location_code"`
+		LocationName string `json:"location_name"`
+		LocationType string `json:"location_type"`
+		IsActive     bool   `json:"is_active"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	loc, err := h.svc.UpdateLocation(c.Request.Context(), id, req.LocationCode, req.LocationName, req.LocationType, req.IsActive)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": loc})
+}
+
+func (h *ProductHandler) DeleteLocation(c *gin.Context) {
+	id := c.Param("id")
+	err := h.svc.DeleteLocation(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "location deleted successfully"})
+}
+

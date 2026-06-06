@@ -112,3 +112,39 @@ func (s *RBACService) ValidatePermissions(ctx context.Context, userID string, re
 
 	return false, nil
 }
+
+func (s *RBACService) ListRoles(ctx context.Context) ([]domain.Role, error) {
+	return s.roleRepo.List(ctx)
+}
+
+func (s *RBACService) ListPermissions(ctx context.Context) ([]domain.Permission, error) {
+	return s.permRepo.List(ctx)
+}
+
+func (s *RBACService) GetRolePermissions(ctx context.Context, roleID string) ([]domain.Permission, error) {
+	rpLinks, err := s.rpRepo.ListByRoleID(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+
+	var list []domain.Permission
+	for _, link := range rpLinks {
+		p, err := s.permRepo.GetByID(ctx, link.PermissionID)
+		if err == nil {
+			list = append(list, *p)
+		}
+	}
+	return list, nil
+}
+
+func (s *RBACService) RemovePermissionFromRole(ctx context.Context, roleID string, permissionID string) error {
+	return s.rpRepo.Delete(ctx, roleID, permissionID)
+}
+
+func (s *RBACService) DeleteRole(ctx context.Context, id string) error {
+	return s.roleRepo.Delete(ctx, id)
+}
+
+func (s *RBACService) DeletePermission(ctx context.Context, id string) error {
+	return s.permRepo.Delete(ctx, id)
+}

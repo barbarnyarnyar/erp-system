@@ -13,6 +13,7 @@ type Project struct {
 	StartDate   time.Time  `json:"start_date"`
 	EndDate     *time.Time `json:"end_date"`
 	Status      string     `json:"status"` // e.g., PLANNING, ACTIVE, COMPLETED, ON_HOLD, CANCELLED
+	BudgetID    *string    `json:"budget_id"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }

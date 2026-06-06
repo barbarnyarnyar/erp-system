@@ -180,6 +180,13 @@ func (r *RoleRepository) List(ctx context.Context) ([]domain.Role, error) {
 	return list, nil
 }
 
+func (r *RoleRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.roles, id)
+	return nil
+}
+
 type PermissionRepository struct {
 	mu          sync.RWMutex
 	permissions map[string]domain.Permission
@@ -227,6 +234,13 @@ func (r *PermissionRepository) List(ctx context.Context) ([]domain.Permission, e
 		list = append(list, p)
 	}
 	return list, nil
+}
+
+func (r *PermissionRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.permissions, id)
+	return nil
 }
 
 type UserRoleRepository struct {
@@ -339,4 +353,15 @@ func (r *RolePermissionRepository) ListByRoleID(ctx context.Context, roleID stri
 		}
 	}
 	return list, nil
+}
+
+func (r *RolePermissionRepository) Delete(ctx context.Context, roleID string, permissionID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, l := range r.links {
+		if l.RoleID == roleID && l.PermissionID == permissionID {
+			delete(r.links, id)
+		}
+	}
+	return nil
 }

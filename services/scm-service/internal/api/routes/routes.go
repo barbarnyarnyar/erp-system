@@ -31,6 +31,13 @@ func RegisterRoutes(
 		v1.PUT("/products/:id", prodHandler.UpdateProduct)
 		v1.DELETE("/products/:id", prodHandler.DeleteProduct)
 
+		// Locations
+		v1.GET("/locations", prodHandler.GetLocations)
+		v1.POST("/locations", prodHandler.CreateLocation)
+		v1.GET("/locations/:id", prodHandler.GetLocation)
+		v1.PUT("/locations/:id", prodHandler.UpdateLocation)
+		v1.DELETE("/locations/:id", prodHandler.DeleteLocation)
+
 		// Vendor Management
 		v1.GET("/vendors", vendorHandler.GetVendors)
 		v1.POST("/vendors", vendorHandler.CreateVendor)
@@ -53,6 +60,7 @@ func RegisterRoutes(
 		v1.DELETE("/purchase-requisitions/:id", poHandler.DeletePurchaseRequisition)
 		v1.POST("/purchase-requisitions/:id/approve", poHandler.ApprovePurchaseRequisition)
 		v1.POST("/purchase-requisitions/:id/reject", poHandler.RejectPurchaseRequisition)
+		v1.GET("/purchase-requisitions/:id/lines", poHandler.GetPurchaseRequisitionLines)
 
 		// Purchase Orders
 		v1.GET("/purchase-orders", poHandler.GetPurchaseOrders)
@@ -61,6 +69,7 @@ func RegisterRoutes(
 		v1.PUT("/purchase-orders/:id", poHandler.UpdatePurchaseOrder)
 		v1.DELETE("/purchase-orders/:id", poHandler.DeletePurchaseOrder)
 		v1.POST("/purchase-orders/:id/send", poHandler.SendPurchaseOrder)
+		v1.GET("/purchase-orders/:id/lines", poHandler.GetPurchaseOrderLines)
 
 		// Inventory
 		v1.GET("/inventory", invHandler.GetInventoryItems)
@@ -70,6 +79,7 @@ func RegisterRoutes(
 		v1.DELETE("/inventory/:id", invHandler.DeleteInventoryItem)
 		v1.POST("/inventory/reserve", invHandler.ReserveStock)
 		v1.POST("/inventory/release", invHandler.ReleaseReservation)
+		v1.GET("/inventory/movements", invHandler.GetInventoryMovements)
 
 		// Stock Transfers
 		v1.GET("/stock-transfers", invHandler.GetStockTransfers)
@@ -82,12 +92,14 @@ func RegisterRoutes(
 		v1.POST("/receipts", whHandler.CreateReceipt)
 		v1.GET("/receipts/:id", whHandler.GetReceipt)
 		v1.PUT("/receipts/:id", whHandler.UpdateReceipt)
+		v1.GET("/receipts/:id/lines", whHandler.GetReceiptLines)
 
 		// Warehouse Operations - Shipments
 		v1.GET("/shipments", whHandler.GetShipments)
 		v1.POST("/shipments", whHandler.CreateShipment)
 		v1.GET("/shipments/:id", whHandler.GetShipment)
 		v1.PUT("/shipments/:id", whHandler.UpdateShipment)
+		v1.GET("/shipments/:id/lines", whHandler.GetShipmentLines)
 
 		// Demand Planning
 		v1.GET("/demand-forecasts", demandHandler.GetForecasts)

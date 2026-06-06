@@ -99,6 +99,27 @@ CREATE TABLE IF NOT EXISTS journal_entry_lines (
     created_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY NOT NULL,
+    reference VARCHAR(255) UNIQUE NOT NULL,
+    date TIMESTAMP NOT NULL,
+    description TEXT NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    created_by VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS transaction_lines (
+    id UUID PRIMARY KEY NOT NULL,
+    transaction_id UUID NOT NULL REFERENCES transactions(id),
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    debit_amount NUMERIC(15, 4) NOT NULL,
+    credit_amount NUMERIC(15, 4) NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS invoices (
     id UUID PRIMARY KEY NOT NULL,
     customer_id UUID NOT NULL,
@@ -124,7 +145,7 @@ CREATE TABLE IF NOT EXISTS invoice_lines (
 
 CREATE TABLE IF NOT EXISTS vendor_bills (
     id UUID PRIMARY KEY NOT NULL,
-    supplier_id UUID NOT NULL,
+    supplier_id UUID NOT NULL REFERENCES suppliers(id),
     bill_number VARCHAR(255) NOT NULL,
     purchase_order_id UUID,
     issue_date DATE NOT NULL,

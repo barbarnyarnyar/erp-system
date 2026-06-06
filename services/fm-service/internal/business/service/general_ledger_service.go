@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/erp-system/fm-service/internal/business/domain"
@@ -157,14 +158,26 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 		UpdatedAt:   time.Now(),
 	}
 
+	// Snapshot account states for rollback on failure
+	snapshots := make(map[string]domain.Account)
+	rollback := func() {
+		for _, oldAcc := range snapshots {
+			_ = s.accounts.Update(ctx, &oldAcc)
+		}
+	}
+
 	for i, l := range lines {
 		lines[i].ID = fmt.Sprintf("jel_%d_%d", time.Now().UnixNano(), i)
 		lines[i].EntryID = id
 
 		acc, err := s.accounts.GetByID(ctx, l.AccountID)
 		if err != nil {
+			rollback()
 			return nil, fmt.Errorf("account not found: %s", l.AccountID)
 		}
+
+		// Snapshot original state
+		snapshots[acc.ID] = *acc
 
 		isDebitIncreaseType := acc.Type == "ASSET" || acc.Type == "EXPENSE"
 		if isDebitIncreaseType {
@@ -175,24 +188,31 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 
 		err = s.accounts.Update(ctx, acc)
 		if err != nil {
+			rollback()
 			return nil, fmt.Errorf("failed to update balance for account %s: %w", acc.ID, err)
 		}
-
-		// Publish event
-		_ = s.publisher.Publish(ctx, "fin.account.balance.changed", acc.ID, domain.AccountEventPayload{
-			ID:            acc.ID,
-			AccountNumber: acc.AccountNumber,
-			Name:          acc.Name,
-			Type:          string(acc.Type),
-			Balance:       acc.Balance,
-			Currency:      acc.Currency,
-			Timestamp:     time.Now(),
-		})
 	}
 
 	err := s.entries.Create(ctx, entry, lines)
 	if err != nil {
+		rollback()
 		return nil, err
+	}
+
+	// Publish events only after successful commit
+	for _, l := range lines {
+		acc, err := s.accounts.GetByID(ctx, l.AccountID)
+		if err == nil {
+			_ = s.publisher.Publish(ctx, "fin.account.balance.changed", acc.ID, domain.AccountEventPayload{
+				ID:            acc.ID,
+				AccountNumber: acc.AccountNumber,
+				Name:          acc.Name,
+				Type:          string(acc.Type),
+				Balance:       acc.Balance,
+				Currency:      acc.Currency,
+				Timestamp:     time.Now(),
+			})
+		}
 	}
 	return entry, nil
 }
@@ -339,5 +359,79 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 
 func (s *GeneralLedgerService) DeleteJournalEntry(ctx context.Context, id string) error {
 	return s.entries.Delete(ctx, id)
+}
+
+func (s *GeneralLedgerService) GetIncomeStatement(ctx context.Context) (map[string]interface{}, error) {
+	accs, err := s.accounts.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	revenues := make(map[string]decimal.Decimal)
+	expenses := make(map[string]decimal.Decimal)
+	
+	var totalRevenue, totalExpense decimal.Decimal
+
+	for _, a := range accs {
+		if !a.IsActive {
+			continue
+		}
+		switch a.Type {
+		case "REVENUE":
+			revenues[a.Name] = a.Balance
+			totalRevenue = totalRevenue.Add(a.Balance)
+		case "EXPENSE":
+			expenses[a.Name] = a.Balance
+			totalExpense = totalExpense.Add(a.Balance)
+		}
+	}
+
+	netIncome := totalRevenue.Sub(totalExpense)
+
+	return map[string]interface{}{
+		"revenues":      revenues,
+		"total_revenue": totalRevenue,
+		"expenses":      expenses,
+		"total_expense": totalExpense,
+		"net_income":    netIncome,
+	}, nil
+}
+
+func (s *GeneralLedgerService) GetCashFlow(ctx context.Context) (map[string]interface{}, error) {
+	accs, err := s.accounts.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	inflows := make(map[string]decimal.Decimal)
+	outflows := make(map[string]decimal.Decimal)
+	
+	var totalInflow, totalOutflow decimal.Decimal
+
+	for _, a := range accs {
+		if !a.IsActive {
+			continue
+		}
+		nameLower := strings.ToLower(a.Name)
+		if a.Type == "ASSET" && (strings.Contains(nameLower, "cash") || strings.Contains(nameLower, "bank")) {
+			if a.Balance.IsPositive() {
+				inflows[a.Name] = a.Balance
+				totalInflow = totalInflow.Add(a.Balance)
+			} else if a.Balance.IsNegative() {
+				outflows[a.Name] = a.Balance.Abs()
+				totalOutflow = totalOutflow.Add(a.Balance.Abs())
+			}
+		}
+	}
+
+	netCashFlow := totalInflow.Sub(totalOutflow)
+
+	return map[string]interface{}{
+		"operating_inflows":  inflows,
+		"total_inflows":      totalInflow,
+		"operating_outflows": outflows,
+		"total_outflows":     totalOutflow,
+		"net_cash_flow":      netCashFlow,
+	}, nil
 }
 

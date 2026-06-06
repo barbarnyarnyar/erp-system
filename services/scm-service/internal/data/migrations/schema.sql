@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS stock_transfers (
 CREATE TABLE IF NOT EXISTS purchase_requisitions (
     id UUID PRIMARY KEY NOT NULL,
     req_number VARCHAR(255) UNIQUE NOT NULL,
-    requester_id UUID NOT NULL,
+    requester_id UUID NOT NULL REFERENCES employees(id),
     request_date DATE NOT NULL,
     status VARCHAR(255) NOT NULL,
     total_amount NUMERIC(15, 4) NOT NULL,

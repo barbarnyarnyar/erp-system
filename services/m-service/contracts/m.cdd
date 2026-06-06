@@ -1,7 +1,7 @@
 service Manufacturing {
     entity BillOfMaterials {
         id          uuid      @primary
-        product_id  uuid      @reference(scm.Product.id)
+        product_id  uuid      @reference(Product.id)
         version     string
         status      string    // e.g., ACTIVE, REVISED, ARCHIVED
         description string
@@ -12,7 +12,7 @@ service Manufacturing {
     entity BOMComponent {
         id                   uuid      @primary
         bom_id               uuid      @reference(BillOfMaterials.id)
-        component_product_id uuid      @reference(scm.Product.id)
+        component_product_id uuid      @reference(Product.id)
         quantity             decimal
         waste_factor         decimal
     }
@@ -39,13 +39,13 @@ service Manufacturing {
     entity ProductionOrder {
         id             uuid      @primary
         bom_id         uuid      @reference(BillOfMaterials.id)
-        product_id     uuid      @reference(scm.Product.id)
+        product_id     uuid      @reference(Product.id)
         quantity       integer
         status         string    // e.g., DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
         scheduled_date timestamp
         start_date     timestamp @optional
         end_date       timestamp @optional
-        sales_order_id uuid      @optional // Links make-to-order manufacturing to CRM SalesOrder
+        sales_order_id uuid      @reference(SalesOrder.id) @optional // Links make-to-order manufacturing to CRM SalesOrder
         created_at     timestamp
         updated_at     timestamp
     }
@@ -67,7 +67,7 @@ service Manufacturing {
     entity LaborReport {
         id            uuid      @primary
         work_order_id uuid      @reference(WorkOrder.id)
-        employee_id   uuid      @reference(hr.Employee.id)
+        employee_id   uuid      @reference(Employee.id)
         hours_worked  decimal
         hourly_rate   decimal   // snapshotted at time of work
         total_cost    decimal   // snapshotted labor cost
@@ -86,7 +86,7 @@ service Manufacturing {
     entity QualityInspection {
         id            uuid      @primary
         work_order_id uuid      @reference(WorkOrder.id)
-        inspector_id  uuid      @reference(hr.Employee.id)
+        inspector_id  uuid      @reference(Employee.id)
         result        string    // e.g., PASS, FAIL, REJECT
         remarks       string
         inspected_at  timestamp

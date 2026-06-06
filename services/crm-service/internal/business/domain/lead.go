@@ -6,15 +6,16 @@ import (
 )
 
 type Lead struct {
-	ID        string    `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Company   string    `json:"company"`
-	Email     string    `json:"email"`
-	Phone     string    `json:"phone"`
-	Status    string    `json:"status"` // e.g., NEW, QUALIFIED, NURTURING, CONVERTED, LOST
-	Score     int       `json:"score"`
-	Source    string    `json:"source"` // e.g., CAMPAIGN, WEBSITE, COLD_CALL
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `json:"id"`
+	FirstName  string    `json:"first_name"`
+	LastName   string    `json:"last_name"`
+	Company    string    `json:"company"`
+	Email      string    `json:"email"`
+	Phone      string    `json:"phone"`
+	Status     string    `json:"status"` // e.g., NEW, QUALIFIED, NURTURING, CONVERTED, LOST
+	Score      int       `json:"score"`
+	Source     string    `json:"source"` // e.g., CAMPAIGN, WEBSITE, COLD_CALL
+	CampaignID *string   `json:"campaign_id"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }

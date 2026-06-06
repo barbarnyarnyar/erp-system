@@ -12,7 +12,8 @@ type PerformanceReview struct {
 	ReviewDate  time.Time `json:"review_date"`
 	PeriodStart time.Time `json:"period_start"`
 	PeriodEnd   time.Time `json:"period_end"`
-	Rating      int       `json:"rating"` // scale 1-5
+	Rating      int       `json:"rating"`       // scale 1-5
+	RatingScale string    `json:"rating_scale"` // e.g., 1-5, 1-10
 	Feedback    string    `json:"feedback"`
 	Status      string    `json:"status"` // e.g., DRAFT, SUBMITTED, ACKNOWLEDGED
 	CreatedAt   time.Time `json:"created_at"`

@@ -1,9 +1,19 @@
+struct ProjectSummary {
+    project_id      string
+    project_name    string
+    status          string
+    task_count      integer
+    completed_tasks integer
+    total_hours     decimal
+    total_expenses  decimal
+}
+
 service PM {
     entity Portfolio {
         id          uuid      @primary
         name        string
         description string
-        manager_id  uuid      @optional
+        manager_id  uuid      @reference(Employee.id) @optional
         created_at  timestamp
         updated_at  timestamp
     }
@@ -16,6 +26,7 @@ service PM {
         start_date   date
         end_date     date      @optional
         status       string    // e.g., PLANNING, ACTIVE, COMPLETED, ON_HOLD, CANCELLED
+        budget_id    uuid      @reference(Budget.id) @optional
         created_at   timestamp
         updated_at   timestamp
     }
@@ -23,16 +34,17 @@ service PM {
     entity Task {
         id           uuid      @primary
         project_id   uuid      @reference(Project.id)
-        parent_id    uuid      @optional // For WBS hierarchy
-        title        string
-        description  string
-        assigned_to  uuid      @optional // User/Employee ID
-        status       string    // e.g., TODO, IN_PROGRESS, REVIEW, DONE
-        progress     integer   // 0-100 percentage
-        actual_hours decimal   // Actual time spent
-        start_date   date      @optional
-        end_date     date      @optional
-        created_at   timestamp
+        parent_id       uuid      @reference(Task.id) @optional // For WBS hierarchy
+        title           string
+        description     string
+        assigned_to     uuid      @reference(Employee.id) @optional // User/Employee ID
+        status          string    // e.g., TODO, IN_PROGRESS, REVIEW, DONE
+        progress        integer   // 0-100 percentage
+        estimated_hours decimal   // Estimated time spent
+        actual_hours    decimal   // Actual time spent
+        start_date      date      @optional
+        end_date        date      @optional
+        created_at      timestamp
         updated_at   timestamp
     }
 
@@ -47,7 +59,7 @@ service PM {
     entity ResourceAllocation {
         id                    uuid      @primary
         project_id            uuid      @reference(Project.id)
-        user_id               uuid      // Reference to user/employee in auth/hr
+        user_id               uuid      @reference(Employee.id)
         role                  string    // e.g. Manager, Developer, Designer
         allocation_percentage integer   // e.g. 50 (for 50% allocation)
         start_date            date
@@ -60,12 +72,12 @@ service PM {
         id          uuid      @primary
         project_id  uuid      @reference(Project.id)
         task_id     uuid      @reference(Task.id)
-        user_id     uuid
+        user_id     uuid      @reference(Employee.id)
         entry_date  date
         hours       decimal
         description string
         status      string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
-        approved_by uuid      @optional
+        approved_by uuid      @reference(Employee.id) @optional
         created_at  timestamp
         updated_at  timestamp
     }
@@ -74,14 +86,14 @@ service PM {
         id           uuid      @primary
         project_id   uuid      @reference(Project.id)
         task_id      uuid      @reference(Task.id) @optional
-        user_id      uuid
+        user_id      uuid      @reference(Employee.id)
         amount       decimal
         currency     string
         expense_date date
         category     string    // e.g. Travel, Software, Hardware
         description  string
         status       string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
-        approved_by  uuid      @optional
+        approved_by  uuid      @reference(Employee.id) @optional
         created_at   timestamp
         updated_at   timestamp
     }
@@ -92,7 +104,7 @@ service PM {
         name       string
         file_path  string
         file_size  integer
-        uploaded_by uuid
+        uploaded_by uuid      @reference(Employee.id)
         created_at timestamp
         updated_at timestamp
     }
@@ -104,8 +116,8 @@ service PM {
         description string
         severity    string    // e.g. LOW, MEDIUM, HIGH, CRITICAL
         status      string    // e.g. OPEN, IN_PROGRESS, RESOLVED, CLOSED
-        assigned_to uuid      @optional
-        raised_by   uuid
+        assigned_to uuid      @reference(Employee.id) @optional
+        raised_by   uuid      @reference(Employee.id)
         created_at  timestamp
         updated_at  timestamp
     }
@@ -118,8 +130,8 @@ service PM {
         reason          string
         impact_analysis string
         status          string    // e.g. PENDING, APPROVED, REJECTED
-        requested_by    uuid
-        approved_by     uuid      @optional
+        requested_by    uuid      @reference(Employee.id)
+        approved_by     uuid      @reference(Employee.id) @optional
         created_at      timestamp
         updated_at      timestamp
     }
@@ -136,7 +148,7 @@ service PM {
         func getPortfolio(id: string): Portfolio {
             description: "Retrieves a portfolio by ID"
         }
-        func createProject(name: string, description: string, startDate: timestamp, endDate: timestamp, portfolioId: string): Project {
+        func createProject(name: string, description: string, startDate: timestamp, endDate: timestamp, portfolioId: string, budgetId: string): Project {
             description: "Creates a new project profile"
         }
         func getProject(id: string): Project {
@@ -153,7 +165,7 @@ service PM {
     component TaskManagementService {
         description: "Manages tasks, work breakdown structure (WBS), and dependencies"
 
-        func createTask(projectId: string, parentId: string, title: string, description: string, assignedTo: string, startDate: timestamp, endDate: timestamp): Task {
+        func createTask(projectId: string, parentId: string, title: string, description: string, assignedTo: string, startDate: timestamp, endDate: timestamp, estimatedHours: decimal): Task {
             description: "Creates a new task in a project"
         }
         func getTask(id: string): Task {
@@ -242,7 +254,7 @@ service PM {
     component PortfolioAnalyticsService {
         description: "Aggregates project indicators, tasks completion rate, and budget vs actual costs"
 
-        func getPortfolioSummary(portfolioId: string): list<object> {
+        func getPortfolioSummary(portfolioId: string): list<ProjectSummary> {
             description: "Retrieves analytics and aggregation summary for all projects in a portfolio"
         }
     }

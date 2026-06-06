@@ -100,6 +100,7 @@ type CreateProjectReq struct {
 	StartDate   time.Time  `json:"start_date" binding:"required"`
 	EndDate     *time.Time `json:"end_date"`
 	PortfolioID string     `json:"portfolio_id"`
+	BudgetID    string     `json:"budget_id"`
 }
 
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
@@ -109,7 +110,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	p, err := h.planningSvc.CreateProject(c.Request.Context(), req.Name, req.Description, req.StartDate, req.EndDate, req.PortfolioID)
+	p, err := h.planningSvc.CreateProject(c.Request.Context(), req.Name, req.Description, req.StartDate, req.EndDate, req.PortfolioID, req.BudgetID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -161,12 +162,13 @@ func (h *ProjectHandler) UpdateProjectStatus(c *gin.Context) {
 // ==========================================
 
 type CreateTaskReq struct {
-	ParentID    string     `json:"parent_id"`
-	Title       string     `json:"title" binding:"required"`
-	Description string     `json:"description"`
-	AssignedTo  string     `json:"assigned_to"`
-	StartDate   *time.Time `json:"start_date"`
-	EndDate     *time.Time `json:"end_date"`
+	ParentID       string          `json:"parent_id"`
+	Title          string          `json:"title" binding:"required"`
+	Description    string          `json:"description"`
+	AssignedTo     string          `json:"assigned_to"`
+	StartDate      *time.Time      `json:"start_date"`
+	EndDate        *time.Time      `json:"end_date"`
+	EstimatedHours decimal.Decimal `json:"estimated_hours"`
 }
 
 func (h *ProjectHandler) CreateTask(c *gin.Context) {
@@ -177,7 +179,7 @@ func (h *ProjectHandler) CreateTask(c *gin.Context) {
 		return
 	}
 
-	t, err := h.taskSvc.CreateTask(c.Request.Context(), projectID, req.ParentID, req.Title, req.Description, req.AssignedTo, req.StartDate, req.EndDate)
+	t, err := h.taskSvc.CreateTask(c.Request.Context(), projectID, req.ParentID, req.Title, req.Description, req.AssignedTo, req.StartDate, req.EndDate, req.EstimatedHours)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

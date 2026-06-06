@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS bill_of_materialss (
     id UUID PRIMARY KEY NOT NULL,
-    product_id UUID NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id),
     version VARCHAR(255) NOT NULL,
     status VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS bill_of_materialss (
 CREATE TABLE IF NOT EXISTS bomcomponents (
     id UUID PRIMARY KEY NOT NULL,
     bom_id UUID NOT NULL REFERENCES bill_of_materialss(id),
-    component_product_id UUID NOT NULL,
+    component_product_id UUID NOT NULL REFERENCES products(id),
     quantity NUMERIC(15, 4) NOT NULL,
     waste_factor NUMERIC(15, 4) NOT NULL
 );
@@ -41,13 +41,13 @@ CREATE TABLE IF NOT EXISTS routing_operations (
 CREATE TABLE IF NOT EXISTS production_orders (
     id UUID PRIMARY KEY NOT NULL,
     bom_id UUID NOT NULL REFERENCES bill_of_materialss(id),
-    product_id UUID NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id),
     quantity INT NOT NULL,
     status VARCHAR(255) NOT NULL,
     scheduled_date TIMESTAMP NOT NULL,
     start_date TIMESTAMP,
     end_date TIMESTAMP,
-    sales_order_id UUID,
+    sales_order_id UUID REFERENCES sales_orders(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS work_orders (
 CREATE TABLE IF NOT EXISTS labor_reports (
     id UUID PRIMARY KEY NOT NULL,
     work_order_id UUID NOT NULL REFERENCES work_orders(id),
-    employee_id UUID NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
     hours_worked NUMERIC(15, 4) NOT NULL,
     hourly_rate NUMERIC(15, 4) NOT NULL,
     total_cost NUMERIC(15, 4) NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS machine_logs (
 CREATE TABLE IF NOT EXISTS quality_inspections (
     id UUID PRIMARY KEY NOT NULL,
     work_order_id UUID NOT NULL REFERENCES work_orders(id),
-    inspector_id UUID NOT NULL,
+    inspector_id UUID NOT NULL REFERENCES employees(id),
     result VARCHAR(255) NOT NULL,
     remarks VARCHAR(255) NOT NULL,
     inspected_at TIMESTAMP NOT NULL

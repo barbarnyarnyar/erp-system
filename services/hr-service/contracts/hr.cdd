@@ -1,3 +1,8 @@
+struct ExpenseClaimLineInput {
+    description string
+    amount      decimal
+}
+
 service HR {
     // -------------------------------------------------------------
     // ORGANIZATIONAL ENTITIES
@@ -45,6 +50,15 @@ service HR {
         updated_at    timestamp
     }
 
+    entity EmployeeCompensationHistory {
+        id             uuid      @primary
+        employee_id    uuid      @reference(Employee.id)
+        salary         decimal
+        effective_date date
+        changed_by     uuid      // Auth User ID reference
+        created_at     timestamp
+    }
+
     // -------------------------------------------------------------
     // PAYROLL & TIME ENTRY ENTITIES
     // -------------------------------------------------------------
@@ -78,8 +92,8 @@ service HR {
         total_hours decimal
         notes       string
         status      string    // e.g., SUBMITTED, APPROVED, REJECTED
-        project_id  uuid      @optional
-        task_id     uuid      @optional
+        project_id  uuid      @reference(Project.id) @optional
+        task_id     uuid      @reference(Task.id) @optional
         created_at  timestamp
         updated_at  timestamp
     }
@@ -147,6 +161,7 @@ service HR {
         period_start   date
         period_end     date
         rating         integer   // scale 1-5
+        rating_scale   string    // e.g., 1-5, 1-10
         feedback       string
         status         string    // e.g., DRAFT, SUBMITTED, ACKNOWLEDGED
         created_at     timestamp
@@ -228,7 +243,7 @@ service HR {
         func deleteEmployee(id: string): void {
             description: "Mark an employee as terminated or delete entry"
         }
-        func submitExpenseClaim(employeeId: string, claimDate: date, lines: list<object>): ExpenseClaim {
+        func submitExpenseClaim(employeeId: string, claimDate: date, lines: list<ExpenseClaimLineInput>): ExpenseClaim {
             description: "Submit a new expense claim with details"
         }
     }
@@ -288,8 +303,11 @@ service HR {
         func updateLeaveRequest(id: string, leaveType: string, startDate: date, endDate: date, reason: string): LeaveRequest {
             description: "Update details of a leave request"
         }
-        func updateLeaveStatus(id: string, approvedBy: string, status: string): LeaveRequest {
-            description: "Update leave request status (approve or reject)"
+        func approveLeaveRequest(id: string, approvedBy: string): LeaveRequest {
+            description: "Approve a leave request"
+        }
+        func rejectLeaveRequest(id: string, rejectedBy: string): LeaveRequest {
+            description: "Reject a leave request"
         }
     }
 

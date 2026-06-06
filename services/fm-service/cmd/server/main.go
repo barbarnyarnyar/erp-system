@@ -80,12 +80,13 @@ func main() {
 	repHandler := handlers.NewReportHandler(generalLedgerSvc)
 	invHandler := handlers.NewInvoiceHandler(accountsReceivableSvc)
 	payHandler := handlers.NewPaymentHandler(cashManagementSvc)
+	billHandler := handlers.NewVendorBillHandler(accountsPayableSvc)
 
 	// Initialize Gin router
 	router := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler, invHandler, payHandler)
+	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler, invHandler, payHandler, billHandler)
 
 	// Start server
 	log.Printf("Financial Management Service starting on port %s", cfg.Server.Port)

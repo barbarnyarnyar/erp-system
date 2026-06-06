@@ -88,7 +88,8 @@ func main() {
 	})
 
 	handler := handlers.NewIdentityHandler(authSvc, userSvc, rbacSvc)
-	routes.SetupAuthRoutes(r, handler)
+	rbacHandler := handlers.NewRBACHandler(rbacSvc)
+	routes.SetupAuthRoutes(r, handler, rbacHandler)
 
 	// 7. Start HTTP server with graceful shutdown
 	server := &http.Server{

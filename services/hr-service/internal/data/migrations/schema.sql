@@ -44,6 +44,15 @@ CREATE TABLE IF NOT EXISTS employees (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS employee_compensation_histories (
+    id UUID PRIMARY KEY NOT NULL,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    salary NUMERIC(15, 4) NOT NULL,
+    effective_date DATE NOT NULL,
+    changed_by UUID NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS payroll_records (
     id UUID PRIMARY KEY NOT NULL,
     employee_id UUID NOT NULL REFERENCES employees(id),
@@ -74,8 +83,8 @@ CREATE TABLE IF NOT EXISTS attendance_entries (
     total_hours NUMERIC(15, 4) NOT NULL,
     notes TEXT NOT NULL,
     status VARCHAR(255) NOT NULL,
-    project_id UUID,
-    task_id UUID,
+    project_id UUID REFERENCES projects(id),
+    task_id UUID REFERENCES tasks(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -134,6 +143,7 @@ CREATE TABLE IF NOT EXISTS performance_reviews (
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
     rating INT NOT NULL,
+    rating_scale VARCHAR(255) NOT NULL,
     feedback VARCHAR(255) NOT NULL,
     status VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,

@@ -31,6 +31,8 @@ func main() {
 
 	// 3. Initialize Memory Repositories
 	empRepo := memory.NewMemoryEmployeeRepo()
+	deptRepo := memory.NewMemoryDepartmentRepo()
+	posRepo := memory.NewMemoryPositionRepo()
 	payrollRepo := memory.NewMemoryPayrollRecordRepo()
 	deductionRepo := memory.NewMemoryPayrollDeductionRepo()
 	timesheetRepo := memory.NewMemoryAttendanceEntryRepo()
@@ -44,9 +46,10 @@ func main() {
 	docRepo := memory.NewMemoryEmployeeDocumentRepo()
 	expenseClaimRepo := memory.NewMemoryExpenseClaimRepo()
 	expenseClaimLineRepo := memory.NewMemoryExpenseClaimLineRepo()
+	compHistoryRepo := memory.NewMemoryEmployeeCompensationHistoryRepo()
 
 	// 4. Initialize Services
-	empSvc := service.NewEmployeeManagementService(empRepo, expenseClaimRepo, expenseClaimLineRepo, publisher)
+	empSvc := service.NewEmployeeManagementService(empRepo, expenseClaimRepo, expenseClaimLineRepo, compHistoryRepo, deptRepo, posRepo, publisher)
 	payrollSvc := service.NewPayrollService(payrollRepo, deductionRepo, empRepo, publisher)
 	timesheetSvc := service.NewTimeAttendanceService(timesheetRepo, publisher)
 	leaveSvc := service.NewLeaveManagementService(leaveRepo, leaveBalanceRepo, publisher)

@@ -27,18 +27,19 @@ func NewTaskManagementService(
 	}
 }
 
-func (s *TaskManagementService) CreateTask(ctx context.Context, projectID, parentID, title, description, assignedTo string, startDate, endDate *time.Time) (*domain.Task, error) {
+func (s *TaskManagementService) CreateTask(ctx context.Context, projectID, parentID, title, description, assignedTo string, startDate, endDate *time.Time, estimatedHours decimal.Decimal) (*domain.Task, error) {
 	id := fmt.Sprintf("task_%d", time.Now().UnixNano())
 	task := &domain.Task{
-		ID:          id,
-		ProjectID:   projectID,
-		Title:       title,
-		Description: description,
-		Status:      "TODO",
-		Progress:    0,
-		ActualHours: decimal.NewFromInt(0),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             id,
+		ProjectID:      projectID,
+		Title:          title,
+		Description:    description,
+		Status:         "TODO",
+		Progress:       0,
+		EstimatedHours: estimatedHours,
+		ActualHours:    decimal.NewFromInt(0),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 	if parentID != "" {
 		task.ParentID = &parentID

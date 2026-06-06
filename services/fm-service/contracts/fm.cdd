@@ -1,3 +1,25 @@
+struct JournalLineInput {
+    account_id     uuid
+    debit_amount   decimal
+    credit_amount  decimal
+    description    string
+    cost_center_id uuid
+}
+
+struct BillLineInput {
+    description    string
+    quantity       integer
+    unit_price     decimal
+    tax_rate_id    uuid
+}
+
+struct InvoiceLineInput {
+    description    string
+    quantity       integer
+    unit_price     decimal
+    tax_rate_id    uuid
+}
+
 service FM {
     // -------------------------------------------------------------
     // PREREQUISITE REFERENCES / INDEPENDENT TABLES
@@ -108,6 +130,30 @@ service FM {
         created_at     timestamp
     }
 
+    // NOTE: Transaction & TransactionLine are a legacy GL entry type (pre-dates JournalEntry).
+    // Both are fully implemented with repo + memory and kept for backward compatibility.
+    // New code should prefer JournalEntry/JournalEntryLine.
+    entity Transaction {
+        id          uuid      @primary
+        reference   string    @unique
+        date        timestamp
+        description string
+        status      string    // PENDING, POSTED, REVERSED
+        created_by  string
+        created_at  timestamp
+        updated_at  timestamp
+    }
+
+    entity TransactionLine {
+        id             uuid      @primary
+        transaction_id uuid      @reference(Transaction.id)
+        account_id     uuid      @reference(Account.id)
+        debit_amount   decimal
+        credit_amount  decimal
+        description    string
+        created_at     timestamp
+    }
+
     // -------------------------------------------------------------
     // ACCOUNTS RECEIVABLE (AR)
     // -------------------------------------------------------------
@@ -139,7 +185,7 @@ service FM {
     // -------------------------------------------------------------
     entity VendorBill {
         id             uuid      @primary
-        supplier_id    uuid      // Cross-service reference to SCM's Supplier
+        supplier_id    uuid      @reference(Supplier.id)
         bill_number    string
         purchase_order_id uuid     @optional
         issue_date     date
@@ -223,7 +269,7 @@ service FM {
         func listJournalEntries(): list<JournalEntry> {
             description: "List all journal entries"
         }
-        func createJournalEntry(reference: string, description: string, lines: list<object>): JournalEntry {
+        func createJournalEntry(reference: string, description: string, lines: list<JournalLineInput>): JournalEntry {
             description: "Create and post a journal entry"
         }
         func getJournalEntry(id: string): JournalEntry {
@@ -252,7 +298,7 @@ service FM {
         func listVendorBills(): list<VendorBill> {
             description: "List all vendor bills"
         }
-        func createVendorBill(supplierId: string, billNumber: string, poId: string, lines: list<object>): VendorBill {
+        func createVendorBill(supplierId: string, billNumber: string, poId: string, lines: list<BillLineInput>): VendorBill {
             description: "Create a vendor bill"
         }
         func matchPurchaseOrder(billId: string, poId: string, goodsReceiptId: string): boolean {
@@ -266,7 +312,7 @@ service FM {
         func listInvoices(): list<Invoice> {
             description: "List customer invoices"
         }
-        func createInvoice(customerId: string, issueDate: date, dueDate: date, lines: list<object>): Invoice {
+        func createInvoice(customerId: string, issueDate: date, dueDate: date, lines: list<InvoiceLineInput>): Invoice {
             description: "Generate a customer invoice"
         }
         func getInvoice(id: string): Invoice {

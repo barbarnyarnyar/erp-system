@@ -1,3 +1,16 @@
+struct OrderLineInput {
+    product_id uuid
+    quantity   integer
+    unit_price decimal
+    discount   decimal
+}
+
+struct QuoteLineInput {
+    product_id uuid
+    quantity   integer
+    unit_price decimal
+}
+
 service CRM {
     entity Customer {
         id                 uuid      @primary
@@ -7,7 +20,7 @@ service CRM {
         phone              string
         status             string    // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
         category           string    // e.g., RETAIL, WHOLESALE
-        parent_customer_id uuid      @optional
+        parent_customer_id uuid      @reference(Customer.id) @optional
         created_at         timestamp
         updated_at         timestamp
     }
@@ -22,6 +35,7 @@ service CRM {
         status     string    // e.g., NEW, QUALIFIED, NURTURING, CONVERTED, LOST
         score      integer
         source     string    // e.g., CAMPAIGN, WEBSITE, COLD_CALL
+        campaign_id uuid      @reference(Campaign.id) @optional
         created_at timestamp
         updated_at timestamp
     }
@@ -44,6 +58,7 @@ service CRM {
         order_date   timestamp
         status       string    // e.g., DRAFT, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
         total_amount decimal
+        opportunity_id uuid  @reference(Opportunity.id) @optional
         created_at   timestamp
         updated_at   timestamp
     }
@@ -51,7 +66,7 @@ service CRM {
     entity SalesOrderItem {
         id             uuid      @primary
         sales_order_id uuid      @reference(SalesOrder.id)
-        product_id     uuid
+        product_id     uuid      @reference(Product.id)
         quantity       integer
         unit_price     decimal
         discount       decimal
@@ -64,6 +79,7 @@ service CRM {
         valid_until  timestamp
         status       string    // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
         total_amount decimal
+        opportunity_id uuid  @reference(Opportunity.id) @optional
         created_at   timestamp
         updated_at   timestamp
     }
@@ -71,7 +87,7 @@ service CRM {
     entity QuoteLineItem {
         id         uuid      @primary
         quote_id   uuid      @reference(Quote.id)
-        product_id uuid
+        product_id uuid      @reference(Product.id)
         quantity   integer
         unit_price decimal
     }
@@ -88,7 +104,7 @@ service CRM {
     entity PriceListItem {
         id            uuid      @primary
         price_list_id uuid      @reference(PriceList.id)
-        product_id    uuid
+        product_id    uuid      @reference(Product.id)
         unit_price    decimal
     }
 
@@ -179,7 +195,7 @@ service CRM {
     component SalesOrderService {
         description: "Manages sales order processing"
 
-        func createSalesOrder(customerId: string, items: list<object>): SalesOrder {
+        func createSalesOrder(customerId: string, items: list<OrderLineInput>): SalesOrder {
             description: "Process a new sales order"
         }
         func getSalesOrder(id: string): SalesOrder {
@@ -199,7 +215,7 @@ service CRM {
     component QuoteService {
         description: "Manages client quotes"
 
-        func createQuote(customerId: string, title: string, validUntil: timestamp, items: list<object>): Quote {
+        func createQuote(customerId: string, title: string, validUntil: timestamp, items: list<QuoteLineInput>): Quote {
             description: "Generate a new quote"
         }
         func getQuote(id: string): Quote {

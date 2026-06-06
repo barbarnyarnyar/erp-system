@@ -9,6 +9,7 @@ import (
 	"github.com/erp-system/pm-service/internal/business/domain"
 	"github.com/erp-system/pm-service/internal/business/service"
 	"github.com/segmentio/kafka-go"
+	"github.com/shopspring/decimal"
 )
 
 type KafkaConsumer struct {
@@ -119,7 +120,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		startDate := time.Now()
 		endDate := startDate.AddDate(0, 1, 0) // 1 month duration
 		
-		proj, err := c.planningSvc.CreateProject(ctx, projName, projDesc, startDate, &endDate, "")
+		proj, err := c.planningSvc.CreateProject(ctx, projName, projDesc, startDate, &endDate, "", "")
 		if err != nil {
 			log.Printf("Failed to auto-create custom project: %v", err)
 			return err
@@ -127,7 +128,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Successfully auto-created project %s (ID: %s) for Sales Order %s", proj.Name, proj.ID, ev.SalesOrderID)
 
 		// Auto-create initial kick-off task
-		_, _ = c.taskSvc.CreateTask(ctx, proj.ID, "", "Project Kick-off & Alignment", "Confirm requirements and resources for Sales Order "+ev.SalesOrderID, "", &startDate, &startDate)
+		_, _ = c.taskSvc.CreateTask(ctx, proj.ID, "", "Project Kick-off & Alignment", "Confirm requirements and resources for Sales Order "+ev.SalesOrderID, "", &startDate, &startDate, decimal.NewFromInt(0))
 		return nil
 
 	case domain.TopicScmMaterialDelivered:

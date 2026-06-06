@@ -1,3 +1,27 @@
+struct RequisitionLineInput {
+    product_id           uuid
+    quantity_requested   integer
+    estimated_unit_price decimal
+}
+
+struct POLineInput {
+    product_id       uuid
+    quantity_ordered integer
+    unit_price       decimal
+    description      string
+}
+
+struct ReceiptLineInput {
+    product_id        uuid
+    quantity_received integer
+    unit_cost         decimal
+}
+
+struct ShipmentLineInput {
+    product_id       uuid
+    quantity_shipped integer
+}
+
 service SCM {
     // -------------------------------------------------------------
     // PRODUCT & SUPPLIER ENTITIES
@@ -106,7 +130,7 @@ service SCM {
     entity PurchaseRequisition {
         id            uuid      @primary
         req_number    string    @unique
-        requester_id  uuid      // Reference to hr.Employee.id / Auth User
+        requester_id  uuid      @reference(Employee.id)
         request_date  date
         status        string    // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
         total_amount  decimal
@@ -288,7 +312,7 @@ service SCM {
         func listRequisitions(): list<PurchaseRequisition> {
             description: "List all purchase requisitions"
         }
-        func createRequisition(requesterId: string, notes: string, lines: list<object>): PurchaseRequisition {
+        func createRequisition(requesterId: string, notes: string, lines: list<RequisitionLineInput>): PurchaseRequisition {
             description: "Create a purchase requisition"
         }
         func getRequisition(id: string): PurchaseRequisition {
@@ -300,7 +324,7 @@ service SCM {
         func listPurchaseOrders(): list<PurchaseOrder> {
             description: "List all purchase orders"
         }
-        func createPurchaseOrder(supplierId: string, expectedDelivery: timestamp, notes: string, lines: list<object>): PurchaseOrder {
+        func createPurchaseOrder(supplierId: string, expectedDelivery: timestamp, notes: string, lines: list<POLineInput>): PurchaseOrder {
             description: "Create a purchase order"
         }
         func getPurchaseOrder(id: string): PurchaseOrder {
@@ -355,7 +379,7 @@ service SCM {
         func listReceipts(): list<Receipt> {
             description: "List warehouse receipts"
         }
-        func createReceipt(purchaseOrderId: string, notes: string, lines: list<object>): Receipt {
+        func createReceipt(purchaseOrderId: string, notes: string, lines: list<ReceiptLineInput>): Receipt {
             description: "Receive goods matching a Purchase Order"
         }
         func getReceipt(id: string): Receipt {
@@ -364,7 +388,7 @@ service SCM {
         func listShipments(): list<Shipment> {
             description: "List outbound shipments"
         }
-        func createShipment(salesOrderId: string, carrier: string, trackingNumber: string, estimatedDelivery: timestamp, notes: string, lines: list<object>): Shipment {
+        func createShipment(salesOrderId: string, carrier: string, trackingNumber: string, estimatedDelivery: timestamp, notes: string, lines: list<ShipmentLineInput>): Shipment {
             description: "Create outbound shipment matching a CRM sales order"
         }
         func getShipment(id: string): Shipment {

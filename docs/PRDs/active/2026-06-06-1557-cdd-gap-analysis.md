@@ -10,16 +10,9 @@ The project's 7 CDD contract files (`auth.cdd`, `fm.cdd`, `hr.cdd`, `scm.cdd`, `
 
 ## 2. Gap Dimensions
 
-### 2.0 Extra Entities in Code Not in CDD
+### 2.0 Extra Entities in Code Not in CDD (RESOLVED)
 
-**FM Service** — has 2 domain structs with full repo+memory implementations but NO CDD definition:
-
-| Struct | File | Has Repo? | Has Memory Impl? | In CDD? |
-|--------|------|-----------|-----------------|---------|
-| `Transaction` | `transaction.go:18` | ✅ `TransactionRepository` | ✅ `MemoryTransactionRepo` | ❌ |
-| `TransactionLine` | `transaction.go:30` | ✅ (bundled in Transaction repo) | ✅ (bundled) | ❌ |
-
-These appear to be a legacy/alternative representation of `JournalEntry`/`JournalEntryLine`. Unlike the 7 missing repos (Section 2.1), these two entities have COMPLETE code but are simply missing from the CDD contract. Fix: add to `fm.cdd`.
+~~**FM Service** — has 2 domain structs with full repo+memory implementations but NO CDD definition...~~ ✅ **RESOLVED**: `Transaction` and `TransactionLine` added to `fm.cdd` at lines 114–133. Both entities now have CDD definitions matching the Go structs. 19 CDD entities = 19 Go structs. Zero remaining Go-only items.
 
 ### 2.1 Missing Repository Implementations (FM Service)
 7 entities have domain structs but NO repository interface or memory implementation:
@@ -117,9 +110,112 @@ These appear to be a legacy/alternative representation of `JournalEntry`/`Journa
 - Passwords stored as plaintext (`user.PasswordHash != password`)
 - Zero TLS/HTTPS in any `.go` file
 
+### 2.7 Inventory Ledger Invariant Unenforced (SCM)
+
+`InventoryItem` has 3 quantity fields (`quantity_on_hand`, `quantity_reserved`, `quantity_available`) with a critical invariant:
+
+$$\text{quantity\_available} = \text{quantity\_on\_hand} - \text{quantity\_reserved}$$
+
+Every mutation site (`AdjustInventory`, `ReserveStock`, `ReleaseReservation`, `CreateInventoryItem`, `UpdateInventoryItem`, `ExecuteStockTransfer`) manually maintains this formula in Go code, but there is **no enforced guard**:
+- No `CHECK` constraint in schema
+- No `assertInvariant()` validation function
+- Zero tests
+- `AdjustInventory` is the weakest point — it modifies both `QuantityOnHand` and `QuantityAvailable` by the same delta instead of recomputing from the formula, so a future change that calls `AdjustInventory` while `QuantityReserved > 0` would silently break the invariant.
+
+### 2.8 Raw String Enums Across 4 Services (7+ Entities)
+
+The following fields use raw `string` with zero typed constants, zero validation, and zero compile-time protection:
+
+| Service | Entity | Field | Commented Values |
+|---------|--------|-------|-----------------|
+| CRM | Customer | `Status` | LEAD, PROSPECT, ACTIVE, INACTIVE |
+| CRM | Opportunity | `Stage` | DISCOVERY, NEGOTIATION, CLOSED_WON, CLOSED_LOST |
+| FM | Account | `Type` | ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE |
+| HR | LeaveRequest | `LeaveType` | ANNUAL, SICK, UNPAID |
+| HR | LeaveRequest | `Status` | PENDING, APPROVED, REJECTED |
+| M | ProductionOrder | `Status` | DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED |
+| M | WorkOrder | `Status` | PENDING, IN_PROGRESS, COMPLETED |
+
+And likely more with the same pattern. Comments are ignored at runtime — invalid or lowercase values can silently corrupt state.
+
+### 2.9 Asymmetrical General Ledger Writes (FM)
+
+`JournalEntry` lines have a mandatory accounting invariant:
+
+$$\sum \text{debit\_amount} - \sum \text{credit\_amount} = 0$$
+
+- `CreateJournalEntry` ✅ enforces this check (`general_ledger_service.go:144-146`)
+- `UpdateJournalEntry` ❌ has **no balance validation** — it calls `s.entries.Update` directly, bypassing the invariant entirely
+- Account balance updates happen **before** the entry is persisted (lines 168-195), with a manual rollback on save failure — but a crash between balance updates and entry save would leave accounts modified with no recorded entry
+- No database transaction wraps the account updates + entry save
+
+### 2.10 Cross-Service @Reference Coupling (All Services)
+
+56 total `@reference` annotations across all CDD files — **25 are cross-service (45%)**:
+
+| Severity | Source → Target | Count | Entities Affected |
+|----------|----------------|-------|-------------------|
+| 🔴 Severe | PM → HR (Employee) | 14 | Portfolio, Task, ResourceAllocation, ProjectTimeEntry, ProjectExpense, ProjectDocument, ProjectIssue, ChangeRequest |
+| 🟠 High | M → SCM (Product) | 3 | BillOfMaterials, BOMComponent, ProductionOrder |
+| 🟠 High | CRM → SCM (Product) | 3 | SalesOrderItem, QuoteLineItem, PriceListItem |
+| 🟡 Medium | M → HR (Employee) | 2 | LaborReport, QualityInspection |
+| 🟡 Medium | HR → PM (Project/Task) | 2 | AttendanceEntry |
+| 🟢 Low | Others (FM→SCM, SCM→HR, M→CRM, PM→FM) | 5 | Various |
+
+If services run on isolated databases, none of these constraints can be enforced natively. The CDD models them as hard `@reference` links, but the actual Go code never validates cross-service existence at write time — they are purely documentation. Fix: either accept as design intent (monolith-deployed), or replace with local value object IDs + event-driven eventual consistency.
+
+### 2.11 Non-Atomic Lead Conversion (CRM)
+
+`LeadService.ConvertLead()` at `lead_service.go:113-144` executes this strictly sequential chain:
+
+```
+leadRepo.GetByID → leadRepo.Update → custSvc.CreateCustomer → oppSvc.CreateOpportunity → publisher.Publish
+```
+
+- No database transaction wraps Customer + Opportunity creation
+- If `CreateCustomer` succeeds but `CreateOpportunity` fails: orphan Customer with no Opportunity
+- If `CreateOpportunity` succeeds but publish fails: Opportunity exists but `LeadConvertedEvent` never fires
+- Assessment specifically flagged this as a synchronous component trap — **confirmed**
+
+### 2.12 TrainingEnrollment Duplicate Enrollment Bug (HR)
+
+`TrainingEnrollment` has no unique constraint on `(training_id, employee_id)`:
+- CDD: no `@unique` composite annotation
+- Service: `TrainingService.EnrollEmployee()` calls `repo.Create()` without checking for existing enrollment
+- Repo: has `GetByTrainingAndEmployee()` method but **service never calls it**
+- Result: same employee can be enrolled in the same training program multiple times
+
+### 2.13 Missing Position/Department Change History (HR)
+
+Only salary changes have an audit trail:
+- ✅ `EmployeeCompensationHistory` entity + `hr.salary.changed` event
+- ❌ **No `PositionHistory`** entity — position changes emit `hr.employee.promoted` but no history table stores the record
+- ❌ **No `DepartmentHistory`** entity — department changes have zero tracking (no event, no entity, no table)
+
+### 2.14 Float64 Bug in SCM Event (SCM)
+
+`CustomerDemandForecastEvent.ConfidenceLevel` at `events.go:192` uses `float64` while the domain model `DemandForecast.ConfidenceLevel` uses `decimal.Decimal`. When serialized/deserialized via the event bus, the float64 representation loses precision — a concrete bug that can cause forecast values to drift.
+
+### 2.15 Missing Auditing Fields on JournalEntry (FM)
+
+`JournalEntry` in `fm.cdd:110-120` has `created_by` but no `posted_by` or `posted_at` fields. In proper accounting practice, ledger entries must record *who* authorized the posting and *when* it was posted, separately from creation metadata:
+
+| Field | Exists? | Notes |
+|-------|---------|-------|
+| `created_by` | ✅ Line 116 | Captures who drafted the entry |
+| `created_at` | ✅ Line 118 | Captures when drafted |
+| `posted_by` | ❌ Missing | Who authorized the POSTED state |
+| `posted_at` | ❌ Missing | When it was posted |
+| `reversed_by` | ✅ Line 117 | Already tracks reversals |
+| `updated_at` | ❌ Should remove | Ledger entries should be structurally immutable — `updated_at` implies standard UPDATEs are allowed |
+
+`JournalEntryLine` (line 122-131) already correctly omits `updated_at` — consistent with immutability.
+
+The `updateJournalEntry` Go method should not exist for posted entries — updates should only be allowed on `DRAFT` entries. Once `POSTED`, the only valid mutation is reversal.
+
 ## 3. Definition of Done
 
-- [ ] **2.0 resolved**: Transaction + TransactionLine entities added to `fm.cdd` (not removed — they have full repo+memory implementations)
+- [x] **2.0 resolved**: Transaction + TransactionLine entities added to `fm.cdd` (not removed — they have full repo+memory implementations)
 - [ ] **2.1 resolved**: All 7 FM entities have repository interfaces + memory implementations
 - [ ] **2.2 resolved**: All 5 missing service methods implemented
 - [ ] **2.3 resolved**: All 27 entities have HTTP CRUD routes
@@ -131,6 +227,14 @@ These appear to be a legacy/alternative representation of `JournalEntry`/`Journa
 - [ ] Plaintext passwords migrated to bcrypt
 - [ ] JWT secret moved to environment variable
 - [ ] Kafka publish errors at least logged (not discarded with `_ =`)
+- [ ] **2.7 resolved**: InventoryItem invariant enforced via validation guard or CHECK constraint
+- [ ] **2.8 resolved**: All raw string enum fields replaced with typed constants in domain layer
+- [ ] **2.9 resolved**: `UpdateJournalEntry` enforces debit=credit balance; account updates + entry save wrapped in atomic operation
+- [ ] **2.11 resolved**: `ConvertLead()` wrapped in transaction — Customer + Opportunity creation is atomic
+- [ ] **2.12 resolved**: TrainingEnrollment has composite unique constraint on `(training_id, employee_id)` and duplicate check before create
+- [ ] **2.13 resolved**: PositionHistory + DepartmentHistory entities exist with event-driven audit trails
+- [ ] **2.14 resolved**: `CustomerDemandForecastEvent.ConfidenceLevel` uses `decimal.Decimal` (not `float64`)
+- [ ] **2.15 resolved**: JournalEntry has `posted_by` + `posted_at` fields; `updated_at` removed from JournalEntry; `Update` blocked on POSTED entries
 - [ ] All changes verified by `make test` passing
 
 ## 3.5 Resolved Design Decisions
@@ -143,6 +247,7 @@ These appear to be a legacy/alternative representation of `JournalEntry`/`Journa
 | Auth events purpose? | **Fire-and-forget notifications** — no downstream service currently needs auth events | If a future service needs `auth.user.created` / `auth.user.deactivated`, add consumer then |
 | ProductionService ↔ MaintenanceService coupling? | **Composition** — `ProductionService` holds a `MaintenanceService` reference; calls internal maintenance methods through it | Avoids circular deps, keeps services independently testable, matches how `QualityService` uses `ProductionService` |
 | DLQ as separate feature? | **Yes, new Phase 6** — DLQ is a new architectural feature, not a gap fix | Keeps Phase 1 focused on existing contract compliance; DLQ can be prioritized independently |
+| JournalEntry auditing fields? | **Add `posted_by`/`posted_at`, remove `updated_at`** — accounting best practice requires immutable ledger rows; only DRAFT entries can be updated, POSTED entries must be reversed | Improves audit trail; removes misleading `updated_at` that suggests mutable entries |
 
 ## 4. Priority-Ordered Execution Plan
 
@@ -150,48 +255,55 @@ These appear to be a legacy/alternative representation of `JournalEntry`/`Journa
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 1 | Phase S0: Add Transaction + TransactionLine entities to `fm.cdd` | 0.25d | CDD source of truth is incomplete — 2 entities fully coded but missing from contract |
+| ~~1~~ | ~~Phase S0: Add Transaction + TransactionLine entities to `fm.cdd`~~ | ~~0.25d~~ | ✅ **DONE** — `fm.cdd:114-133` now defines both entities matching Go structs |
 | 2 | Phase S1: Event error logging (`_ =` → `if err != nil`) | 0.5d | All 65+ publishes silently fail — zero visibility |
 | 3 | Phase S2: Fix gateway backend port mismatches (HR 8003, SCM 8006, CRM 8002) | 0.5d | 3 of 6 services unreachable via gateway |
 | 4 | Phase S3: Fix Dockerfile EXPOSE mismatches (M 8004, PM 8006, CRM 8002) | 0.5d | Container orchestration reads wrong ports |
 
-### P1 — Security (immediately exploitable)
+### P1 — Security + Data Integrity (immediately exploitable or corrupting)
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
 | 5 | Phase S4: Migrate passwords to bcrypt | 0.5d | Plaintext comparison in auth service |
 | 6 | Phase S4: Move JWT secret to env var | 0.5d | Hardcoded `super-secret-key-123` |
+| 7 | Phase S4.5: Enforce InventoryItem invariant (`available = on_hand - reserved`) | 1d | Data can silently drift — `AdjustInventory` path breaks if `reserved > 0` |
+| 8 | **Phase S4.6: TrainingEnrollment duplicate enrollment protection** | **0.5d** | **Real bug — `GetByTrainingAndEmployee` repo method exists but is never called; duplicates silently created** |
 
-### P2 — Functional Completeness (CDD spec, 27% API surface missing)
-
-| Step | Task | Est. Time | Rationale |
-|------|------|-----------|-----------|
-| 7 | Phase S5: Add 7 missing FM repository implementations | 1d | Entities exist in domain but can't be stored |
-| 8 | Phase S6: Implement 5 missing service methods | 1d | CDD-defined business logic absent |
-| 9 | Phase S7: Add HTTP routes for 14 entities with existing services | 1.5d | API endpoints for entities with existing repos+methods |
-| 10 | Phase S8: Add HTTP routes for remaining 13 entities (need new handlers) | 1.5d | Auth roles/permissions, FM vendor bills, etc. |
-
-### P3 — Event Integrity (event-driven architecture broken)
+### P2 — Functional Completeness (CDD spec + accounting + atomicity)
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 11 | Phase S9: Fix missing event publishes (31 events) + add dead sub comments | 1.5d | Events define service integrations |
-| 12 | Phase S9: Fix topic naming inconsistency (FM → `crm.sales.order.confirmed`) | 0.5d | Cross-service integration broken |
-| 13 | Phase S9: Migrate fm-service 21 hardcoded topic strings to constants | 0.5d | Code quality: bypasses typed constants |
+| 9 | Phase S5: Add 7 missing FM repository implementations | 1d | Entities exist in domain but can't be stored |
+| 10 | Phase S6: Implement 5 missing service methods | 1d | CDD-defined business logic absent |
+| 11 | Phase S7: Add HTTP routes for 14 entities with existing services | 1.5d | API endpoints for entities with existing repos+methods |
+| 12 | Phase S8: Add HTTP routes for remaining 13 entities (need new handlers) | 1.5d | Auth roles/permissions, FM vendor bills, etc. |
+| 13 | Phase S8.5: GL balance enforcement in `UpdateJournalEntry` + atomicity fix | 1d | `CreateJournalEntry` has check but `Update` bypasses it; account updates not atomic with entry save |
+| 14 | **Phase S8.6: Wrap `ConvertLead()` in transaction for Customer + Opportunity atomicity** | **1d** | **Partial writes can create orphan Customers if Opportunity creation fails** |
+
+### P3 — Event Integrity + Type Safety (broken integrations + string enums + auditing)
+
+| Step | Task | Est. Time | Rationale |
+|------|------|-----------|-----------|
+| 15 | Phase S9: Fix missing event publishes (31 events) + add dead sub comments | 1.5d | Events define service integrations |
+| 16 | Phase S9: Fix topic naming inconsistency (FM → `crm.sales.order.confirmed`) | 0.5d | Cross-service integration broken |
+| 17 | Phase S9: Migrate fm-service 21 hardcoded topic strings to constants | 0.5d | Code quality: bypasses typed constants |
+| 18 | Phase S9.5: Migrate 7+ raw string enum fields to typed constants + fix `ConfidenceLevel` float64 → decimal (SCM) | 1d | Comments ignored at runtime — invalid values corrupt state silently; float64 bug causes forecast drift |
+| 19 | **Phase S9.6: Add PositionHistory + DepartmentHistory entities with event-driven audit trails** | **1d** | **Only salary changes have audit trail; position/department changes have zero history tracking** |
 
 ### P4 — Architecture & Remaining Security (works but messy)
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 14 | Phase S10: Gateway — reconcile route prefixes + deploy new router | 1d | Alignment: Needed before auth can be enabled |
-| 15 | Phase S10: Gateway — enable JWT+RBAC middleware | 1d | Depends on bcrypt + JWT env (P1) |
-| 16 | Phase S11: Extract MaintenanceService from God struct | 1.5d | ProductionService holds 12 methods from other services |
-| 17 | Phase S12: TLS config stubs (all 7 services) | 0.5d | Prep: No behavioral change |
-| 18 | Phase S12: Admin seed user on auth startup | 0.5d | Enables gateway login testing |
+| 20 | Phase S10: Gateway — reconcile route prefixes + deploy new router | 1d | Alignment: Needed before auth can be enabled |
+| 21 | Phase S10: Gateway — enable JWT+RBAC middleware | 1d | Depends on bcrypt + JWT env (P1) |
+| 22 | Phase S11: Extract MaintenanceService from God struct | 1.5d | ProductionService holds 12 methods from other services |
+| 23 | Phase S12: TLS config stubs (all 7 services) | 0.5d | Prep: No behavioral change |
+| 24 | Phase S12: Admin seed user on auth startup | 0.5d | Enables gateway login testing |
+| 25 | **Phase S12.5: Add `posted_by`/`posted_at` to JournalEntry + drop `updated_at` + guard `Update` on POSTED** | **1d** | **Auditing gap: ledger entries should be structurally immutable; `updated_at` suggests mutable entries** |
 
 ### P5 — Optional
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 19 | Phase S14: Dead-letter queue for consumer errors | 2-3d | New Feature: Not a gap, not required for correctness |
-| 20 | Phase S15: Verification (all DoD items) | 1d | Final check after all above done |
+| 26 | Phase S14: Dead-letter queue for consumer errors | 2-3d | New Feature: Not a gap, not required for correctness |
+| 27 | Phase S15: Verification (all DoD items) | 1d | Final check after all above done |

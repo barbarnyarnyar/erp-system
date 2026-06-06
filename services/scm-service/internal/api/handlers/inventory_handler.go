@@ -197,3 +197,12 @@ func (h *InventoryHandler) ExecuteStockTransfer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": st})
 }
 
+func (h *InventoryHandler) GetInventoryMovements(c *gin.Context) {
+	list, err := h.svc.ListMovements(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}
+

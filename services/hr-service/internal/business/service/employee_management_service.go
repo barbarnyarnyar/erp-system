@@ -11,18 +11,32 @@ import (
 )
 
 type EmployeeManagementService struct {
-	repo       domain.EmployeeRepository
-	claims     domain.ExpenseClaimRepository
-	claimLines domain.ExpenseClaimLineRepository
-	publisher  domain.EventPublisher
+	repo        domain.EmployeeRepository
+	claims      domain.ExpenseClaimRepository
+	claimLines  domain.ExpenseClaimLineRepository
+	historyRepo domain.EmployeeCompensationHistoryRepository
+	depts       domain.DepartmentRepository
+	positions   domain.PositionRepository
+	publisher   domain.EventPublisher
 }
 
-func NewEmployeeManagementService(repo domain.EmployeeRepository, claims domain.ExpenseClaimRepository, claimLines domain.ExpenseClaimLineRepository, publisher domain.EventPublisher) *EmployeeManagementService {
+func NewEmployeeManagementService(
+	repo domain.EmployeeRepository,
+	claims domain.ExpenseClaimRepository,
+	claimLines domain.ExpenseClaimLineRepository,
+	historyRepo domain.EmployeeCompensationHistoryRepository,
+	depts domain.DepartmentRepository,
+	positions domain.PositionRepository,
+	publisher domain.EventPublisher,
+) *EmployeeManagementService {
 	return &EmployeeManagementService{
-		repo:       repo,
-		claims:     claims,
-		claimLines: claimLines,
-		publisher:  publisher,
+		repo:        repo,
+		claims:      claims,
+		claimLines:  claimLines,
+		historyRepo: historyRepo,
+		depts:       depts,
+		positions:   positions,
+		publisher:   publisher,
 	}
 }
 
@@ -57,6 +71,17 @@ func (s *EmployeeManagementService) CreateEmployee(ctx context.Context, firstNam
 	if err != nil {
 		return nil, err
 	}
+
+	// Record initial compensation history
+	echID := fmt.Sprintf("ech_%d", time.Now().UnixNano())
+	_ = s.historyRepo.Create(ctx, &domain.EmployeeCompensationHistory{
+		ID:            echID,
+		EmployeeID:    emp.ID,
+		Salary:        salary,
+		EffectiveDate: time.Now(),
+		ChangedBy:     "system",
+		CreatedAt:     time.Now(),
+	})
 
 	// Publish employee created event to Kafka
 	_ = s.publisher.Publish(ctx, domain.TopicHrEmployeeCreated, emp.ID, domain.EmployeeCreatedEvent{
@@ -112,8 +137,18 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 		Timestamp:    time.Now(),
 	})
 
-	// Publish salary changed event if different
+	// Publish salary changed event and record compensation history if different
 	if salaryChanged {
+		echID := fmt.Sprintf("ech_%d", time.Now().UnixNano())
+		_ = s.historyRepo.Create(ctx, &domain.EmployeeCompensationHistory{
+			ID:            echID,
+			EmployeeID:    emp.ID,
+			Salary:        salary,
+			EffectiveDate: time.Now(),
+			ChangedBy:     "system",
+			CreatedAt:     time.Now(),
+		})
+
 		_ = s.publisher.Publish(ctx, domain.TopicHrSalaryChanged, emp.ID, domain.SalaryChangedEvent{
 			EmployeeID: emp.ID,
 			OldSalary:  oldSalary,
@@ -205,5 +240,49 @@ func (s *EmployeeManagementService) SubmitExpenseClaim(ctx context.Context, empl
 	})
 
 	return claim, nil
+}
+
+func (s *EmployeeManagementService) ListDepartments(ctx context.Context) ([]domain.Department, error) {
+	return s.depts.List(ctx)
+}
+
+func (s *EmployeeManagementService) CreateDepartment(ctx context.Context, code, name, description, managerID string) (*domain.Department, error) {
+	id := fmt.Sprintf("dept_%d", time.Now().UnixNano())
+	dept := &domain.Department{
+		ID:          id,
+		Code:        code,
+		Name:        name,
+		Description: description,
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if managerID != "" {
+		dept.ManagerID = &managerID
+	}
+	err := s.depts.Create(ctx, dept)
+	return dept, err
+}
+
+func (s *EmployeeManagementService) ListPositions(ctx context.Context) ([]domain.Position, error) {
+	return s.positions.List(ctx)
+}
+
+func (s *EmployeeManagementService) CreatePosition(ctx context.Context, code, title, description, departmentID string, minSalary, maxSalary decimal.Decimal) (*domain.Position, error) {
+	id := fmt.Sprintf("pos_%d", time.Now().UnixNano())
+	pos := &domain.Position{
+		ID:           id,
+		Code:         code,
+		Title:        title,
+		Description:  description,
+		DepartmentID: departmentID,
+		MinSalary:    minSalary,
+		MaxSalary:    maxSalary,
+		IsActive:     true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	err := s.positions.Create(ctx, pos)
+	return pos, err
 }
 

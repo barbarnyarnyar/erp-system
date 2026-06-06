@@ -25,15 +25,19 @@ func (h *ReportHandler) GetBalanceSheet(c *gin.Context) {
 }
 
 func (h *ReportHandler) GetIncomeStatement(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Income statement report generated successfully",
-		"report":  "income_statement",
-	})
+	report, err := h.svc.GetIncomeStatement(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"report": report})
 }
 
 func (h *ReportHandler) GetCashFlow(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Cash flow report generated successfully",
-		"report":  "cash_flow",
-	})
+	report, err := h.svc.GetCashFlow(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"report": report})
 }

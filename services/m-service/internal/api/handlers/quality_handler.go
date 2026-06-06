@@ -76,3 +76,13 @@ func (h *QualityHandler) UpdateQualityInspection(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": qi})
 }
+
+func (h *QualityHandler) GetNonConformances(c *gin.Context) {
+	inspectionID := c.Param("id")
+	list, err := h.svc.ListNonConformancesByInspectionID(c.Request.Context(), inspectionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list})
+}

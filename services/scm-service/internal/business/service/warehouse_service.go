@@ -290,3 +290,11 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 
 	return ship, nil
 }
+
+func (s *WarehouseService) ListReceiptLines(ctx context.Context, receiptID string) ([]domain.ReceiptLine, error) {
+	return s.recLRepo.ListByReceiptID(ctx, receiptID)
+}
+
+func (s *WarehouseService) ListShipmentLines(ctx context.Context, shipmentID string) ([]domain.ShipmentLine, error) {
+	return s.shipLRepo.ListByShipmentID(ctx, shipmentID)
+}

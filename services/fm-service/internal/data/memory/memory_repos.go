@@ -425,4 +425,334 @@ func (r *MemoryTaxRateRepo) List(ctx context.Context) ([]domain.TaxRate, error) 
 	return list, nil
 }
 
+// MemoryCurrencyRateRepo implements domain.CurrencyRateRepository in-memory
+type MemoryCurrencyRateRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.CurrencyRate
+}
+
+func NewMemoryCurrencyRateRepo() *MemoryCurrencyRateRepo {
+	return &MemoryCurrencyRateRepo{
+		data: make(map[string]domain.CurrencyRate),
+	}
+}
+
+func (r *MemoryCurrencyRateRepo) Create(ctx context.Context, rate *domain.CurrencyRate) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[rate.ID] = *rate
+	return nil
+}
+
+func (r *MemoryCurrencyRateRepo) GetByID(ctx context.Context, id string) (*domain.CurrencyRate, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	rate, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("currency rate not found")
+	}
+	return &rate, nil
+}
+
+func (r *MemoryCurrencyRateRepo) List(ctx context.Context) ([]domain.CurrencyRate, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.CurrencyRate, 0, len(r.data))
+	for _, rate := range r.data {
+		list = append(list, rate)
+	}
+	return list, nil
+}
+
+// MemoryFiscalYearRepo implements domain.FiscalYearRepository in-memory
+type MemoryFiscalYearRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.FiscalYear
+}
+
+func NewMemoryFiscalYearRepo() *MemoryFiscalYearRepo {
+	return &MemoryFiscalYearRepo{
+		data: make(map[string]domain.FiscalYear),
+	}
+}
+
+func (r *MemoryFiscalYearRepo) Create(ctx context.Context, fy *domain.FiscalYear) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[fy.ID] = *fy
+	return nil
+}
+
+func (r *MemoryFiscalYearRepo) GetByID(ctx context.Context, id string) (*domain.FiscalYear, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	fy, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("fiscal year not found")
+	}
+	return &fy, nil
+}
+
+func (r *MemoryFiscalYearRepo) Update(ctx context.Context, fy *domain.FiscalYear) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[fy.ID] = *fy
+	return nil
+}
+
+func (r *MemoryFiscalYearRepo) List(ctx context.Context) ([]domain.FiscalYear, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.FiscalYear, 0, len(r.data))
+	for _, fy := range r.data {
+		list = append(list, fy)
+	}
+	return list, nil
+}
+
+// MemoryCostCenterRepo implements domain.CostCenterRepository in-memory
+type MemoryCostCenterRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.CostCenter
+}
+
+func NewMemoryCostCenterRepo() *MemoryCostCenterRepo {
+	return &MemoryCostCenterRepo{
+		data: make(map[string]domain.CostCenter),
+	}
+}
+
+func (r *MemoryCostCenterRepo) Create(ctx context.Context, cc *domain.CostCenter) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[cc.ID] = *cc
+	return nil
+}
+
+func (r *MemoryCostCenterRepo) GetByID(ctx context.Context, id string) (*domain.CostCenter, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	cc, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("cost center not found")
+	}
+	return &cc, nil
+}
+
+func (r *MemoryCostCenterRepo) Update(ctx context.Context, cc *domain.CostCenter) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[cc.ID] = *cc
+	return nil
+}
+
+func (r *MemoryCostCenterRepo) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.data, id)
+	return nil
+}
+
+func (r *MemoryCostCenterRepo) List(ctx context.Context) ([]domain.CostCenter, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.CostCenter, 0, len(r.data))
+	for _, cc := range r.data {
+		list = append(list, cc)
+	}
+	return list, nil
+}
+
+// MemoryBankAccountRepo implements domain.BankAccountRepository in-memory
+type MemoryBankAccountRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.BankAccount
+}
+
+func NewMemoryBankAccountRepo() *MemoryBankAccountRepo {
+	return &MemoryBankAccountRepo{
+		data: make(map[string]domain.BankAccount),
+	}
+}
+
+func (r *MemoryBankAccountRepo) Create(ctx context.Context, ba *domain.BankAccount) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[ba.ID] = *ba
+	return nil
+}
+
+func (r *MemoryBankAccountRepo) GetByID(ctx context.Context, id string) (*domain.BankAccount, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ba, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("bank account not found")
+	}
+	return &ba, nil
+}
+
+func (r *MemoryBankAccountRepo) Update(ctx context.Context, ba *domain.BankAccount) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[ba.ID] = *ba
+	return nil
+}
+
+func (r *MemoryBankAccountRepo) List(ctx context.Context) ([]domain.BankAccount, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.BankAccount, 0, len(r.data))
+	for _, ba := range r.data {
+		list = append(list, ba)
+	}
+	return list, nil
+}
+
+// MemoryCustomerCreditRepo implements domain.CustomerCreditRepository in-memory
+type MemoryCustomerCreditRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.CustomerCredit
+}
+
+func NewMemoryCustomerCreditRepo() *MemoryCustomerCreditRepo {
+	return &MemoryCustomerCreditRepo{
+		data: make(map[string]domain.CustomerCredit),
+	}
+}
+
+func (r *MemoryCustomerCreditRepo) Create(ctx context.Context, cc *domain.CustomerCredit) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[cc.ID] = *cc
+	return nil
+}
+
+func (r *MemoryCustomerCreditRepo) GetByID(ctx context.Context, id string) (*domain.CustomerCredit, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	cc, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("customer credit not found")
+	}
+	return &cc, nil
+}
+
+func (r *MemoryCustomerCreditRepo) Update(ctx context.Context, cc *domain.CustomerCredit) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[cc.ID] = *cc
+	return nil
+}
+
+func (r *MemoryCustomerCreditRepo) List(ctx context.Context) ([]domain.CustomerCredit, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.CustomerCredit, 0, len(r.data))
+	for _, cc := range r.data {
+		list = append(list, cc)
+	}
+	return list, nil
+}
+
+// MemoryBankStatementRepo implements domain.BankStatementRepository in-memory
+type MemoryBankStatementRepo struct {
+	mu    sync.RWMutex
+	data  map[string]domain.BankStatement
+	lines map[string][]domain.BankStatementLine
+}
+
+func NewMemoryBankStatementRepo() *MemoryBankStatementRepo {
+	return &MemoryBankStatementRepo{
+		data:  make(map[string]domain.BankStatement),
+		lines: make(map[string][]domain.BankStatementLine),
+	}
+}
+
+func (r *MemoryBankStatementRepo) Create(ctx context.Context, bs *domain.BankStatement, lines []domain.BankStatementLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[bs.ID] = *bs
+	r.lines[bs.ID] = lines
+	return nil
+}
+
+func (r *MemoryBankStatementRepo) GetByID(ctx context.Context, id string) (*domain.BankStatement, []domain.BankStatementLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	bs, ok := r.data[id]
+	if !ok {
+		return nil, nil, errors.New("bank statement not found")
+	}
+	return &bs, r.lines[id], nil
+}
+
+func (r *MemoryBankStatementRepo) Update(ctx context.Context, bs *domain.BankStatement, lines []domain.BankStatementLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[bs.ID] = *bs
+	r.lines[bs.ID] = lines
+	return nil
+}
+
+func (r *MemoryBankStatementRepo) List(ctx context.Context) ([]domain.BankStatement, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.BankStatement, 0, len(r.data))
+	for _, bs := range r.data {
+		list = append(list, bs)
+	}
+	return list, nil
+}
+
+// MemoryTransactionRepo implements domain.TransactionRepository in-memory
+type MemoryTransactionRepo struct {
+	mu    sync.RWMutex
+	data  map[string]domain.Transaction
+	lines map[string][]domain.TransactionLine
+}
+
+func NewMemoryTransactionRepo() *MemoryTransactionRepo {
+	return &MemoryTransactionRepo{
+		data:  make(map[string]domain.Transaction),
+		lines: make(map[string][]domain.TransactionLine),
+	}
+}
+
+func (r *MemoryTransactionRepo) Create(ctx context.Context, tx *domain.Transaction, lines []domain.TransactionLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[tx.ID] = *tx
+	r.lines[tx.ID] = lines
+	return nil
+}
+
+func (r *MemoryTransactionRepo) GetByID(ctx context.Context, id string) (*domain.Transaction, []domain.TransactionLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	tx, ok := r.data[id]
+	if !ok {
+		return nil, nil, errors.New("transaction not found")
+	}
+	return &tx, r.lines[id], nil
+}
+
+func (r *MemoryTransactionRepo) Update(ctx context.Context, tx *domain.Transaction, lines []domain.TransactionLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[tx.ID] = *tx
+	r.lines[tx.ID] = lines
+	return nil
+}
+
+func (r *MemoryTransactionRepo) List(ctx context.Context) ([]domain.Transaction, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.Transaction, 0, len(r.data))
+	for _, tx := range r.data {
+		list = append(list, tx)
+	}
+	return list, nil
+}
+
 

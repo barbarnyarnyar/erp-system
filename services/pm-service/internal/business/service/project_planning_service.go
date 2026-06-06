@@ -54,7 +54,7 @@ func (s *ProjectPlanningService) GetPortfolio(ctx context.Context, id string) (*
 	return s.portfolioRepo.GetByID(ctx, id)
 }
 
-func (s *ProjectPlanningService) CreateProject(ctx context.Context, name, description string, startDate time.Time, endDate *time.Time, portfolioID string) (*domain.Project, error) {
+func (s *ProjectPlanningService) CreateProject(ctx context.Context, name, description string, startDate time.Time, endDate *time.Time, portfolioID string, budgetID string) (*domain.Project, error) {
 	id := fmt.Sprintf("proj_%d", time.Now().UnixNano())
 	proj := &domain.Project{
 		ID:          id,
@@ -68,6 +68,9 @@ func (s *ProjectPlanningService) CreateProject(ctx context.Context, name, descri
 	}
 	if portfolioID != "" {
 		proj.PortfolioID = &portfolioID
+	}
+	if budgetID != "" {
+		proj.BudgetID = &budgetID
 	}
 
 	err := s.projectRepo.Create(ctx, proj)

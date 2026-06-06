@@ -8,6 +8,7 @@ import (
 func SetupAuthRoutes(
 	r *gin.Engine,
 	handler *handlers.IdentityHandler,
+	rbacHandler *handlers.RBACHandler,
 ) {
 	v1 := r.Group("/api/v1/auth")
 	{
@@ -20,5 +21,20 @@ func SetupAuthRoutes(
 		v1.POST("/users/:id/store", handler.AssignStore)
 		v1.POST("/users/:id/validate-permission", handler.ValidatePermission)
 		v1.POST("/users/:id/deactivate", handler.Deactivate)
+
+		// Roles CRUD
+		v1.GET("/roles", rbacHandler.GetRoles)
+		v1.POST("/roles", rbacHandler.CreateRole)
+		v1.DELETE("/roles/:id", rbacHandler.DeleteRole)
+
+		// Permissions CRUD
+		v1.GET("/permissions", rbacHandler.GetPermissions)
+		v1.POST("/permissions", rbacHandler.CreatePermission)
+		v1.DELETE("/permissions/:id", rbacHandler.DeletePermission)
+
+		// Role Permissions association
+		v1.GET("/roles/:id/permissions", rbacHandler.GetRolePermissions)
+		v1.POST("/roles/:id/permissions", rbacHandler.AssignPermissionToRole)
+		v1.DELETE("/roles/:id/permissions/:permissionId", rbacHandler.RemovePermissionFromRole)
 	}
 }

@@ -164,4 +164,12 @@ func (s *LeaveManagementService) RejectLeaveRequest(ctx context.Context, id stri
 	return s.UpdateLeaveStatus(ctx, id, rejectedBy, "REJECTED")
 }
 
+func (s *LeaveManagementService) ListLeaveBalances(ctx context.Context) ([]domain.LeaveBalance, error) {
+	return s.balances.List(ctx)
+}
+
+func (s *LeaveManagementService) GetLeaveBalancesByEmployee(ctx context.Context, employeeID string) ([]domain.LeaveBalance, error) {
+	return s.balances.GetByEmployeeID(ctx, employeeID)
+}
+
 

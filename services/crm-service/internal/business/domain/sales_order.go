@@ -7,11 +7,12 @@ import (
 )
 
 type SalesOrder struct {
-	ID          string          `json:"id"`
-	CustomerID  string          `json:"customer_id"`
-	OrderDate   time.Time       `json:"order_date"`
-	Status      string          `json:"status"` // e.g., DRAFT, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
-	TotalAmount decimal.Decimal `json:"total_amount"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ID            string          `json:"id"`
+	CustomerID    string          `json:"customer_id"`
+	OrderDate     time.Time       `json:"order_date"`
+	Status        string          `json:"status"` // e.g., DRAFT, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+	TotalAmount   decimal.Decimal `json:"total_amount"`
+	OpportunityID *string         `json:"opportunity_id"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }

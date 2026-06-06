@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
     id UUID PRIMARY KEY NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    manager_id UUID,
+    manager_id UUID REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS projects (
     start_date DATE NOT NULL,
     end_date DATE,
     status VARCHAR(255) NOT NULL,
+    budget_id UUID REFERENCES budgets(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -25,12 +26,13 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY NOT NULL,
     project_id UUID NOT NULL REFERENCES projects(id),
-    parent_id UUID,
+    parent_id UUID REFERENCES tasks(id),
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    assigned_to UUID,
+    assigned_to UUID REFERENCES employees(id),
     status VARCHAR(255) NOT NULL,
     progress INT NOT NULL,
+    estimated_hours NUMERIC(15, 4) NOT NULL,
     actual_hours NUMERIC(15, 4) NOT NULL,
     start_date DATE,
     end_date DATE,
@@ -49,7 +51,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 CREATE TABLE IF NOT EXISTS resource_allocations (
     id UUID PRIMARY KEY NOT NULL,
     project_id UUID NOT NULL REFERENCES projects(id),
-    user_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES employees(id),
     role VARCHAR(255) NOT NULL,
     allocation_percentage INT NOT NULL,
     start_date DATE NOT NULL,
@@ -62,12 +64,12 @@ CREATE TABLE IF NOT EXISTS project_time_entries (
     id UUID PRIMARY KEY NOT NULL,
     project_id UUID NOT NULL REFERENCES projects(id),
     task_id UUID NOT NULL REFERENCES tasks(id),
-    user_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES employees(id),
     entry_date DATE NOT NULL,
     hours NUMERIC(15, 4) NOT NULL,
     description TEXT NOT NULL,
     status VARCHAR(255) NOT NULL,
-    approved_by UUID,
+    approved_by UUID REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -76,14 +78,14 @@ CREATE TABLE IF NOT EXISTS project_expenses (
     id UUID PRIMARY KEY NOT NULL,
     project_id UUID NOT NULL REFERENCES projects(id),
     task_id UUID REFERENCES tasks(id),
-    user_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES employees(id),
     amount NUMERIC(15, 4) NOT NULL,
     currency VARCHAR(255) NOT NULL,
     expense_date DATE NOT NULL,
     category VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     status VARCHAR(255) NOT NULL,
-    approved_by UUID,
+    approved_by UUID REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -94,7 +96,7 @@ CREATE TABLE IF NOT EXISTS project_documents (
     name VARCHAR(255) NOT NULL,
     file_path VARCHAR(255) NOT NULL,
     file_size INT NOT NULL,
-    uploaded_by UUID NOT NULL,
+    uploaded_by UUID NOT NULL REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -106,8 +108,8 @@ CREATE TABLE IF NOT EXISTS project_issues (
     description TEXT NOT NULL,
     severity VARCHAR(255) NOT NULL,
     status VARCHAR(255) NOT NULL,
-    assigned_to UUID,
-    raised_by UUID NOT NULL,
+    assigned_to UUID REFERENCES employees(id),
+    raised_by UUID NOT NULL REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -120,8 +122,8 @@ CREATE TABLE IF NOT EXISTS change_requests (
     reason VARCHAR(255) NOT NULL,
     impact_analysis VARCHAR(255) NOT NULL,
     status VARCHAR(255) NOT NULL,
-    requested_by UUID NOT NULL,
-    approved_by UUID,
+    requested_by UUID NOT NULL REFERENCES employees(id),
+    approved_by UUID REFERENCES employees(id),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );

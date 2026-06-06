@@ -26,6 +26,10 @@ func RegisterRoutes(
 		v1.PUT("/employees/:id", empHandler.UpdateEmployee)
 		v1.DELETE("/employees/:id", empHandler.DeleteEmployee)
 		v1.POST("/employees/:id/expenses", empHandler.SubmitExpenseClaim)
+		v1.GET("/departments", empHandler.GetDepartments)
+		v1.POST("/departments", empHandler.CreateDepartment)
+		v1.GET("/positions", empHandler.GetPositions)
+		v1.POST("/positions", empHandler.CreatePosition)
 
 		// Payroll
 		v1.GET("/payroll", payrollHandler.GetPayrollRecords)
@@ -49,7 +53,8 @@ func RegisterRoutes(
 		v1.PUT("/leave-requests/:id", leaveHandler.UpdateLeaveRequest)
 		v1.POST("/leave-requests/:id/approve", leaveHandler.ApproveLeaveRequest)
 		v1.POST("/leave-requests/:id/reject", leaveHandler.RejectLeaveRequest)
-		v1.PUT("/leave-requests/:id/status", leaveHandler.UpdateLeaveStatus)
+		v1.GET("/leave-balances", leaveHandler.GetLeaveBalances)
+
 
 		// Recruitment
 		v1.GET("/recruitment/jobs", recruitmentHandler.GetJobPostings)

@@ -12,12 +12,14 @@ import (
 type ProductManagementService struct {
 	repo    domain.ProductRepository
 	catRepo domain.ProductCategoryRepository
+	locRepo domain.LocationRepository
 }
 
-func NewProductManagementService(repo domain.ProductRepository, catRepo domain.ProductCategoryRepository) *ProductManagementService {
+func NewProductManagementService(repo domain.ProductRepository, catRepo domain.ProductCategoryRepository, locRepo domain.LocationRepository) *ProductManagementService {
 	return &ProductManagementService{
 		repo:    repo,
 		catRepo: catRepo,
+		locRepo: locRepo,
 	}
 }
 
@@ -129,5 +131,50 @@ func (s *ProductManagementService) UpdateCategory(ctx context.Context, id, code,
 
 func (s *ProductManagementService) DeleteCategory(ctx context.Context, id string) error {
 	return s.catRepo.Delete(ctx, id)
+}
+
+// Locations CRUD
+func (s *ProductManagementService) ListLocations(ctx context.Context) ([]domain.Location, error) {
+	return s.locRepo.List(ctx)
+}
+
+func (s *ProductManagementService) CreateLocation(ctx context.Context, code, name, locType string) (*domain.Location, error) {
+	id := fmt.Sprintf("loc_%d", time.Now().UnixNano())
+	loc := &domain.Location{
+		ID:           id,
+		LocationCode: code,
+		LocationName: name,
+		LocationType: locType,
+		IsActive:     true,
+	}
+	err := s.locRepo.Create(ctx, loc)
+	if err != nil {
+		return nil, err
+	}
+	return loc, nil
+}
+
+func (s *ProductManagementService) GetLocation(ctx context.Context, id string) (*domain.Location, error) {
+	return s.locRepo.GetByID(ctx, id)
+}
+
+func (s *ProductManagementService) UpdateLocation(ctx context.Context, id, code, name, locType string, isActive bool) (*domain.Location, error) {
+	loc, err := s.locRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	loc.LocationCode = code
+	loc.LocationName = name
+	loc.LocationType = locType
+	loc.IsActive = isActive
+	err = s.locRepo.Update(ctx, loc)
+	if err != nil {
+		return nil, err
+	}
+	return loc, nil
+}
+
+func (s *ProductManagementService) DeleteLocation(ctx context.Context, id string) error {
+	return s.locRepo.Delete(ctx, id)
 }
 

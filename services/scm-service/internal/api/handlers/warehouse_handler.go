@@ -178,3 +178,23 @@ func (h *WarehouseHandler) UpdateShipment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": shp})
 }
+
+func (h *WarehouseHandler) GetReceiptLines(c *gin.Context) {
+	id := c.Param("id")
+	lines, err := h.svc.ListReceiptLines(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": lines})
+}
+
+func (h *WarehouseHandler) GetShipmentLines(c *gin.Context) {
+	id := c.Param("id")
+	lines, err := h.svc.ListShipmentLines(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": lines})
+}

@@ -67,3 +67,8 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 	return bill, nil
 }
 
+func (s *AccountsPayableService) ListVendorBills(ctx context.Context) ([]domain.VendorBill, error) {
+	return s.bills.List(ctx)
+}
+
+

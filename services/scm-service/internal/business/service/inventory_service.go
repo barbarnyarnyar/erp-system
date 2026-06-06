@@ -358,3 +358,7 @@ func (s *InventoryService) publishValuation(ctx context.Context, ii *domain.Inve
 		Timestamp:       time.Now(),
 	})
 }
+
+func (s *InventoryService) ListMovements(ctx context.Context) ([]domain.InventoryMovement, error) {
+	return s.moveRepo.List(ctx)
+}

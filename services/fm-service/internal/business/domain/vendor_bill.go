@@ -8,7 +8,7 @@ import (
 
 type VendorBill struct {
 	ID              string          `json:"id"`
-	SupplierID      string          `json:"supplier_id"` // Cross-service reference to SCM's Supplier
+	SupplierID      string          `json:"supplier_id"`
 	BillNumber      string          `json:"bill_number"`
 	PurchaseOrderID *string         `json:"purchase_order_id"`
 	IssueDate       time.Time       `json:"issue_date"`

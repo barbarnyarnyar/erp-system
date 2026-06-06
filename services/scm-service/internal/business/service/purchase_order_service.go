@@ -316,3 +316,11 @@ func (s *PurchaseOrderService) RejectPurchaseRequisition(ctx context.Context, id
 
 	return pr, nil
 }
+
+func (s *PurchaseOrderService) ListPurchaseOrderLines(ctx context.Context, poID string) ([]domain.PurchaseOrderLine, error) {
+	return s.lineRepo.ListByPOID(ctx, poID)
+}
+
+func (s *PurchaseOrderService) ListPurchaseRequisitionLines(ctx context.Context, reqID string) ([]domain.PurchaseRequisitionLine, error) {
+	return s.reqLineRepo.ListByRequisitionID(ctx, reqID)
+}
