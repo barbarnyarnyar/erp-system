@@ -300,6 +300,17 @@ func (r *UserStoreRepository) ListByUserID(ctx context.Context, userID string) (
 	return list, nil
 }
 
+func (r *UserStoreRepository) Delete(ctx context.Context, userID string, storeID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, l := range r.links {
+		if l.UserID == userID && l.StoreID == storeID {
+			delete(r.links, id)
+		}
+	}
+	return nil
+}
+
 type RolePermissionRepository struct {
 	mu    sync.RWMutex
 	links map[string]domain.RolePermission

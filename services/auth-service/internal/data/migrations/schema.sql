@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     id UUID PRIMARY KEY NOT NULL,
     user_id UUID NOT NULL REFERENCES users(id),
     refresh_token VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(255),
+    user_agent VARCHAR(255),
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
@@ -40,7 +42,9 @@ CREATE TABLE IF NOT EXISTS permissions (
 CREATE TABLE IF NOT EXISTS user_roles (
     id UUID PRIMARY KEY NOT NULL,
     user_id UUID NOT NULL REFERENCES users(id),
-    role_id UUID NOT NULL REFERENCES roles(id)
+    role_id UUID NOT NULL REFERENCES roles(id),
+    created_at TIMESTAMP NOT NULL,
+    assigned_by UUID
 );
 
 CREATE TABLE IF NOT EXISTS user_stores (
@@ -53,6 +57,8 @@ CREATE TABLE IF NOT EXISTS user_stores (
 CREATE TABLE IF NOT EXISTS role_permissions (
     id UUID PRIMARY KEY NOT NULL,
     role_id UUID NOT NULL REFERENCES roles(id),
-    permission_id UUID NOT NULL REFERENCES permissions(id)
+    permission_id UUID NOT NULL REFERENCES permissions(id),
+    created_at TIMESTAMP NOT NULL,
+    assigned_by UUID
 );
 

@@ -42,6 +42,7 @@ type UserRoleRepository interface {
 type UserStoreRepository interface {
 	Create(ctx context.Context, us *UserStore) error
 	ListByUserID(ctx context.Context, userID string) ([]UserStore, error)
+	Delete(ctx context.Context, userID string, storeID string) error
 }
 
 type RolePermissionRepository interface {

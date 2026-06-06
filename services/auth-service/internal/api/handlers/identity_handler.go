@@ -9,17 +9,27 @@ import (
 )
 
 type IdentityHandler struct {
-	idSvc *service.IdentityService
+	authSvc *service.AuthService
+	userSvc *service.UserService
+	rbacSvc *service.RBACService
 }
 
-func NewIdentityHandler(idSvc *service.IdentityService) *IdentityHandler {
-	return &IdentityHandler{idSvc: idSvc}
+func NewIdentityHandler(
+	authSvc *service.AuthService,
+	userSvc *service.UserService,
+	rbacSvc *service.RBACService,
+) *IdentityHandler {
+	return &IdentityHandler{
+		authSvc: authSvc,
+		userSvc: userSvc,
+		rbacSvc: rbacSvc,
+	}
 }
 
 type RegisterReq struct {
 	Username       string   `json:"username" binding:"required"`
 	Email          string   `json:"email" binding:"required"`
-	PasswordHash   string   `json:"password_hash" binding:"required"`
+	Password       string   `json:"password" binding:"required"`
 	FirstName      string   `json:"first_name" binding:"required"`
 	LastName       string   `json:"last_name" binding:"required"`
 	InitialStoreID string   `json:"initial_store_id"`
@@ -36,12 +46,12 @@ func (h *IdentityHandler) Register(c *gin.Context) {
 	user := &domain.User{
 		Username:     req.Username,
 		Email:        req.Email,
-		PasswordHash: req.PasswordHash,
+		PasswordHash: req.Password, // password hash is raw password for simplicity of the in-memory example
 		FirstName:    req.FirstName,
 		LastName:     req.LastName,
 	}
 
-	created, err := h.idSvc.CreateUser(c.Request.Context(), user, req.InitialStoreID, req.RoleIDs)
+	created, err := h.userSvc.CreateUser(c.Request.Context(), user, req.InitialStoreID, req.RoleIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -51,8 +61,8 @@ func (h *IdentityHandler) Register(c *gin.Context) {
 }
 
 type LoginReq struct {
-	Username     string `json:"username" binding:"required"`
-	PasswordHash string `json:"password_hash" binding:"required"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 func (h *IdentityHandler) Login(c *gin.Context) {
@@ -62,7 +72,10 @@ func (h *IdentityHandler) Login(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.idSvc.AuthenticateUser(c.Request.Context(), req.Username, req.PasswordHash)
+	ipAddress := c.ClientIP()
+	userAgent := c.GetHeader("User-Agent")
+
+	accessToken, refreshToken, err := h.authSvc.AuthenticateUser(c.Request.Context(), req.Username, req.Password, ipAddress, userAgent)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -86,7 +99,7 @@ func (h *IdentityHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.idSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
+	accessToken, refreshToken, err := h.authSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -110,7 +123,13 @@ func (h *IdentityHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	err := h.idSvc.Logout(c.Request.Context(), req.RefreshToken)
+	session, err := h.authSvc.GetSessionByRefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
+		return
+	}
+
+	err = h.authSvc.RevokeToken(c.Request.Context(), session.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -131,7 +150,7 @@ func (h *IdentityHandler) AssignStore(c *gin.Context) {
 		return
 	}
 
-	err := h.idSvc.AssignUserToStore(c.Request.Context(), id, req.StoreID)
+	err := h.userSvc.AssignUserToStore(c.Request.Context(), id, req.StoreID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -152,7 +171,7 @@ func (h *IdentityHandler) ValidatePermission(c *gin.Context) {
 		return
 	}
 
-	valid, err := h.idSvc.ValidatePermissions(c.Request.Context(), id, req.Permission)
+	valid, err := h.rbacSvc.ValidatePermissions(c.Request.Context(), id, req.Permission)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -161,15 +180,22 @@ func (h *IdentityHandler) ValidatePermission(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"valid": valid})
 }
 
+type UpdateUserReq struct {
+	FirstName *string `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Email     *string `json:"email"`
+	IsActive  *bool   `json:"is_active"`
+}
+
 func (h *IdentityHandler) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
-	var req map[string]interface{}
+	var req UpdateUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	updated, err := h.idSvc.UpdateUser(c.Request.Context(), id, req)
+	updated, err := h.userSvc.UpdateUser(c.Request.Context(), id, req.FirstName, req.LastName, req.Email, req.IsActive)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -180,7 +206,7 @@ func (h *IdentityHandler) UpdateUser(c *gin.Context) {
 
 func (h *IdentityHandler) Deactivate(c *gin.Context) {
 	id := c.Param("id")
-	err := h.idSvc.DeactivateUser(c.Request.Context(), id)
+	err := h.userSvc.DeactivateUser(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

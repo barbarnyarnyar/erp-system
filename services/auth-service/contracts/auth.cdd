@@ -15,6 +15,8 @@ service Auth {
         id            uuid      @primary
         user_id       uuid      @reference(User.id)
         refresh_token string
+        ip_address    string    @optional
+        user_agent    string    @optional
         expires_at    timestamp
         created_at    timestamp
     }
@@ -39,6 +41,8 @@ service Auth {
         id            uuid      @primary
         user_id       uuid      @reference(User.id)
         role_id       uuid      @reference(Role.id)
+        created_at    timestamp
+        assigned_by   uuid      @optional
     }
 
     entity UserStore {
@@ -52,37 +56,80 @@ service Auth {
         id            uuid      @primary
         role_id       uuid      @reference(Role.id)
         permission_id uuid      @reference(Permission.id)
+        created_at    timestamp
+        assigned_by   uuid      @optional
     }
 
-    component IdentityService {
-        description: "Manages authentication, RBAC, and store assignments"
+    // =============================================================
+    // SUBDOMAIN SERVICES (Split Components)
+    // =============================================================
 
-        func authenticateUser(username: string, passwordHash: string): string {
+    component AuthService {
+        description: "Manages login, logout, token verification and refresh"
+
+        func authenticateUser(username: string, password: string): string {
             description: "Verifies credentials and returns a JWT token"
         }
+        func refreshToken(refreshToken: string): string {
+            description: "Issue a new access token using a refresh token"
+        }
+        func revokeToken(sessionId: string): void {
+            description: "Revoke a session (logout)"
+        }
+        func validateToken(token: string): object {
+            description: "Decodes and validates a JWT token returning claims"
+        }
+    }
+
+    component UserService {
+        description: "Manages user accounts and store assignments"
 
         func createUser(user: User, initialStoreId: string, roleIds: list<string>): User {
             description: "create a user and establish initial store and role relations via junction tables"
         }
-
-        func updateUser(userId: string, updatedFields: object): User {
-            description: "update a user, preventing passwordHash updates"
+        func updateUser(userId: string, firstName: string @optional, lastName: string @optional, email: string @optional, isActive: boolean @optional): User {
+            description: "update user details"
         }
-
-        func updateCredentials(userId: string, newPasswordHash: string): boolean {
+        func updateCredentials(userId: string, newPassword: string): boolean {
             description: "securely update a user password"
         }
-
-        func assignUserToStore(userId: string, storeId: string): void {
-            description: "Links a user to a specific branch via UserStore junction"
-        }
-
-        func validatePermissions(userId: string, permission: string): boolean {
-            description: "Checks if a user has the required permission across all assigned roles"
-        }
-
         func deactivateUser(userId: string): void {
-            description: "Set isActive to false for a user"
+            description: "Deactivate user account"
         }
+        func assignUserToStore(userId: string, storeId: string): void {
+            description: "Links a user to a store"
+        }
+        func removeUserFromStore(userId: string, storeId: string): void {
+            description: "Removes a user from a store"
+        }
+    }
+
+    component RBACService {
+        description: "Manages Roles, Permissions, and User role assignments"
+
+        func createRole(name: string, description: string): Role {
+            description: "Create a new role"
+        }
+        func createPermission(code: string, description: string): Permission {
+            description: "Create a new permission"
+        }
+        func assignPermissionToRole(roleId: string, permissionId: string): void {
+            description: "Assign a permission to a role"
+        }
+        func validatePermissions(userId: string, permission: string): boolean {
+            description: "Checks if user has permission"
+        }
+    }
+
+    // =============================================================
+    // MESSAGE QUEUE EVENTS (EVENT-DRIVEN CONTRACTS)
+    // =============================================================
+    
+    producer_events {
+        auth.user.created: UserEventPayload
+        auth.user.deactivated: UserEventPayload
+        auth.user.role.assigned: UserRoleEventPayload
+        auth.user.store.assigned: UserStoreEventPayload
+        auth.password.changed: PasswordChangedEventPayload
     }
 }

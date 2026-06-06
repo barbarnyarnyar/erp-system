@@ -2,11 +2,13 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 type Config struct {
 	Server ServerConfig
 	JWT    JWTConfig
+	Kafka  KafkaConfig
 }
 
 type ServerConfig struct {
@@ -20,7 +22,16 @@ type JWTConfig struct {
 	RefreshExpiry int // in hours
 }
 
+type KafkaConfig struct {
+	Brokers []string
+}
+
 func Load() (*Config, error) {
+	brokers := os.Getenv("KAFKA_BROKERS")
+	if brokers == "" {
+		brokers = "localhost:9092"
+	}
+
 	return &Config{
 		Server: ServerConfig{
 			Port: getEnv("PORT", "8000"),
@@ -30,6 +41,9 @@ func Load() (*Config, error) {
 			Secret:        getEnv("JWT_SECRET", "super-secret-key-123"),
 			AccessExpiry:  60, // 1 hour
 			RefreshExpiry: 24, // 24 hours
+		},
+		Kafka: KafkaConfig{
+			Brokers: strings.Split(brokers, ","),
 		},
 	}, nil
 }

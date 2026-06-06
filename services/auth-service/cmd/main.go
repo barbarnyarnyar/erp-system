@@ -14,6 +14,7 @@ import (
 	"github.com/erp-system/auth-service/internal/business/domain"
 	"github.com/erp-system/auth-service/internal/business/service"
 	"github.com/erp-system/auth-service/internal/config"
+	"github.com/erp-system/auth-service/internal/data/kafka"
 	"github.com/erp-system/auth-service/internal/data/memory"
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +28,15 @@ func main() {
 
 	log.Printf("Starting auth-service in %s environment...", cfg.Server.Env)
 
-	// 2. Initialize in-memory repositories
+	// 2. Initialize Event Publisher (Kafka)
+	publisher := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
+	defer func() {
+		if err := publisher.Close(); err != nil {
+			log.Printf("Failed to close Kafka publisher: %v", err)
+		}
+	}()
+
+	// 3. Initialize in-memory repositories
 	userRepo := memory.NewUserRepository()
 	sessRepo := memory.NewSessionRepository()
 	roleRepo := memory.NewRoleRepository()
@@ -36,22 +45,34 @@ func main() {
 	usRepo := memory.NewUserStoreRepository()
 	rpRepo := memory.NewRolePermissionRepository()
 
-	// 3. Initialize business service
-	idSvc := service.NewIdentityService(
-		userRepo,
-		sessRepo,
+	// 4. Initialize business services (split components)
+	rbacSvc := service.NewRBACService(
 		roleRepo,
 		permRepo,
 		urRepo,
-		usRepo,
 		rpRepo,
+		publisher,
+	)
+
+	userSvc := service.NewUserService(
+		userRepo,
+		usRepo,
+		urRepo,
+		publisher,
+	)
+
+	authSvc := service.NewAuthService(
+		userRepo,
+		sessRepo,
+		rbacSvc,
+		publisher,
 		cfg,
 	)
 
-	// 4. Seed initial roles, permissions, and users
-	seedAuthData(idSvc)
+	// 5. Seed initial roles, permissions, and users
+	seedAuthData(userSvc, rbacSvc)
 
-	// 5. Setup Gin routing
+	// 6. Setup Gin routing
 	if cfg.Server.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -66,10 +87,10 @@ func main() {
 		})
 	})
 
-	handler := handlers.NewIdentityHandler(idSvc)
+	handler := handlers.NewIdentityHandler(authSvc, userSvc, rbacSvc)
 	routes.SetupAuthRoutes(r, handler)
 
-	// 6. Start HTTP server with graceful shutdown
+	// 7. Start HTTP server with graceful shutdown
 	server := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
 		Handler: r,
@@ -98,33 +119,33 @@ func main() {
 	log.Println("auth-service stopped gracefully.")
 }
 
-func seedAuthData(s *service.IdentityService) {
+func seedAuthData(userSvc *service.UserService, rbacSvc *service.RBACService) {
 	ctx := context.Background()
 	log.Println("Seeding Auth / RBAC definitions...")
 
 	// Create roles
-	adminRole, _ := s.CreateRole(ctx, "Admin", "Super admin with all permissions")
-	managerRole, _ := s.CreateRole(ctx, "Manager", "Store manager permissions")
-	clerkRole, _ := s.CreateRole(ctx, "Clerk", "Basic clerk permissions")
+	adminRole, _ := rbacSvc.CreateRole(ctx, "Admin", "Super admin with all permissions")
+	managerRole, _ := rbacSvc.CreateRole(ctx, "Manager", "Store manager permissions")
+	clerkRole, _ := rbacSvc.CreateRole(ctx, "Clerk", "Basic clerk permissions")
 
 	// Create permissions
-	pCreateProduct, _ := s.CreatePermission(ctx, "scm:product:create", "Create products")
-	pReadProduct, _ := s.CreatePermission(ctx, "scm:product:read", "View products")
-	pCreateCustomer, _ := s.CreatePermission(ctx, "crm:customer:create", "Create customers")
-	pReadCustomer, _ := s.CreatePermission(ctx, "crm:customer:read", "View customers")
+	pCreateProduct, _ := rbacSvc.CreatePermission(ctx, "scm:product:create", "Create products")
+	pReadProduct, _ := rbacSvc.CreatePermission(ctx, "scm:product:read", "View products")
+	pCreateCustomer, _ := rbacSvc.CreatePermission(ctx, "crm:customer:create", "Create customers")
+	pReadCustomer, _ := rbacSvc.CreatePermission(ctx, "crm:customer:read", "View customers")
 
 	// Link permissions to Admin Role
-	_ = s.LinkRolePermission(ctx, adminRole.ID, pCreateProduct.ID)
-	_ = s.LinkRolePermission(ctx, adminRole.ID, pReadProduct.ID)
-	_ = s.LinkRolePermission(ctx, adminRole.ID, pCreateCustomer.ID)
-	_ = s.LinkRolePermission(ctx, adminRole.ID, pReadCustomer.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pCreateProduct.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadProduct.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pCreateCustomer.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadCustomer.ID)
 
 	// Link permissions to Manager Role
-	_ = s.LinkRolePermission(ctx, managerRole.ID, pReadProduct.ID)
-	_ = s.LinkRolePermission(ctx, managerRole.ID, pReadCustomer.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, managerRole.ID, pReadProduct.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, managerRole.ID, pReadCustomer.ID)
 
 	// Link permissions to Clerk Role
-	_ = s.LinkRolePermission(ctx, clerkRole.ID, pReadProduct.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, clerkRole.ID, pReadProduct.ID)
 
 	// Create initial admin user
 	adminUser := &domain.User{
@@ -135,7 +156,7 @@ func seedAuthData(s *service.IdentityService) {
 		LastName:     "Administrator",
 	}
 
-	_, err := s.CreateUser(ctx, adminUser, "store_default", []string{adminRole.ID})
+	_, err := userSvc.CreateUser(ctx, adminUser, "store_default", []string{adminRole.ID})
 	if err != nil {
 		log.Printf("Failed to seed admin user: %v", err)
 		return
