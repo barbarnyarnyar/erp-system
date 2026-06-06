@@ -2,6 +2,8 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"api-gateway/internal/config"
 	"api-gateway/internal/handlers"

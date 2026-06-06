@@ -7,6 +7,7 @@ import (
 
 type Project struct {
 	ID          string     `json:"id"`
+	PortfolioID *string    `json:"portfolio_id"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
 	StartDate   time.Time  `json:"start_date"`

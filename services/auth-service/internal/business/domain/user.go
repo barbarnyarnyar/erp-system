@@ -10,7 +10,6 @@ type User struct {
 	Username     string    `json:"username"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"password_hash"`
-	Role         string    `json:"role"`
 	FirstName    string    `json:"first_name"`
 	LastName     string    `json:"last_name"`
 	IsActive     bool      `json:"is_active"`

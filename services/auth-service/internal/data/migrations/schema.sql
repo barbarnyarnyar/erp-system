@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL,
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     is_active BOOLEAN NOT NULL,
@@ -20,5 +19,40 @@ CREATE TABLE IF NOT EXISTS sessions (
     refresh_token VARCHAR(255) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS roles (
+    id UUID PRIMARY KEY NOT NULL,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+    id UUID PRIMARY KEY NOT NULL,
+    code VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    id UUID PRIMARY KEY NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    role_id UUID NOT NULL REFERENCES roles(id)
+);
+
+CREATE TABLE IF NOT EXISTS user_stores (
+    id UUID PRIMARY KEY NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    store_id UUID NOT NULL,
+    assigned_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id UUID PRIMARY KEY NOT NULL,
+    role_id UUID NOT NULL REFERENCES roles(id),
+    permission_id UUID NOT NULL REFERENCES permissions(id)
 );
 

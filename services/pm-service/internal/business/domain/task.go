@@ -2,18 +2,22 @@
 package domain
 
 import (
+	"github.com/shopspring/decimal"
 	"time"
 )
 
 type Task struct {
-	ID          string     `json:"id"`
-	ProjectID   string     `json:"project_id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	AssignedTo  *string    `json:"assigned_to"`
-	Status      string     `json:"status"` // e.g., TODO, IN_PROGRESS, REVIEW, DONE
-	StartDate   *time.Time `json:"start_date"`
-	EndDate     *time.Time `json:"end_date"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          string          `json:"id"`
+	ProjectID   string          `json:"project_id"`
+	ParentID    *string         `json:"parent_id"` // For WBS hierarchy
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	AssignedTo  *string         `json:"assigned_to"`  // User/Employee ID
+	Status      string          `json:"status"`       // e.g., TODO, IN_PROGRESS, REVIEW, DONE
+	Progress    int             `json:"progress"`     // 0-100 percentage
+	ActualHours decimal.Decimal `json:"actual_hours"` // Actual time spent
+	StartDate   *time.Time      `json:"start_date"`
+	EndDate     *time.Time      `json:"end_date"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }

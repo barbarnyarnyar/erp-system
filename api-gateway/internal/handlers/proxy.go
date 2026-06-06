@@ -2,8 +2,6 @@
 package handlers
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"

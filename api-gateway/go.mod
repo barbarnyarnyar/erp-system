@@ -1,9 +1,9 @@
-// api-gateway/go.mod
-module github.com/sithuhlaing/erp-system/api-gateway
+module api-gateway
 
 go 1.21
 
 require (
+	erp-system/shared v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 )

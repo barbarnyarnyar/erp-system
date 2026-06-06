@@ -4,7 +4,6 @@ service Auth {
         username      string    @unique
         email         string    @unique
         password_hash string
-        role          string
         first_name    string
         last_name     string
         is_active     boolean
@@ -18,6 +17,41 @@ service Auth {
         refresh_token string
         expires_at    timestamp
         created_at    timestamp
+    }
+
+    entity Role {
+        id            uuid      @primary
+        name          string    @unique
+        description   string
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity Permission {
+        id            uuid      @primary
+        code          string    @unique
+        description   string
+        created_at    timestamp
+        updated_at    timestamp
+    }
+
+    entity UserRole {
+        id            uuid      @primary
+        user_id       uuid      @reference(User.id)
+        role_id       uuid      @reference(Role.id)
+    }
+
+    entity UserStore {
+        id            uuid      @primary
+        user_id       uuid      @reference(User.id)
+        store_id      uuid
+        assigned_at   timestamp
+    }
+
+    entity RolePermission {
+        id            uuid      @primary
+        role_id       uuid      @reference(Role.id)
+        permission_id uuid      @reference(Permission.id)
     }
 
     component IdentityService {
