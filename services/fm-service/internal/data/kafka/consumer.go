@@ -12,20 +12,46 @@ import (
 	"github.com/erp-system/fm-service/internal/business/service"
 )
 
+type DeadLetterMessage struct {
+	OriginalTopic string      `json:"original_topic"`
+	OriginalKey   string      `json:"original_key,omitempty"`
+	Payload       interface{} `json:"payload"`
+	Error         string      `json:"error"`
+	FailedAt      time.Time   `json:"failed_at"`
+	ServiceName   string      `json:"service_name"`
+}
+
+const (
+	TopicHrEmployeeCreatedDeadLetter        = domain.TopicHrEmployeeCreated + ".dead-letter"
+	TopicHrPayrollProcessedDeadLetter       = domain.TopicHrPayrollProcessed + ".dead-letter"
+	TopicHrExpenseSubmittedDeadLetter       = domain.TopicHrExpenseSubmitted + ".dead-letter"
+	TopicScmPurchaseOrderCreatedDeadLetter  = domain.TopicScmPurchaseOrderCreated + ".dead-letter"
+	TopicScmInventoryValuedDeadLetter       = domain.TopicScmInventoryValued + ".dead-letter"
+	TopicCrmSalesOrderConfirmedDeadLetter   = domain.TopicCrmSalesOrderConfirmed + ".dead-letter"
+	TopicCrmCustomerCreatedDeadLetter       = domain.TopicCrmCustomerCreated + ".dead-letter"
+	TopicMfgProductionCompletedDeadLetter   = domain.TopicMfgProductionCompleted + ".dead-letter"
+	TopicMfgMaterialConsumedDeadLetter      = domain.TopicMfgMaterialConsumed + ".dead-letter"
+	TopicPrjProjectCreatedDeadLetter        = domain.TopicPrjProjectCreated + ".dead-letter"
+	TopicPrjTimeLoggedDeadLetter            = domain.TopicPrjTimeLogged + ".dead-letter"
+	TopicPrjExpenseIncurredDeadLetter       = domain.TopicPrjExpenseIncurred + ".dead-letter"
+)
+
 // KafkaConsumer listens to external microservice events and updates the financial records
 type KafkaConsumer struct {
-	reader *kafka.Reader
-	gl     *service.GeneralLedgerService
-	ap     *service.AccountsPayableService
-	ar     *service.AccountsReceivableService
-	cash   *service.CashManagementService
-	budget *service.BudgetingService
+	reader    *kafka.Reader
+	publisher *KafkaPublisher
+	gl        *service.GeneralLedgerService
+	ap        *service.AccountsPayableService
+	ar        *service.AccountsReceivableService
+	cash      *service.CashManagementService
+	budget    *service.BudgetingService
 }
 
 // NewKafkaConsumer initializes the Kafka consumer with a list of topics
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
+	publisher *KafkaPublisher,
 	gl *service.GeneralLedgerService,
 	ap *service.AccountsPayableService,
 	ar *service.AccountsReceivableService,
@@ -56,12 +82,13 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader: reader,
-		gl:     gl,
-		ap:     ap,
-		ar:     ar,
-		cash:   cash,
-		budget: budget,
+		reader:    reader,
+		publisher: publisher,
+		gl:        gl,
+		ap:        ap,
+		ar:        ar,
+		cash:      cash,
+		budget:    budget,
 	}
 }
 
@@ -87,8 +114,26 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			log.Printf("Received event on topic %s, key %s", msg.Topic, string(msg.Key))
 			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
 				log.Printf("Failed to process event %s: %v", msg.Topic, err)
+				c.publishToDLQ(ctx, msg.Topic, string(msg.Key), msg.Value, err)
 			}
 		}
+	}
+}
+
+func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key string, value []byte, err error) {
+	dlqMsg := DeadLetterMessage{
+		OriginalTopic: topic,
+		OriginalKey:   key,
+		Payload:       string(value),
+		Error:         err.Error(),
+		FailedAt:      time.Now(),
+		ServiceName:   "fm-service",
+	}
+	dlqTopic := topic + ".dead-letter"
+	if dlqErr := c.publisher.Publish(ctx, dlqTopic, key, dlqMsg); dlqErr != nil {
+		log.Printf("ERROR: failed to publish DLQ message for topic %s: %v", topic, dlqErr)
+	} else {
+		log.Printf("ERROR: consumer handler failed for topic %s: %v — sent to DLQ topic %s", topic, err, dlqTopic)
 	}
 }
 

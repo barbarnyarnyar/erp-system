@@ -11,14 +11,30 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+type DeadLetterMessage struct {
+	OriginalTopic string      `json:"original_topic"`
+	OriginalKey   string      `json:"original_key,omitempty"`
+	Payload       interface{} `json:"payload"`
+	Error         string      `json:"error"`
+	FailedAt      time.Time   `json:"failed_at"`
+	ServiceName   string      `json:"service_name"`
+}
+
+const (
+	TopicMfgProductionScheduledDeadLetter = domain.TopicMfgProductionScheduled + ".dead-letter"
+	TopicScmTrainingRequiredDeadLetter    = domain.TopicScmTrainingRequired + ".dead-letter"
+)
+
 type KafkaConsumer struct {
-	reader   *kafka.Reader
-	training *service.TrainingService
+	reader    *kafka.Reader
+	publisher *KafkaPublisher
+	training  *service.TrainingService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
+	publisher *KafkaPublisher,
 	training *service.TrainingService,
 ) *KafkaConsumer {
 	topics := []string{
@@ -39,8 +55,9 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:   reader,
-		training: training,
+		reader:    reader,
+		publisher: publisher,
+		training:  training,
 	}
 }
 
@@ -65,8 +82,26 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			log.Printf("Received event on topic %s, key %s", msg.Topic, string(msg.Key))
 			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
 				log.Printf("Failed to process event %s: %v", msg.Topic, err)
+				c.publishToDLQ(ctx, msg.Topic, string(msg.Key), msg.Value, err)
 			}
 		}
+	}
+}
+
+func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key string, value []byte, err error) {
+	dlqMsg := DeadLetterMessage{
+		OriginalTopic: topic,
+		OriginalKey:   key,
+		Payload:       string(value),
+		Error:         err.Error(),
+		FailedAt:      time.Now(),
+		ServiceName:   "hr-service",
+	}
+	dlqTopic := topic + ".dead-letter"
+	if dlqErr := c.publisher.Publish(ctx, dlqTopic, key, dlqMsg); dlqErr != nil {
+		log.Printf("ERROR: failed to publish DLQ message for topic %s: %v", topic, dlqErr)
+	} else {
+		log.Printf("ERROR: consumer handler failed for topic %s: %v — sent to DLQ topic %s", topic, err, dlqTopic)
 	}
 }
 

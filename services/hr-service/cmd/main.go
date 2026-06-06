@@ -74,7 +74,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, trainingSvc)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, trainingSvc)
 	go consumer.Start(ctx)
 	defer func() {
 		if err := consumer.Close(); err != nil {

@@ -18,6 +18,29 @@ type stockReservation struct {
 	quantity   int
 }
 
+// assertInventoryInvariant validates the SCM inventory invariant:
+//   quantity_available = quantity_on_hand - quantity_reserved
+// with all three fields non-negative. Returns nil when satisfied, or a
+// descriptive error if violated. Called at the end of every mutation site
+// to catch logic bugs that would silently corrupt inventory state.
+func assertInventoryInvariant(ii *domain.InventoryItem) error {
+	if ii.QuantityOnHand < 0 {
+		return fmt.Errorf("inventory invariant violated: quantity_on_hand=%d (must be >= 0)", ii.QuantityOnHand)
+	}
+	if ii.QuantityReserved < 0 {
+		return fmt.Errorf("inventory invariant violated: quantity_reserved=%d (must be >= 0)", ii.QuantityReserved)
+	}
+	if ii.QuantityAvailable < 0 {
+		return fmt.Errorf("inventory invariant violated: quantity_available=%d (must be >= 0)", ii.QuantityAvailable)
+	}
+	expected := ii.QuantityOnHand - ii.QuantityReserved
+	if ii.QuantityAvailable != expected {
+		return fmt.Errorf("inventory invariant violated: quantity_available=%d != quantity_on_hand(%d) - quantity_reserved(%d) = %d",
+			ii.QuantityAvailable, ii.QuantityOnHand, ii.QuantityReserved, expected)
+	}
+	return nil
+}
+
 type InventoryService struct {
 	invRepo      domain.InventoryItemRepository
 	moveRepo     domain.InventoryMovementRepository
@@ -69,6 +92,10 @@ func (s *InventoryService) CreateInventoryItem(ctx context.Context, productID, l
 		return nil, err
 	}
 
+	if err := assertInventoryInvariant(ii); err != nil {
+		return nil, err
+	}
+
 	s.publishValuation(ctx, ii)
 
 	return ii, nil
@@ -91,6 +118,10 @@ func (s *InventoryService) UpdateInventoryItem(ctx context.Context, id string, q
 	ii.MaximumStock = maxStock
 	ii.UnitCost = cost
 	ii.UpdatedAt = time.Now()
+
+	if err := assertInventoryInvariant(ii); err != nil {
+		return nil, err
+	}
 
 	err = s.invRepo.Update(ctx, ii)
 	if err != nil {
@@ -115,18 +146,23 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 	switch movementType {
 	case "RECEIPT", "ADJUSTMENT_ADD":
 		ii.QuantityOnHand += qty
-		ii.QuantityAvailable += qty
 	case "ISSUE", "ADJUSTMENT_SUB":
 		if ii.QuantityOnHand < qty {
 			return nil, errors.New("insufficient inventory on hand to perform issue")
 		}
 		ii.QuantityOnHand -= qty
-		ii.QuantityAvailable -= qty
 	default:
 		return nil, fmt.Errorf("unknown inventory movement type: %s", movementType)
 	}
+	// Always recompute available from the formula; never mutate it by a delta.
+	// This preserves the invariant `available = on_hand - reserved` even
+	// when `reserved > 0`.
+	ii.QuantityAvailable = ii.QuantityOnHand - ii.QuantityReserved
 
 	ii.UpdatedAt = time.Now()
+	if err := assertInventoryInvariant(ii); err != nil {
+		return nil, err
+	}
 	err = s.invRepo.Update(ctx, ii)
 	if err != nil {
 		return nil, err
@@ -227,6 +263,9 @@ func (s *InventoryService) ReserveStock(ctx context.Context, productID, location
 	ii.QuantityAvailable = ii.QuantityOnHand - ii.QuantityReserved
 	ii.UpdatedAt = time.Now()
 
+	if err := assertInventoryInvariant(ii); err != nil {
+		return err
+	}
 	err = s.invRepo.Update(ctx, ii)
 	if err != nil {
 		return err
@@ -266,6 +305,9 @@ func (s *InventoryService) ReleaseReservation(ctx context.Context, referenceID s
 	ii.QuantityAvailable = ii.QuantityOnHand - ii.QuantityReserved
 	ii.UpdatedAt = time.Now()
 
+	if err := assertInventoryInvariant(ii); err != nil {
+		return err
+	}
 	err = s.invRepo.Update(ctx, ii)
 	if err != nil {
 		return err
@@ -344,6 +386,9 @@ func (s *InventoryService) ExecuteStockTransfer(ctx context.Context, id string) 
 	fromItem.QuantityOnHand -= st.Quantity
 	fromItem.QuantityAvailable = fromItem.QuantityOnHand - fromItem.QuantityReserved
 	fromItem.UpdatedAt = time.Now()
+	if err := assertInventoryInvariant(fromItem); err != nil {
+		return nil, err
+	}
 	err = s.invRepo.Update(ctx, fromItem)
 	if err != nil {
 		return nil, err
@@ -374,6 +419,9 @@ func (s *InventoryService) ExecuteStockTransfer(ctx context.Context, id string) 
 	toItem.QuantityOnHand += st.Quantity
 	toItem.QuantityAvailable = toItem.QuantityOnHand - toItem.QuantityReserved
 	toItem.UpdatedAt = time.Now()
+	if err := assertInventoryInvariant(toItem); err != nil {
+		return nil, err
+	}
 	err = s.invRepo.Update(ctx, toItem)
 	if err != nil {
 		return nil, err

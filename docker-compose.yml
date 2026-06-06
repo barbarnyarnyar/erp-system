@@ -70,6 +70,8 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - JWT_SECRET=your-super-secret-key
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
   fm-service:
@@ -78,6 +80,7 @@ services:
       - "8001:8001"
     environment:
       - PORT=8001
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
   crm-service:
@@ -86,6 +89,7 @@ services:
       - "8002:8002"
     environment:
       - PORT=8002
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
   hr-service:
@@ -94,6 +98,7 @@ services:
       - "8003:8003"
     environment:
       - PORT=8003
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
   m-service:
@@ -102,6 +107,7 @@ services:
       - "8004:8004"
     environment:
       - PORT=8004
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
   pm-service:
@@ -110,6 +116,7 @@ services:
       - "8005:8006"
     environment:
       - PORT=8006
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
   scm-service:
@@ -118,6 +125,7 @@ services:
       - "8006:8006"
     environment:
       - PORT=8006
+      - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
 volumes:

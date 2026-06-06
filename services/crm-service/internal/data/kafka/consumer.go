@@ -11,14 +11,29 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+type DeadLetterMessage struct {
+	OriginalTopic string      `json:"original_topic"`
+	OriginalKey   string      `json:"original_key,omitempty"`
+	Payload       interface{} `json:"payload"`
+	Error         string      `json:"error"`
+	FailedAt      time.Time   `json:"failed_at"`
+	ServiceName   string      `json:"service_name"`
+}
+
+const (
+	TopicScmShipmentDeliveredDeadLetter = domain.TopicScmShipmentDelivered + ".dead-letter"
+)
+
 type KafkaConsumer struct {
-	reader   *kafka.Reader
-	orderSvc *service.SalesOrderService
+	reader    *kafka.Reader
+	publisher *KafkaPublisher
+	orderSvc  *service.SalesOrderService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
+	publisher *KafkaPublisher,
 	orderSvc *service.SalesOrderService,
 ) *KafkaConsumer {
 	topics := []string{
@@ -41,8 +56,9 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:   reader,
-		orderSvc: orderSvc,
+		reader:    reader,
+		publisher: publisher,
+		orderSvc:  orderSvc,
 	}
 }
 
@@ -67,8 +83,26 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			log.Printf("Received event on topic %s, key %s", msg.Topic, string(msg.Key))
 			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
 				log.Printf("Failed to process event %s: %v", msg.Topic, err)
+				c.publishToDLQ(ctx, msg.Topic, string(msg.Key), msg.Value, err)
 			}
 		}
+	}
+}
+
+func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key string, value []byte, err error) {
+	dlqMsg := DeadLetterMessage{
+		OriginalTopic: topic,
+		OriginalKey:   key,
+		Payload:       string(value),
+		Error:         err.Error(),
+		FailedAt:      time.Now(),
+		ServiceName:   "crm-service",
+	}
+	dlqTopic := topic + ".dead-letter"
+	if dlqErr := c.publisher.Publish(ctx, dlqTopic, key, dlqMsg); dlqErr != nil {
+		log.Printf("ERROR: failed to publish DLQ message for topic %s: %v", topic, dlqErr)
+	} else {
+		log.Printf("ERROR: consumer handler failed for topic %s: %v — sent to DLQ topic %s", topic, err, dlqTopic)
 	}
 }
 
@@ -94,6 +128,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.orderSvc.UpdateSalesOrder(ctx, ev.SalesOrderID, "DELIVERED")
 		if err != nil {
 			log.Printf("Failed to update sales order status to DELIVERED: %v", err)
+			return err
 		}
 		return nil
 

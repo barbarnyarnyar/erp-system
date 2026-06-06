@@ -11,14 +11,30 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+type DeadLetterMessage struct {
+	OriginalTopic string      `json:"original_topic"`
+	OriginalKey   string      `json:"original_key,omitempty"`
+	Payload       interface{} `json:"payload"`
+	Error         string      `json:"error"`
+	FailedAt      time.Time   `json:"failed_at"`
+	ServiceName   string      `json:"service_name"`
+}
+
+const (
+	TopicCrmSalesOrderCreatedDeadLetter  = domain.TopicCrmSalesOrderCreated + ".dead-letter"
+	TopicPrjCustomOrderCreatedDeadLetter = domain.TopicPrjCustomOrderCreated + ".dead-letter"
+)
+
 type KafkaConsumer struct {
-	reader *kafka.Reader
-	prod   *service.ProductionService
+	reader    *kafka.Reader
+	publisher *KafkaPublisher
+	prod      *service.ProductionService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
+	publisher *KafkaPublisher,
 	prod *service.ProductionService,
 ) *KafkaConsumer {
 	topics := []string{
@@ -41,8 +57,9 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader: reader,
-		prod:   prod,
+		reader:    reader,
+		publisher: publisher,
+		prod:      prod,
 	}
 }
 
@@ -67,8 +84,26 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			log.Printf("Received event on topic %s, key %s", msg.Topic, string(msg.Key))
 			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
 				log.Printf("Failed to process event %s: %v", msg.Topic, err)
+				c.publishToDLQ(ctx, msg.Topic, string(msg.Key), msg.Value, err)
 			}
 		}
+	}
+}
+
+func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key string, value []byte, err error) {
+	dlqMsg := DeadLetterMessage{
+		OriginalTopic: topic,
+		OriginalKey:   key,
+		Payload:       string(value),
+		Error:         err.Error(),
+		FailedAt:      time.Now(),
+		ServiceName:   "m-service",
+	}
+	dlqTopic := topic + ".dead-letter"
+	if dlqErr := c.publisher.Publish(ctx, dlqTopic, key, dlqMsg); dlqErr != nil {
+		log.Printf("ERROR: failed to publish DLQ message for topic %s: %v", topic, dlqErr)
+	} else {
+		log.Printf("ERROR: consumer handler failed for topic %s: %v — sent to DLQ topic %s", topic, err, dlqTopic)
 	}
 }
 
@@ -86,6 +121,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, time.Now().AddDate(0, 0, 7), ev.SalesOrderID)
 		if err != nil {
 			log.Printf("Failed to auto-schedule production order for Sales Order %s: %v", ev.SalesOrderID, err)
+			return err
 		}
 		return nil
 
@@ -145,6 +181,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, ev.RequiredBy, "")
 		if err != nil {
 			log.Printf("Failed to auto-schedule production order for Project Custom Order %s: %v", ev.ProjectID, err)
+			return err
 		}
 		return nil
 	}

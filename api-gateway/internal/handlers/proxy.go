@@ -44,7 +44,7 @@ func (p *ProxyHandler) ProxyToService(serviceName string) gin.HandlerFunc {
 
 		// Add user context to headers
 		if userID, exists := c.Get("user_id"); exists {
-			c.Request.Header.Set("X-User-ID", string(rune(userID.(uint))))
+			c.Request.Header.Set("X-User-ID", userID.(string))
 		}
 		if username, exists := c.Get("username"); exists {
 			c.Request.Header.Set("X-Username", username.(string))

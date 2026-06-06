@@ -14,7 +14,7 @@ type AuthMiddleware struct {
 }
 
 type JWTClaims struct {
-	UserID      uint     `json:"user_id"`
+	UserID      string   `json:"user_id"`
 	Username    string   `json:"username"`
 	Email       string   `json:"email"`
 	Roles       []string `json:"roles"`

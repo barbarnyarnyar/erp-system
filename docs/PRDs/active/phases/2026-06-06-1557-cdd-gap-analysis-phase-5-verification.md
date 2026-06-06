@@ -3,7 +3,7 @@
 **Source PRD**: docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: 5 of 6
-**Status**: Draft
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -158,16 +158,16 @@ make test-direct
 
 ## Definition of Done (Parent PRD)
 
-- [ ] **2.0 resolved**: Transaction entity either CDD-documented or removed
-- [ ] **2.1 resolved**: All 7 FM entities have repository interfaces + memory implementations
-- [ ] **2.2 resolved**: All 5 missing service methods implemented
-- [ ] **2.3 resolved**: All 27 entities have HTTP CRUD routes
-- [ ] **2.4 resolved**: `MaintenanceService` extracted from God struct into its own Go struct
-- [ ] **2.5 resolved**: Event integrity: 0 missing publishers, 0 dead consumer subscriptions, topic names consistent, auth consumer decision made
-- [ ] **2.6 resolved**: Single gateway implementation with auth deployed
-- [ ] Gateway port mappings match code defaults
-- [ ] Dockerfile EXPOSE ports match code defaults
-- [ ] Plaintext passwords migrated to bcrypt
-- [ ] JWT secret moved to environment variable
-- [ ] Kafka publish errors at least logged (not discarded)
-- [ ] All changes verified by `make test` passing
+- [x] **2.0 resolved**: Transaction entity either CDD-documented or removed
+- [x] **2.1 resolved**: All 7 FM entities have repository interfaces + memory implementations
+- [x] **2.2 resolved**: All 5 missing service methods implemented
+- [x] **2.3 resolved**: All 27 entities have HTTP CRUD routes
+- [x] **2.4 resolved**: `MaintenanceService` extracted from God struct into its own Go struct
+- [x] **2.5 resolved**: Event integrity: 0 missing publishers, 0 dead consumer subscriptions, topic names consistent, auth consumer decision made
+- [x] **2.6 resolved**: Single gateway implementation with auth deployed
+- [x] Gateway port mappings match code defaults
+- [x] Dockerfile EXPOSE ports match code defaults
+- [x] Plaintext passwords migrated to bcrypt
+- [x] JWT secret moved to environment variable
+- [x] Kafka publish errors at least logged (not discarded)
+- [x] All changes verified by `make test` passing

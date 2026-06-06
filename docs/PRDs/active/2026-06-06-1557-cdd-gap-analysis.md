@@ -306,9 +306,9 @@ Fix: add `entity CustomerInteraction { id, customer_id, type (CALL, MEETING, EMA
 ## 3. Definition of Done
 
 - [x] **2.0 resolved**: Transaction + TransactionLine entities added to `fm.cdd` (not removed — they have full repo+memory implementations)
-- [ ] **2.1 resolved**: All 7 FM entities have repository interfaces + memory implementations
-- [ ] **2.2 resolved**: All 5 missing service methods implemented
-- [ ] **2.3 resolved**: All 27 entities have HTTP CRUD routes
+- [x] **2.1 resolved**: All 7 FM entities have repository interfaces + memory implementations
+- [x] **2.2 resolved**: All 5 missing service methods implemented
+- [x] **2.3 resolved**: All 27 entities have HTTP CRUD routes
 - [x] **2.4 resolved**: `MaintenanceService` extracted from God struct into its own Go struct; `ProductionService` composed with `MaintenanceService` as a dependency for internal cross-calls
 - [x] **2.5 resolved**: Event integrity: 0 missing publishers, 0 dead consumer subscriptions, topic names consistent (Auth `hr.employee.terminated` handled by separate 2.18 task)
 - [x] **2.6 resolved**: Single gateway implementation with auth deployed; route prefix convention decided: `/finance/`, `/manufacturing/`, `/projects/` (matches `make test`)
@@ -316,8 +316,8 @@ Fix: add `entity CustomerInteraction { id, customer_id, type (CALL, MEETING, EMA
 - [x] Dockerfile EXPOSE ports match code defaults
 - [x] Plaintext passwords migrated to bcrypt
 - [x] JWT secret moved to environment variable
-- [ ] Kafka publish errors at least logged (not discarded with `_ =`)
-- [ ] **2.7 resolved**: InventoryItem invariant enforced via validation guard or CHECK constraint
+- [x] Kafka publish errors at least logged (not discarded with `_ =`)
+- [x] **2.7 resolved**: InventoryItem invariant enforced via `assertInventoryInvariant()` helper in `inventory_service.go` called at all 6 mutation sites (CreateInventoryItem, UpdateInventoryItem, AdjustInventory, ReserveStock, ReleaseReservation, ExecuteStockTransfer). Also fixed bug in AdjustInventory that mutated both `QuantityOnHand` and `QuantityAvailable` by the same delta (broke invariant when `QuantityReserved > 0`); now only mutates `QuantityOnHand` and recomputes `QuantityAvailable = on_hand - reserved`. 8 unit tests pass in `inventory_invariant_test.go` (see Phase S4.5 doc).
 - [ ] **2.8 resolved**: All raw string enum fields replaced with typed constants in domain layer
 - [ ] **2.9 resolved**: `UpdateJournalEntry` enforces debit=credit balance; account updates + entry save wrapped in atomic operation
 - [ ] **2.11 resolved**: `ConvertLead()` wrapped in transaction — Customer + Opportunity creation is atomic

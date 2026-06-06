@@ -149,6 +149,7 @@ func (s *Server) setupRoutes() {
 		hrGroup := protected.Group("/hr")
 		hrGroup.Use(authMiddleware.RequirePermission("hr", "*", "read"))
 		{
+			hrGroup.Any("", proxyHandler.ProxyToService("hr"))
 			hrGroup.Any("/*path", proxyHandler.ProxyToService("hr"))
 		}
 
@@ -156,6 +157,7 @@ func (s *Server) setupRoutes() {
 		scmGroup := protected.Group("/scm")
 		scmGroup.Use(authMiddleware.RequirePermission("scm", "*", "read"))
 		{
+			scmGroup.Any("", proxyHandler.ProxyToService("scm"))
 			scmGroup.Any("/*path", proxyHandler.ProxyToService("scm"))
 		}
 
@@ -163,6 +165,7 @@ func (s *Server) setupRoutes() {
 		mGroup := protected.Group("/manufacturing")
 		mGroup.Use(authMiddleware.RequirePermission("m", "*", "read"))
 		{
+			mGroup.Any("", proxyHandler.ProxyToService("m"))
 			mGroup.Any("/*path", proxyHandler.ProxyToService("m"))
 		}
 
@@ -170,6 +173,7 @@ func (s *Server) setupRoutes() {
 		crmGroup := protected.Group("/crm")
 		crmGroup.Use(authMiddleware.RequirePermission("crm", "*", "read"))
 		{
+			crmGroup.Any("", proxyHandler.ProxyToService("crm"))
 			crmGroup.Any("/*path", proxyHandler.ProxyToService("crm"))
 		}
 
@@ -177,6 +181,7 @@ func (s *Server) setupRoutes() {
 		pmGroup := protected.Group("/projects")
 		pmGroup.Use(authMiddleware.RequirePermission("pm", "*", "read"))
 		{
+			pmGroup.Any("", proxyHandler.ProxyToService("pm"))
 			pmGroup.Any("/*path", proxyHandler.ProxyToService("pm"))
 		}
 

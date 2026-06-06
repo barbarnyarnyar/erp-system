@@ -69,28 +69,36 @@ health: ## Check health of all services
 	@curl -s http://localhost:8005/health || echo "❌ Not responding"
 
 test: ## Test Hello World APIs
-	@echo "🧪 Testing Hello World APIs..."
+	@echo "🧪 Testing microservices via API Gateway..."
 	@echo ""
-	@echo "=== API Gateway ==="
-	@curl -s http://localhost:8080/ | jq '.message' || echo "❌ Failed"
+	@echo "=== API Gateway Health ==="
+	@curl -s http://localhost:8080/health | jq '.status' || echo "❌ Failed"
 	@echo ""
-	@echo "=== Finance Service ==="
-	@curl -s http://localhost:8080/api/v1/finance/hello | jq '.message' || echo "❌ Failed"
-	@echo ""
-	@echo "=== HR Service ==="
-	@curl -s http://localhost:8080/api/v1/hr/hello | jq '.message' || echo "❌ Failed"
-	@echo ""
-	@echo "=== SCM Service ==="
-	@curl -s http://localhost:8080/api/v1/scm/hello | jq '.message' || echo "❌ Failed"
-	@echo ""
-	@echo "=== Manufacturing Service ==="
-	@curl -s http://localhost:8080/api/v1/manufacturing/hello | jq '.message' || echo "❌ Failed"
-	@echo ""
-	@echo "=== CRM Service ==="
-	@curl -s http://localhost:8080/api/v1/crm/hello | jq '.message' || echo "❌ Failed"
-	@echo ""
-	@echo "=== Projects Service ==="
-	@curl -s http://localhost:8080/api/v1/projects/hello | jq '.message' || echo "❌ Failed"
+	@echo "=== Obtaining Auth Token ==="
+	@TOKEN=$$(curl -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin123"}' | jq -r '.access_token') && \
+	if [ "$$TOKEN" = "null" ] || [ -z "$$TOKEN" ]; then \
+		echo "❌ Failed to obtain auth token"; \
+		exit 1; \
+	fi && \
+	echo "Token obtained successfully." && \
+	echo "" && \
+	echo "=== Finance Service (Accounts) ===" && \
+	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/finance/accounts | jq '.data' || echo "❌ Failed" && \
+	echo "" && \
+	echo "=== HR Service (Employees) ===" && \
+	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/hr/employees | jq '.data' || echo "❌ Failed" && \
+	echo "" && \
+	echo "=== SCM Service (Products) ===" && \
+	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/scm/products | jq '.data' || echo "❌ Failed" && \
+	echo "" && \
+	echo "=== Manufacturing Service (BOMs) ===" && \
+	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/manufacturing/boms | jq '.data' || echo "❌ Failed" && \
+	echo "" && \
+	echo "=== CRM Service (Customers) ===" && \
+	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/crm/customers | jq '.' || echo "❌ Failed" && \
+	echo "" && \
+	echo "=== Projects Service (Projects) ===" && \
+	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/projects | jq '.' || echo "❌ Failed"
 
 test-direct: ## Test services directly (bypass gateway)
 	@echo "🧪 Testing services directly..."

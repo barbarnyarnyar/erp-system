@@ -12,8 +12,22 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type DeadLetterMessage struct {
+	OriginalTopic string      `json:"original_topic"`
+	OriginalKey   string      `json:"original_key,omitempty"`
+	Payload       interface{} `json:"payload"`
+	Error         string      `json:"error"`
+	FailedAt      time.Time   `json:"failed_at"`
+	ServiceName   string      `json:"service_name"`
+}
+
+const (
+	TopicCrmSalesOrderReceivedDeadLetter = domain.TopicCrmSalesOrderReceived + ".dead-letter"
+)
+
 type KafkaConsumer struct {
 	reader      *kafka.Reader
+	publisher   *KafkaPublisher
 	planningSvc *service.ProjectPlanningService
 	taskSvc     *service.TaskManagementService
 }
@@ -21,6 +35,7 @@ type KafkaConsumer struct {
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
+	publisher *KafkaPublisher,
 	planningSvc *service.ProjectPlanningService,
 	taskSvc *service.TaskManagementService,
 ) *KafkaConsumer {
@@ -29,7 +44,7 @@ func NewKafkaConsumer(
 		// domain.TopicHrEmployeeAvailable,
 		// TODO: connect when handler does real work (currently log-only)
 		// domain.TopicHrEmployeeSkillsUpdated,
-		// TODO: connect when fm/fin publishes fin.budget.approved
+		// TODO: connect when fm/fin publishes fm.budget.approved
 		// domain.TopicFinBudgetApproved,
 		// TODO: connect when handler does real work (currently log-only)
 		// domain.TopicFinPaymentReceived,
@@ -48,6 +63,7 @@ func NewKafkaConsumer(
 
 	return &KafkaConsumer{
 		reader:      reader,
+		publisher:   publisher,
 		planningSvc: planningSvc,
 		taskSvc:     taskSvc,
 	}
@@ -74,8 +90,26 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			log.Printf("Received event on topic %s, key %s", msg.Topic, string(msg.Key))
 			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
 				log.Printf("Failed to process event %s: %v", msg.Topic, err)
+				c.publishToDLQ(ctx, msg.Topic, string(msg.Key), msg.Value, err)
 			}
 		}
+	}
+}
+
+func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key string, value []byte, err error) {
+	dlqMsg := DeadLetterMessage{
+		OriginalTopic: topic,
+		OriginalKey:   key,
+		Payload:       string(value),
+		Error:         err.Error(),
+		FailedAt:      time.Now(),
+		ServiceName:   "pm-service",
+	}
+	dlqTopic := topic + ".dead-letter"
+	if dlqErr := c.publisher.Publish(ctx, dlqTopic, key, dlqMsg); dlqErr != nil {
+		log.Printf("ERROR: failed to publish DLQ message for topic %s: %v", topic, dlqErr)
+	} else {
+		log.Printf("ERROR: consumer handler failed for topic %s: %v — sent to DLQ topic %s", topic, err, dlqTopic)
 	}
 }
 

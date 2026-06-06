@@ -65,6 +65,7 @@ func main() {
 	kafkaConsumer := kafkaData.NewKafkaConsumer(
 		cfg.Kafka.Brokers,
 		cfg.Kafka.GroupID,
+		kafkaPublisher,
 		generalLedgerSvc,
 		accountsPayableSvc,
 		accountsReceivableSvc,
