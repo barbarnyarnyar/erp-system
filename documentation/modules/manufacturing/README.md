@@ -73,7 +73,7 @@ graph TB
 | `MaintenanceOrder` | ID, EquipmentID, ScheduleDate, Type (Preventive/Corrective/Predictive), Status (Scheduled/InProgress/Completed/Cancelled) | Maintenance task |
 | `CostingRecord` | ID, ProductionOrderID, MaterialCost, LaborCost, OverheadCost, TotalCost | Production cost summary |
 
-## Business Services (2)
+## Business Services (5)
 
 ### BOMService
 
@@ -120,11 +120,31 @@ graph TB
 
 | Method | Description | Side Effects |
 |--------|-------------|-------------|
-| `RecordQualityInspection` | Record inspection; on FAIL creates NonConformance, on PASS with all WOs completed auto-completes production | Publishes `mfg.quality.inspection.passed` or `mfg.quality.inspection.failed`, possibly `mfg.quality.non.conformance.detected` |
+| `RecordQualityInspection` | Record inspection; on FAIL creates NonConformance | Publishes `mfg.quality.inspection.passed` or `mfg.quality.inspection.failed` |
 | `GetQualityInspection` | Get inspection by ID | — |
 | `GetAllQualityInspections` | List inspections | — |
 | `UpdateQualityInspection` | Update inspection | — |
-| `DeleteQualityInspection` | Delete inspection | — |
+
+### MaintenanceService
+
+| Method | Description |
+|--------|-------------|
+| `LogMachineStatus` | Log machine status for work center monitoring |
+| `CreateEquipment` | Create an equipment record for work center |
+| `ScheduleMaintenance` | Schedule maintenance order |
+| `CompleteMaintenance` | Complete maintenance order |
+| `ListMaintenanceSchedules` | List all maintenance schedules |
+| `GetMaintenanceSchedule` | Get maintenance schedule |
+| `UpdateMaintenanceSchedule` | Update maintenance schedule |
+
+### CostingService (not wired)
+
+| Method | Description |
+|--------|-------------|
+| `GetCostingRecord` | Get variance and costing record for production order |
+| `RunMRP` | Run material requirements planning |
+
+> **Note**: CostingService is CDD-defined but NOT wired in code. MRP logic is handled by ProductionService instead.
 
 ## API Endpoints (30 routes)
 
@@ -296,11 +316,16 @@ sequenceDiagram
 | `mfg.material.wasted` | — |
 | `mfg.material.required` | RunMRP |
 
-### Events Consumed (1 topic)
+### Events Consumed (6 topics, per CDD)
 
-| Topic | Publisher | Consumer Logic |
-|-------|-----------|---------------|
-| `fin.cost.budget.allocated` | FM | Adjusts production schedules based on budget allocation |
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `scm.material.received` | SCM | Logged only |
+| `scm.inventory.updated` | SCM | Logged only |
+| `crm.sales.order.created` | CRM | Auto-schedule production order |
+| `fin.cost.budget.allocated` | FM | Adjust production schedules |
+| `hr.employee.scheduled` | HR | Logged only |
+| `prj.custom.order.created` | PM | Schedule custom production |
 
 ## Seed Data
 

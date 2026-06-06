@@ -258,86 +258,27 @@ flowchart LR
 
 ## Kafka Integration
 
-### Events Published (43 topic constants defined, 24 actively published)
+### Events Published (28 topics, per CDD)
 
-**Customer Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.customer.created` | CreateCustomer, ConvertLead |
-| `crm.customer.updated` | UpdateCustomer |
-| `crm.customer.activated` | Activate customer |
-| `crm.customer.deactivated` | — |
-| `crm.customer.deleted` | — |
-| `crm.customer.credit.limit.changed` | — |
-| `crm.customer.payment.received` | — |
+**Customer:** `crm.customer.created`, `crm.customer.updated`, `crm.customer.activated`, `crm.customer.deactivated`
+**Lead:** `crm.lead.created`, `crm.lead.qualified`, `crm.lead.converted`, `crm.lead.lost`
+**Opportunity:** `crm.opportunity.created`, `crm.opportunity.updated`, `crm.opportunity.won`, `crm.opportunity.lost`
+**Sales Orders:** `crm.sales.order.created`, `crm.sales.order.updated`, `crm.sales.order.confirmed`, `crm.sales.order.shipped`, `crm.sales.order.delivered`, `crm.sales.order.cancelled`, `crm.sales.order.received`
+**Service Tickets:** `crm.service.ticket.created`, `crm.service.ticket.updated`, `crm.service.ticket.resolved`, `crm.service.ticket.escalated`
+**Campaigns:** `crm.campaign.launched`, `crm.campaign.completed`
+**Email:** `crm.email.sent`, `crm.email.opened`, `crm.email.clicked`
 
-**Lead Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.lead.created` | CreateLead |
-| `crm.lead.qualified` | Update with status Qualified |
-| `crm.lead.disqualified` | Update with status Disqualified |
-| `crm.lead.converted` | ConvertLead |
+### Events Consumed (7 topics, per CDD)
 
-**Opportunity Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.opportunity.created` | CreateOpportunity, ConvertLead |
-| `crm.opportunity.won` | Update with stage ClosedWon |
-| `crm.opportunity.lost` | Update with stage ClosedLost |
-| `crm.opportunity.updated` | Generic update |
-| `crm.opportunity.deleted` | — |
-
-**Sales Order Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.sales.order.created` | CreateSalesOrder |
-| `crm.sales.order.confirmed` | Update with status Confirmed |
-| `crm.sales.order.shipped` | Update with status Shipped |
-| `crm.sales.order.delivered` | Update with status Delivered |
-| `crm.sales.order.cancelled` | Update with status Cancelled |
-| `crm.sales.order.received` | — |
-| `crm.sales.order.fulfilled` | — |
-| `crm.sales.order.paid` | — |
-
-**Quote Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.quote.created` | CreateQuote |
-| `crm.quote.sent` | SendQuote |
-| `crm.quote.accepted` | — |
-| `crm.quote.rejected` | — |
-| `crm.quote.expired` | — |
-
-**Service Ticket Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.ticket.created` | CreateTicket |
-| `crm.ticket.updated` | UpdateTicket |
-| `crm.ticket.resolved` | Status → Resolved |
-| `crm.ticket.escalated` | — |
-
-**Campaign Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.campaign.launched` | Status → Active |
-| `crm.campaign.completed` | Status → Completed |
-| `crm.campaign.paused` | — |
-
-**Demand/Customer Events:**
-| Topic | Trigger |
-|-------|---------|
-| `crm.customer.demand.forecast` | — |
-| `crm.sale.completed` | — |
-
-### Key Cross-Service Events
-
-| Topic | Consumer | Business Impact |
-|-------|----------|----------------|
-| `crm.sales.order.created` | MFG | Auto-schedule production order |
-| `crm.sales.order.received` | PM | Auto-create project |
-| `crm.customer.demand.forecast` | SCM | Create demand forecast entry |
-| `crm.sale.completed` | FM | Create revenue journal entry |
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `scm.inventory.available` | SCM | Logged only |
+| `scm.shipment.delivered` | SCM | Update sales order to DELIVERED |
+| `fin.payment.received` | FM | Logged only |
+| `fin.credit.check.completed` | FM | Logged only |
+| `mfg.production.completed` | MFG | Logged only |
+| `prj.project.completed` | PM | Logged only |
+| `hr.employee.performance` | HR | Logged only |
 
 ## Seed Data
 

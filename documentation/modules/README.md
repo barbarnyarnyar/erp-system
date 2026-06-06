@@ -6,13 +6,45 @@ The ERP system provides six integrated business modules with REST APIs, in-memor
 
 > **Auth note**: The Auth Service runs on port 8000 but is **not wired** into the deployed API Gateway (`api-gateway/cmd/main.go`). A full JWT+RBAC system exists in `api-gateway/internal/server/server.go` but is not deployed. All endpoints are publicly accessible.
 
+## [Auth Service](../architecture/security-architecture.md)
+
+User identity, authentication, session management, role-based access control, and permission management. Port **8000**.
+
+### Domain Models (7 types)
+
+| Model | Key Fields |
+|-------|-----------|
+| `User` | ID, Username, Email, PasswordHash, FirstName, LastName, IsActive |
+| `Session` | ID, UserID, RefreshToken, IPAddress, UserAgent, ExpiresAt |
+| `Role` | ID, Name, Description |
+| `Permission` | ID, Code, Description |
+| `UserRole` | UserID, RoleID, AssignedBy |
+| `UserStore` | UserID, StoreID |
+| `RolePermission` | RoleID, PermissionID, AssignedBy |
+
+### Business Services (3)
+
+| Service | Key Methods |
+|---------|-------------|
+| `AuthService` | `authenticateUser` (returns JWT), `refreshToken`, `revokeToken`, `validateToken` |
+| `UserService` | `createUser`, `updateUser`, `updateCredentials`, `deactivateUser`, `assignUserToStore`, `removeUserFromStore` |
+| `RBACService` | `createRole`, `createPermission`, `assignPermissionToRole`, `validatePermissions` |
+
+### Kafka Events Published (5 topics)
+
+`auth.user.created`, `auth.user.deactivated`, `auth.user.role.assigned`, `auth.user.store.assigned`, `auth.password.changed`
+
+No consumed events.
+
+**Note**: Auth service runs on port 8000 but is NOT wired into the deployed API Gateway. The gateway reverse-proxies without authentication.
+
 ---
 
 ## [Financial Management](financial-management/)
 
 General ledger, accounts receivable, accounts payable, cash management, budgeting, and financial reports. Port **8001**.
 
-### Domain Models (18 types)
+### Domain Models (17 types)
 
 | Model | Key Fields | Event Triggers |
 |-------|-----------|----------------|
@@ -31,7 +63,7 @@ General ledger, accounts receivable, accounts payable, cash management, budgetin
 | `BankAccount`, `BankStatement`, `BankStatementLine` | — | — |
 | `CustomerCredit` | CustomerID, CreditLimit, CurrentBalance | — |
 
-### Business Services (5)
+### Business Services (6)
 
 | Service | Key Methods | Business Logic |
 |---------|-------------|---------------|
@@ -40,6 +72,7 @@ General ledger, accounts receivable, accounts payable, cash management, budgetin
 | `AccountsPayableService` | `CreateVendorBill`, `GetVendorBill` | Vendor bill management |
 | `CashManagementService` | `RecordPayment`, `GetPayments` | Payment recording against invoices |
 | `BudgetingService` | `CreateBudget`, `MonitorBudget`, `GetBudgetVariance` | Budget vs. actual variance reporting |
+| `TaxService` | `CreateTaxRate`, `ListTaxRates`, `GetTaxRate` | Tax rate CRUD — **not wired in code** |
 
 ### API Endpoints (25 routes)
 
@@ -70,11 +103,11 @@ General ledger, accounts receivable, accounts payable, cash management, budgetin
 | GET | `/api/v1/reports/income-statement` | `repHandler.GetIncomeStatement` | Income statement |
 | GET | `/api/v1/reports/cash-flow` | `repHandler.GetCashFlow` | Cash flow report |
 
-### Kafka Events Published (16 topics)
+### Kafka Events Published (16 topics, per CDD)
 
-`fin.invoice.created`, `fin.invoice.updated`, `fin.invoice.sent`, `fin.invoice.paid`, `fin.invoice.overdue`, `fin.payment.received`, `fin.payment.processed`, `fin.payment.failed`, `fin.vendor.payment.due`, `fin.budget.created`, `fin.budget.updated`, `fin.budget.exceeded`, `fin.budget.approved`, `fin.budget.allocated`, `fin.account.created`, `fin.account.updated`, `fin.account.balance.changed`, `fin.cost.budget.allocated`
+`fin.invoice.created`, `fin.invoice.updated`, `fin.invoice.sent`, `fin.invoice.paid`, `fin.invoice.overdue`, `fin.payment.received`, `fin.payment.processed`, `fin.payment.failed`, `fin.vendor.payment.due`, `fin.budget.created`, `fin.budget.updated`, `fin.budget.exceeded`, `fin.budget.approved`, `fin.account.created`, `fin.account.updated`, `fin.account.balance.changed`
 
-### Kafka Events Consumed (14 topics)
+### Kafka Events Consumed (13 topics, per CDD)
 
 Consumed by `EventConsumer` in `internal/business/service/event_consumer.go`:
 - **HR → FM**: `hr.employee.created` (track new employee), `hr.payroll.processed` (create salary journal entry), `hr.expense.submitted` (create expense journal entry)
@@ -211,19 +244,25 @@ Employee lifecycle, payroll, time tracking, leave management, recruitment, perfo
 | GET | `/api/v1/reports/payroll` | Payroll summary report |
 | GET | `/api/v1/reports/attendance` | Attendance report |
 
-### Kafka Events Published (24 topics)
+### Kafka Events Published (22 topics, per CDD)
 
 **Employee:** `hr.employee.created`, `hr.employee.updated`, `hr.employee.terminated`, `hr.employee.promoted`, `hr.employee.available`
 **Payroll:** `hr.payroll.processed`, `hr.payroll.failed`, `hr.salary.changed`
 **Time:** `hr.timesheet.submitted`, `hr.timesheet.approved`, `hr.overtime.recorded`
 **Leave:** `hr.leave.requested`, `hr.leave.approved`, `hr.leave.rejected`
 **Training:** `hr.training.completed`, `hr.certification.earned`, `hr.skill.acquired`
-**Performance:** `hr.performance.review.completed`, `hr.goal.achieved`
+**Performance:** `hr.performance.review.completed`, `hr.goal.achieved`, `hr.performance.improvement.needed`
 **Other:** `hr.expense.submitted`, `hr.employee.scheduled`, `hr.employee.skills.updated`
 
-### Kafka Events Consumed (1 topic)
+### Kafka Events Consumed (5 topics, per CDD)
 
-- `fin.budget.allocated` — HR adjusts hiring plans based on budget allocation
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `prj.project.created` | PM | Logged only |
+| `prj.task.assigned` | PM | Logged only |
+| `fin.budget.allocated` | FM | Adjust hiring plans based on budget |
+| `mfg.production.scheduled` | MFG | Logged only |
+| `scm.training.required` | SCM | Auto-create training program |
 
 ---
 
@@ -372,9 +411,17 @@ Product catalog, inventory, procurement, warehouse operations, vendor management
 **Shipments:** `scm.shipment.created`, `scm.shipment.dispatched`, `scm.shipment.delivered`, `scm.shipment.delayed`
 **Other:** `scm.training.required`, `scm.material.delivered`, `scm.material.received`, `scm.invoice.received`
 
-### Kafka Events Consumed (1 topic)
+### Kafka Events Consumed (8 topics, per CDD)
 
-- `crm.customer.demand.forecast` — creates `DemandForecast` records for capacity planning
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `crm.sales.order.created` | CRM | Logged only |
+| `crm.customer.demand.forecast` | CRM | Create demand forecast record |
+| `mfg.material.required` | MFG | Auto-create purchase requisition |
+| `mfg.material.consumed` | MFG | Issue raw material from inventory |
+| `mfg.production.completed` | MFG | Receive finished goods into inventory |
+| `fin.vendor.payment.processed` | FM | Logged only |
+| `prj.material.requested` | PM | Issue material from inventory |
 
 ---
 
@@ -487,16 +534,27 @@ Customer accounts, lead management, opportunity pipeline, sales orders, quotes, 
 | PUT | `/api/v1/price-lists/:id` | Update price list |
 | DELETE | `/api/v1/price-lists/:id` | Delete price list |
 
-### Kafka Events Published (4 topics)
+### Kafka Events Published (28 topics, per CDD)
 
-- `crm.sales.order.created` — consumed by MFG (auto-schedule production) and SCM (trigger fulfillment)
-- `crm.sales.order.received` — consumed by PM (auto-create project)
-- `crm.customer.demand.forecast` — consumed by SCM (demand planning)
-- `crm.sale.completed` — consumed by FM (create revenue journal entry)
+**Customer:** `crm.customer.created`, `crm.customer.updated`, `crm.customer.activated`, `crm.customer.deactivated`
+**Lead:** `crm.lead.created`, `crm.lead.qualified`, `crm.lead.converted`, `crm.lead.lost`
+**Opportunity:** `crm.opportunity.created`, `crm.opportunity.updated`, `crm.opportunity.won`, `crm.opportunity.lost`
+**Sales Orders:** `crm.sales.order.created`, `crm.sales.order.updated`, `crm.sales.order.confirmed`, `crm.sales.order.cancelled`, `crm.sales.order.shipped`, `crm.sales.order.delivered`, `crm.sales.order.received`
+**Service Tickets:** `crm.service.ticket.created`, `crm.service.ticket.updated`, `crm.service.ticket.resolved`, `crm.service.ticket.escalated`
+**Campaigns:** `crm.campaign.launched`, `crm.campaign.completed`
+**Email:** `crm.email.sent`, `crm.email.opened`, `crm.email.clicked`
 
-### Kafka Events Consumed
+### Kafka Events Consumed (7 topics, per CDD)
 
-None subscribed.
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `scm.inventory.available` | SCM | Logged only |
+| `scm.shipment.delivered` | SCM | Update sales order to DELIVERED |
+| `fin.payment.received` | FM | Logged only |
+| `fin.credit.check.completed` | FM | Logged only |
+| `mfg.production.completed` | MFG | Logged only |
+| `prj.project.completed` | PM | Logged only |
+| `hr.employee.performance` | HR | Logged only |
 
 ---
 
@@ -522,12 +580,15 @@ Bill of materials, routings, work orders, production planning, MRP, quality cont
 | `MaintenanceOrder` | ID, EquipmentID, ScheduleDate, Type, Status |
 | `CostingRecord` | ID, ProductionOrderID, MaterialCost, LaborCost, OverheadCost |
 
-### Business Services (2)
+### Business Services (5)
 
 | Service | Key Responsibilities |
 |---------|---------------------|
 | `BOMService` | BOM CRUD with component hierarchy, routing operations, work center management |
 | `ProductionService` | Production orders, work orders (start/complete/cancel), labor reporting, quality inspections, maintenance scheduling, MRP execution, costing |
+| `QualityService` | Record/list/get/update quality inspections — **wired in code** |
+| `MaintenanceService` | Log machine status, create equipment, schedule/complete maintenance — **code exists but routes may be partial** |
+| `CostingService` | Get costing record, run MRP — **not wired** |
 
 ### API Endpoints (30 routes)
 
@@ -614,9 +675,16 @@ Bill of materials, routings, work orders, production planning, MRP, quality cont
 **Equipment:** `mfg.equipment.down`, `mfg.equipment.up`
 **Other:** `mfg.custom.production.completed`
 
-### Kafka Events Consumed (1 topic)
+### Kafka Events Consumed (6 topics, per CDD)
 
-- `fin.cost.budget.allocated` — adjusts production schedules based on budget allocation
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `scm.material.received` | SCM | Logged only |
+| `scm.inventory.updated` | SCM | Logged only |
+| `crm.sales.order.created` | CRM | Auto-schedule production order |
+| `fin.cost.budget.allocated` | FM | Adjust production schedules |
+| `hr.employee.scheduled` | HR | Logged only |
+| `prj.custom.order.created` | PM | Schedule custom production |
 
 ---
 
@@ -731,9 +799,17 @@ Portfolios, projects, tasks, resource allocation, time/expense tracking, documen
 **Milestones:** `prj.milestone.achieved`, `prj.milestone.delayed`
 **Integration:** `prj.custom.order.created`, `prj.material.requested`
 
-### Kafka Events Consumed (1 topic)
+### Kafka Events Consumed (8 topics, per CDD)
 
-- `fin.budget.approved` — PM releases project funding upon budget approval
+| Topic | Publisher | Consumer Logic |
+|-------|-----------|----------------|
+| `hr.employee.available` | HR | Logged only |
+| `hr.employee.skills.updated` | HR | Logged only |
+| `fin.budget.approved` | FM | Release project funding upon budget approval |
+| `fin.payment.received` | FM | Logged only |
+| `crm.sales.order.received` | CRM | Auto-create project + kickoff task |
+| `scm.material.delivered` | SCM | Logged only |
+| `mfg.custom.production.completed` | MFG | Logged only |
 
 ---
 

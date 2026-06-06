@@ -298,11 +298,17 @@ flowchart TD
 | `prj.milestone.achieved` | — | — |
 | `prj.milestone.delayed` | — | — |
 
-### Events Consumed (1 topic)
+### Events Consumed (8 topics, per CDD)
 
 | Topic | Publisher | Consumer Logic |
-|-------|-----------|---------------|
-| `fin.budget.approved` | FM | PM releases project funding upon budget approval |
+|-------|-----------|----------------|
+| `hr.employee.available` | HR | Logged only |
+| `hr.employee.skills.updated` | HR | Logged only |
+| `fin.budget.approved` | FM | Release project funding upon budget approval |
+| `fin.payment.received` | FM | Logged only |
+| `crm.sales.order.received` | CRM | Auto-create project + kickoff task |
+| `scm.material.delivered` | SCM | Logged only |
+| `mfg.custom.production.completed` | MFG | Logged only |
 
 ## Cross-Service Integration
 

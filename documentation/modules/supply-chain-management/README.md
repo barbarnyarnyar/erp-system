@@ -1,414 +1,297 @@
 # Supply Chain Management Module
 
-Comprehensive supply chain optimization from suppliers to customers, managing inventory, procurement, and logistics operations.
+Product catalog, inventory, procurement, vendor management, warehouse operations, and demand forecasting. Port **8003** (docker-compose: 8006).
 
-## Overview
+## Module Overview
 
-The Supply Chain Management module optimizes the flow of goods and materials throughout the organization. It provides real-time inventory tracking, automated procurement processes, and supplier relationship management to ensure efficient operations and cost control.
+```mermaid
+graph TB
+    subgraph "SCM Core"
+        CAT[Product Categories<br/>Hierarchical Classification]
+        PROD[Products<br/>SKU & Pricing]
+        VEND[Vendor Management<br/>Suppliers & Contracts]
+        REQ[Purchase Requisitions<br/>Approval Workflow]
+        PO[Purchase Orders<br/>Send & Receive]
+        INV[Inventory<br/>Stock & Reservations]
+        TRANS[Stock Transfers<br/>Between Locations]
+        RECV[Receiving<br/>Goods Receipt]
+        SHIP[Shipping<br/>Outbound Shipments]
+        DEMAND[Demand Forecasting<br/>Planning]
+    end
 
-**Key Capabilities:**
-- Multi-location inventory management with real-time tracking
-- Procurement processes with supplier management
-- Warehouse operations and logistics coordination
-- Demand planning and forecasting
-- Quality management and compliance tracking
-- Supplier relationship management and performance monitoring
+    subgraph "Integration Points"
+        MFG_INT[MFG Integration<br/>Material Requirements]
+        CRM_INT[CRM Integration<br/>Fulfillment & Forecast]
+        FM_INT[FM Integration<br/>Cost & Valuation]
+        PM_INT[PM Integration<br/>Material Requests]
+    end
 
-## Core Features
-
-### Inventory Management
-
-**Purpose**: Track and manage inventory across multiple locations with real-time visibility
-
-**Key Features:**
-- **Multi-Location Inventory**: Track stock across warehouses, stores, and distribution centers
-- **Real-Time Tracking**: Live inventory updates with every transaction
-- **Serial/Lot Tracking**: Full traceability for recalled or expired products
-- **Reorder Management**: Automatic reorder points and quantity calculations
-- **Cycle Counting**: Scheduled and ad-hoc inventory counting procedures
-- **Valuation Methods**: FIFO, LIFO, weighted average costing
-
-**Implementation Example:**
-```go
-type InventoryItem struct {
-    ID                string          `json:"id"`
-    ProductID         string          `json:"product_id"`
-    LocationID        string          `json:"location_id"`
-    QuantityOnHand    int             `json:"quantity_on_hand"`
-    QuantityReserved  int             `json:"quantity_reserved"`
-    QuantityAvailable int             `json:"quantity_available"`
-    ReorderPoint      int             `json:"reorder_point"`
-    MaximumStock      int             `json:"maximum_stock"`
-    UnitCost          decimal.Decimal `json:"unit_cost"`
-    LastReceived      *time.Time      `json:"last_received,omitempty"`
-    LastSold          *time.Time      `json:"last_sold,omitempty"`
-}
-
-type InventoryMovement struct {
-    ID            string              `json:"id"`
-    ProductID     string              `json:"product_id"`
-    LocationID    string              `json:"location_id"`
-    MovementType  InventoryMovementType `json:"movement_type"`
-    Quantity      int                 `json:"quantity"`
-    UnitCost      decimal.Decimal     `json:"unit_cost"`
-    ReferenceType string              `json:"reference_type"`
-    ReferenceID   string              `json:"reference_id"`
-    Notes         string              `json:"notes,omitempty"`
-    CreatedAt     time.Time           `json:"created_at"`
-    CreatedBy     string              `json:"created_by"`
-}
-
-func (s *InventoryService) ProcessMovement(ctx context.Context, movement InventoryMovement) error {
-    // Get current inventory item
-    item, err := s.repo.GetInventoryItem(ctx, movement.ProductID, movement.LocationID)
-    if err != nil {
-        return err
-    }
-    
-    // Calculate new quantities based on movement type
-    var newQuantity int
-    switch movement.MovementType {
-    case MovementTypeReceipt:
-        newQuantity = item.QuantityOnHand + movement.Quantity
-    case MovementTypeShipment:
-        if item.QuantityAvailable < movement.Quantity {
-            return ErrInsufficientInventory
-        }
-        newQuantity = item.QuantityOnHand - movement.Quantity
-    case MovementTypeAdjustment:
-        newQuantity = movement.Quantity // Set to specific quantity
-    case MovementTypeTransfer:
-        return s.processTransfer(ctx, movement)
-    default:
-        return ErrInvalidMovementType
-    }
-    
-    // Update inventory item
-    item.QuantityOnHand = newQuantity
-    item.QuantityAvailable = newQuantity - item.QuantityReserved
-    
-    // Save updates in transaction
-    return s.repo.UpdateInventoryWithMovement(ctx, item, &movement)
-}
+    REQ --> PO
+    PO --> RECV
+    RECV --> INV
+    INV --> SHIP
+    INV --> TRANS
+    MFG_INT --> REQ
+    CRM_INT --> PO
+    CRM_INT --> DEMAND
+    FM_INT --> INV
+    PM_INT --> INV
 ```
 
-### Procurement Management
+## Documentation Structure
 
-**Purpose**: Manage the complete procurement process from requisition to receipt
+### Core Features
+- `product-catalog.md` — Products and categories
+- `vendor-management.md` — Suppliers and contracts
+- `procurement.md` — Requisitions and purchase orders
+- `inventory-management.md` — Stock, reservations, transfers
+- `warehouse-operations.md` — Receiving and shipping
+- `demand-forecasting.md` — Planning and safety stock
+- `reports.md` — Inventory, vendor, procurement reports
 
-**Key Features:**
-- **Purchase Requisitions**: Employee requests for purchases with approval workflows
-- **Request for Quotes**: RFQ process with supplier comparison
-- **Purchase Orders**: Generate and manage POs with delivery tracking
-- **Supplier Management**: Comprehensive supplier database with performance tracking
-- **Contract Management**: Track supplier contracts and terms
-- **Three-Way Matching**: Automated matching of PO, receipt, and invoice
+### Integration and APIs
+- `api-reference.md` — REST API documentation
+- `event-architecture.md` — Kafka event catalog
 
-**Purchase Order Workflow:**
+### Implementation
+- `database-schema.md` — Data models
+
+## Domain Models (18 types)
+
+| Model | Key Fields |
+|-------|-----------|
+| `Product` | ID, SKU, Name, Description, CategoryID, UnitPrice, UnitCost, ReorderPoint |
+| `ProductCategory` | ID, Name, Description, ParentCategoryID |
+| `Supplier` | ID, Code, Name, ContactPerson, Email, Phone, PaymentTerms, Status |
+| `VendorContract` | ID, SupplierID, StartDate, EndDate, Terms, DiscountRate |
+| `PurchaseRequisition` | ID, RequesterID, DepartmentID, Status, Items[], TotalAmount |
+| `PurchaseRequisitionLine` | ProductID, Quantity, EstimatedUnitPrice |
+| `PurchaseOrder` | ID, SupplierID, OrderDate, ExpectedDelivery, Status, Items[] |
+| `PurchaseOrderLine` | ProductID, Quantity, UnitPrice, ReceivedQuantity |
+| `InventoryItem` | ID, ProductID, LocationID, QuantityOnHand, QuantityReserved, ReorderPoint, MaxStock |
+| `InventoryMovement` | ID, ProductID, LocationID, MovementType, Quantity, ReferenceID, UnitCost |
+| `StockTransfer` | ID, FromLocationID, ToLocationID, Status, Items[] |
+| `Location` | ID, Name, Code, Type, Address |
+| `Receipt` | ID, PurchaseOrderID, ReceivedDate, Items[], Status |
+| `ReceiptLine` | ProductID, QuantityReceived, QuantityAccepted, Notes |
+| `Shipment` | ID, CustomerID, ShippedDate, Status, Items[] |
+| `ShipmentLine` | ProductID, QuantityShipped |
+| `DemandForecast` | ID, ProductID, PeriodStart, PeriodEnd, ForecastQuantity, ActualQuantity |
+
+## Business Services (7)
+
+| Service | Key Methods | Description |
+|---------|-------------|-------------|
+| `ProductManagementService` | CRUD products, CRUD categories | Product catalog with category hierarchy |
+| `SupplierManagementService` | CRUD suppliers, CRUD contracts | Vendor relationships and agreements |
+| `PurchaseOrderService` | CRUD requisitions (with approve/reject), CRUD orders (with send), stock reservation on order send | Full procurement lifecycle |
+| `InventoryService` | CRUD items, reserve/release stock, CRUD transfers (with execute) | Stock tracking and movements |
+| `WarehouseService` | CRUD receipts, CRUD shipments | Inbound/outbound logistics |
+| `DemandPlanningService` | CRUD forecasts | Demand planning |
+| `ReportService` | Inventory levels, vendor performance, procurement metrics, safety stock | Reporting |
+
+## API Endpoints (47 routes)
+
+### Product Categories
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/product-categories` |
+| POST | `/api/v1/product-categories` |
+| GET | `/api/v1/product-categories/:id` |
+| PUT | `/api/v1/product-categories/:id` |
+| DELETE | `/api/v1/product-categories/:id` |
+
+### Products
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/products` |
+| POST | `/api/v1/products` |
+| GET | `/api/v1/products/:id` |
+| PUT | `/api/v1/products/:id` |
+| DELETE | `/api/v1/products/:id` |
+
+### Vendors
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/vendors` |
+| POST | `/api/v1/vendors` |
+| GET | `/api/v1/vendors/:id` |
+| PUT | `/api/v1/vendors/:id` |
+| DELETE | `/api/v1/vendors/:id` |
+
+### Vendor Contracts
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/vendor-contracts` |
+| POST | `/api/v1/vendor-contracts` |
+| GET | `/api/v1/vendor-contracts/:id` |
+| PUT | `/api/v1/vendor-contracts/:id` |
+| DELETE | `/api/v1/vendor-contracts/:id` |
+
+### Purchase Requisitions
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/purchase-requisitions` |
+| POST | `/api/v1/purchase-requisitions` |
+| GET | `/api/v1/purchase-requisitions/:id` |
+| PUT | `/api/v1/purchase-requisitions/:id` |
+| DELETE | `/api/v1/purchase-requisitions/:id` |
+| POST | `/api/v1/purchase-requisitions/:id/approve` |
+| POST | `/api/v1/purchase-requisitions/:id/reject` |
+
+### Purchase Orders
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/purchase-orders` |
+| POST | `/api/v1/purchase-orders` |
+| GET | `/api/v1/purchase-orders/:id` |
+| PUT | `/api/v1/purchase-orders/:id` |
+| DELETE | `/api/v1/purchase-orders/:id` |
+| POST | `/api/v1/purchase-orders/:id/send` |
+
+### Inventory
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/inventory` |
+| POST | `/api/v1/inventory` |
+| GET | `/api/v1/inventory/:id` |
+| PUT | `/api/v1/inventory/:id` |
+| DELETE | `/api/v1/inventory/:id` |
+| POST | `/api/v1/inventory/reserve` |
+| POST | `/api/v1/inventory/release` |
+
+### Stock Transfers
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/stock-transfers` |
+| POST | `/api/v1/stock-transfers` |
+| GET | `/api/v1/stock-transfers/:id` |
+| POST | `/api/v1/stock-transfers/:id/execute` |
+
+### Receipts
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/receipts` |
+| POST | `/api/v1/receipts` |
+| GET | `/api/v1/receipts/:id` |
+| PUT | `/api/v1/receipts/:id` |
+
+### Shipments
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/shipments` |
+| POST | `/api/v1/shipments` |
+| GET | `/api/v1/shipments/:id` |
+| PUT | `/api/v1/shipments/:id` |
+
+### Demand Forecasts
+| Method | Path |
+|--------|------|
+| GET | `/api/v1/demand-forecasts` |
+| POST | `/api/v1/demand-forecasts` |
+| GET | `/api/v1/demand-forecasts/:id` |
+| PUT | `/api/v1/demand-forecasts/:id` |
+
+### Reports
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/reports/inventory-levels` | Current stock levels |
+| GET | `/api/v1/reports/vendor-performance` | Vendor metrics |
+| GET | `/api/v1/reports/procurement-metrics` | Procurement stats |
+| GET | `/api/v1/reports/safety-stock` | Safety stock calculations |
+
+## Procurement Workflow
+
 ```mermaid
 flowchart TD
-    A[Purchase Requisition] --> B{Approval Required?}
-    B -->|Yes| C[Manager Approval]
-    B -->|No| D[Create RFQ]
-    C --> D
-    D --> E[Supplier Quotes]
-    E --> F[Quote Evaluation]
-    F --> G[Create Purchase Order]
-    G --> H[PO Approval]
-    H --> I[Send to Supplier]
-    I --> J[Goods Receipt]
-    J --> K[Three-Way Matching]
-    K --> L[Invoice Processing]
+    A[Create Purchase Requisition] --> B{Approval Required?}
+    B -->|Yes| C[HOD Approval]
+    B -->|No| D[Create Purchase Order]
+    C -->|Approve| D
+    C -->|Reject| E[Requisition Rejected]
+    D --> F[Send PO to Vendor]
+    F --> G[Goods Receipt<br/>Receive Items]
+    G --> H[Update Inventory<br/>Stock Added]
+    H --> I[Invoice Received<br/>→ FM Creates AP Entry]
+
+    style D fill:#e1f5fe
+    style G fill:#c8e6c9
+    style I fill:#fff3e0
 ```
 
-### Warehouse Operations
+## Kafka Integration
 
-**Purpose**: Optimize warehouse efficiency and accuracy
+### Events Published (22 topic constants)
 
-**Key Features:**
-- **Receiving**: Goods receipt with quality inspection and put-away
-- **Put-Away**: Optimal storage location assignment
-- **Picking**: Batch picking and pick path optimization
-- **Packing**: Packing slip generation and shipping label creation
-- **Shipping**: Carrier selection and shipment tracking
-- **Cycle Counting**: Perpetual inventory counting programs
+**Inventory:** `scm.inventory.received`, `scm.inventory.shipped`, `scm.inventory.adjusted`, `scm.inventory.low.stock`, `scm.inventory.out.of.stock`, `scm.inventory.valued`, `scm.inventory.updated`
 
-**Warehouse Management Example:**
-```go
-type WarehouseOperation struct {
-    ID              string            `json:"id"`
-    Type            OperationType     `json:"type"`
-    Status          OperationStatus   `json:"status"`
-    Priority        Priority          `json:"priority"`
-    LocationID      string            `json:"location_id"`
-    AssignedTo      *string           `json:"assigned_to,omitempty"`
-    Items           []OperationItem   `json:"items"`
-    Instructions    string            `json:"instructions"`
-    CreatedAt       time.Time         `json:"created_at"`
-    CompletedAt     *time.Time        `json:"completed_at,omitempty"`
-}
+**Purchase Orders:** `scm.purchase.order.created`, `scm.purchase.order.sent`, `scm.purchase.order.received`, `scm.purchase.order.cancelled`
 
-func (s *WarehouseService) CreatePickingOperation(ctx context.Context, orderID string) (*WarehouseOperation, error) {
-    // Get order items
-    orderItems, err := s.orderService.GetOrderItems(ctx, orderID)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Optimize pick path
-    optimizedItems := s.optimizePickPath(orderItems)
-    
-    operation := &WarehouseOperation{
-        ID:           uuid.New().String(),
-        Type:         OperationTypePicking,
-        Status:       StatusPending,
-        Priority:     s.calculatePriority(orderItems),
-        LocationID:   s.selectOptimalLocation(orderItems),
-        Items:        optimizedItems,
-        Instructions: s.generatePickInstructions(optimizedItems),
-        CreatedAt:    time.Now(),
-    }
-    
-    return s.repo.CreateOperation(ctx, operation)
-}
-```
+**Vendors:** `scm.vendor.created`, `scm.vendor.updated`, `scm.vendor.performance.evaluated`
 
-### Supplier Relationship Management
+**Shipments:** `scm.shipment.created`, `scm.shipment.dispatched`, `scm.shipment.delivered`, `scm.shipment.delayed`
 
-**Purpose**: Manage supplier relationships and performance
+**Other:** `scm.training.required` (→ HR), `scm.material.delivered`, `scm.material.received`, `scm.invoice.received` (→ FM)
 
-**Key Features:**
-- **Supplier Portal**: Self-service portal for suppliers
-- **Performance Scorecards**: Track delivery, quality, and pricing metrics
-- **Supplier Development**: Improvement programs and audits
-- **Risk Management**: Supplier risk assessment and mitigation
-- **Diversity Programs**: Minority and women-owned business tracking
-- **Contract Compliance**: Monitor adherence to contract terms
+### Events Consumed (8 topics, per CDD)
 
-### Demand Planning and Forecasting
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `crm.sales.order.created` | CRM | Logged only |
+| `crm.customer.demand.forecast` | CRM | Create demand forecast record |
+| `mfg.material.required` | MFG | Auto-create purchase requisition |
+| `mfg.material.consumed` | MFG | Issue raw material from inventory |
+| `mfg.production.completed` | MFG | Receive finished goods into inventory |
+| `fin.vendor.payment.processed` | FM | Logged only |
+| `prj.material.requested` | PM | Issue material from inventory |
 
-**Purpose**: Predict future demand and optimize inventory levels
+## Seed Data
 
-**Key Features:**
-- **Demand Forecasting**: Statistical forecasting models
-- **Seasonal Analysis**: Account for seasonal demand patterns
-- **Trend Analysis**: Identify and project demand trends
-- **Safety Stock Calculations**: Optimize safety stock levels
-- **ABC Analysis**: Categorize items by importance
-- **Economic Order Quantity**: Calculate optimal order quantities
+On startup, the service seeds one location:
+- **Location**: "Main Warehouse" (Code: MAIN-WH, Type: WAREHOUSE)
 
-## API Endpoints
+## Implementation Status vs Documentation
 
-### Inventory Management
-```http
-# Get inventory levels
-GET /api/v1/scm/inventory
-Query Parameters:
-  - location_id: Filter by location
-  - product_id: Filter by product
-  - low_stock: Show only low stock items (true/false)
+| Feature Claimed | Actual Status |
+|----------------|--------------|
+| Product CRUD | Fully implemented |
+| Product categories (hierarchical) | Implemented |
+| Vendor management with contracts | Implemented |
+| Purchase requisition → PO → receipt | Fully implemented with approve/reject workflow |
+| Inventory with stock reservations | Implemented |
+| Stock transfers between locations | Implemented (create → execute) |
+| Demand forecasting with safety stock | Implemented |
+| Inventory reports | Implemented (basic level/valuation) |
+| Vendor performance reports | Implemented (basic metrics) |
+| Procurement metrics | Implemented (basic stats) |
+| Real-time inventory valuation | Not implemented |
+| Bin/shelf location tracking | Not implemented |
+| Pick/pack/ship optimization | Not implemented |
+| EDI integration | Not implemented |
+| Supplier portal | Not implemented |
+| ABC analysis | Not implemented |
+| Lot/serial number tracking | Not implemented |
+| Three-way matching | Event-based stub only |
 
-# Process inventory movement
-POST /api/v1/scm/inventory/movements
-{
-  "product_id": "prod-123",
-  "location_id": "loc-456",
-  "movement_type": "RECEIPT",
-  "quantity": 100,
-  "unit_cost": "25.50",
-  "reference_type": "PURCHASE_ORDER",
-  "reference_id": "po-789",
-  "notes": "Weekly inventory receipt"
-}
+## Known Limitations
 
-# Get inventory by location
-GET /api/v1/scm/inventory/locations/{location_id}
+| Gap | Detail |
+|-----|--------|
+| No inventory valuation | `scm.inventory.valued` event published but no actual costing logic |
+| No bin/shelf management | Location is a single string, no warehouse layout |
+| No pick path optimization | Warehouse operations are simple CRUD |
+| No supplier portal | Vendors managed through API only |
+| No EDI | No electronic data interchange |
+| No lot/serial tracking | Inventory items have no lot tracking |
+| No auto-reorder | ReorderPoint model field exists but no automatic PO generation |
+| Demand forecast is basic | Manual CRUD — no ML/statistical forecasting |
+| In-memory only | All data lost on restart |
+| No pagination | List endpoints return all records |
+| Fire-and-forget events | `_ = publisher.Publish(...)` ignores errors |
 
-# Adjust inventory levels
-POST /api/v1/scm/inventory/adjustments
-{
-  "items": [
-    {
-      "product_id": "prod-123",
-      "location_id": "loc-456", 
-      "new_quantity": 150,
-      "reason": "Cycle count adjustment"
-    }
-  ]
-}
-```
+## Related Modules
 
-### Purchase Order Management
-```http
-# Create purchase order
-POST /api/v1/scm/purchase-orders
-{
-  "supplier_id": "sup-123",
-  "order_date": "2024-03-15",
-  "expected_delivery": "2024-03-25",
-  "items": [
-    {
-      "product_id": "prod-456",
-      "quantity": 100,
-      "unit_price": "25.00",
-      "description": "Widget Component A"
-    }
-  ]
-}
-
-# List purchase orders
-GET /api/v1/scm/purchase-orders
-Query Parameters:
-  - status: Filter by order status
-  - supplier_id: Filter by supplier
-  - date_from: Start date filter
-  - date_to: End date filter
-
-# Get purchase order details
-GET /api/v1/scm/purchase-orders/{id}
-
-# Receive goods against PO
-POST /api/v1/scm/purchase-orders/{id}/receive
-{
-  "received_items": [
-    {
-      "product_id": "prod-456",
-      "quantity_received": 95,
-      "quality_passed": true,
-      "notes": "5 units damaged in shipping"
-    }
-  ]
-}
-```
-
-### Supplier Management
-```http
-# List suppliers
-GET /api/v1/scm/suppliers
-Query Parameters:
-  - status: Filter by supplier status
-  - category: Filter by supplier category
-  - performance_rating: Filter by rating
-
-# Create supplier
-POST /api/v1/scm/suppliers
-{
-  "name": "ABC Suppliers Inc",
-  "contact_name": "John Smith",
-  "email": "john@abcsuppliers.com",
-  "phone": "+1-555-123-4567",
-  "address": {
-    "street": "123 Industrial Blvd",
-    "city": "Manufacturing City",
-    "state": "CA",
-    "postal_code": "12345"
-  },
-  "payment_terms": "NET_30",
-  "categories": ["ELECTRONICS", "COMPONENTS"]
-}
-
-# Get supplier performance
-GET /api/v1/scm/suppliers/{id}/performance
-Query Parameters:
-  - period: Time period for performance data
-  - metrics: Specific metrics to include
-```
-
-### Warehouse Operations
-```http
-# Create warehouse operation
-POST /api/v1/scm/warehouse/operations
-{
-  "type": "PICKING",
-  "priority": "HIGH",
-  "location_id": "loc-main",
-  "reference_id": "order-789",
-  "items": [
-    {
-      "product_id": "prod-123",
-      "quantity": 5,
-      "location": "A1-B2-C3"
-    }
-  ]
-}
-
-# Get warehouse operations
-GET /api/v1/scm/warehouse/operations
-Query Parameters:
-  - type: Filter by operation type
-  - status: Filter by status
-  - assigned_to: Filter by assignee
-
-# Complete warehouse operation
-POST /api/v1/scm/warehouse/operations/{id}/complete
-{
-  "completed_items": [
-    {
-      "product_id": "prod-123",
-      "quantity_completed": 5,
-      "notes": "All items picked successfully"
-    }
-  ]
-}
-```
-
-## Integration Points
-
-### Internal Module Integration
-- **Finance Module**: Purchase order processing, invoice matching, payment processing, inventory valuation
-- **Manufacturing Module**: Material requirements planning, production scheduling, bill of materials integration
-- **Sales/CRM Module**: Available-to-promise calculations, order fulfillment, customer delivery tracking
-- **Project Module**: Project-specific inventory allocation, material cost tracking
-
-### External System Integration
-- **Supplier Systems**: EDI integration for orders, invoices, and shipping notifications
-- **Shipping Carriers**: Rate shopping, shipment tracking, delivery confirmation
-- **Warehouse Management Systems**: Advanced warehouse operations integration
-- **ERP Systems**: Integration with existing enterprise systems
-
-## Business Rules and Automation
-
-### Inventory Rules
-- Automatic reorder when stock falls below reorder point
-- Safety stock calculations based on lead time and demand variability
-- Lot/serial number tracking for regulated products
-- First-in-first-out (FIFO) inventory rotation
-
-### Procurement Rules
-- Approval workflows based on purchase amount thresholds
-- Preferred supplier selection based on performance metrics
-- Contract compliance monitoring and alerts
-- Three-way matching requirements for invoice processing
-
-### Warehouse Rules
-- Optimal location assignment based on product characteristics
-- Pick path optimization to minimize travel time
-- Cycle counting frequency based on product classification
-- Quality inspection requirements for incoming goods
-
-## Analytics and Reporting
-
-### Inventory Reports
-- Inventory valuation by location and product
-- Stock aging analysis and obsolescence reports
-- Inventory turnover and velocity analysis
-- Stockout frequency and impact reports
-
-### Procurement Reports  
-- Supplier performance scorecards
-- Purchase price variance analysis
-- Contract compliance reports
-- Spend analysis by category and supplier
-
-### Warehouse Reports
-- Warehouse productivity and efficiency metrics
-- Pick accuracy and cycle time reports
-- Storage utilization and capacity planning
-- Order fulfillment performance
-
-## Next Steps
-
-Learn about other integrated business modules:
-- [Manufacturing](manufacturing.md) - Production planning and BOM management
-- [Financial Management](financial-management.md) - Purchase accounting and cost tracking
-- [Customer Relationship Management](customer-relationship-management.md) - Sales and order management
+- [Financial Management](../financial-management/) — Purchase order costs, inventory valuation via Kafka
+- [Manufacturing](../manufacturing/) — Material requirements (mfg.material.required)
+- [Customer Relations](../customer-relationship-management/) — Demand forecasts, order fulfillment
+- [Project Management](../project-management/) — Material requests from projects
