@@ -116,11 +116,11 @@ func (s *ReportService) GetVendorPerformanceReport(ctx context.Context) ([]Suppl
 	performanceMap := make(map[string]*SupplierPerformance)
 	for _, sup := range suppliers {
 		performanceMap[sup.ID] = &SupplierPerformance{
-			SupplierID:      sup.ID,
-			SupplierCode:    sup.SupplierCode,
-			SupplierName:    sup.SupplierName,
-			CompletionRate:  decimal.Zero,
-			TotalSpend:      decimal.Zero,
+			SupplierID:     sup.ID,
+			SupplierCode:   sup.SupplierCode,
+			SupplierName:   sup.SupplierName,
+			CompletionRate: decimal.Zero,
+			TotalSpend:     decimal.Zero,
 		}
 	}
 
@@ -255,4 +255,3 @@ func (s *ReportService) GetSafetyStockReport(ctx context.Context) ([]SafetyStock
 
 	return report, nil
 }
-

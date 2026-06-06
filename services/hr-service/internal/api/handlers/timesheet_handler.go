@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/erp-system/hr-service/internal/business/service"
+	"github.com/gin-gonic/gin"
 )
 
 type TimesheetHandler struct {
@@ -108,4 +108,3 @@ func (h *TimesheetHandler) ApproveTimesheet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": te})
 }
-

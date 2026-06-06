@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"sort"
 	"sync"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -779,6 +780,9 @@ func (r *MemoryEmployeeCompensationHistoryRepo) ListByEmployeeID(ctx context.Con
 			list = append(list, ech)
 		}
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].CreatedAt.Before(list[j].CreatedAt)
+	})
 	return list, nil
 }
 
@@ -807,6 +811,9 @@ func (r *MemoryPositionHistoryRepo) ListByEmployeeID(ctx context.Context, empID 
 			list = append(list, ph)
 		}
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].CreatedAt.Before(list[j].CreatedAt)
+	})
 	return list, nil
 }
 
@@ -835,7 +842,8 @@ func (r *MemoryDepartmentHistoryRepo) ListByEmployeeID(ctx context.Context, empI
 			list = append(list, dh)
 		}
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].CreatedAt.Before(list[j].CreatedAt)
+	})
 	return list, nil
 }
-
-

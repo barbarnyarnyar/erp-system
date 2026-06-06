@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -26,19 +26,19 @@ func (s *PerformanceService) ListPerformanceReviews(ctx context.Context) ([]doma
 }
 
 func (s *PerformanceService) CreatePerformanceReview(ctx context.Context, employeeID, reviewerID string, reviewDate time.Time, periodStart, periodEnd time.Time, rating int, feedback string) (*domain.PerformanceReview, error) {
-	id := fmt.Sprintf("review_%d", time.Now().UnixNano())
+	id := utils.NewID("review")
 
 	pr := &domain.PerformanceReview{
-		ID:           id,
-		EmployeeID:   employeeID,
-		ReviewerID:   reviewerID,
-		ReviewDate:   reviewDate,
-		PeriodStart:  periodStart,
-		PeriodEnd:    periodEnd,
-		Rating:       rating,
-		Feedback:     feedback,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:          id,
+		EmployeeID:  employeeID,
+		ReviewerID:  reviewerID,
+		ReviewDate:  reviewDate,
+		PeriodStart: periodStart,
+		PeriodEnd:   periodEnd,
+		Rating:      rating,
+		Feedback:    feedback,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	err := s.repo.Create(ctx, pr)
@@ -54,7 +54,7 @@ func (s *PerformanceService) CreatePerformanceReview(ctx context.Context, employ
 		Rating:     pr.Rating,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceReviewCompleted, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrPerformanceReviewCompleted, err)
 	}
 
 	// Publish goal achieved if rating is high (>= 4)
@@ -65,7 +65,7 @@ func (s *PerformanceService) CreatePerformanceReview(ctx context.Context, employ
 			AchievedAt: time.Now(),
 			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrGoalAchieved, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrGoalAchieved, err)
 		}
 	}
 
@@ -73,11 +73,11 @@ func (s *PerformanceService) CreatePerformanceReview(ctx context.Context, employ
 	if pr.Rating < 3 {
 		if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
 			EmployeeID: pr.EmployeeID,
-			ReviewID:    pr.ID,
-			Details:     fmt.Sprintf("Low performance review rating of %d: %s", pr.Rating, pr.Feedback),
-			Timestamp:   time.Now(),
+			ReviewID:   pr.ID,
+			Details:    fmt.Sprintf("Low performance review rating of %d: %s", pr.Rating, pr.Feedback),
+			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceImprovementNeeded, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrPerformanceImprovementNeeded, err)
 		}
 	}
 
@@ -111,7 +111,7 @@ func (s *PerformanceService) UpdatePerformanceReview(ctx context.Context, id str
 		Rating:     pr.Rating,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceReviewCompleted, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrPerformanceReviewCompleted, err)
 	}
 
 	// Publish goal achieved if updated rating is high
@@ -122,7 +122,7 @@ func (s *PerformanceService) UpdatePerformanceReview(ctx context.Context, id str
 			AchievedAt: time.Now(),
 			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrGoalAchieved, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrGoalAchieved, err)
 		}
 	}
 
@@ -130,11 +130,11 @@ func (s *PerformanceService) UpdatePerformanceReview(ctx context.Context, id str
 	if pr.Rating < 3 {
 		if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
 			EmployeeID: pr.EmployeeID,
-			ReviewID:    pr.ID,
-			Details:     fmt.Sprintf("Low performance review rating updated to %d: %s", pr.Rating, pr.Feedback),
-			Timestamp:   time.Now(),
+			ReviewID:   pr.ID,
+			Details:    fmt.Sprintf("Low performance review rating updated to %d: %s", pr.Rating, pr.Feedback),
+			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceImprovementNeeded, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrPerformanceImprovementNeeded, err)
 		}
 	}
 

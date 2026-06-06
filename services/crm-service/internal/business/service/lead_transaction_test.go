@@ -12,29 +12,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// MockPublisher tracks events for testing
-type MockPublisher struct {
-	Events      []MockEvent
-	FailPublish bool
-}
+import sharedtesting "erp-system/shared/testing"
 
-type MockEvent struct {
-	Topic   string
-	Key     string
-	Payload interface{}
-}
-
-func (m *MockPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
-	if m.FailPublish {
-		return errors.New("failed to publish")
-	}
-	m.Events = append(m.Events, MockEvent{
-		Topic:   topic,
-		Key:     key,
-		Payload: payload,
-	})
-	return nil
-}
+type MockPublisher = sharedtesting.MockPublisher
+type MockEvent = sharedtesting.MockEvent
 
 // MockOpportunityRepo that can fail on Create to test rollback
 type MockFailOpportunityRepo struct {

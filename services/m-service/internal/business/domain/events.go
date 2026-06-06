@@ -164,11 +164,11 @@ type SCMMaterialReceivedEvent struct {
 }
 
 type SCMInventoryUpdatedEvent struct {
-	ProductID        string          `json:"product_id"`
-	LocationID       string          `json:"location_id"`
-	QuantityOnHand   decimal.Decimal `json:"quantity_on_hand"`
-	ChangeType       string          `json:"change_type"` // e.g. ADJUSTED, RECEIVED, SHIPPED
-	Timestamp        time.Time       `json:"timestamp"`
+	ProductID      string          `json:"product_id"`
+	LocationID     string          `json:"location_id"`
+	QuantityOnHand decimal.Decimal `json:"quantity_on_hand"`
+	ChangeType     string          `json:"change_type"` // e.g. ADJUSTED, RECEIVED, SHIPPED
+	Timestamp      time.Time       `json:"timestamp"`
 }
 
 type FinCostBudgetAllocatedEvent struct {

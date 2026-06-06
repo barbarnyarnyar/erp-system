@@ -2,8 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
@@ -29,7 +28,7 @@ func (s *SupplierManagementService) ListSuppliers(ctx context.Context) ([]domain
 }
 
 func (s *SupplierManagementService) CreateSupplier(ctx context.Context, code, name, contact, email, phone string) (*domain.Supplier, error) {
-	id := fmt.Sprintf("supp_%d", time.Now().UnixNano())
+	id := utils.NewID("supp")
 
 	sup := &domain.Supplier{
 		ID:           id,
@@ -54,7 +53,7 @@ func (s *SupplierManagementService) CreateSupplier(ctx context.Context, code, na
 		VendorName: sup.SupplierName,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmVendorCreated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmVendorCreated, err)
 	}
 
 	return sup, nil
@@ -90,7 +89,7 @@ func (s *SupplierManagementService) UpdateSupplier(ctx context.Context, id, code
 		IsActive:   sup.IsActive,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmVendorUpdated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmVendorUpdated, err)
 	}
 
 	return sup, nil
@@ -108,7 +107,7 @@ func (s *SupplierManagementService) EvaluatePerformance(ctx context.Context, ven
 		Score:          score,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmVendorPerformanceEvaluated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmVendorPerformanceEvaluated, err)
 	}
 	return nil
 }
@@ -120,7 +119,7 @@ func (s *SupplierManagementService) ListContracts(ctx context.Context) ([]domain
 }
 
 func (s *SupplierManagementService) CreateContract(ctx context.Context, contractNum, supplierID string, startDate, endDate time.Time, terms string) (*domain.VendorContract, error) {
-	id := fmt.Sprintf("cont_%d", time.Now().UnixNano())
+	id := utils.NewID("cont")
 	vc := &domain.VendorContract{
 		ID:             id,
 		ContractNumber: contractNum,
@@ -168,4 +167,3 @@ func (s *SupplierManagementService) UpdateContract(ctx context.Context, id, cont
 func (s *SupplierManagementService) DeleteContract(ctx context.Context, id string) error {
 	return s.contRepo.Delete(ctx, id)
 }
-

@@ -1,9 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/pm-service/internal/business/domain"
@@ -29,7 +28,7 @@ func NewTimeExpenseService(
 }
 
 func (s *TimeExpenseService) LogTime(ctx context.Context, projectID, taskID, userID string, entryDate time.Time, hours decimal.Decimal, description string) (*domain.ProjectTimeEntry, error) {
-	id := fmt.Sprintf("time_%d", time.Now().UnixNano())
+	id := utils.NewID("time")
 	entry := &domain.ProjectTimeEntry{
 		ID:          id,
 		ProjectID:   projectID,
@@ -56,7 +55,7 @@ func (s *TimeExpenseService) LogTime(ctx context.Context, projectID, taskID, use
 		BillableRate: decimal.NewFromFloat(75.00),
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTimeLogged, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjTimeLogged, err)
 	}
 
 	return entry, nil
@@ -83,7 +82,7 @@ func (s *TimeExpenseService) ApproveTime(ctx context.Context, entryID string, ap
 		ApprovedBy: approvedBy,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTimeApproved, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjTimeApproved, err)
 	}
 
 	return entry, nil
@@ -94,7 +93,7 @@ func (s *TimeExpenseService) ListTimeEntries(ctx context.Context, projectID stri
 }
 
 func (s *TimeExpenseService) LogExpense(ctx context.Context, projectID, taskID, userID string, amount decimal.Decimal, currency string, expenseDate time.Time, category, description string) (*domain.ProjectExpense, error) {
-	id := fmt.Sprintf("exp_%d", time.Now().UnixNano())
+	id := utils.NewID("exp")
 	expense := &domain.ProjectExpense{
 		ID:          id,
 		ProjectID:   projectID,
@@ -126,7 +125,7 @@ func (s *TimeExpenseService) LogExpense(ctx context.Context, projectID, taskID, 
 		Currency:  currency,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseSubmitted, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjExpenseSubmitted, err)
 	}
 
 	// Keep old incurrence event for FM service compatibility
@@ -137,7 +136,7 @@ func (s *TimeExpenseService) LogExpense(ctx context.Context, projectID, taskID, 
 		Amount:      amount,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseIncurred, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjExpenseIncurred, err)
 	}
 
 	return expense, nil
@@ -164,7 +163,7 @@ func (s *TimeExpenseService) ApproveExpense(ctx context.Context, expenseID strin
 		ApprovedBy: approvedBy,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseApproved, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjExpenseApproved, err)
 	}
 
 	return exp, nil
@@ -194,7 +193,7 @@ func (s *TimeExpenseService) RejectTime(ctx context.Context, entryID string, rej
 		Reason:     reason,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTimeRejected, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjTimeRejected, err)
 	}
 
 	return entry, nil
@@ -220,7 +219,7 @@ func (s *TimeExpenseService) RejectExpense(ctx context.Context, expenseID string
 		Reason:     reason,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjExpenseRejected, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjExpenseRejected, err)
 	}
 
 	return exp, nil

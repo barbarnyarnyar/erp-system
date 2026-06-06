@@ -120,5 +120,3 @@ type TransactionRepository interface {
 	Update(ctx context.Context, tx *Transaction, lines []TransactionLine) error
 	List(ctx context.Context) ([]Transaction, error)
 }
-
-

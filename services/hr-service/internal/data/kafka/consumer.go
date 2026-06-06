@@ -27,14 +27,14 @@ const (
 
 type KafkaConsumer struct {
 	reader    *kafka.Reader
-	publisher *KafkaPublisher
+	publisher domain.EventPublisher
 	training  *service.TrainingService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
-	publisher *KafkaPublisher,
+	publisher domain.EventPublisher,
 	training *service.TrainingService,
 ) *KafkaConsumer {
 	topics := []string{
@@ -109,32 +109,32 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 	switch topic {
 	// TODO: connect when topic has real handler implementation
 	/*
-	case domain.TopicPrjProjectCreated:
-		var ev domain.ProjectCreatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Project Created: assigning resource buffer for Project %s (%s)", ev.ProjectID, ev.Name)
-		return nil
+		case domain.TopicPrjProjectCreated:
+			var ev domain.ProjectCreatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing Project Created: assigning resource buffer for Project %s (%s)", ev.ProjectID, ev.Name)
+			return nil
 
-	case domain.TopicPrjTaskAssigned:
-		var ev domain.TaskAssignedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
-		return nil
+		case domain.TopicPrjTaskAssigned:
+			var ev domain.TaskAssignedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
+			return nil
 	*/
 
 	// TODO: connect when fm/fin publishes fin.budget.allocated
 	/*
-	case domain.TopicFinBudgetAllocated:
-		var ev domain.BudgetAllocatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Budget Allocated: updating salary budgets for Dept %s, Allocated Amount: %s, Period: %s", ev.DepartmentID, ev.Amount.String(), ev.Period)
-		return nil
+		case domain.TopicFinBudgetAllocated:
+			var ev domain.BudgetAllocatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing Budget Allocated: updating salary budgets for Dept %s, Allocated Amount: %s, Period: %s", ev.DepartmentID, ev.Amount.String(), ev.Period)
+			return nil
 	*/
 
 	case domain.TopicMfgProductionScheduled:
@@ -151,11 +151,11 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		log.Printf("Processing SCM Training Required: auto-scheduling training program for topic: %s, deadline: %s", ev.Topic, ev.Deadline.String())
-		
+
 		title := "SCM Required Training: " + ev.Topic
 		description := "Automated mandatory training scheduled due to supply chain requirement for department " + ev.DepartmentID
 		trainer := "SCM Technical Specialist"
-		
+
 		_, err := c.training.CreateTrainingProgram(ctx, title, description, trainer, time.Now(), ev.Deadline)
 		return err
 	}

@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
@@ -73,7 +73,7 @@ func (s *WarehouseService) ListReceipts(ctx context.Context) ([]domain.Receipt, 
 }
 
 func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes string, lines []ReceiptLineInput) (*ReceiptDetails, error) {
-	recID := fmt.Sprintf("rec_%d", time.Now().UnixNano())
+	recID := utils.NewID("rec")
 	recNum := fmt.Sprintf("REC-%d", time.Now().Unix())
 
 	rec := &domain.Receipt{
@@ -104,11 +104,11 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 
 	for _, l := range lines {
 		line := domain.ReceiptLine{
-			ID:                fmt.Sprintf("recl_%d", time.Now().UnixNano()+int64(len(savedLines))),
-			ReceiptID:         recID,
-			ProductID:         l.ProductID,
-			QuantityReceived:  l.QuantityReceived,
-			CreatedAt:         time.Now(),
+			ID:               fmt.Sprintf("recl_%d", time.Now().UnixNano()+int64(len(savedLines))),
+			ReceiptID:        recID,
+			ProductID:        l.ProductID,
+			QuantityReceived: l.QuantityReceived,
+			CreatedAt:        time.Now(),
 		}
 
 		err = s.recLRepo.Create(ctx, &line)
@@ -167,7 +167,7 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 			DeliveryDate: rec.ReceivedDate,
 			Timestamp:    time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmMaterialDelivered, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmMaterialDelivered, err)
 		}
 	}
 
@@ -221,20 +221,20 @@ func (s *WarehouseService) ListShipments(ctx context.Context) ([]domain.Shipment
 }
 
 func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, trackingNum string, estDelivery time.Time, notes string, lines []ShipmentLineInput) (*ShipmentDetails, error) {
-	shipID := fmt.Sprintf("ship_%d", time.Now().UnixNano())
+	shipID := utils.NewID("ship")
 	shipNum := fmt.Sprintf("SHP-%d", time.Now().Unix())
 
 	ship := &domain.Shipment{
-		ID:                 shipID,
-		ShipmentNumber:     shipNum,
-		Carrier:            carrier,
-		TrackingNumber:     trackingNum,
-		ShippedDate:        time.Now(),
-		EstimatedDelivery:  estDelivery,
-		Status:             "SHIPPED",
-		Notes:              notes,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
+		ID:                shipID,
+		ShipmentNumber:    shipNum,
+		Carrier:           carrier,
+		TrackingNumber:    trackingNum,
+		ShippedDate:       time.Now(),
+		EstimatedDelivery: estDelivery,
+		Status:            "SHIPPED",
+		Notes:             notes,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 
 	err := s.shipRepo.Create(ctx, ship)
@@ -246,11 +246,11 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 
 	for _, l := range lines {
 		line := domain.ShipmentLine{
-			ID:               fmt.Sprintf("shipl_%d", time.Now().UnixNano()+int64(len(savedLines))),
-			ShipmentID:       shipID,
-			ProductID:        l.ProductID,
-			QuantityShipped:  l.QuantityShipped,
-			CreatedAt:        time.Now(),
+			ID:              fmt.Sprintf("shipl_%d", time.Now().UnixNano()+int64(len(savedLines))),
+			ShipmentID:      shipID,
+			ProductID:       l.ProductID,
+			QuantityShipped: l.QuantityShipped,
+			CreatedAt:       time.Now(),
 		}
 
 		err = s.shipLRepo.Create(ctx, &line)
@@ -274,7 +274,7 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 		TrackingNumber: ship.TrackingNumber,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentCreated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmShipmentCreated, err)
 	}
 
 	if err := s.publisher.Publish(ctx, domain.TopicScmShipmentDispatched, ship.ID, domain.ShipmentDispatchedEvent{
@@ -282,7 +282,7 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 		DispatchedAt: ship.ShippedDate,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentDispatched, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmShipmentDispatched, err)
 	}
 
 	return &ShipmentDetails{
@@ -330,7 +330,7 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 			DeliveredAt: time.Now(),
 			Timestamp:   time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentDelivered, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmShipmentDelivered, err)
 		}
 	}
 
@@ -341,7 +341,7 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 			Reason:            notes,
 			Timestamp:         time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmShipmentDelayed, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmShipmentDelayed, err)
 		}
 	}
 
@@ -363,7 +363,7 @@ func (s *WarehouseService) TriggerTrainingRequired(ctx context.Context, deptID s
 		Deadline:     deadline,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmTrainingRequired, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmTrainingRequired, err)
 	}
 	return nil
 }

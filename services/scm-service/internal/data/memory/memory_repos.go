@@ -822,4 +822,3 @@ func (r *MemoryStockTransferRepo) Update(ctx context.Context, st *domain.StockTr
 	r.data[st.ID] = *st
 	return nil
 }
-

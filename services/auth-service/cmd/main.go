@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
 	"os"
@@ -29,7 +30,7 @@ func main() {
 	log.Printf("Starting auth-service in %s environment...", cfg.Server.Env)
 
 	// 2. Initialize Event Publisher (Kafka)
-	publisher := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
+	publisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
 	defer func() {
 		if err := publisher.Close(); err != nil {
 			log.Printf("Failed to close Kafka publisher: %v", err)

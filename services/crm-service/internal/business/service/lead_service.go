@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -11,10 +11,10 @@ import (
 )
 
 type LeadService struct {
-	leadRepo   domain.LeadRepository
-	custSvc    *CustomerService
-	oppSvc     *OpportunityService
-	publisher  domain.EventPublisher
+	leadRepo  domain.LeadRepository
+	custSvc   *CustomerService
+	oppSvc    *OpportunityService
+	publisher domain.EventPublisher
 }
 
 func NewLeadService(
@@ -32,7 +32,7 @@ func NewLeadService(
 }
 
 func (s *LeadService) CreateLead(ctx context.Context, firstName, lastName, company, email, phone, source string) (*domain.Lead, error) {
-	id := fmt.Sprintf("lead_%d", time.Now().UnixNano())
+	id := utils.NewID("lead")
 	lead := &domain.Lead{
 		ID:        id,
 		FirstName: firstName,
@@ -58,7 +58,7 @@ func (s *LeadService) CreateLead(ctx context.Context, firstName, lastName, compa
 		Email:     email,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadCreated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmLeadCreated, err)
 	}
 
 	return lead, nil
@@ -98,14 +98,14 @@ func (s *LeadService) UpdateLead(ctx context.Context, id string, firstName, last
 				Score:     score,
 				Timestamp: time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadQualified, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmLeadQualified, err)
 			}
 		} else if status == "LOST" {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmLeadLost, id, domain.LeadLostEvent{
 				LeadID:    id,
 				Timestamp: time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadLost, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmLeadLost, err)
 			}
 		}
 	}
@@ -170,7 +170,7 @@ func (s *LeadService) ConvertLead(ctx context.Context, id string) (*domain.Oppor
 		OpportunityID: opp.ID,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmLeadConverted, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmLeadConverted, err)
 		rollback()
 		return nil, fmt.Errorf("failed to publish lead conversion event: %w", err)
 	}

@@ -1,10 +1,11 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -56,7 +57,7 @@ func (s *EmployeeManagementService) CreateEmployee(ctx context.Context, firstNam
 		return nil, errors.New("first name, last name, and email are required")
 	}
 
-	id := fmt.Sprintf("emp_%d", time.Now().UnixNano())
+	id := utils.NewID("emp")
 	empCode := fmt.Sprintf("EMP-%d", time.Now().Unix())
 
 	emp := &domain.Employee{
@@ -80,7 +81,7 @@ func (s *EmployeeManagementService) CreateEmployee(ctx context.Context, firstNam
 	}
 
 	// Record initial compensation history
-	echID := fmt.Sprintf("ech_%d", time.Now().UnixNano())
+	echID := utils.NewID("ech")
 	_ = s.historyRepo.Create(ctx, &domain.EmployeeCompensationHistory{
 		ID:            echID,
 		EmployeeID:    emp.ID,
@@ -99,7 +100,7 @@ func (s *EmployeeManagementService) CreateEmployee(ctx context.Context, firstNam
 		Salary:       emp.Salary,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeCreated, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrEmployeeCreated, err)
 	}
 
 	return emp, nil
@@ -145,12 +146,12 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 		Status:       emp.Status,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeUpdated, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrEmployeeUpdated, err)
 	}
 
 	// Record Position History and Publish Promoted Event
 	if positionChanged {
-		phID := fmt.Sprintf("ph_%d", time.Now().UnixNano())
+		phID := utils.NewID("ph")
 		_ = s.posHistoryRepo.Create(ctx, &domain.PositionHistory{
 			ID:            phID,
 			EmployeeID:    emp.ID,
@@ -167,13 +168,13 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 			NewSalary:     emp.Salary,
 			Timestamp:     time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeePromoted, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrEmployeePromoted, err)
 		}
 	}
 
 	// Record Department History and Publish Transferred Event
 	if departmentChanged {
-		dhID := fmt.Sprintf("dh_%d", time.Now().UnixNano())
+		dhID := utils.NewID("dh")
 		_ = s.deptHistoryRepo.Create(ctx, &domain.DepartmentHistory{
 			ID:            dhID,
 			EmployeeID:    emp.ID,
@@ -189,7 +190,7 @@ func (s *EmployeeManagementService) UpdateEmployee(ctx context.Context, id, firs
 			NewDepartmentID: emp.DepartmentID,
 			Timestamp:       time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeTransferred, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrEmployeeTransferred, err)
 		}
 	}
 
@@ -205,7 +206,7 @@ func (s *EmployeeManagementService) UpdateCompensation(ctx context.Context, empl
 	oldSalary := emp.Salary
 
 	// Record compensation history
-	echID := fmt.Sprintf("ech_%d", time.Now().UnixNano())
+	echID := utils.NewID("ech")
 	err = s.historyRepo.Create(ctx, &domain.EmployeeCompensationHistory{
 		ID:            echID,
 		EmployeeID:    emp.ID,
@@ -234,7 +235,7 @@ func (s *EmployeeManagementService) UpdateCompensation(ctx context.Context, empl
 			NewSalary:  salary,
 			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrSalaryChanged, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrSalaryChanged, err)
 		}
 	}
 
@@ -271,18 +272,18 @@ func (s *EmployeeManagementService) DeleteEmployee(ctx context.Context, id strin
 		Reason:     "Deleted / Terminated from management system",
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeTerminated, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrEmployeeTerminated, err)
 	}
 
 	return nil
 }
 
 func (s *EmployeeManagementService) SubmitExpenseClaim(ctx context.Context, employeeID string, claimDate time.Time, lines []domain.ExpenseClaimLine) (*domain.ExpenseClaim, error) {
-	claimID := fmt.Sprintf("exp_%d", time.Now().UnixNano())
+	claimID := utils.NewID("exp")
 
 	var total decimal.Decimal
 	for i := range lines {
-		lines[i].ID = fmt.Sprintf("expl_%d_%d", time.Now().UnixNano(), i)
+		lines[i].ID = utils.NewID("expl")
 		lines[i].ClaimID = claimID
 		total = total.Add(lines[i].Amount)
 	}
@@ -322,7 +323,7 @@ func (s *EmployeeManagementService) SubmitExpenseClaim(ctx context.Context, empl
 		Amount:      claim.TotalAmount,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrExpenseSubmitted, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrExpenseSubmitted, err)
 	}
 
 	return claim, nil
@@ -333,7 +334,7 @@ func (s *EmployeeManagementService) ListDepartments(ctx context.Context) ([]doma
 }
 
 func (s *EmployeeManagementService) CreateDepartment(ctx context.Context, code, name, description, managerID string) (*domain.Department, error) {
-	id := fmt.Sprintf("dept_%d", time.Now().UnixNano())
+	id := utils.NewID("dept")
 	dept := &domain.Department{
 		ID:          id,
 		Code:        code,
@@ -355,7 +356,7 @@ func (s *EmployeeManagementService) ListPositions(ctx context.Context) ([]domain
 }
 
 func (s *EmployeeManagementService) CreatePosition(ctx context.Context, code, title, description, departmentID string, minSalary, maxSalary decimal.Decimal) (*domain.Position, error) {
-	id := fmt.Sprintf("pos_%d", time.Now().UnixNano())
+	id := utils.NewID("pos")
 	pos := &domain.Position{
 		ID:           id,
 		Code:         code,
@@ -395,4 +396,3 @@ func (s *EmployeeManagementService) UpdateEmployeeSkills(ctx context.Context, em
 	}
 	return nil
 }
-

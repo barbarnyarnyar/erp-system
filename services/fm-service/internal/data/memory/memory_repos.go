@@ -23,7 +23,7 @@ func NewMemoryAccountRepo() *MemoryAccountRepo {
 func (r *MemoryAccountRepo) Create(ctx context.Context, account *domain.Account) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.accounts[account.ID]; ok {
 		return errors.New("account already exists")
 	}
@@ -34,7 +34,7 @@ func (r *MemoryAccountRepo) Create(ctx context.Context, account *domain.Account)
 func (r *MemoryAccountRepo) GetByID(ctx context.Context, id string) (*domain.Account, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	acc, ok := r.accounts[id]
 	if !ok {
 		return nil, errors.New("account not found")
@@ -45,7 +45,7 @@ func (r *MemoryAccountRepo) GetByID(ctx context.Context, id string) (*domain.Acc
 func (r *MemoryAccountRepo) GetByNumber(ctx context.Context, accountNumber string) (*domain.Account, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	for _, acc := range r.accounts {
 		if acc.AccountNumber == accountNumber {
 			return &acc, nil
@@ -57,7 +57,7 @@ func (r *MemoryAccountRepo) GetByNumber(ctx context.Context, accountNumber strin
 func (r *MemoryAccountRepo) Update(ctx context.Context, account *domain.Account) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.accounts[account.ID]; !ok {
 		return errors.New("account not found")
 	}
@@ -68,7 +68,7 @@ func (r *MemoryAccountRepo) Update(ctx context.Context, account *domain.Account)
 func (r *MemoryAccountRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.accounts[id]; !ok {
 		return errors.New("account not found")
 	}
@@ -79,7 +79,7 @@ func (r *MemoryAccountRepo) Delete(ctx context.Context, id string) error {
 func (r *MemoryAccountRepo) List(ctx context.Context) ([]domain.Account, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	list := make([]domain.Account, 0, len(r.accounts))
 	for _, acc := range r.accounts {
 		list = append(list, acc)
@@ -104,7 +104,7 @@ func NewMemoryJournalEntryRepo() *MemoryJournalEntryRepo {
 func (r *MemoryJournalEntryRepo) Create(ctx context.Context, entry *domain.JournalEntry, lines []domain.JournalEntryLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.entries[entry.ID] = *entry
 	r.lines[entry.ID] = lines
 	return nil
@@ -113,7 +113,7 @@ func (r *MemoryJournalEntryRepo) Create(ctx context.Context, entry *domain.Journ
 func (r *MemoryJournalEntryRepo) GetByID(ctx context.Context, id string) (*domain.JournalEntry, []domain.JournalEntryLine, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	entry, ok := r.entries[id]
 	if !ok {
 		return nil, nil, errors.New("journal entry not found")
@@ -124,7 +124,7 @@ func (r *MemoryJournalEntryRepo) GetByID(ctx context.Context, id string) (*domai
 func (r *MemoryJournalEntryRepo) Update(ctx context.Context, entry *domain.JournalEntry, lines []domain.JournalEntryLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.entries[entry.ID] = *entry
 	r.lines[entry.ID] = lines
 	return nil
@@ -133,7 +133,7 @@ func (r *MemoryJournalEntryRepo) Update(ctx context.Context, entry *domain.Journ
 func (r *MemoryJournalEntryRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	delete(r.entries, id)
 	delete(r.lines, id)
 	return nil
@@ -142,7 +142,7 @@ func (r *MemoryJournalEntryRepo) Delete(ctx context.Context, id string) error {
 func (r *MemoryJournalEntryRepo) List(ctx context.Context) ([]domain.JournalEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	list := make([]domain.JournalEntry, 0, len(r.entries))
 	for _, entry := range r.entries {
 		list = append(list, entry)
@@ -167,7 +167,7 @@ func NewMemoryInvoiceRepo() *MemoryInvoiceRepo {
 func (r *MemoryInvoiceRepo) Create(ctx context.Context, invoice *domain.Invoice, lines []domain.InvoiceLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.invoices[invoice.ID] = *invoice
 	r.lines[invoice.ID] = lines
 	return nil
@@ -176,7 +176,7 @@ func (r *MemoryInvoiceRepo) Create(ctx context.Context, invoice *domain.Invoice,
 func (r *MemoryInvoiceRepo) GetByID(ctx context.Context, id string) (*domain.Invoice, []domain.InvoiceLine, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	inv, ok := r.invoices[id]
 	if !ok {
 		return nil, nil, errors.New("invoice not found")
@@ -187,7 +187,7 @@ func (r *MemoryInvoiceRepo) GetByID(ctx context.Context, id string) (*domain.Inv
 func (r *MemoryInvoiceRepo) Update(ctx context.Context, invoice *domain.Invoice) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.invoices[invoice.ID] = *invoice
 	return nil
 }
@@ -195,7 +195,7 @@ func (r *MemoryInvoiceRepo) Update(ctx context.Context, invoice *domain.Invoice)
 func (r *MemoryInvoiceRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	delete(r.invoices, id)
 	delete(r.lines, id)
 	return nil
@@ -204,7 +204,7 @@ func (r *MemoryInvoiceRepo) Delete(ctx context.Context, id string) error {
 func (r *MemoryInvoiceRepo) List(ctx context.Context) ([]domain.Invoice, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	list := make([]domain.Invoice, 0, len(r.invoices))
 	for _, inv := range r.invoices {
 		list = append(list, inv)
@@ -227,7 +227,7 @@ func NewMemoryPaymentRepo() *MemoryPaymentRepo {
 func (r *MemoryPaymentRepo) Create(ctx context.Context, payment *domain.Payment) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.payments[payment.ID] = *payment
 	return nil
 }
@@ -235,7 +235,7 @@ func (r *MemoryPaymentRepo) Create(ctx context.Context, payment *domain.Payment)
 func (r *MemoryPaymentRepo) GetByID(ctx context.Context, id string) (*domain.Payment, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	pay, ok := r.payments[id]
 	if !ok {
 		return nil, errors.New("payment not found")
@@ -246,7 +246,7 @@ func (r *MemoryPaymentRepo) GetByID(ctx context.Context, id string) (*domain.Pay
 func (r *MemoryPaymentRepo) List(ctx context.Context) ([]domain.Payment, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	list := make([]domain.Payment, 0, len(r.payments))
 	for _, pay := range r.payments {
 		list = append(list, pay)
@@ -269,7 +269,7 @@ func NewMemoryBudgetRepo() *MemoryBudgetRepo {
 func (r *MemoryBudgetRepo) Create(ctx context.Context, budget *domain.Budget) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.budgets[budget.ID] = *budget
 	return nil
 }
@@ -277,7 +277,7 @@ func (r *MemoryBudgetRepo) Create(ctx context.Context, budget *domain.Budget) er
 func (r *MemoryBudgetRepo) GetByID(ctx context.Context, id string) (*domain.Budget, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	bud, ok := r.budgets[id]
 	if !ok {
 		return nil, errors.New("budget not found")
@@ -288,7 +288,7 @@ func (r *MemoryBudgetRepo) GetByID(ctx context.Context, id string) (*domain.Budg
 func (r *MemoryBudgetRepo) Update(ctx context.Context, budget *domain.Budget) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.budgets[budget.ID] = *budget
 	return nil
 }
@@ -296,7 +296,7 @@ func (r *MemoryBudgetRepo) Update(ctx context.Context, budget *domain.Budget) er
 func (r *MemoryBudgetRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	delete(r.budgets, id)
 	return nil
 }
@@ -304,7 +304,7 @@ func (r *MemoryBudgetRepo) Delete(ctx context.Context, id string) error {
 func (r *MemoryBudgetRepo) List(ctx context.Context) ([]domain.Budget, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	list := make([]domain.Budget, 0, len(r.budgets))
 	for _, bud := range r.budgets {
 		list = append(list, bud)
@@ -315,7 +315,7 @@ func (r *MemoryBudgetRepo) List(ctx context.Context) ([]domain.Budget, error) {
 func (r *MemoryBudgetRepo) GetByAccountAndPeriod(ctx context.Context, accountID string, fiscalYear int, period int) (*domain.Budget, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	for _, bud := range r.budgets {
 		if bud.AccountID == accountID && bud.FiscalYear == fiscalYear && bud.Period == period {
 			return &bud, nil
@@ -341,7 +341,7 @@ func NewMemoryVendorBillRepo() *MemoryVendorBillRepo {
 func (r *MemoryVendorBillRepo) Create(ctx context.Context, bill *domain.VendorBill, lines []domain.VendorBillLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.bills[bill.ID] = *bill
 	r.lines[bill.ID] = lines
 	return nil
@@ -350,7 +350,7 @@ func (r *MemoryVendorBillRepo) Create(ctx context.Context, bill *domain.VendorBi
 func (r *MemoryVendorBillRepo) GetByID(ctx context.Context, id string) (*domain.VendorBill, []domain.VendorBillLine, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	bill, ok := r.bills[id]
 	if !ok {
 		return nil, nil, errors.New("vendor bill not found")
@@ -361,7 +361,7 @@ func (r *MemoryVendorBillRepo) GetByID(ctx context.Context, id string) (*domain.
 func (r *MemoryVendorBillRepo) Update(ctx context.Context, bill *domain.VendorBill) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.bills[bill.ID] = *bill
 	return nil
 }
@@ -369,7 +369,7 @@ func (r *MemoryVendorBillRepo) Update(ctx context.Context, bill *domain.VendorBi
 func (r *MemoryVendorBillRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	delete(r.bills, id)
 	delete(r.lines, id)
 	return nil
@@ -378,7 +378,7 @@ func (r *MemoryVendorBillRepo) Delete(ctx context.Context, id string) error {
 func (r *MemoryVendorBillRepo) List(ctx context.Context) ([]domain.VendorBill, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	list := make([]domain.VendorBill, 0, len(r.bills))
 	for _, bill := range r.bills {
 		list = append(list, bill)
@@ -754,5 +754,3 @@ func (r *MemoryTransactionRepo) List(ctx context.Context) ([]domain.Transaction,
 	}
 	return list, nil
 }
-
-

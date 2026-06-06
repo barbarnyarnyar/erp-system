@@ -18,14 +18,14 @@ import (
 // (which bumps the security_stamp and invalidates any in-flight JWTs).
 type KafkaConsumer struct {
 	reader    *kafka.Reader
-	publisher *KafkaPublisher
+	publisher domain.EventPublisher
 	userSvc   *service.UserService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
-	publisher *KafkaPublisher,
+	publisher domain.EventPublisher,
 	userSvc *service.UserService,
 ) *KafkaConsumer {
 	topics := []string{

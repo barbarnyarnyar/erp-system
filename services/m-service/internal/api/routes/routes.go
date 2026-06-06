@@ -21,7 +21,7 @@ func RegisterRoutes(
 		v1.GET("/boms/:id", bomHandler.GetBillOfMaterials)
 		v1.PUT("/boms/:id", bomHandler.UpdateBillOfMaterials)
 		v1.DELETE("/boms/:id", bomHandler.DeleteBillOfMaterials)
-		
+
 		// BOM Components
 		v1.GET("/boms/:id/components", bomHandler.GetBOMComponents)
 		v1.POST("/boms/:id/components", bomHandler.AddBOMComponent)

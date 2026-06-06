@@ -1,9 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/m-service/internal/business/domain"
@@ -31,7 +30,7 @@ func NewMaintenanceService(
 }
 
 func (s *MaintenanceService) LogMachineStatus(ctx context.Context, workCenterID string, statusCode string, message string, severity string) (*domain.MachineLog, error) {
-	id := fmt.Sprintf("ml_%d", time.Now().UnixNano())
+	id := utils.NewID("ml")
 	ml := &domain.MachineLog{
 		ID:           id,
 		WorkCenterID: workCenterID,
@@ -49,7 +48,7 @@ func (s *MaintenanceService) LogMachineStatus(ctx context.Context, workCenterID 
 }
 
 func (s *MaintenanceService) CreateEquipment(ctx context.Context, workCenterID string, name string) (*domain.Equipment, error) {
-	id := fmt.Sprintf("eq_%d", time.Now().UnixNano())
+	id := utils.NewID("eq")
 	eq := &domain.Equipment{
 		ID:           id,
 		WorkCenterID: workCenterID,
@@ -65,7 +64,7 @@ func (s *MaintenanceService) CreateEquipment(ctx context.Context, workCenterID s
 }
 
 func (s *MaintenanceService) ScheduleMaintenance(ctx context.Context, equipmentID string, description string, maintType string) (*domain.MaintenanceOrder, error) {
-	id := fmt.Sprintf("mo_%d", time.Now().UnixNano())
+	id := utils.NewID("mo")
 	mo := &domain.MaintenanceOrder{
 		ID:              id,
 		EquipmentID:     equipmentID,
@@ -92,7 +91,7 @@ func (s *MaintenanceService) ScheduleMaintenance(ctx context.Context, equipmentI
 		ScheduledDate:      time.Now(), // Mock scheduled date
 		Timestamp:          time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaintenanceScheduled, err)
+		utils.LogPublishErr("m-service", domain.TopicMfgMaintenanceScheduled, err)
 	}
 
 	// Publish Equipment Down Event
@@ -103,7 +102,7 @@ func (s *MaintenanceService) ScheduleMaintenance(ctx context.Context, equipmentI
 			Reason:       description,
 			Timestamp:    time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgEquipmentDown, err)
+			utils.LogPublishErr("m-service", domain.TopicMfgEquipmentDown, err)
 		}
 	}
 
@@ -136,7 +135,7 @@ func (s *MaintenanceService) CompleteMaintenance(ctx context.Context, id string)
 		EquipmentID:        mo.EquipmentID,
 		Timestamp:          now,
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaintenanceCompleted, err)
+		utils.LogPublishErr("m-service", domain.TopicMfgMaintenanceCompleted, err)
 	}
 
 	// Publish Equipment Up Event
@@ -146,7 +145,7 @@ func (s *MaintenanceService) CompleteMaintenance(ctx context.Context, id string)
 			WorkCenterID: eq.WorkCenterID,
 			Timestamp:    now,
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgEquipmentUp, err)
+			utils.LogPublishErr("m-service", domain.TopicMfgEquipmentUp, err)
 		}
 	}
 

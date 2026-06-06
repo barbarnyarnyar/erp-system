@@ -50,4 +50,3 @@ func (h *ReportHandler) GetSafetyStockReport(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": rep})
 }
-

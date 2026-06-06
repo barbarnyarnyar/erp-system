@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
+	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/erp-system/fm-service/internal/api/handlers"
 	"github.com/erp-system/fm-service/internal/api/routes"
 	"github.com/erp-system/fm-service/internal/business/service"
 	"github.com/erp-system/fm-service/internal/config"
-	"github.com/erp-system/fm-service/internal/data/memory"
 	kafkaData "github.com/erp-system/fm-service/internal/data/kafka"
+	"github.com/erp-system/fm-service/internal/data/memory"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 	}
 
 	// Initialize Kafka Publisher
-	kafkaPublisher := kafkaData.NewKafkaPublisher(cfg.Kafka.Brokers)
+	kafkaPublisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
 	defer kafkaPublisher.Close()
 
 	// Initialize in-memory repositories

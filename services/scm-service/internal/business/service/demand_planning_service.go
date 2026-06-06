@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
@@ -22,7 +22,7 @@ func (s *DemandPlanningService) ListForecasts(ctx context.Context) ([]domain.Dem
 }
 
 func (s *DemandPlanningService) CreateForecast(ctx context.Context, productID string, forecastDate time.Time, qty int, confidence decimal.Decimal, notes string) (*domain.DemandForecast, error) {
-	id := fmt.Sprintf("fore_%d", time.Now().UnixNano())
+	id := utils.NewID("fore")
 
 	df := &domain.DemandForecast{
 		ID:               id,

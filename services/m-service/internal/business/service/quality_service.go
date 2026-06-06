@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -37,14 +37,14 @@ func (s *QualityService) SetProductionService(prodSvc *ProductionService) {
 }
 
 func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderID string, inspectorID string, result string, remarks string) (*domain.QualityInspection, error) {
-	id := fmt.Sprintf("qi_%d", time.Now().UnixNano())
+	id := utils.NewID("qi")
 	qi := &domain.QualityInspection{
-		ID:            id,
-		WorkOrderID:   workOrderID,
-		InspectorID:   inspectorID,
-		Result:        result,
-		Remarks:       remarks,
-		InspectedAt:   time.Now(),
+		ID:          id,
+		WorkOrderID: workOrderID,
+		InspectorID: inspectorID,
+		Result:      result,
+		Remarks:     remarks,
+		InspectedAt: time.Now(),
 	}
 
 	err := s.qualityRepo.Create(ctx, qi)
@@ -53,13 +53,13 @@ func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderI
 	}
 
 	if result == "FAIL" {
-		ncID := fmt.Sprintf("nc_%d", time.Now().UnixNano())
+		ncID := utils.NewID("nc")
 		nc := &domain.NonConformance{
-			ID:            ncID,
-			InspectionID:  id,
-			Description:   fmt.Sprintf("Failed quality inspection: %s", remarks),
-			Severity:      "MEDIUM",
-			Status:        "OPEN",
+			ID:           ncID,
+			InspectionID: id,
+			Description:  fmt.Sprintf("Failed quality inspection: %s", remarks),
+			Severity:     "MEDIUM",
+			Status:       "OPEN",
 		}
 		_ = s.nonConfRepo.Create(ctx, nc)
 
@@ -71,7 +71,7 @@ func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderI
 			Remarks:      remarks,
 			Timestamp:    time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgQualityInspectionFailed, err)
+			utils.LogPublishErr("m-service", domain.TopicMfgQualityInspectionFailed, err)
 		}
 
 		// Publish Non-Conformance Detected Event
@@ -82,7 +82,7 @@ func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderI
 			Description:      nc.Description,
 			Timestamp:        time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgQualityNonConformanceDetected, err)
+			utils.LogPublishErr("m-service", domain.TopicMfgQualityNonConformanceDetected, err)
 		}
 
 		// Publish Material Wasted Event (using mock quantities/reasons)
@@ -94,7 +94,7 @@ func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderI
 			Reason:            fmt.Sprintf("Inspection Fail: %s", remarks),
 			Timestamp:         time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaterialWasted, err)
+			utils.LogPublishErr("m-service", domain.TopicMfgMaterialWasted, err)
 		}
 
 	} else if result == "PASS" {
@@ -105,7 +105,7 @@ func (s *QualityService) RecordQualityInspection(ctx context.Context, workOrderI
 			InspectorID:  inspectorID,
 			Timestamp:    time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgQualityInspectionPassed, err)
+			utils.LogPublishErr("m-service", domain.TopicMfgQualityInspectionPassed, err)
 		}
 
 		if s.prodSvc != nil {

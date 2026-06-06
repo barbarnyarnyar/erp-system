@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/m-service/internal/business/domain"
@@ -34,7 +34,7 @@ func NewBOMService(
 }
 
 func (s *BOMService) CreateBillOfMaterials(ctx context.Context, productID string, version string, description string) (*domain.BillOfMaterials, error) {
-	bomID := fmt.Sprintf("bom_%d", time.Now().UnixNano())
+	bomID := utils.NewID("bom")
 	bom := &domain.BillOfMaterials{
 		ID:          bomID,
 		ProductID:   productID,
@@ -88,13 +88,13 @@ func (s *BOMService) GetBOMComponents(ctx context.Context, bomID string) ([]doma
 }
 
 func (s *BOMService) AddBOMComponent(ctx context.Context, bomID string, componentProductID string, quantity decimal.Decimal, wasteFactor decimal.Decimal) (*domain.BOMComponent, error) {
-	compID := fmt.Sprintf("bomc_%d", time.Now().UnixNano())
+	compID := utils.NewID("bomc")
 	comp := &domain.BOMComponent{
-		ID:                   compID,
-		BomID:                bomID,
-		ComponentProductID:   componentProductID,
-		Quantity:             quantity,
-		WasteFactor:          wasteFactor,
+		ID:                 compID,
+		BomID:              bomID,
+		ComponentProductID: componentProductID,
+		Quantity:           quantity,
+		WasteFactor:        wasteFactor,
 	}
 
 	err := s.compRepo.Create(ctx, comp)
@@ -109,14 +109,14 @@ func (s *BOMService) RemoveBOMComponent(ctx context.Context, bomID string, compo
 }
 
 func (s *BOMService) CreateWorkCenter(ctx context.Context, code string, name string, capacity decimal.Decimal, hourlyRate decimal.Decimal) (*domain.WorkCenter, error) {
-	id := fmt.Sprintf("wc_%d", time.Now().UnixNano())
+	id := utils.NewID("wc")
 	wc := &domain.WorkCenter{
-		ID:             id,
-		Code:           code,
-		Name:           name,
-		Status:         "ACTIVE",
-		CapacityHours:  capacity,
-		HourlyRate:     hourlyRate,
+		ID:            id,
+		Code:          code,
+		Name:          name,
+		Status:        "ACTIVE",
+		CapacityHours: capacity,
+		HourlyRate:    hourlyRate,
 	}
 	err := s.wcRepo.Create(ctx, wc)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *BOMService) DeleteWorkCenter(ctx context.Context, id string) error {
 }
 
 func (s *BOMService) CreateRoutingOperation(ctx context.Context, bomID string, sequenceNum int, workCenterID string, name string, setupTime, runTime decimal.Decimal) (*domain.RoutingOperation, error) {
-	id := fmt.Sprintf("route_%d", time.Now().UnixNano())
+	id := utils.NewID("route")
 	op := &domain.RoutingOperation{
 		ID:             id,
 		BomID:          bomID,

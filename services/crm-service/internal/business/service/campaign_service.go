@@ -1,9 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
@@ -23,15 +22,15 @@ func NewCampaignService(campaignRepo domain.CampaignRepository, publisher domain
 }
 
 func (s *CampaignService) CreateCampaign(ctx context.Context, name, campaignType string, budget decimal.Decimal) (*domain.Campaign, error) {
-	id := fmt.Sprintf("camp_%d", time.Now().UnixNano())
+	id := utils.NewID("camp")
 	camp := &domain.Campaign{
-		ID:         id,
-		Name:       name,
-		Type:       campaignType,
-		Status:     "DRAFT",
-		Budget:     budget,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		ID:        id,
+		Name:      name,
+		Type:      campaignType,
+		Status:    "DRAFT",
+		Budget:    budget,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	err := s.campaignRepo.Create(ctx, camp)
@@ -73,14 +72,14 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, id string, status 
 				Name:       camp.Name,
 				Timestamp:  time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCampaignLaunched, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmCampaignLaunched, err)
 			}
 		} else if status == "COMPLETED" {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmCampaignCompleted, id, domain.CampaignCompletedEvent{
 				CampaignID: id,
 				Timestamp:  time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCampaignCompleted, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmCampaignCompleted, err)
 			}
 		}
 	}

@@ -1,9 +1,9 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
+	"log"
 	"time"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
@@ -35,7 +35,7 @@ func NewQuoteService(
 }
 
 func (s *QuoteService) CreateQuote(ctx context.Context, customerID, title string, validUntil time.Time, items []QuoteLineItemInput) (*domain.Quote, error) {
-	quoteID := fmt.Sprintf("q_%d", time.Now().UnixNano())
+	quoteID := utils.NewID("q")
 	total := decimal.Zero
 
 	for _, it := range items {
@@ -60,7 +60,7 @@ func (s *QuoteService) CreateQuote(ctx context.Context, customerID, title string
 	}
 
 	for _, it := range items {
-		itemID := fmt.Sprintf("qi_%d", time.Now().UnixNano())
+		itemID := utils.NewID("qi")
 		item := &domain.QuoteLineItem{
 			ID:        itemID,
 			QuoteID:   quoteID,
@@ -114,14 +114,14 @@ func (s *QuoteService) SendQuote(ctx context.Context, id string) (*domain.Quote,
 	_ = s.quoteRepo.Update(ctx, quote)
 
 	// Publish Email Sent Event
-	emailID := fmt.Sprintf("email_%d", time.Now().UnixNano())
+	emailID := utils.NewID("email")
 	if err := s.publisher.Publish(ctx, domain.TopicCrmEmailSent, emailID, domain.EmailSentEvent{
 		EmailID:    emailID,
 		CampaignID: "quote_dispatch",
 		Recipient:  "customer_quote_inbox",
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmEmailSent, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmEmailSent, err)
 	}
 
 	return quote, nil

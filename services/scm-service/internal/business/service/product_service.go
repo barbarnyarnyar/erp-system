@@ -2,8 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
@@ -31,21 +30,21 @@ func (s *ProductManagementService) ListProducts(ctx context.Context) ([]domain.P
 }
 
 func (s *ProductManagementService) CreateProduct(ctx context.Context, code, name, desc, pType, uom string, cost, price decimal.Decimal, categoryID *string) (*domain.Product, error) {
-	id := fmt.Sprintf("prod_%d", time.Now().UnixNano())
+	id := utils.NewID("prod")
 
 	p := &domain.Product{
-		ID:              id,
-		ProductCode:     code,
-		ProductName:     name,
-		Description:     desc,
-		ProductType:     pType,
-		CategoryID:      categoryID,
-		UnitOfMeasure:   uom,
-		StandardCost:    cost,
-		ListPrice:       price,
-		IsActive:        true,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		ID:            id,
+		ProductCode:   code,
+		ProductName:   name,
+		Description:   desc,
+		ProductType:   pType,
+		CategoryID:    categoryID,
+		UnitOfMeasure: uom,
+		StandardCost:  cost,
+		ListPrice:     price,
+		IsActive:      true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	err := s.repo.Create(ctx, p)
@@ -60,7 +59,7 @@ func (s *ProductManagementService) CreateProduct(ctx context.Context, code, name
 		ProductType: p.ProductType,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmProductCreated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmProductCreated, err)
 	}
 
 	return p, nil
@@ -99,7 +98,7 @@ func (s *ProductManagementService) UpdateProduct(ctx context.Context, id, code, 
 		IsActive:    p.IsActive,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmProductUpdated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmProductUpdated, err)
 	}
 
 	return p, nil
@@ -115,7 +114,7 @@ func (s *ProductManagementService) DeleteProduct(ctx context.Context, id string)
 		ProductID: id,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmProductDiscontinued, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmProductDiscontinued, err)
 	}
 
 	return nil
@@ -128,7 +127,7 @@ func (s *ProductManagementService) ListCategories(ctx context.Context) ([]domain
 }
 
 func (s *ProductManagementService) CreateCategory(ctx context.Context, code, name, desc string) (*domain.ProductCategory, error) {
-	id := fmt.Sprintf("cat_%d", time.Now().UnixNano())
+	id := utils.NewID("cat")
 	pc := &domain.ProductCategory{
 		ID:          id,
 		Code:        code,
@@ -174,7 +173,7 @@ func (s *ProductManagementService) ListLocations(ctx context.Context) ([]domain.
 }
 
 func (s *ProductManagementService) CreateLocation(ctx context.Context, code, name, locType string) (*domain.Location, error) {
-	id := fmt.Sprintf("loc_%d", time.Now().UnixNano())
+	id := utils.NewID("loc")
 	loc := &domain.Location{
 		ID:           id,
 		LocationCode: code,
@@ -212,4 +211,3 @@ func (s *ProductManagementService) UpdateLocation(ctx context.Context, id, code,
 func (s *ProductManagementService) DeleteLocation(ctx context.Context, id string) error {
 	return s.locRepo.Delete(ctx, id)
 }
-

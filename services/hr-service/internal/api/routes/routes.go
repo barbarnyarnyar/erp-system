@@ -59,7 +59,6 @@ func RegisterRoutes(
 		v1.POST("/leave-requests/:id/reject", leaveHandler.RejectLeaveRequest)
 		v1.GET("/leave-balances", leaveHandler.GetLeaveBalances)
 
-
 		// Recruitment
 		v1.GET("/recruitment/jobs", recruitmentHandler.GetJobPostings)
 		v1.POST("/recruitment/jobs", recruitmentHandler.CreateJobPosting)
@@ -85,7 +84,6 @@ func RegisterRoutes(
 		v1.PUT("/training/programs/:id", trainingHandler.UpdateTrainingProgram)
 		v1.POST("/training/programs/:id/enroll", trainingHandler.EnrollEmployee)
 		v1.POST("/training/enrollments/:enrollmentId/complete", trainingHandler.CompleteTraining)
-
 
 		// Document Management
 		v1.GET("/employees/:id/documents", docHandler.GetEmployeeDocuments)

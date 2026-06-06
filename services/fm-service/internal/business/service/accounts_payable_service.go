@@ -1,10 +1,9 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/erp-system/fm-service/internal/business/domain"
@@ -33,8 +32,8 @@ func (s *AccountsPayableService) MatchPurchaseOrder(ctx context.Context, billID,
 }
 
 func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierID, billNum, poID string, issueDate, dueDate time.Time, total decimal.Decimal, lines []domain.VendorBillLine) (*domain.VendorBill, error) {
-	id := fmt.Sprintf("bill_%d", time.Now().UnixNano())
-	
+	id := utils.NewID("bill")
+
 	bill := &domain.VendorBill{
 		ID:          id,
 		SupplierID:  supplierID,
@@ -64,7 +63,7 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 		DueDate:    bill.DueDate,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinVendorPaymentDue, err)
+		utils.LogPublishErr("fm-service", domain.TopicFinVendorPaymentDue, err)
 	}
 
 	return bill, nil
@@ -73,5 +72,3 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 func (s *AccountsPayableService) ListVendorBills(ctx context.Context) ([]domain.VendorBill, error) {
 	return s.bills.List(ctx)
 }
-
-

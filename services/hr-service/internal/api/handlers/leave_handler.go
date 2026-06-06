@@ -137,5 +137,3 @@ func (h *LeaveHandler) RejectLeaveRequest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": lr})
 }
-
-

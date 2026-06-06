@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -21,7 +21,7 @@ func (s *EmployeeDocumentService) ListDocuments(ctx context.Context, employeeID 
 }
 
 func (s *EmployeeDocumentService) UploadDocument(ctx context.Context, employeeID string, docType string, fileName string, fileURL string) (*domain.EmployeeDocument, error) {
-	id := fmt.Sprintf("doc_%d", time.Now().UnixNano())
+	id := utils.NewID("doc")
 
 	doc := &domain.EmployeeDocument{
 		ID:         id,

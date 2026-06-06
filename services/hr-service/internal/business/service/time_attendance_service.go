@@ -1,9 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -27,23 +26,23 @@ func (s *TimeAttendanceService) ListTimesheets(ctx context.Context) ([]domain.At
 }
 
 func (s *TimeAttendanceService) CreateTimesheet(ctx context.Context, employeeID string, entryDate time.Time, clockIn, clockOut time.Time, notes string) (*domain.AttendanceEntry, error) {
-	id := fmt.Sprintf("te_%d", time.Now().UnixNano())
+	id := utils.NewID("te")
 
 	// Calculate total hours
 	diff := clockOut.Sub(clockIn)
 	hours := decimal.NewFromFloat(diff.Hours())
 
 	te := &domain.AttendanceEntry{
-		ID:          id,
-		EmployeeID:  employeeID,
-		EntryDate:   entryDate,
-		ClockIn:     clockIn,
-		ClockOut:    clockOut,
-		TotalHours:  hours,
-		Notes:       notes,
-		Status:      "SUBMITTED",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:         id,
+		EmployeeID: employeeID,
+		EntryDate:  entryDate,
+		ClockIn:    clockIn,
+		ClockOut:   clockOut,
+		TotalHours: hours,
+		Notes:      notes,
+		Status:     "SUBMITTED",
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 
 	err := s.repo.Create(ctx, te)
@@ -60,7 +59,7 @@ func (s *TimeAttendanceService) CreateTimesheet(ctx context.Context, employeeID 
 			OvertimeHours: otHours,
 			Timestamp:     time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrOvertimeRecorded, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrOvertimeRecorded, err)
 		}
 	}
 
@@ -116,7 +115,7 @@ func (s *TimeAttendanceService) SubmitTimesheet(ctx context.Context, id string) 
 		TotalHours:  te.TotalHours,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTimesheetSubmitted, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrTimesheetSubmitted, err)
 	}
 
 	return te, nil
@@ -143,7 +142,7 @@ func (s *TimeAttendanceService) ApproveTimesheet(ctx context.Context, id string,
 		ApprovedBy:  approvedBy,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTimesheetApproved, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrTimesheetApproved, err)
 	}
 
 	return te, nil

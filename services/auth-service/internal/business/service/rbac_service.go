@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/auth-service/internal/business/domain"
@@ -66,7 +66,7 @@ func (s *RBACService) GetUserRolesAndPermissions(ctx context.Context, userID str
 
 func (s *RBACService) CreateRole(ctx context.Context, name, description string) (*domain.Role, error) {
 	role := &domain.Role{
-		ID:          fmt.Sprintf("role_%d", time.Now().UnixNano()),
+		ID:          utils.NewID("role"),
 		Name:        name,
 		Description: description,
 		CreatedAt:   time.Now(),
@@ -78,7 +78,7 @@ func (s *RBACService) CreateRole(ctx context.Context, name, description string) 
 
 func (s *RBACService) CreatePermission(ctx context.Context, code, description string) (*domain.Permission, error) {
 	perm := &domain.Permission{
-		ID:          fmt.Sprintf("perm_%d", time.Now().UnixNano()),
+		ID:          utils.NewID("perm"),
 		Code:        code,
 		Description: description,
 		CreatedAt:   time.Now(),
@@ -90,7 +90,7 @@ func (s *RBACService) CreatePermission(ctx context.Context, code, description st
 
 func (s *RBACService) AssignPermissionToRole(ctx context.Context, roleID, permissionID string) error {
 	link := &domain.RolePermission{
-		ID:           fmt.Sprintf("rp_%d", time.Now().UnixNano()),
+		ID:           utils.NewID("rp"),
 		RoleID:       roleID,
 		PermissionID: permissionID,
 		CreatedAt:    time.Now(),

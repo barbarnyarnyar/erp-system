@@ -6,13 +6,13 @@ import (
 )
 
 type Milestone struct {
-	ID            string     `json:"id"`
-	ProjectID     string     `json:"project_id"`
-	Name          string     `json:"name"`
-	Description   *string    `json:"description"`
-	TargetDate    *time.Time `json:"target_date"`
+	ID             string     `json:"id"`
+	ProjectID      string     `json:"project_id"`
+	Name           string     `json:"name"`
+	Description    *string    `json:"description"`
+	TargetDate     *time.Time `json:"target_date"`
 	CompletionDate *time.Time `json:"completion_date"`
-	Status        string     `json:"status"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	Status         string     `json:"status"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }

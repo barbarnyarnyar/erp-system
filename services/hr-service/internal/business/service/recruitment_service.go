@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -25,7 +25,7 @@ func (s *RecruitmentService) ListJobPostings(ctx context.Context) ([]domain.JobP
 }
 
 func (s *RecruitmentService) CreateJobPosting(ctx context.Context, title, description, deptID, location, salaryRange string) (*domain.JobPosting, error) {
-	id := fmt.Sprintf("job_%d", time.Now().UnixNano())
+	id := utils.NewID("job")
 
 	jp := &domain.JobPosting{
 		ID:           id,
@@ -81,7 +81,7 @@ func (s *RecruitmentService) ListApplications(ctx context.Context) ([]domain.Job
 }
 
 func (s *RecruitmentService) CreateApplication(ctx context.Context, jobPostingID, applicantName, email, phone, resumeURL string) (*domain.JobApplication, error) {
-	id := fmt.Sprintf("app_%d", time.Now().UnixNano())
+	id := utils.NewID("app")
 
 	ja := &domain.JobApplication{
 		ID:            id,

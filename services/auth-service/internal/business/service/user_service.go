@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/erp-system/auth-service/internal/business/domain"
@@ -32,12 +32,12 @@ func NewUserService(
 }
 
 func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialStoreID string, roleIDs []string) (*domain.User, error) {
-	u.ID = fmt.Sprintf("user_%d", time.Now().UnixNano())
+	u.ID = utils.NewID("user")
 	u.IsActive = true
 	// Initial security stamp. Every subsequent state change bumps this
 	// value so that any JWT issued before the change is rejected on
 	// ValidateToken (claims.SecurityStamp != user.SecurityStamp).
-	u.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
+	u.SecurityStamp = utils.NewID("ss")
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 
@@ -62,7 +62,7 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 
 	// Link to Roles
 	for _, roleID := range roleIDs {
-		linkID := fmt.Sprintf("ur_%d", time.Now().UnixNano())
+		linkID := utils.NewID("ur")
 		ur := &domain.UserRole{
 			ID:        linkID,
 			UserID:    u.ID,
@@ -79,7 +79,7 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 			AssignedBy: "",
 			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserRoleAssigned, err)
+			utils.LogPublishErr("auth-service", domain.TopicAuthUserRoleAssigned, err)
 		}
 	}
 
@@ -93,7 +93,7 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 		IsActive:  u.IsActive,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserCreated, err)
+		utils.LogPublishErr("auth-service", domain.TopicAuthUserCreated, err)
 	}
 
 	return u, nil
@@ -118,7 +118,7 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, firstName, 
 		// Bumping the security_stamp invalidates any in-flight JWTs the
 		// moment the activation flag flips. Critical for offboarding flow.
 		user.IsActive = *isActive
-		user.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
+		user.SecurityStamp = utils.NewID("ss")
 	}
 	user.UpdatedAt = time.Now()
 
@@ -142,7 +142,7 @@ func (s *UserService) UpdateCredentials(ctx context.Context, userID string, newP
 	}
 	user.PasswordHash = string(hash)
 	// Bump security_stamp: any JWT issued before the password change is now invalid.
-	user.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
+	user.SecurityStamp = utils.NewID("ss")
 	user.UpdatedAt = time.Now()
 
 	err = s.userRepo.Update(ctx, user)
@@ -155,7 +155,7 @@ func (s *UserService) UpdateCredentials(ctx context.Context, userID string, newP
 		UserID:    user.ID,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthPasswordChanged, err)
+		utils.LogPublishErr("auth-service", domain.TopicAuthPasswordChanged, err)
 	}
 
 	return true, nil
@@ -171,7 +171,7 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 	// Critical: bump the security stamp so that any in-flight JWT becomes
 	// invalid the moment the user is deactivated. Without this, a terminated
 	// employee could keep using their old token until natural expiration.
-	user.SecurityStamp = fmt.Sprintf("ss_%d", time.Now().UnixNano())
+	user.SecurityStamp = utils.NewID("ss")
 	user.UpdatedAt = time.Now()
 	err = s.userRepo.Update(ctx, user)
 	if err != nil {
@@ -188,14 +188,14 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 		IsActive:  user.IsActive,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserDeactivated, err)
+		utils.LogPublishErr("auth-service", domain.TopicAuthUserDeactivated, err)
 	}
 
 	return nil
 }
 
 func (s *UserService) AssignUserToStore(ctx context.Context, userID, storeID string) error {
-	linkID := fmt.Sprintf("us_%d", time.Now().UnixNano())
+	linkID := utils.NewID("us")
 	us := &domain.UserStore{
 		ID:         linkID,
 		UserID:     userID,
@@ -214,7 +214,7 @@ func (s *UserService) AssignUserToStore(ctx context.Context, userID, storeID str
 		StoreID:   us.StoreID,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicAuthUserStoreAssigned, err)
+		utils.LogPublishErr("auth-service", domain.TopicAuthUserStoreAssigned, err)
 	}
 
 	return nil

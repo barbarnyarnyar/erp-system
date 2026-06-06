@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"errors"
 	"fmt"
 	"strings"
@@ -40,7 +40,7 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 		return nil, fmt.Errorf("invalid account type: %s", accType)
 	}
 
-	id := fmt.Sprintf("acc_%d", time.Now().UnixNano())
+	id := utils.NewID("acc")
 	acc := &domain.Account{
 		ID:            id,
 		AccountNumber: accNum,
@@ -61,7 +61,7 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Publish event
 	if err := s.publisher.Publish(ctx, domain.TopicFinAccountCreated, acc.ID, domain.AccountEventPayload{
 		ID:            acc.ID,
@@ -72,9 +72,9 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 		Currency:      acc.Currency,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinAccountCreated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFinAccountCreated, err)
 	}
-	
+
 	return acc, nil
 }
 
@@ -112,7 +112,7 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Publish event
 	if err := s.publisher.Publish(ctx, domain.TopicFinAccountUpdated, acc.ID, domain.AccountEventPayload{
 		ID:            acc.ID,
@@ -123,9 +123,9 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 		Currency:      acc.Currency,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinAccountUpdated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFinAccountUpdated, err)
 	}
-	
+
 	return acc, nil
 }
 
@@ -161,7 +161,7 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 		return nil, fmt.Errorf("journal entry is unbalanced: debits=%s, credits=%s", totalDebits, totalCredits)
 	}
 
-	id := fmt.Sprintf("je_%d", time.Now().UnixNano())
+	id := utils.NewID("je")
 	now := time.Now()
 	entry := &domain.JournalEntry{
 		ID:          id,
@@ -184,7 +184,7 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 	}
 
 	for i, l := range lines {
-		lines[i].ID = fmt.Sprintf("jel_%d_%d", time.Now().UnixNano(), i)
+		lines[i].ID = utils.NewID("jel")
 		lines[i].EntryID = id
 
 		acc, err := s.accounts.GetByID(ctx, l.AccountID)
@@ -229,7 +229,7 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 				Currency:      acc.Currency,
 				Timestamp:     time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinAccountBalanceChanged, err)
+				utils.LogPublishErr("fm-service", domain.TopicFinAccountBalanceChanged, err)
 			}
 		}
 	}
@@ -254,17 +254,17 @@ func (s *GeneralLedgerService) ReverseJournalEntry(ctx context.Context, id strin
 	revLines := make([]domain.JournalEntryLine, len(lines))
 	for i, l := range lines {
 		revLines[i] = domain.JournalEntryLine{
-			AccountID:     l.AccountID,
-			DebitAmount:   l.CreditAmount, // swap debits and credits
-			CreditAmount:  l.DebitAmount,
-			Description:   "Reversal of " + entry.Reference + ": " + l.Description,
-			CostCenterID:  l.CostCenterID,
+			AccountID:    l.AccountID,
+			DebitAmount:  l.CreditAmount, // swap debits and credits
+			CreditAmount: l.DebitAmount,
+			Description:  "Reversal of " + entry.Reference + ": " + l.Description,
+			CostCenterID: l.CostCenterID,
 		}
 	}
 
 	revRef := fmt.Sprintf("REV-%s", entry.Reference)
 	revDesc := fmt.Sprintf("Reversal of Journal Entry %s: %s", entry.Reference, entry.Description)
-	
+
 	// Create reversing journal entry (which will handle adjusting the GL account balances)
 	revEntry, err := s.CreateJournalEntry(ctx, revRef, revDesc, revLines)
 	if err != nil {
@@ -282,7 +282,6 @@ func (s *GeneralLedgerService) ReverseJournalEntry(ctx context.Context, id strin
 
 	return revEntry, nil
 }
-
 
 func (s *GeneralLedgerService) GetTrialBalance(ctx context.Context) (map[string]interface{}, error) {
 	accs, err := s.accounts.List(ctx)
@@ -329,7 +328,7 @@ func (s *GeneralLedgerService) GetBalanceSheet(ctx context.Context) (map[string]
 	assets := make(map[string]decimal.Decimal)
 	liabilities := make(map[string]decimal.Decimal)
 	equity := make(map[string]decimal.Decimal)
-	
+
 	var totalAssets, totalLiabilities, totalEquity decimal.Decimal
 
 	for _, a := range accs {
@@ -428,7 +427,7 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 
 	// Apply new lines
 	for i, l := range lines {
-		lines[i].ID = fmt.Sprintf("jel_%d_%d", time.Now().UnixNano(), i)
+		lines[i].ID = utils.NewID("jel")
 		lines[i].EntryID = id
 
 		acc, err := getAndSnapshotAccount(l.AccountID)
@@ -473,7 +472,7 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 				Currency:      acc.Currency,
 				Timestamp:     time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinAccountBalanceChanged, err)
+				utils.LogPublishErr("fm-service", domain.TopicFinAccountBalanceChanged, err)
 			}
 		}
 	}
@@ -493,7 +492,7 @@ func (s *GeneralLedgerService) GetIncomeStatement(ctx context.Context) (map[stri
 
 	revenues := make(map[string]decimal.Decimal)
 	expenses := make(map[string]decimal.Decimal)
-	
+
 	var totalRevenue, totalExpense decimal.Decimal
 
 	for _, a := range accs {
@@ -529,7 +528,7 @@ func (s *GeneralLedgerService) GetCashFlow(ctx context.Context) (map[string]inte
 
 	inflows := make(map[string]decimal.Decimal)
 	outflows := make(map[string]decimal.Decimal)
-	
+
 	var totalInflow, totalOutflow decimal.Decimal
 
 	for _, a := range accs {
@@ -558,4 +557,3 @@ func (s *GeneralLedgerService) GetCashFlow(ctx context.Context) (map[string]inte
 		"net_cash_flow":      netCashFlow,
 	}, nil
 }
-

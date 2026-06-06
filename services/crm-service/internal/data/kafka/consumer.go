@@ -26,14 +26,14 @@ const (
 
 type KafkaConsumer struct {
 	reader    *kafka.Reader
-	publisher *KafkaPublisher
+	publisher domain.EventPublisher
 	orderSvc  *service.SalesOrderService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
-	publisher *KafkaPublisher,
+	publisher domain.EventPublisher,
 	orderSvc *service.SalesOrderService,
 ) *KafkaConsumer {
 	topics := []string{
@@ -108,15 +108,15 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-		// TODO: connect when scm publishes scm.inventory.available
+	// TODO: connect when scm publishes scm.inventory.available
 	/*
-	case domain.TopicScmInventoryAvailable:
-		var ev domain.InventoryAvailableEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing SCM Inventory Available: Product %s is available with quantity %s. Updating CRM sales catalog availability.", ev.ProductID, ev.QuantityOnHand.String())
-		return nil
+		case domain.TopicScmInventoryAvailable:
+			var ev domain.InventoryAvailableEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing SCM Inventory Available: Product %s is available with quantity %s. Updating CRM sales catalog availability.", ev.ProductID, ev.QuantityOnHand.String())
+			return nil
 	*/
 
 	case domain.TopicScmShipmentDelivered:
@@ -132,57 +132,57 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		return nil
 
-	// TODO: connect when handler does real work (currently log-only)
-	/*
-	case domain.TopicFinPaymentReceived:
-		var ev domain.PaymentReceivedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
-		return nil
-	*/
+		// TODO: connect when handler does real work (currently log-only)
+		/*
+			case domain.TopicFinPaymentReceived:
+				var ev domain.PaymentReceivedEvent
+				if err := json.Unmarshal(value, &ev); err != nil {
+					return err
+				}
+				log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
+				return nil
+		*/
 
-	// TODO: connect when fm/fin publishes fin.credit.check.completed
-	/*
-	case domain.TopicFinCreditCheckCompleted:
-		var ev domain.CreditCheckCompletedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Financial Credit Check Completed: Customer %s credit status: %s. Updating customer credit history.", ev.CustomerID, ev.CreditStatus)
-		return nil
-	*/
+		// TODO: connect when fm/fin publishes fin.credit.check.completed
+		/*
+			case domain.TopicFinCreditCheckCompleted:
+				var ev domain.CreditCheckCompletedEvent
+				if err := json.Unmarshal(value, &ev); err != nil {
+					return err
+				}
+				log.Printf("Processing Financial Credit Check Completed: Customer %s credit status: %s. Updating customer credit history.", ev.CustomerID, ev.CreditStatus)
+				return nil
+		*/
 
-	// TODO: connect when handler does real work (currently log-only)
-	/*
-	case domain.TopicMfgProductionCompleted:
-		var ev domain.ProductionCompletedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Manufacturing Production Completed: Production Order %s completed for Product %s, quantity %d. Catalog updated.", ev.ProductionOrderID, ev.ProductID, ev.Quantity)
-		return nil
+		// TODO: connect when handler does real work (currently log-only)
+		/*
+			case domain.TopicMfgProductionCompleted:
+				var ev domain.ProductionCompletedEvent
+				if err := json.Unmarshal(value, &ev); err != nil {
+					return err
+				}
+				log.Printf("Processing Manufacturing Production Completed: Production Order %s completed for Product %s, quantity %d. Catalog updated.", ev.ProductionOrderID, ev.ProductID, ev.Quantity)
+				return nil
 
-	case domain.TopicPrjProjectCompleted:
-		var ev domain.ProjectCompletedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Project Completed: Custom project %s completed. Updating status of project-linked sales orders.", ev.ProjectID)
-		return nil
-	*/
+			case domain.TopicPrjProjectCompleted:
+				var ev domain.ProjectCompletedEvent
+				if err := json.Unmarshal(value, &ev); err != nil {
+					return err
+				}
+				log.Printf("Processing Project Completed: Custom project %s completed. Updating status of project-linked sales orders.", ev.ProjectID)
+				return nil
+		*/
 
-	// TODO: connect when hr publishes hr.employee.performance
-	/*
-	case domain.TopicHrEmployeePerformance:
-		var ev domain.EmployeePerformanceEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing HR Employee Performance: Employee %s rated %s. Updating sales representative metrics in CRM.", ev.EmployeeID, ev.Rating.String())
-		return nil
-	*/
+		// TODO: connect when hr publishes hr.employee.performance
+		/*
+			case domain.TopicHrEmployeePerformance:
+				var ev domain.EmployeePerformanceEvent
+				if err := json.Unmarshal(value, &ev); err != nil {
+					return err
+				}
+				log.Printf("Processing HR Employee Performance: Employee %s rated %s. Updating sales representative metrics in CRM.", ev.EmployeeID, ev.Rating.String())
+				return nil
+		*/
 	}
 
 	return nil

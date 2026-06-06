@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -22,7 +22,7 @@ func NewCustomerService(customerRepo domain.CustomerRepository, publisher domain
 }
 
 func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, contactName, email, phone, category, parentCustomerID string) (*domain.Customer, error) {
-	id := fmt.Sprintf("cust_%d", time.Now().UnixNano())
+	id := utils.NewID("cust")
 	cust := &domain.Customer{
 		ID:          id,
 		CompanyName: companyName,
@@ -50,14 +50,14 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, conta
 		Email:       email,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerCreated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmCustomerCreated, err)
 	}
 
 	if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
 		CustomerID: id,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerActivated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmCustomerActivated, err)
 	}
 
 	return cust, nil
@@ -102,7 +102,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 		Status:      status,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerUpdated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmCustomerUpdated, err)
 	}
 
 	if oldStatus != statusEnum {
@@ -111,14 +111,14 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 				CustomerID: id,
 				Timestamp:  time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerActivated, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmCustomerActivated, err)
 			}
 		} else if statusEnum == domain.CustomerStatusInactive {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerDeactivated, id, domain.CustomerDeactivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerDeactivated, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmCustomerDeactivated, err)
 			}
 		}
 	}

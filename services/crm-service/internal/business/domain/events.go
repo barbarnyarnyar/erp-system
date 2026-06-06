@@ -165,10 +165,10 @@ type CampaignCompletedEvent struct {
 }
 
 type EmailSentEvent struct {
-	EmailID   string    `json:"email_id"`
-	CampaignID string   `json:"campaign_id"`
-	Recipient string    `json:"recipient"`
-	Timestamp time.Time `json:"timestamp"`
+	EmailID    string    `json:"email_id"`
+	CampaignID string    `json:"campaign_id"`
+	Recipient  string    `json:"recipient"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type EmailOpenedEvent struct {
@@ -221,8 +221,8 @@ type PaymentReceivedEvent struct {
 }
 
 type CreditCheckCompletedEvent struct {
-	CustomerID   string `json:"customer_id"`
-	CreditStatus string `json:"credit_status"` // APPROVED, DENIED
+	CustomerID   string    `json:"customer_id"`
+	CreditStatus string    `json:"credit_status"` // APPROVED, DENIED
 	Timestamp    time.Time `json:"timestamp"`
 }
 

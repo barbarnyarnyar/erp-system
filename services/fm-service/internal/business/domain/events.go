@@ -201,4 +201,3 @@ type ProjectExpenseIncurredEvent struct {
 	Amount      decimal.Decimal `json:"amount"`
 	Timestamp   time.Time       `json:"timestamp"`
 }
-

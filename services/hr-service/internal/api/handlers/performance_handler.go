@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/erp-system/hr-service/internal/business/service"
+	"github.com/gin-gonic/gin"
 )
 
 type PerformanceHandler struct {

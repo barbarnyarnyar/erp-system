@@ -1,17 +1,14 @@
 # Build stage
 FROM golang:1.23-alpine AS builder
 
+WORKDIR /
+COPY shared/ ./shared/
+
 WORKDIR /app
-
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod tidy && go mod download
-
-# Copy source code
-COPY . .
+COPY services/auth-service/ ./
 
 # Build the application
-RUN go build -o main ./cmd
+RUN go mod tidy && go build -o main ./cmd
 
 # Final stage
 FROM alpine:latest

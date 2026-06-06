@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/pm-service/internal/business/domain"
@@ -30,7 +30,7 @@ func NewCollaborationService(
 }
 
 func (s *CollaborationService) UploadDocument(ctx context.Context, projectID, name, filePath string, fileSize int, uploadedBy string) (*domain.ProjectDocument, error) {
-	id := fmt.Sprintf("doc_%d", time.Now().UnixNano())
+	id := utils.NewID("doc")
 	doc := &domain.ProjectDocument{
 		ID:         id,
 		ProjectID:  projectID,
@@ -54,7 +54,7 @@ func (s *CollaborationService) ListDocuments(ctx context.Context, projectID stri
 }
 
 func (s *CollaborationService) LogIssue(ctx context.Context, projectID, title, description, severity, raisedBy string) (*domain.ProjectIssue, error) {
-	id := fmt.Sprintf("iss_%d", time.Now().UnixNano())
+	id := utils.NewID("iss")
 	issue := &domain.ProjectIssue{
 		ID:          id,
 		ProjectID:   projectID,
@@ -98,7 +98,7 @@ func (s *CollaborationService) ListIssues(ctx context.Context, projectID string)
 }
 
 func (s *CollaborationService) CreateChangeRequest(ctx context.Context, projectID, title, description, reason, impact string, requestedBy string) (*domain.ChangeRequest, error) {
-	id := fmt.Sprintf("cr_%d", time.Now().UnixNano())
+	id := utils.NewID("cr")
 	req := &domain.ChangeRequest{
 		ID:             id,
 		ProjectID:      projectID,

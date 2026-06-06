@@ -589,7 +589,7 @@ func (r *ChangeRequestRepository) Delete(ctx context.Context, id string) error {
 // ==========================================
 
 type MilestoneRepository struct {
-	mu        sync.RWMutex
+	mu         sync.RWMutex
 	milestones map[string]domain.Milestone
 }
 

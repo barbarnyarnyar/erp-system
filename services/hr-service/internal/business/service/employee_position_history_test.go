@@ -12,7 +12,9 @@ import (
 
 type silentPub struct{}
 
-func (silentPub) Publish(ctx context.Context, topic string, key string, payload interface{}) error { return nil }
+func (silentPub) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
+	return nil
+}
 
 func TestEmployee_Update_RecordsPositionAndDepartmentHistory(t *testing.T) {
 	empRepo := memory.NewMemoryEmployeeRepo()

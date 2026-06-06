@@ -74,13 +74,13 @@ type InventoryShippedEvent struct {
 }
 
 type InventoryAdjustedEvent struct {
-	InventoryItemID string          `json:"inventory_item_id"`
-	ProductID       string          `json:"product_id"`
-	LocationID      string          `json:"location_id"`
-	QuantityChange  int             `json:"quantity_change"`
-	NewQuantity     int             `json:"new_quantity"`
-	Reason          string          `json:"reason"`
-	Timestamp       time.Time       `json:"timestamp"`
+	InventoryItemID string    `json:"inventory_item_id"`
+	ProductID       string    `json:"product_id"`
+	LocationID      string    `json:"location_id"`
+	QuantityChange  int       `json:"quantity_change"`
+	NewQuantity     int       `json:"new_quantity"`
+	Reason          string    `json:"reason"`
+	Timestamp       time.Time `json:"timestamp"`
 }
 
 type InventoryLowStockEvent struct {
@@ -162,10 +162,10 @@ type ShipmentDeliveredEvent struct {
 }
 
 type ShipmentDelayedEvent struct {
-	ShipmentID       string    `json:"shipment_id"`
+	ShipmentID        string    `json:"shipment_id"`
 	NewEstimatedDeliv time.Time `json:"new_estimated_delivery"`
-	Reason           string    `json:"reason"`
-	Timestamp        time.Time `json:"timestamp"`
+	Reason            string    `json:"reason"`
+	Timestamp         time.Time `json:"timestamp"`
 }
 
 type MaterialDeliveredEvent struct {
@@ -190,7 +190,7 @@ type CustomerDemandForecastEvent struct {
 	ForecastDate     time.Time       `json:"forecast_date"`
 	ForecastQuantity int             `json:"forecast_quantity"`
 	ConfidenceLevel  decimal.Decimal `json:"confidence_level"`
-	Timestamp        time.Time `json:"timestamp"`
+	Timestamp        time.Time       `json:"timestamp"`
 }
 
 type MaterialRequiredEvent struct {
@@ -229,4 +229,3 @@ type MaterialConsumedEvent struct {
 	Quantity          decimal.Decimal `json:"quantity"`
 	Timestamp         time.Time       `json:"timestamp"`
 }
-

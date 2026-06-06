@@ -575,7 +575,7 @@ func (r *CampaignRepository) Delete(ctx context.Context, id string) error {
 // ==========================================
 
 type OpportunityStageHistoryRepository struct {
-	mu       sync.RWMutex
+	mu        sync.RWMutex
 	histories map[string]domain.OpportunityStageHistory
 }
 
@@ -609,7 +609,7 @@ func (r *OpportunityStageHistoryRepository) ListByOpportunityID(ctx context.Cont
 // ==========================================
 
 type CustomerInteractionRepository struct {
-	mu          sync.RWMutex
+	mu           sync.RWMutex
 	interactions map[string]domain.CustomerInteraction
 }
 

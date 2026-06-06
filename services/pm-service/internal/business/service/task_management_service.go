@@ -1,9 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/pm-service/internal/business/domain"
@@ -29,7 +28,7 @@ func NewTaskManagementService(
 }
 
 func (s *TaskManagementService) CreateTask(ctx context.Context, projectID, parentID, title, description, assignedTo string, startDate, endDate *time.Time, estimatedHours decimal.Decimal) (*domain.Task, error) {
-	id := fmt.Sprintf("task_%d", time.Now().UnixNano())
+	id := utils.NewID("task")
 	task := &domain.Task{
 		ID:             id,
 		ProjectID:      projectID,
@@ -67,7 +66,7 @@ func (s *TaskManagementService) CreateTask(ctx context.Context, projectID, paren
 		Title:     title,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskCreated, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjTaskCreated, err)
 	}
 
 	if assignedTo != "" {
@@ -78,7 +77,7 @@ func (s *TaskManagementService) CreateTask(ctx context.Context, projectID, paren
 			Workload:   8,
 			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskAssigned, err)
+			utils.LogPublishErr("pm-service", domain.TopicPrjTaskAssigned, err)
 		}
 	}
 
@@ -117,7 +116,7 @@ func (s *TaskManagementService) UpdateTaskProgress(ctx context.Context, taskID s
 				ProjectID: task.ProjectID,
 				Timestamp: time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskStarted, err)
+				utils.LogPublishErr("pm-service", domain.TopicPrjTaskStarted, err)
 			}
 		} else if status == "DONE" {
 			if err := s.publisher.Publish(ctx, domain.TopicPrjTaskCompleted, taskID, domain.TaskCompletedEvent{
@@ -125,7 +124,7 @@ func (s *TaskManagementService) UpdateTaskProgress(ctx context.Context, taskID s
 				ProjectID: task.ProjectID,
 				Timestamp: time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskCompleted, err)
+				utils.LogPublishErr("pm-service", domain.TopicPrjTaskCompleted, err)
 			}
 		}
 	}
@@ -154,14 +153,14 @@ func (s *TaskManagementService) AssignTask(ctx context.Context, taskID string, e
 		Workload:   8,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskAssigned, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjTaskAssigned, err)
 	}
 
 	return task, nil
 }
 
 func (s *TaskManagementService) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID, depType string) (*domain.TaskDependency, error) {
-	id := fmt.Sprintf("dep_%d", time.Now().UnixNano())
+	id := utils.NewID("dep")
 	dep := &domain.TaskDependency{
 		ID:              id,
 		TaskID:          taskID,
@@ -210,7 +209,7 @@ func (s *TaskManagementService) MarkTaskOverdue(ctx context.Context, taskID stri
 		DueDate:   dueDate,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjTaskOverdue, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjTaskOverdue, err)
 	}
 
 	return task, nil

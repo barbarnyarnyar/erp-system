@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -31,7 +31,7 @@ func NewProjectPlanningService(
 }
 
 func (s *ProjectPlanningService) CreatePortfolio(ctx context.Context, name, description, managerID string) (*domain.Portfolio, error) {
-	id := fmt.Sprintf("port_%d", time.Now().UnixNano())
+	id := utils.NewID("port")
 	port := &domain.Portfolio{
 		ID:          id,
 		Name:        name,
@@ -59,7 +59,7 @@ func (s *ProjectPlanningService) GetPortfolio(ctx context.Context, id string) (*
 }
 
 func (s *ProjectPlanningService) CreateProject(ctx context.Context, name, description string, startDate time.Time, endDate *time.Time, portfolioID string, budgetID string) (*domain.Project, error) {
-	id := fmt.Sprintf("proj_%d", time.Now().UnixNano())
+	id := utils.NewID("proj")
 	proj := &domain.Project{
 		ID:          id,
 		Name:        name,
@@ -89,7 +89,7 @@ func (s *ProjectPlanningService) CreateProject(ctx context.Context, name, descri
 		ManagerID:   "",
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectCreated, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjProjectCreated, err)
 	}
 
 	return proj, nil
@@ -123,14 +123,14 @@ func (s *ProjectPlanningService) UpdateProjectStatus(ctx context.Context, id str
 			ProjectID: id,
 			Timestamp: time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectStarted, err)
+			utils.LogPublishErr("pm-service", domain.TopicPrjProjectStarted, err)
 		}
 	case "COMPLETED":
 		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectCompleted, id, domain.ProjectCompletedEvent{
 			ProjectID: id,
 			Timestamp: time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectCompleted, err)
+			utils.LogPublishErr("pm-service", domain.TopicPrjProjectCompleted, err)
 		}
 	case "CANCELLED":
 		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectCancelled, id, domain.ProjectCancelledEvent{
@@ -138,7 +138,7 @@ func (s *ProjectPlanningService) UpdateProjectStatus(ctx context.Context, id str
 			Reason:    "Status changed to cancelled",
 			Timestamp: time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectCancelled, err)
+			utils.LogPublishErr("pm-service", domain.TopicPrjProjectCancelled, err)
 		}
 	default:
 		if err := s.publisher.Publish(ctx, domain.TopicPrjProjectUpdated, id, domain.ProjectUpdatedEvent{
@@ -146,7 +146,7 @@ func (s *ProjectPlanningService) UpdateProjectStatus(ctx context.Context, id str
 			Status:    status,
 			Timestamp: time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectUpdated, err)
+			utils.LogPublishErr("pm-service", domain.TopicPrjProjectUpdated, err)
 		}
 	}
 
@@ -182,7 +182,7 @@ func (s *ProjectPlanningService) DelayProject(ctx context.Context, projectID str
 		DelayDays: delayDays,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjProjectDelayed, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjProjectDelayed, err)
 	}
 
 	return proj, nil
@@ -196,7 +196,7 @@ func (s *ProjectPlanningService) CreateMilestone(ctx context.Context, projectID,
 		return nil, fmt.Errorf("project not found: %w", err)
 	}
 
-	id := fmt.Sprintf("ms_%d", time.Now().UnixNano())
+	id := utils.NewID("ms")
 	m := &domain.Milestone{
 		ID:         id,
 		ProjectID:  projectID,
@@ -256,7 +256,7 @@ func (s *ProjectPlanningService) CompleteMilestone(ctx context.Context, mileston
 		CompletionDate: completionDate,
 		Timestamp:      now,
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneAchieved, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjMilestoneAchieved, err)
 	}
 
 	return m, nil
@@ -286,7 +286,7 @@ func (s *ProjectPlanningService) DelayMilestone(ctx context.Context, milestoneID
 		TargetDate:  newTargetDate,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjMilestoneDelayed, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjMilestoneDelayed, err)
 	}
 
 	return m, nil

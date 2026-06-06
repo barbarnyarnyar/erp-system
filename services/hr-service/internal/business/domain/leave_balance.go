@@ -6,10 +6,10 @@ import (
 )
 
 type LeaveBalance struct {
-	ID           string    `json:"id"`
-	EmployeeID   string    `json:"employee_id"`
-	LeaveType    LeaveType `json:"leave_type"`
+	ID           string          `json:"id"`
+	EmployeeID   string          `json:"employee_id"`
+	LeaveType    LeaveType       `json:"leave_type"`
 	EntitledDays decimal.Decimal `json:"entitled_days"`
 	UsedDays     decimal.Decimal `json:"used_days"`
-	Year         int       `json:"year"`
+	Year         int             `json:"year"`
 }

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -22,7 +22,7 @@ func (s *CustomerInteractionService) CreateCustomerInteraction(ctx context.Conte
 	if customerID == "" || typ == "" {
 		return nil, fmt.Errorf("customer_id and type are required")
 	}
-	id := fmt.Sprintf("ci_%d", time.Now().UnixNano())
+	id := utils.NewID("ci")
 	ci := &domain.CustomerInteraction{
 		ID:              id,
 		CustomerID:      customerID,
@@ -45,7 +45,7 @@ func (s *CustomerInteractionService) CreateCustomerInteraction(ctx context.Conte
 		CreatedBy:       ci.CreatedBy,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmCustomerInteractionLogged, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmCustomerInteractionLogged, err)
 	}
 	return ci, nil
 }

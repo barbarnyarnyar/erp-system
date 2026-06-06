@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/segmentio/kafka-go"
-	"github.com/shopspring/decimal"
 	"github.com/erp-system/fm-service/internal/business/domain"
 	"github.com/erp-system/fm-service/internal/business/service"
+	"github.com/segmentio/kafka-go"
+	"github.com/shopspring/decimal"
 )
 
 type DeadLetterMessage struct {
@@ -22,24 +22,24 @@ type DeadLetterMessage struct {
 }
 
 const (
-	TopicHrEmployeeCreatedDeadLetter        = domain.TopicHrEmployeeCreated + ".dead-letter"
-	TopicHrPayrollProcessedDeadLetter       = domain.TopicHrPayrollProcessed + ".dead-letter"
-	TopicHrExpenseSubmittedDeadLetter       = domain.TopicHrExpenseSubmitted + ".dead-letter"
-	TopicScmPurchaseOrderCreatedDeadLetter  = domain.TopicScmPurchaseOrderCreated + ".dead-letter"
-	TopicScmInventoryValuedDeadLetter       = domain.TopicScmInventoryValued + ".dead-letter"
-	TopicCrmSalesOrderConfirmedDeadLetter   = domain.TopicCrmSalesOrderConfirmed + ".dead-letter"
-	TopicCrmCustomerCreatedDeadLetter       = domain.TopicCrmCustomerCreated + ".dead-letter"
-	TopicMfgProductionCompletedDeadLetter   = domain.TopicMfgProductionCompleted + ".dead-letter"
-	TopicMfgMaterialConsumedDeadLetter      = domain.TopicMfgMaterialConsumed + ".dead-letter"
-	TopicPrjProjectCreatedDeadLetter        = domain.TopicPrjProjectCreated + ".dead-letter"
-	TopicPrjTimeLoggedDeadLetter            = domain.TopicPrjTimeLogged + ".dead-letter"
-	TopicPrjExpenseIncurredDeadLetter       = domain.TopicPrjExpenseIncurred + ".dead-letter"
+	TopicHrEmployeeCreatedDeadLetter       = domain.TopicHrEmployeeCreated + ".dead-letter"
+	TopicHrPayrollProcessedDeadLetter      = domain.TopicHrPayrollProcessed + ".dead-letter"
+	TopicHrExpenseSubmittedDeadLetter      = domain.TopicHrExpenseSubmitted + ".dead-letter"
+	TopicScmPurchaseOrderCreatedDeadLetter = domain.TopicScmPurchaseOrderCreated + ".dead-letter"
+	TopicScmInventoryValuedDeadLetter      = domain.TopicScmInventoryValued + ".dead-letter"
+	TopicCrmSalesOrderConfirmedDeadLetter  = domain.TopicCrmSalesOrderConfirmed + ".dead-letter"
+	TopicCrmCustomerCreatedDeadLetter      = domain.TopicCrmCustomerCreated + ".dead-letter"
+	TopicMfgProductionCompletedDeadLetter  = domain.TopicMfgProductionCompleted + ".dead-letter"
+	TopicMfgMaterialConsumedDeadLetter     = domain.TopicMfgMaterialConsumed + ".dead-letter"
+	TopicPrjProjectCreatedDeadLetter       = domain.TopicPrjProjectCreated + ".dead-letter"
+	TopicPrjTimeLoggedDeadLetter           = domain.TopicPrjTimeLogged + ".dead-letter"
+	TopicPrjExpenseIncurredDeadLetter      = domain.TopicPrjExpenseIncurred + ".dead-letter"
 )
 
 // KafkaConsumer listens to external microservice events and updates the financial records
 type KafkaConsumer struct {
 	reader    *kafka.Reader
-	publisher *KafkaPublisher
+	publisher domain.EventPublisher
 	gl        *service.GeneralLedgerService
 	ap        *service.AccountsPayableService
 	ar        *service.AccountsReceivableService
@@ -51,7 +51,7 @@ type KafkaConsumer struct {
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
-	publisher *KafkaPublisher,
+	publisher domain.EventPublisher,
 	gl *service.GeneralLedgerService,
 	ap *service.AccountsPayableService,
 	ar *service.AccountsReceivableService,
@@ -256,22 +256,22 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 
 	// TODO: connect when SCM publishes scm.invoice.received
 	/*
-	case domain.TopicScmInvoiceReceived:
-		var ev domain.InvoiceReceivedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
+		case domain.TopicScmInvoiceReceived:
+			var ev domain.InvoiceReceivedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			lines := []domain.VendorBillLine{
+				{
+					ID:          "vbl_" + ev.InvoiceNo,
+					Description: "SCM Vendor Invoice " + ev.InvoiceNo,
+					Quantity:    1,
+					UnitPrice:   ev.TotalAmount,
+					LineTotal:   ev.TotalAmount,
+				},
+			}
+			_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
 			return err
-		}
-		lines := []domain.VendorBillLine{
-			{
-				ID:          "vbl_" + ev.InvoiceNo,
-				Description: "SCM Vendor Invoice " + ev.InvoiceNo,
-				Quantity:    1,
-				UnitPrice:   ev.TotalAmount,
-				LineTotal:   ev.TotalAmount,
-			},
-		}
-		_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
-		return err
 	*/
 
 	case domain.TopicScmInventoryValued:

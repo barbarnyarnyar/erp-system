@@ -1,9 +1,9 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
+	"log"
 	"time"
 
 	"github.com/erp-system/pm-service/internal/business/domain"
@@ -22,7 +22,7 @@ func NewResourceManagementService(allocRepo domain.ResourceAllocationRepository,
 }
 
 func (s *ResourceManagementService) AllocateResource(ctx context.Context, projectID, userID, role string, allocationPct int, startDate time.Time, endDate *time.Time) (*domain.ResourceAllocation, error) {
-	id := fmt.Sprintf("alloc_%d", time.Now().UnixNano())
+	id := utils.NewID("alloc")
 	alloc := &domain.ResourceAllocation{
 		ID:                   id,
 		ProjectID:            projectID,
@@ -48,7 +48,7 @@ func (s *ResourceManagementService) AllocateResource(ctx context.Context, projec
 		Role:         role,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjResourceAllocated, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjResourceAllocated, err)
 	}
 
 	return alloc, nil
@@ -75,7 +75,7 @@ func (s *ResourceManagementService) ReleaseResource(ctx context.Context, allocat
 		UserID:       alloc.UserID,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjResourceReleased, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjResourceReleased, err)
 	}
 
 	return nil

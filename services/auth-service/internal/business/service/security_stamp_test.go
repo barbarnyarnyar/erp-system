@@ -10,12 +10,9 @@ import (
 	"github.com/erp-system/auth-service/internal/data/memory"
 )
 
-// MockPublisher records events without contacting Kafka.
-type MockPublisher struct{}
+import sharedtesting "erp-system/shared/testing"
 
-func (m *MockPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
-	return nil
-}
+type MockPublisher = sharedtesting.MockPublisher
 
 func newTestConfig() *config.Config {
 	return &config.Config{

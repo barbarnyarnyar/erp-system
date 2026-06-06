@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
 	"os"
@@ -42,7 +43,7 @@ func main() {
 	milestoneRepo := memory.NewMilestoneRepository()
 
 	// 3. Initialize Kafka publisher
-	kafkaPub := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
+	kafkaPub := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
 	defer kafkaPub.Close()
 
 	// 4. Initialize subdivided services (matching CDD components)

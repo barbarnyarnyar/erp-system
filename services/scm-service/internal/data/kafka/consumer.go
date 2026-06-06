@@ -24,14 +24,14 @@ type DeadLetterMessage struct {
 const (
 	TopicCrmCustomerDemandForecastDeadLetter = domain.TopicCrmCustomerDemandForecast + ".dead-letter"
 	TopicMfgMaterialRequiredDeadLetter       = domain.TopicMfgMaterialRequired + ".dead-letter"
-	TopicMfgMaterialConsumedDeadLetter      = domain.TopicMfgMaterialConsumed + ".dead-letter"
-	TopicMfgProductionCompletedDeadLetter   = domain.TopicMfgProductionCompleted + ".dead-letter"
+	TopicMfgMaterialConsumedDeadLetter       = domain.TopicMfgMaterialConsumed + ".dead-letter"
+	TopicMfgProductionCompletedDeadLetter    = domain.TopicMfgProductionCompleted + ".dead-letter"
 	TopicPrjMaterialRequestedDeadLetter      = domain.TopicPrjMaterialRequested + ".dead-letter"
 )
 
 type KafkaConsumer struct {
 	reader    *kafka.Reader
-	publisher *KafkaPublisher
+	publisher domain.EventPublisher
 	poSvc     *service.PurchaseOrderService
 	invSvc    *service.InventoryService
 	demandSvc *service.DemandPlanningService
@@ -40,7 +40,7 @@ type KafkaConsumer struct {
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
-	publisher *KafkaPublisher,
+	publisher domain.EventPublisher,
 	poSvc *service.PurchaseOrderService,
 	invSvc *service.InventoryService,
 	demandSvc *service.DemandPlanningService,
@@ -120,13 +120,13 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 	switch topic {
 	// TODO: connect when pick list creation logic is implemented
 	/*
-	case domain.TopicCrmSalesOrderCreated:
-		var ev domain.SalesOrderCreatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("[SCM-CONSUMER] Processing Sales Order Created: creating pick list for Order %s, Customer: %s", ev.OrderNumber, ev.CustomerID)
-		return nil
+		case domain.TopicCrmSalesOrderCreated:
+			var ev domain.SalesOrderCreatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("[SCM-CONSUMER] Processing Sales Order Created: creating pick list for Order %s, Customer: %s", ev.OrderNumber, ev.CustomerID)
+			return nil
 	*/
 
 	case domain.TopicCrmCustomerDemandForecast:
@@ -178,13 +178,13 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 
 	// TODO: connect when fin/fm publishes fin.vendor.payment.processed
 	/*
-	case domain.TopicFinVendorPaymentProcessed:
-		var ev domain.VendorPaymentProcessedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("[SCM-CONSUMER] Processing Vendor Payment Processed: Vendor ID %s, payment amount: %s, status: %s", ev.VendorID, ev.AmountPaid.String(), ev.Status)
-		return nil
+		case domain.TopicFinVendorPaymentProcessed:
+			var ev domain.VendorPaymentProcessedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("[SCM-CONSUMER] Processing Vendor Payment Processed: Vendor ID %s, payment amount: %s, status: %s", ev.VendorID, ev.AmountPaid.String(), ev.Status)
+			return nil
 	*/
 
 	case domain.TopicPrjMaterialRequested:

@@ -20,22 +20,22 @@ func newConsumerWithUser(t *testing.T, userID string) (*KafkaConsumer, *memory.U
 
 	// Create a user that maps to the HR employee.
 	u := &domain.User{
-		ID:           userID,
-		Username:     "frank",
-		Email:        "frank@example.com",
-		PasswordHash: "password",
-		FirstName:    "Frank",
-		LastName:     "F",
-		IsActive:     true,
+		ID:            userID,
+		Username:      "frank",
+		Email:         "frank@example.com",
+		PasswordHash:  "password",
+		FirstName:     "Frank",
+		LastName:      "F",
+		IsActive:      true,
 		SecurityStamp: "ss_initial",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 	if err := userRepo.Create(context.Background(), u); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
 
-	publisher := NewKafkaPublisher([]string{"localhost:9092"})
+	publisher := &silentPub{}
 	consumer := NewKafkaConsumer([]string{"localhost:9092"}, "auth-service-test", publisher, userSvc)
 	return consumer, userRepo
 }

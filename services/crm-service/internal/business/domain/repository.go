@@ -92,4 +92,3 @@ type CustomerInteractionRepository interface {
 	ListByCustomerID(ctx context.Context, customerID string) ([]CustomerInteraction, error)
 	Delete(ctx context.Context, id string) error
 }
-

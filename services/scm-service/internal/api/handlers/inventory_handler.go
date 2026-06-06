@@ -205,4 +205,3 @@ func (h *InventoryHandler) GetInventoryMovements(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
 }
-

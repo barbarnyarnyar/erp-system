@@ -30,7 +30,7 @@ func (s *TaxService) CreateTaxRate(ctx context.Context, code, name string, rate 
 		Rate:     rate,
 		IsActive: true,
 	}
-	
+
 	err := s.repo.Create(ctx, taxRate)
 	if err != nil {
 		return nil, err
@@ -46,4 +46,3 @@ func (s *TaxService) ListTaxRates(ctx context.Context) ([]domain.TaxRate, error)
 func (s *TaxService) GetTaxRate(ctx context.Context, id string) (*domain.TaxRate, error) {
 	return s.repo.GetByID(ctx, id)
 }
-

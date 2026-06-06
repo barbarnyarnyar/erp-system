@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -51,7 +51,7 @@ func (s *PurchaseOrderService) ListPurchaseOrders(ctx context.Context) ([]domain
 }
 
 func (s *PurchaseOrderService) CreatePurchaseOrder(ctx context.Context, supplierID string, expectedDelivery time.Time, notes string, lines []POLineInput) (*PurchaseOrderDetails, error) {
-	poID := fmt.Sprintf("po_%d", time.Now().UnixNano())
+	poID := utils.NewID("po")
 	poNum := fmt.Sprintf("PO-%d", time.Now().Unix())
 
 	totalAmount := decimal.Zero
@@ -63,15 +63,15 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(ctx context.Context, supplier
 		totalAmount = totalAmount.Add(lineTotal)
 
 		line := domain.PurchaseOrderLine{
-			ID:                fmt.Sprintf("pol_%d", time.Now().UnixNano()+int64(len(poLines))),
-			PurchaseOrderID:   poID,
-			ProductID:         l.ProductID,
-			QuantityOrdered:   l.QuantityOrdered,
-			QuantityReceived:  0,
-			UnitPrice:         l.UnitPrice,
-			LineTotal:         lineTotal,
-			Description:       l.Description,
-			CreatedAt:         time.Now(),
+			ID:               fmt.Sprintf("pol_%d", time.Now().UnixNano()+int64(len(poLines))),
+			PurchaseOrderID:  poID,
+			ProductID:        l.ProductID,
+			QuantityOrdered:  l.QuantityOrdered,
+			QuantityReceived: 0,
+			UnitPrice:        l.UnitPrice,
+			LineTotal:        lineTotal,
+			Description:      l.Description,
+			CreatedAt:        time.Now(),
 		}
 
 		poLines = append(poLines, line)
@@ -149,7 +149,7 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 			ReceivedDate:    time.Now(),
 			Timestamp:       time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderReceived, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmPurchaseOrderReceived, err)
 		}
 	}
 
@@ -160,7 +160,7 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 			Reason:          notes,
 			Timestamp:       time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderCancelled, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmPurchaseOrderCancelled, err)
 		}
 	}
 
@@ -195,7 +195,7 @@ func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string)
 		TotalAmount:     po.TotalAmount,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderCreated, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmPurchaseOrderCreated, err)
 	}
 
 	if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderSent, po.ID, domain.PurchaseOrderSentEvent{
@@ -204,7 +204,7 @@ func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string)
 		SupplierID:      po.SupplierID,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmPurchaseOrderSent, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmPurchaseOrderSent, err)
 	}
 
 	return po, nil
@@ -226,7 +226,7 @@ func (s *PurchaseOrderService) ListPurchaseRequisitions(ctx context.Context) ([]
 }
 
 func (s *PurchaseOrderService) CreatePurchaseRequisition(ctx context.Context, requesterID string, requestDate time.Time, notes string, lines []RequisitionLineInput) (*PurchaseRequisitionDetails, error) {
-	reqID := fmt.Sprintf("req_%d", time.Now().UnixNano())
+	reqID := utils.NewID("req")
 	reqNum := fmt.Sprintf("REQ-%d", time.Now().Unix())
 
 	totalAmount := decimal.Zero

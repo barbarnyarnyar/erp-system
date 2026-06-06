@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/m-service/internal/business/domain"
@@ -51,7 +51,7 @@ func (s *CostingService) RunMRP(ctx context.Context) error {
 					RequiredBy: po.ScheduledDate,
 					Timestamp:  time.Now(),
 				}); err != nil {
-					log.Printf("ERROR: failed to publish event %s: %v", domain.TopicMfgMaterialRequired, err)
+					utils.LogPublishErr("m-service", domain.TopicMfgMaterialRequired, err)
 				}
 			}
 		}

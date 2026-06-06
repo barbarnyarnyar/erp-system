@@ -11,25 +11,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// MockPublisher tracks published events for assertion
-type MockPublisher struct {
-	Events []MockEvent
-}
+import sharedtesting "erp-system/shared/testing"
 
-type MockEvent struct {
-	Topic   string
-	Key     string
-	Payload interface{}
-}
-
-func (m *MockPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
-	m.Events = append(m.Events, MockEvent{
-		Topic:   topic,
-		Key:     key,
-		Payload: payload,
-	})
-	return nil
-}
+type MockPublisher = sharedtesting.MockPublisher
+type MockEvent = sharedtesting.MockEvent
 
 func TestGeneralLedgerService_CreateAccount_PublishesEvent(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()

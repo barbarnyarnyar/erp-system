@@ -1,9 +1,10 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -49,20 +50,20 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 	totalDeductions := incomeTaxAmt.Add(socialSecurityAmt)
 	netPay := grossPay.Sub(totalDeductions)
 
-	id := fmt.Sprintf("pay_%d", time.Now().UnixNano())
+	id := utils.NewID("pay")
 
 	pr := &domain.PayrollRecord{
-		ID:               id,
-		EmployeeID:       employeeID,
-		PayPeriodStart:   start,
-		PayPeriodEnd:     end,
-		RegularHours:     regularHours,
-		OvertimeHours:    overtimeHours,
-		GrossPay:         grossPay,
-		NetPay:           netPay,
-		Status:           "PAID",
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+		ID:             id,
+		EmployeeID:     employeeID,
+		PayPeriodStart: start,
+		PayPeriodEnd:   end,
+		RegularHours:   regularHours,
+		OvertimeHours:  overtimeHours,
+		GrossPay:       grossPay,
+		NetPay:         netPay,
+		Status:         "PAID",
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	err = s.repo.Create(ctx, pr)
@@ -96,12 +97,11 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 		TotalNet:    pr.NetPay,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPayrollProcessed, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrPayrollProcessed, err)
 	}
 
 	return pr, nil
 }
-
 
 func (s *PayrollService) GetPayrollRecord(ctx context.Context, id string) (*domain.PayrollRecord, error) {
 	return s.repo.GetByID(ctx, id)

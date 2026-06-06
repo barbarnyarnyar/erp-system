@@ -134,6 +134,30 @@ func (r *ResponseHelper) ValidateJSON(c *gin.Context, obj interface{}) bool {
 	return true
 }
 
+// BindAndValidate binds JSON and sends bad request if validation fails
+func (r *ResponseHelper) BindAndValidate(c *gin.Context, obj interface{}) bool {
+	if err := c.ShouldBindJSON(obj); err != nil {
+		r.BadRequest(c, err.Error())
+		return false
+	}
+	return true
+}
+
+// NotFoundErr sends a 404 error response with standardized message
+func (r *ResponseHelper) NotFoundErr(c *gin.Context, err error) {
+	r.Error(c, http.StatusNotFound, "not found", err)
+}
+
+// ConflictErr sends a 409 Conflict response
+func (r *ResponseHelper) ConflictErr(c *gin.Context, err error) {
+	r.Error(c, http.StatusConflict, "conflict", err)
+}
+
+// InternalErr sends a 500 error response with standardized message
+func (r *ResponseHelper) InternalErr(c *gin.Context, err error) {
+	r.Error(c, http.StatusInternalServerError, "internal error", err)
+}
+
 // SuccessResponse sends a global success response
 func SuccessResponse(c *gin.Context, message string, data interface{}) {
 	c.JSON(http.StatusOK, gin.H{

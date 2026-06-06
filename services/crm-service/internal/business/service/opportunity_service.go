@@ -1,9 +1,10 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
@@ -11,16 +12,16 @@ import (
 )
 
 type OpportunityService struct {
-	oppRepo    domain.OpportunityRepository
+	oppRepo     domain.OpportunityRepository
 	historyRepo domain.OpportunityStageHistoryRepository
-	publisher  domain.EventPublisher
+	publisher   domain.EventPublisher
 }
 
 func NewOpportunityService(oppRepo domain.OpportunityRepository, historyRepo domain.OpportunityStageHistoryRepository, publisher domain.EventPublisher) *OpportunityService {
 	return &OpportunityService{
-		oppRepo:    oppRepo,
+		oppRepo:     oppRepo,
 		historyRepo: historyRepo,
-		publisher:  publisher,
+		publisher:   publisher,
 	}
 }
 
@@ -30,7 +31,7 @@ func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, 
 		return nil, fmt.Errorf("invalid opportunity stage: %s", stage)
 	}
 
-	id := fmt.Sprintf("opp_%d", time.Now().UnixNano())
+	id := utils.NewID("opp")
 	opp := &domain.Opportunity{
 		ID:          id,
 		CustomerID:  customerID,
@@ -49,7 +50,7 @@ func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, 
 	}
 
 	history := &domain.OpportunityStageHistory{
-		ID:            fmt.Sprintf("osh_%d", time.Now().UnixNano()),
+		ID:            utils.NewID("osh"),
 		OpportunityID: id,
 		Stage:         stageEnum,
 		ChangedAt:     time.Now(),
@@ -66,7 +67,7 @@ func (s *OpportunityService) CreateOpportunity(ctx context.Context, customerID, 
 		Value:         value,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityCreated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmOpportunityCreated, err)
 	}
 
 	return opp, nil
@@ -107,7 +108,7 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 
 	if oldStage != stageEnum {
 		history := &domain.OpportunityStageHistory{
-			ID:            fmt.Sprintf("osh_%d", time.Now().UnixNano()),
+			ID:            utils.NewID("osh"),
 			OpportunityID: id,
 			Stage:         stageEnum,
 			ChangedAt:     time.Now(),
@@ -125,7 +126,7 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 		Value:         value,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityUpdated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmOpportunityUpdated, err)
 	}
 
 	if oldStatus != status {
@@ -136,14 +137,14 @@ func (s *OpportunityService) UpdateOpportunity(ctx context.Context, id string, t
 				Value:         value,
 				Timestamp:     time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityWon, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmOpportunityWon, err)
 			}
 		} else if status == "LOST" {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmOpportunityLost, id, domain.OpportunityLostEvent{
 				OpportunityID: id,
 				Timestamp:     time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmOpportunityLost, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmOpportunityLost, err)
 			}
 		}
 	}

@@ -195,4 +195,3 @@ func (h *VendorHandler) DeleteContract(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "contract deleted successfully"})
 }
-

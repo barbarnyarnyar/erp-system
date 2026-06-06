@@ -6,14 +6,14 @@ import (
 )
 
 type User struct {
-	ID           string    `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"password_hash"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	IsActive     bool      `json:"is_active"`
-	SecurityStamp string   `json:"security_stamp,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	Username      string    `json:"username"`
+	Email         string    `json:"email"`
+	PasswordHash  string    `json:"password_hash"`
+	FirstName     string    `json:"first_name"`
+	LastName      string    `json:"last_name"`
+	IsActive      bool      `json:"is_active"`
+	SecurityStamp string    `json:"security_stamp,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

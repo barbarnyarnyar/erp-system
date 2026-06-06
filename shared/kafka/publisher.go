@@ -9,23 +9,23 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// KafkaPublisher implements domain.EventPublisher
-type KafkaPublisher struct {
+// Publisher handles event publishing to Kafka brokers.
+type Publisher struct {
 	writer *kafka.Writer
 }
 
-// NewKafkaPublisher initializes a new Kafka publisher
-func NewKafkaPublisher(brokers []string) *KafkaPublisher {
+// NewPublisher initializes a new Kafka publisher writer with least bytes balancer and auto-topic creation.
+func NewPublisher(brokers []string) *Publisher {
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(brokers...),
 		Balancer:               &kafka.LeastBytes{},
 		AllowAutoTopicCreation: true,
 	}
-	return &KafkaPublisher{writer: writer}
+	return &Publisher{writer: writer}
 }
 
-// Publish serializes the payload to JSON and writes it to the specified topic
-func (p *KafkaPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
+// Publish serializes the payload to JSON and writes the message to the specified Kafka topic.
+func (p *Publisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event payload: %w", err)
@@ -47,7 +47,7 @@ func (p *KafkaPublisher) Publish(ctx context.Context, topic string, key string, 
 	return nil
 }
 
-// Close releases the writer resources
-func (p *KafkaPublisher) Close() error {
+// Close closes the underlying writer connection.
+func (p *Publisher) Close() error {
 	return p.writer.Close()
 }

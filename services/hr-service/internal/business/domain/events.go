@@ -143,10 +143,10 @@ type CertificationEarnedEvent struct {
 }
 
 type SkillAcquiredEvent struct {
-	EmployeeID string    `json:"employee_id"`
-	SkillName  string    `json:"skill_name"`
-	Proficiency string   `json:"proficiency"`
-	Timestamp  time.Time `json:"timestamp"`
+	EmployeeID  string    `json:"employee_id"`
+	SkillName   string    `json:"skill_name"`
+	Proficiency string    `json:"proficiency"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 type PerformanceReviewCompletedEvent struct {
@@ -158,17 +158,17 @@ type PerformanceReviewCompletedEvent struct {
 }
 
 type GoalAchievedEvent struct {
-	EmployeeID  string    `json:"employee_id"`
-	GoalTitle   string    `json:"goal_title"`
-	AchievedAt  time.Time `json:"achieved_at"`
-	Timestamp   time.Time `json:"timestamp"`
+	EmployeeID string    `json:"employee_id"`
+	GoalTitle  string    `json:"goal_title"`
+	AchievedAt time.Time `json:"achieved_at"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type PerformanceImprovementNeededEvent struct {
-	EmployeeID  string    `json:"employee_id"`
-	ReviewID    string    `json:"review_id"`
-	Details     string    `json:"details"`
-	Timestamp   time.Time `json:"timestamp"`
+	EmployeeID string    `json:"employee_id"`
+	ReviewID   string    `json:"review_id"`
+	Details    string    `json:"details"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type ExpenseSubmittedEvent struct {
@@ -186,8 +186,8 @@ type EmployeeAvailableEvent struct {
 }
 
 type EmployeeSkillsUpdatedEvent struct {
-	EmployeeID string   `json:"employee_id"`
-	Skills     []string `json:"skills"`
+	EmployeeID string    `json:"employee_id"`
+	Skills     []string  `json:"skills"`
 	Timestamp  time.Time `json:"timestamp"`
 }
 
@@ -196,19 +196,19 @@ type EmployeeSkillsUpdatedEvent struct {
 // ============================================================================
 
 type ProjectCreatedEvent struct {
-	ProjectID   string    `json:"project_id"`
-	Name        string    `json:"name"`
-	StartDate   time.Time `json:"start_date"`
-	EndDate     time.Time `json:"end_date"`
-	Timestamp   time.Time `json:"timestamp"`
+	ProjectID string    `json:"project_id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type TaskAssignedEvent struct {
-	TaskID      string    `json:"task_id"`
-	ProjectID   string    `json:"project_id"`
-	EmployeeID  string    `json:"employee_id"`
-	Workload    int       `json:"workload"` // e.g. expected hours
-	Timestamp   time.Time `json:"timestamp"`
+	TaskID     string    `json:"task_id"`
+	ProjectID  string    `json:"project_id"`
+	EmployeeID string    `json:"employee_id"`
+	Workload   int       `json:"workload"` // e.g. expected hours
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type BudgetAllocatedEvent struct {
@@ -219,11 +219,11 @@ type BudgetAllocatedEvent struct {
 }
 
 type ProductionScheduledEvent struct {
-	ScheduleID  string    `json:"schedule_id"`
-	Workstation string    `json:"workstation"`
-	RequiredStaff int     `json:"required_staff"`
-	StartDate   time.Time `json:"start_date"`
-	Timestamp   time.Time `json:"timestamp"`
+	ScheduleID    string    `json:"schedule_id"`
+	Workstation   string    `json:"workstation"`
+	RequiredStaff int       `json:"required_staff"`
+	StartDate     time.Time `json:"start_date"`
+	Timestamp     time.Time `json:"timestamp"`
 }
 
 type SCMTrainingRequiredEvent struct {

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"errors"
 	"fmt"
 	"sync"
@@ -19,7 +19,9 @@ type stockReservation struct {
 }
 
 // assertInventoryInvariant validates the SCM inventory invariant:
-//   quantity_available = quantity_on_hand - quantity_reserved
+//
+//	quantity_available = quantity_on_hand - quantity_reserved
+//
 // with all three fields non-negative. Returns nil when satisfied, or a
 // descriptive error if violated. Called at the end of every mutation site
 // to catch logic bugs that would silently corrupt inventory state.
@@ -71,7 +73,7 @@ func (s *InventoryService) ListInventory(ctx context.Context) ([]domain.Inventor
 }
 
 func (s *InventoryService) CreateInventoryItem(ctx context.Context, productID, locationID string, qtyOnHand, reorderPoint, maxStock int, cost decimal.Decimal) (*domain.InventoryItem, error) {
-	id := fmt.Sprintf("inv_%d", time.Now().UnixNano())
+	id := utils.NewID("inv")
 
 	ii := &domain.InventoryItem{
 		ID:                id,
@@ -169,7 +171,7 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 	}
 
 	// Publish specific events
-	if movementType == "RECEIPT" || movementType == "ADJUSTMENT_ADD" {
+	if utils.IsAny(movementType, "RECEIPT", "ADJUSTMENT_ADD") {
 		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryReceived, ii.ID, domain.InventoryReceivedEvent{
 			InventoryItemID: ii.ID,
 			ProductID:       ii.ProductID,
@@ -177,9 +179,9 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 			Quantity:        qty,
 			Timestamp:       time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryReceived, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmInventoryReceived, err)
 		}
-	} else if movementType == "ISSUE" || movementType == "ADJUSTMENT_SUB" {
+	} else if utils.IsAny(movementType, "ISSUE", "ADJUSTMENT_SUB") {
 		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryShipped, ii.ID, domain.InventoryShippedEvent{
 			InventoryItemID: ii.ID,
 			ProductID:       ii.ProductID,
@@ -187,13 +189,13 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 			Quantity:        qty,
 			Timestamp:       time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryShipped, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmInventoryShipped, err)
 		}
 	}
 
 	// Always publish adjusted
 	qtyChange := qty
-	if movementType == "ISSUE" || movementType == "ADJUSTMENT_SUB" {
+	if utils.IsAny(movementType, "ISSUE", "ADJUSTMENT_SUB") {
 		qtyChange = -qty
 	}
 	if err := s.publisher.Publish(ctx, domain.TopicScmInventoryAdjusted, ii.ID, domain.InventoryAdjustedEvent{
@@ -205,7 +207,7 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 		Reason:          notes,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryAdjusted, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmInventoryAdjusted, err)
 	}
 
 	// Check low stock / out of stock
@@ -215,7 +217,7 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 			LocationID: ii.LocationID,
 			Timestamp:  time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryOutOfStock, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmInventoryOutOfStock, err)
 		}
 	} else if ii.QuantityOnHand < ii.ReorderPoint {
 		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryLowStock, ii.ProductID, domain.InventoryLowStockEvent{
@@ -225,13 +227,13 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 			ReorderPoint:   ii.ReorderPoint,
 			Timestamp:      time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryLowStock, err)
+			utils.LogPublishErr("scm-service", domain.TopicScmInventoryLowStock, err)
 		}
 	}
 
 	// Create movement log
 	move := &domain.InventoryMovement{
-		ID:            fmt.Sprintf("move_%d", time.Now().UnixNano()),
+		ID:            utils.NewID("move"),
 		ProductID:     productID,
 		LocationID:    locationID,
 		MovementType:  movementType,
@@ -331,7 +333,7 @@ func (s *InventoryService) CreateStockTransfer(ctx context.Context, fromLocation
 		return nil, fmt.Errorf("insufficient source inventory available (have %d, requested %d)", ii.QuantityAvailable, quantity)
 	}
 
-	id := fmt.Sprintf("st_%d", time.Now().UnixNano())
+	id := utils.NewID("st")
 	st := &domain.StockTransfer{
 		ID:             id,
 		FromLocationID: fromLocationID,
@@ -467,7 +469,7 @@ func (s *InventoryService) publishValuation(ctx context.Context, ii *domain.Inve
 		TotalValuation:  totalVal,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicScmInventoryValued, err)
+		utils.LogPublishErr("scm-service", domain.TopicScmInventoryValued, err)
 	}
 }
 

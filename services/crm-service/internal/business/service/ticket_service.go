@@ -1,9 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
@@ -22,7 +21,7 @@ func NewServiceTicketService(ticketRepo domain.ServiceTicketRepository, publishe
 }
 
 func (s *ServiceTicketService) CreateServiceTicket(ctx context.Context, customerID, title, description, priority string) (*domain.ServiceTicket, error) {
-	id := fmt.Sprintf("ticket_%d", time.Now().UnixNano())
+	id := utils.NewID("ticket")
 	ticket := &domain.ServiceTicket{
 		ID:          id,
 		CustomerID:  customerID,
@@ -46,7 +45,7 @@ func (s *ServiceTicketService) CreateServiceTicket(ctx context.Context, customer
 		Priority:   priority,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketCreated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmServiceTicketCreated, err)
 	}
 
 	return ticket, nil
@@ -82,7 +81,7 @@ func (s *ServiceTicketService) UpdateServiceTicket(ctx context.Context, id strin
 		Priority:  priority,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketUpdated, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmServiceTicketUpdated, err)
 	}
 
 	if oldStatus != status {
@@ -91,14 +90,14 @@ func (s *ServiceTicketService) UpdateServiceTicket(ctx context.Context, id strin
 				TicketID:  id,
 				Timestamp: time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketResolved, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmServiceTicketResolved, err)
 			}
 		} else if status == "ESCALATED" {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmServiceTicketEscalated, id, domain.ServiceTicketEscalatedEvent{
 				TicketID:  id,
 				Timestamp: time.Now(),
 			}); err != nil {
-				log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmServiceTicketEscalated, err)
+				utils.LogPublishErr("crm-service", domain.TopicCrmServiceTicketEscalated, err)
 			}
 		}
 	}

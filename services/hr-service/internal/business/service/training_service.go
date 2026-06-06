@@ -1,9 +1,10 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -28,7 +29,7 @@ func (s *TrainingService) ListTrainingPrograms(ctx context.Context) ([]domain.Tr
 }
 
 func (s *TrainingService) CreateTrainingProgram(ctx context.Context, title, description, trainer string, start, end time.Time) (*domain.TrainingProgram, error) {
-	id := fmt.Sprintf("train_%d", time.Now().UnixNano())
+	id := utils.NewID("train")
 
 	tp := &domain.TrainingProgram{
 		ID:          id,
@@ -83,7 +84,7 @@ func (s *TrainingService) UpdateTrainingProgram(ctx context.Context, id string, 
 			CompletionDate:    time.Now(),
 			Timestamp:         time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTrainingCompleted, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrTrainingCompleted, err)
 		}
 	}
 
@@ -106,7 +107,7 @@ func (s *TrainingService) EnrollEmployee(ctx context.Context, trainingID string,
 		// For CANCELLED or COMPLETED, fall through and create a new enrollment.
 	}
 
-	id := fmt.Sprintf("enr_%d", time.Now().UnixNano())
+	id := utils.NewID("enr")
 	te := &domain.TrainingEnrollment{
 		ID:         id,
 		TrainingID: trainingID,
@@ -144,7 +145,7 @@ func (s *TrainingService) CompleteTraining(ctx context.Context, enrollmentID str
 		CompletionDate:    now,
 		Timestamp:         now,
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrTrainingCompleted, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrTrainingCompleted, err)
 	}
 
 	return te, nil
@@ -175,4 +176,3 @@ func (s *TrainingService) AcquireSkill(ctx context.Context, employeeID, skillNam
 	}
 	return nil
 }
-

@@ -27,14 +27,14 @@ const (
 
 type KafkaConsumer struct {
 	reader    *kafka.Reader
-	publisher *KafkaPublisher
+	publisher domain.EventPublisher
 	prod      *service.ProductionService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
-	publisher *KafkaPublisher,
+	publisher domain.EventPublisher,
 	prod *service.ProductionService,
 ) *KafkaConsumer {
 	topics := []string{
@@ -127,46 +127,46 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 
 	// TODO: connect when scm publishes scm.material.received
 	/*
-	case domain.TopicScmMaterialReceived:
-		var ev domain.SCMMaterialReceivedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing SCM Material Received: Material Product %s received for PO %s, quantity: %s. Updating material availability.", ev.ProductID, ev.PurchaseOrderID, ev.Quantity.String())
-		return nil
+		case domain.TopicScmMaterialReceived:
+			var ev domain.SCMMaterialReceivedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing SCM Material Received: Material Product %s received for PO %s, quantity: %s. Updating material availability.", ev.ProductID, ev.PurchaseOrderID, ev.Quantity.String())
+			return nil
 	*/
 
 	// TODO: connect when scm publishes scm.inventory.updated
 	/*
-	case domain.TopicScmInventoryUpdated:
-		var ev domain.SCMInventoryUpdatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing SCM Inventory Updated: Product %s changed by type %s at location %s. New QOH: %s. Updating production material status.", ev.ProductID, ev.ChangeType, ev.LocationID, ev.QuantityOnHand.String())
-		return nil
+		case domain.TopicScmInventoryUpdated:
+			var ev domain.SCMInventoryUpdatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing SCM Inventory Updated: Product %s changed by type %s at location %s. New QOH: %s. Updating production material status.", ev.ProductID, ev.ChangeType, ev.LocationID, ev.QuantityOnHand.String())
+			return nil
 	*/
 
 	// TODO: connect when fin/fm publishes fin.cost.budget.allocated
 	/*
-	case domain.TopicFinCostBudgetAllocated:
-		var ev domain.FinCostBudgetAllocatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Financial Cost Budget Allocated: Allocated budget amount: %s to Project: %s (Dept: %s).", ev.Amount.String(), ev.ProjectID, ev.DepartmentID)
-		return nil
+		case domain.TopicFinCostBudgetAllocated:
+			var ev domain.FinCostBudgetAllocatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing Financial Cost Budget Allocated: Allocated budget amount: %s to Project: %s (Dept: %s).", ev.Amount.String(), ev.ProjectID, ev.DepartmentID)
+			return nil
 	*/
 
 	// TODO: connect when hr publishes hr.employee.scheduled
 	/*
-	case domain.TopicHrEmployeeScheduled:
-		var ev domain.HREmployeeScheduledEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing HR Employee Scheduled: Employee %s scheduled for Work Center %s from %s to %s. Updating labor capacity.", ev.EmployeeID, ev.WorkCenterID, ev.ShiftStart, ev.ShiftEnd)
-		return nil
+		case domain.TopicHrEmployeeScheduled:
+			var ev domain.HREmployeeScheduledEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("Processing HR Employee Scheduled: Employee %s scheduled for Work Center %s from %s to %s. Updating labor capacity.", ev.EmployeeID, ev.WorkCenterID, ev.ShiftStart, ev.ShiftEnd)
+			return nil
 	*/
 
 	case domain.TopicPrjCustomOrderCreated:
@@ -175,7 +175,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		log.Printf("Processing Project Custom Order Created: Scheduling custom production order for item: %s, quantity: %d.", ev.CustomItemID, ev.Quantity)
-		
+
 		// Auto-schedule production order for custom product
 		bomID := "bom_default"
 		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, ev.RequiredBy, "")

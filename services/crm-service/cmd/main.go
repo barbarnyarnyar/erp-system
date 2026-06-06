@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
 	"os"
@@ -44,7 +45,7 @@ func main() {
 	custInteractionRepo := memory.NewCustomerInteractionRepository()
 
 	// 3. Initialize Kafka publisher
-	kafkaPub := kafka.NewKafkaPublisher(cfg.Kafka.Brokers)
+	kafkaPub := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
 	defer kafkaPub.Close()
 
 	// 4. Initialize subdivided business services

@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/erp-system/fm-service/internal/business/service"
+	"github.com/gin-gonic/gin"
 )
 
 type ReportHandler struct {

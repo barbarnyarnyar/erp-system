@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -43,7 +43,7 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 	if err != nil {
 		// Auto-initialize a default leave balance for testing/convenience
 		balance = &domain.LeaveBalance{
-			ID:           fmt.Sprintf("bal_%d", time.Now().UnixNano()),
+			ID:           utils.NewID("bal"),
 			EmployeeID:   employeeID,
 			LeaveType:    typeEnum,
 			EntitledDays: decimal.NewFromInt(15), // 15 entitled days by default
@@ -58,18 +58,18 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 		return nil, fmt.Errorf("insufficient leave balance: requested %s days, only %s days remaining", durationDays.String(), remaining.String())
 	}
 
-	id := fmt.Sprintf("leave_%d", time.Now().UnixNano())
+	id := utils.NewID("leave")
 
 	lr := &domain.LeaveRequest{
-		ID:          id,
-		EmployeeID:  employeeID,
-		LeaveType:   typeEnum,
-		StartDate:   start,
-		EndDate:     end,
-		Reason:      reason,
-		Status:      domain.LeaveStatusPending,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:         id,
+		EmployeeID: employeeID,
+		LeaveType:  typeEnum,
+		StartDate:  start,
+		EndDate:    end,
+		Reason:     reason,
+		Status:     domain.LeaveStatusPending,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 
 	err = s.repo.Create(ctx, lr)
@@ -86,7 +86,7 @@ func (s *LeaveManagementService) CreateLeaveRequest(ctx context.Context, employe
 		EndDate:        lr.EndDate,
 		Timestamp:      time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrLeaveRequested, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrLeaveRequested, err)
 	}
 
 	return lr, nil
@@ -160,7 +160,7 @@ func (s *LeaveManagementService) UpdateLeaveStatus(ctx context.Context, id strin
 			ApprovedBy:     approvedBy,
 			Timestamp:      time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrLeaveApproved, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrLeaveApproved, err)
 		}
 	} else if status == "REJECTED" {
 		// Publish leave rejected event
@@ -171,7 +171,7 @@ func (s *LeaveManagementService) UpdateLeaveStatus(ctx context.Context, id strin
 			Reason:         "Rejected by manager",
 			Timestamp:      time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrLeaveRejected, err)
+			utils.LogPublishErr("hr-service", domain.TopicHrLeaveRejected, err)
 		}
 	}
 
@@ -193,5 +193,3 @@ func (s *LeaveManagementService) ListLeaveBalances(ctx context.Context) ([]domai
 func (s *LeaveManagementService) GetLeaveBalancesByEmployee(ctx context.Context, employeeID string) ([]domain.LeaveBalance, error) {
 	return s.balances.GetByEmployeeID(ctx, employeeID)
 }
-
-

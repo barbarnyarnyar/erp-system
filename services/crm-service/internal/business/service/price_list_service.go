@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"erp-system/shared/utils"
 	"time"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
@@ -21,7 +21,7 @@ func NewPriceListService(priceListRepo domain.PriceListRepository, priceListItem
 }
 
 func (s *PriceListService) CreatePriceList(ctx context.Context, name, description string, isActive bool) (*domain.PriceList, error) {
-	id := fmt.Sprintf("pl_%d", time.Now().UnixNano())
+	id := utils.NewID("pl")
 	pl := &domain.PriceList{
 		ID:          id,
 		Name:        name,

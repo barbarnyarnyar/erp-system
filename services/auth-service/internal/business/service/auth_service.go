@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"erp-system/shared/utils"
 	"fmt"
 	"time"
 
@@ -13,7 +14,9 @@ import (
 
 // TokenClaims is the canonical typed contract for decoded JWT payloads.
 // Mirrors the `struct TokenClaims` declaration in `auth.cdd`:
-//   { user_id, tenant_id, roles }
+//
+//	{ user_id, tenant_id, roles }
+//
 // Plus internal-only fields (Username, Email, Permissions, SecurityStamp)
 // used by ValidateToken and downstream consumers.
 type TokenClaims struct {
@@ -103,9 +106,9 @@ func (s *AuthService) AuthenticateUser(ctx context.Context, username, password, 
 	}
 
 	// Generate Refresh Token
-	refreshToken := fmt.Sprintf("rt_%d_%s", time.Now().UnixNano(), user.ID)
+	refreshToken := fmt.Sprintf("rt_%s_%s", utils.NewID("rt"), user.ID)
 	session := &domain.Session{
-		ID:           fmt.Sprintf("sess_%d", time.Now().UnixNano()),
+		ID:           utils.NewID("sess"),
 		UserID:       user.ID,
 		RefreshToken: refreshToken,
 		IpAddress:    &ipAddress,

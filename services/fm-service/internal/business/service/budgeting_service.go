@@ -1,10 +1,9 @@
 package service
 
 import (
-	"log"
 	"context"
+	"erp-system/shared/utils"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/erp-system/fm-service/internal/business/domain"
@@ -34,7 +33,7 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 		return nil, errors.New("invalid budget inputs: account ID, year, and valid month period are required")
 	}
 
-	id := fmt.Sprintf("bud_%d", time.Now().UnixNano())
+	id := utils.NewID("bud")
 	budget := &domain.Budget{
 		ID:              id,
 		AccountID:       accountID,
@@ -65,7 +64,7 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 		SpentAmount:     budget.SpentAmount,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinBudgetCreated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFinBudgetCreated, err)
 	}
 
 	return budget, nil
@@ -126,7 +125,7 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 		SpentAmount:     bud.SpentAmount,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinBudgetUpdated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFinBudgetUpdated, err)
 	}
 
 	if newSpent.GreaterThan(bud.AllocatedAmount) {
@@ -140,7 +139,7 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 			SpentAmount:     bud.SpentAmount,
 			Timestamp:       time.Now(),
 		}); err != nil {
-			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicFinBudgetExceeded, err)
+			utils.LogPublishErr("fm-service", domain.TopicFinBudgetExceeded, err)
 		}
 	}
 

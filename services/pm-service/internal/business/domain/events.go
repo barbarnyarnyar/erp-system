@@ -60,11 +60,11 @@ type TaskCreatedEvent struct {
 }
 
 type TaskAssignedEvent struct {
-	TaskID      string    `json:"task_id"`
-	ProjectID   string    `json:"project_id"`
-	EmployeeID  string    `json:"employee_id"`
-	Workload    int       `json:"workload"` // expected workload in hours
-	Timestamp   time.Time `json:"timestamp"`
+	TaskID     string    `json:"task_id"`
+	ProjectID  string    `json:"project_id"`
+	EmployeeID string    `json:"employee_id"`
+	Workload   int       `json:"workload"` // expected workload in hours
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type TaskStartedEvent struct {
@@ -183,8 +183,8 @@ type EmployeeAvailableEvent struct {
 }
 
 type EmployeeSkillsUpdatedEvent struct {
-	EmployeeID string   `json:"employee_id"`
-	Skills     []string `json:"skills"`
+	EmployeeID string    `json:"employee_id"`
+	Skills     []string  `json:"skills"`
 	Timestamp  time.Time `json:"timestamp"`
 }
 
@@ -196,10 +196,10 @@ type BudgetApprovedEvent struct {
 }
 
 type PaymentReceivedEvent struct {
-	ProjectID   string          `json:"project_id"`
-	InvoiceID   string          `json:"invoice_id"`
-	AmountPaid  decimal.Decimal `json:"amount_paid"`
-	Timestamp   time.Time       `json:"timestamp"`
+	ProjectID  string          `json:"project_id"`
+	InvoiceID  string          `json:"invoice_id"`
+	AmountPaid decimal.Decimal `json:"amount_paid"`
+	Timestamp  time.Time       `json:"timestamp"`
 }
 
 type SalesOrderReceivedEvent struct {
@@ -252,4 +252,3 @@ type ProjectExpenseIncurredEvent struct {
 	Amount      decimal.Decimal `json:"amount"`
 	Timestamp   time.Time       `json:"timestamp"`
 }
-

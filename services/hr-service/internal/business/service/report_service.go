@@ -95,8 +95,8 @@ func (s *ReportService) GetPayrollReport(ctx context.Context) (*PayrollReport, e
 }
 
 type AttendanceReport struct {
-	TotalHoursLogged decimal.Decimal `json:"total_hours_logged"`
-	TotalShiftsCount int             `json:"total_shifts_count"`
+	TotalHoursLogged  decimal.Decimal `json:"total_hours_logged"`
+	TotalShiftsCount  int             `json:"total_shifts_count"`
 	AverageShiftHours decimal.Decimal `json:"average_shift_hours"`
 	LateCheckinsCount int             `json:"late_checkins_count"`
 }
@@ -108,7 +108,7 @@ func (s *ReportService) GetAttendanceReport(ctx context.Context) (*AttendanceRep
 	}
 
 	report := &AttendanceReport{
-		TotalHoursLogged: decimal.Zero,
+		TotalHoursLogged:  decimal.Zero,
 		AverageShiftHours: decimal.Zero,
 	}
 

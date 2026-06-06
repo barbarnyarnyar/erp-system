@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.24.6
 
 require (
+	erp-system/shared v0.0.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/shopspring/decimal v1.4.0
@@ -38,3 +39,5 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace erp-system/shared => ../../shared

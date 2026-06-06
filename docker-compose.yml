@@ -65,7 +65,9 @@ services:
     restart: unless-stopped
 
   auth-service:
-    build: ./services/auth-service
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -75,7 +77,9 @@ services:
     restart: unless-stopped
 
   fm-service:
-    build: ./services/fm-service
+    build:
+      context: .
+      dockerfile: services/fm-service/Dockerfile
     ports:
       - "8001:8001"
     environment:
@@ -84,7 +88,9 @@ services:
     restart: unless-stopped
 
   crm-service:
-    build: ./services/crm-service
+    build:
+      context: .
+      dockerfile: services/crm-service/Dockerfile
     ports:
       - "8002:8002"
     environment:
@@ -93,7 +99,9 @@ services:
     restart: unless-stopped
 
   hr-service:
-    build: ./services/hr-service
+    build:
+      context: .
+      dockerfile: services/hr-service/Dockerfile
     ports:
       - "8003:8003"
     environment:
@@ -102,7 +110,9 @@ services:
     restart: unless-stopped
 
   m-service:
-    build: ./services/m-service
+    build:
+      context: .
+      dockerfile: services/m-service/Dockerfile
     ports:
       - "8004:8004"
     environment:
@@ -111,7 +121,9 @@ services:
     restart: unless-stopped
 
   pm-service:
-    build: ./services/pm-service
+    build:
+      context: .
+      dockerfile: services/pm-service/Dockerfile
     ports:
       - "8005:8006"
     environment:
@@ -120,7 +132,9 @@ services:
     restart: unless-stopped
 
   scm-service:
-    build: ./services/scm-service
+    build:
+      context: .
+      dockerfile: services/scm-service/Dockerfile
     ports:
       - "8006:8006"
     environment:

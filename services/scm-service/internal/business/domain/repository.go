@@ -126,4 +126,3 @@ type StockTransferRepository interface {
 	List(ctx context.Context) ([]StockTransfer, error)
 	Update(ctx context.Context, st *StockTransfer) error
 }
-

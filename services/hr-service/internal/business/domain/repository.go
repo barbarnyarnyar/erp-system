@@ -131,6 +131,3 @@ type DepartmentHistoryRepository interface {
 	Create(ctx context.Context, dh *DepartmentHistory) error
 	ListByEmployeeID(ctx context.Context, empID string) ([]DepartmentHistory, error)
 }
-
-
-
