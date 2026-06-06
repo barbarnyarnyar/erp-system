@@ -8,11 +8,18 @@ import (
 type Config struct {
 	Server ServerConfig
 	Kafka  KafkaConfig
+	TLS    TLSConfig
 }
 
 type ServerConfig struct {
 	Port string
 	Env  string
+}
+
+type TLSConfig struct {
+	Enabled  bool
+	CertFile string
+	KeyFile  string
 }
 
 type KafkaConfig struct {
@@ -34,6 +41,11 @@ func Load() (*Config, error) {
 		Kafka: KafkaConfig{
 			Brokers: strings.Split(brokers, ","),
 			GroupID: getEnv("KAFKA_GROUP_ID", "scm-service"),
+		},
+		TLS: TLSConfig{
+			Enabled:  getEnv("TLS_ENABLED", "false") == "true",
+			CertFile: getEnv("TLS_CERT_FILE", ""),
+			KeyFile:  getEnv("TLS_KEY_FILE", ""),
 		},
 	}, nil
 }

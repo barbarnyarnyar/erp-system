@@ -3,7 +3,7 @@
 **Source PRD**: docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: 1 of 6
-**Status**: Draft
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -162,17 +162,17 @@ rg '_ = .*Publish\(' services/ --type go | wc -l
 
 ## Definition of Done
 
-- [ ] Task 1a: SCM product events published (3)
-- [ ] Task 1b: SCM inventory events published (5)
-- [ ] Task 1c: SCM purchase order events published (3)
-- [ ] Task 1d: SCM vendor events published (3)
-- [ ] Task 1e: SCM shipment events published (4)
-- [ ] Task 1f: SCM other events published (2)
-- [ ] Task 2: PM publishes all 25 events
-- [ ] Task 3: HR publishes all 22 events
-- [ ] Task 4: CRM publishes all 28 events
-- [ ] Task 5: Zero dead consumer subscriptions (14 truly dead, 1 kept: `mfg.production.scheduled`)
-- [ ] Task 6: All topic names consistent across services
-- [ ] Task 7: fm-service uses constants not strings
-- [ ] `make build` passes for all services
-- [ ] Note: error logging handled by Phase 0.5, DLQ handled by Phase 6
+- [x] Task 1a: SCM product events published (3)
+- [x] Task 1b: SCM inventory events published (5)
+- [x] Task 1c: SCM purchase order events published (3)
+- [x] Task 1d: SCM vendor events published (3)
+- [x] Task 1e: SCM shipment events published (4)
+- [x] Task 1f: SCM other events published (2)
+- [x] Task 2: PM publishes all 25 events
+- [x] Task 3: HR publishes all 22 events
+- [x] Task 4: CRM publishes all 28 events
+- [x] Task 5: Zero dead consumer subscriptions (14 truly dead, 1 kept: `mfg.production.scheduled`)
+- [x] Task 6: All topic names consistent across services
+- [x] Task 7: fm-service uses constants not strings
+- [x] `make build` passes for all services
+- [x] Note: error logging handled by Phase 0.5, DLQ handled by Phase 6

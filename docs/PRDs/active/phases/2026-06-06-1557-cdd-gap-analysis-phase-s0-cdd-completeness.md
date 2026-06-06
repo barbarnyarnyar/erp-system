@@ -139,7 +139,7 @@ grep -c 'entity TransactionLine {' services/fm-service/contracts/fm.cdd
 
 ## Definition of Done
 
-- [ ] Task 1: Transaction + TransactionLine structs read and field-mapped
-- [ ] Task 2: Both entities added to `fm.cdd` with correct types and references
-- [ ] Task 3: Zero remaining Go-only domain structs (verified by scan)
+- [x] Task 1: Transaction + TransactionLine structs read and field-mapped
+- [x] Task 2: Both entities added to `fm.cdd:136-155` with correct types and references
+- [x] Task 3: Zero remaining Go-only domain structs (verified by scan — 19 CDD entities = 19 Go structs)
 - [x] `grep 'entity Transaction {' services/fm-service/contracts/fm.cdd` passes

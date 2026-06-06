@@ -8,6 +8,7 @@ import (
 	"github.com/erp-system/auth-service/internal/business/domain"
 	"github.com/erp-system/auth-service/internal/config"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type JWTClaims struct {
@@ -53,8 +54,7 @@ func (s *AuthService) AuthenticateUser(ctx context.Context, username, password, 
 		return "", "", fmt.Errorf("user account is deactivated")
 	}
 
-	// Simple check (in production, use bcrypt or secure comparison)
-	if user.PasswordHash != password {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return "", "", fmt.Errorf("invalid credentials")
 	}
 

@@ -22,8 +22,10 @@ func NewKafkaConsumer(
 	training *service.TrainingService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicPrjProjectCreated,
-		domain.TopicPrjTaskAssigned,
+		// TODO: connect when PM event handler is implemented (currently log-only)
+		// domain.TopicPrjProjectCreated,
+		// TODO: connect when PM event handler is implemented (currently log-only)
+		// domain.TopicPrjTaskAssigned,
 		// TODO: connect when fm/fin publishes fin.budget.allocated
 		// domain.TopicFinBudgetAllocated,
 		domain.TopicMfgProductionScheduled,
@@ -70,6 +72,8 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
+	// TODO: connect when topic has real handler implementation
+	/*
 	case domain.TopicPrjProjectCreated:
 		var ev domain.ProjectCreatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -85,6 +89,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
 		return nil
+	*/
 
 	// TODO: connect when fm/fin publishes fin.budget.allocated
 	/*

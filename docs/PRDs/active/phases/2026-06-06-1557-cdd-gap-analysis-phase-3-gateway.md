@@ -229,16 +229,16 @@ If Checkpoint C breaks `make test`, gate stays at Checkpoint B (port-correct gat
 
 ## Definition of Done
 
-- [ ] Task 0: Route prefix conventions reconciled (server.go uses `/finance/`, `/manufacturing/`, `/projects/`)
-- [ ] Task 1: Gateway backend URLs match code default ports
-- [ ] Task 2: Dockerfile EXPOSE matches code default ports
-- [ ] Task 4: docker-compose ports consistent
-- [ ] **Checkpoint A**: `make test` + `make health` + `make test-direct` all pass after port fixes
-- [ ] Task 3a + 3b: New gateway with correct routes, auth disabled
-- [ ] **Checkpoint B**: `make test` + `make health` pass after route swap (no auth)
-- [ ] Task 3c + 3d: JWT+RBAC auth middleware enabled
-- [ ] **Checkpoint C**: `make test` passes with auth token
-- [ ] `make health` shows all 6 services healthy at every checkpoint
+- [x] Task 0: Route prefix conventions reconciled (server.go uses `/finance/`, `/manufacturing/`, `/projects/`)
+- [x] Task 1: Gateway backend URLs match code default ports
+- [x] Task 2: Dockerfile EXPOSE matches code default ports
+- [x] Task 4: docker-compose ports consistent
+- [x] **Checkpoint A**: `make test` + `make health` + `make test-direct` all pass after port fixes
+- [x] Task 3a + 3b: New gateway with correct routes, auth disabled
+- [x] **Checkpoint B**: `make test` + `make health` pass after route swap (no auth)
+- [x] Task 3c + 3d: JWT+RBAC auth middleware enabled
+- [x] **Checkpoint C**: `make test` passes with auth token
+- [x] `make health` shows all 6 services healthy at every checkpoint
 
 ---
 

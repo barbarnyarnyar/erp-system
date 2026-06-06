@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/erp-system/auth-service/internal/business/domain"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -36,7 +37,13 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 
-	err := s.userRepo.Create(ctx, u)
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.PasswordHash), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+	u.PasswordHash = string(hash)
+
+	err = s.userRepo.Create(ctx, u)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +129,11 @@ func (s *UserService) UpdateCredentials(ctx context.Context, userID string, newP
 		return false, err
 	}
 
-	user.PasswordHash = newPassword
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return false, fmt.Errorf("failed to hash password: %w", err)
+	}
+	user.PasswordHash = string(hash)
 	user.UpdatedAt = time.Now()
 
 	err = s.userRepo.Update(ctx, user)

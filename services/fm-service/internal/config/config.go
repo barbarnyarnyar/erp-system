@@ -12,11 +12,18 @@ type Config struct {
 	Redis    RedisConfig
 	RabbitMQ RabbitMQConfig
 	Kafka    KafkaConfig
+	TLS      TLSConfig
 }
 
 type ServerConfig struct {
 	Port string
 	Env  string
+}
+
+type TLSConfig struct {
+	Enabled  bool
+	CertFile string
+	KeyFile  string
 }
 
 type DatabaseConfig struct {
@@ -72,6 +79,11 @@ func Load() (*Config, error) {
 		Kafka: KafkaConfig{
 			Brokers: strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
 			GroupID: getEnv("KAFKA_GROUP_ID", "fm-service"),
+		},
+		TLS: TLSConfig{
+			Enabled:  getEnv("TLS_ENABLED", "false") == "true",
+			CertFile: getEnv("TLS_CERT_FILE", ""),
+			KeyFile:  getEnv("TLS_KEY_FILE", ""),
 		},
 	}
 

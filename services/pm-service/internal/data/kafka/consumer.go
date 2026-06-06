@@ -25,13 +25,17 @@ func NewKafkaConsumer(
 	taskSvc *service.TaskManagementService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicHrEmployeeAvailable,
-		domain.TopicHrEmployeeSkillsUpdated,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicHrEmployeeAvailable,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicHrEmployeeSkillsUpdated,
 		// TODO: connect when fm/fin publishes fin.budget.approved
 		// domain.TopicFinBudgetApproved,
-		domain.TopicFinPaymentReceived,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicFinPaymentReceived,
 		domain.TopicCrmSalesOrderReceived,
-		domain.TopicScmMaterialDelivered,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicScmMaterialDelivered,
 		// TODO: connect when mfg/m publishes mfg.custom.production.completed
 		// domain.TopicMfgCustomProductionCompleted,
 	}
@@ -77,6 +81,8 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
+	// TODO: connect when handler does real work (currently log-only)
+	/*
 	case domain.TopicHrEmployeeAvailable:
 		var ev domain.EmployeeAvailableEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -92,6 +98,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing HR Employee Skills Updated: Employee %s skills updated to %v. Re-mapping project resource capabilities.", ev.EmployeeID, ev.Skills)
 		return nil
+	*/
 
 	// TODO: connect when fm/fin publishes fin.budget.approved
 	/*
@@ -104,6 +111,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		return nil
 	*/
 
+	// TODO: connect when handler does real work (currently log-only)
+	/*
 	case domain.TopicFinPaymentReceived:
 		var ev domain.PaymentReceivedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -111,6 +120,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Finance Payment Received: Project %s received payment of %s on Invoice %s. Updating billing summary.", ev.ProjectID, ev.AmountPaid.String(), ev.InvoiceID)
 		return nil
+	*/
 
 	case domain.TopicCrmSalesOrderReceived:
 		var ev domain.SalesOrderReceivedEvent
@@ -136,6 +146,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, _ = c.taskSvc.CreateTask(ctx, proj.ID, "", "Project Kick-off & Alignment", "Confirm requirements and resources for Sales Order "+ev.SalesOrderID, "", &startDate, &startDate, decimal.NewFromInt(0))
 		return nil
 
+	// TODO: connect when handler does real work (currently log-only)
+	/*
 	case domain.TopicScmMaterialDelivered:
 		var ev domain.MaterialDeliveredEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -143,6 +155,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing SCM Material Delivered: Material delivered for project %s, task %s (Shipment: %s). Updating task resource status.", ev.ProjectID, ev.TaskID, ev.ShipmentID)
 		return nil
+	*/
 
 	// TODO: connect when mfg/m publishes mfg.custom.production.completed
 	/*

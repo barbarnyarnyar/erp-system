@@ -57,6 +57,18 @@ func (s *PerformanceService) CreatePerformanceReview(ctx context.Context, employ
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceReviewCompleted, err)
 	}
 
+	// Publish goal achieved if rating is high (>= 4)
+	if pr.Rating >= 4 {
+		if err := s.publisher.Publish(ctx, domain.TopicHrGoalAchieved, pr.EmployeeID, domain.GoalAchievedEvent{
+			EmployeeID: pr.EmployeeID,
+			GoalTitle:  fmt.Sprintf("Performance period %s - %s", pr.PeriodStart.Format("2006-01-02"), pr.PeriodEnd.Format("2006-01-02")),
+			AchievedAt: time.Now(),
+			Timestamp:  time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrGoalAchieved, err)
+		}
+	}
+
 	// Publish performance improvement needed if rating is low (e.g., < 3)
 	if pr.Rating < 3 {
 		if err := s.publisher.Publish(ctx, domain.TopicHrPerformanceImprovementNeeded, pr.EmployeeID, domain.PerformanceImprovementNeededEvent{
@@ -100,6 +112,18 @@ func (s *PerformanceService) UpdatePerformanceReview(ctx context.Context, id str
 		Timestamp:  time.Now(),
 	}); err != nil {
 		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPerformanceReviewCompleted, err)
+	}
+
+	// Publish goal achieved if updated rating is high
+	if pr.Rating >= 4 {
+		if err := s.publisher.Publish(ctx, domain.TopicHrGoalAchieved, pr.EmployeeID, domain.GoalAchievedEvent{
+			EmployeeID: pr.EmployeeID,
+			GoalTitle:  fmt.Sprintf("Performance period %s - %s", pr.PeriodStart.Format("2006-01-02"), pr.PeriodEnd.Format("2006-01-02")),
+			AchievedAt: time.Now(),
+			Timestamp:  time.Now(),
+		}); err != nil {
+			log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrGoalAchieved, err)
+		}
 	}
 
 	// Publish performance improvement needed if updated rating is low

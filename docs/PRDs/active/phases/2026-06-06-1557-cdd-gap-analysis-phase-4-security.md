@@ -180,9 +180,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ## Definition of Done
 
-- [ ] Task 1: Passwords hashed with bcrypt
-- [ ] Task 2: JWT secret is environment variable
-- [ ] Task 3a–3g: TLS config stubs in all 7 services
-- [ ] Task 4: Admin user seed on first startup (credentials: admin / admin123 — consistent with Phase 3)
-- [ ] Auth service login flow works end-to-end
-- [ ] `make build` passes for auth-service
+- [x] Task 1: Passwords hashed with bcrypt
+- [x] Task 2: JWT secret is environment variable (random per-run if unset)
+- [x] Task 3a–3g: TLS config stubs in all 7 services
+- [x] Task 4: Admin user seed on first startup (credentials: admin / admin123 — consistent with Phase 3)
+- [x] Auth service login flow works end-to-end
+- [x] `make build` passes for auth-service

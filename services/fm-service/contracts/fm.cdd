@@ -410,7 +410,7 @@ service FM {
         scm.purchase.order.created: PurchaseOrderCreatedEvent
         scm.invoice.received: InvoiceReceivedEvent
         scm.inventory.valued: InventoryValuedEvent
-        crm.sale.completed: SaleCompletedEvent
+        crm.sales.order.confirmed: SalesOrderConfirmedEvent
         crm.customer.created: CustomerCreatedEvent
         mfg.production.completed: ProductionCompletedEvent
         mfg.material.consumed: MaterialConsumedEvent

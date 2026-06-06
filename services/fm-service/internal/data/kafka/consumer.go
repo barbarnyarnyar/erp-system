@@ -262,7 +262,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		return err
 
 	case domain.TopicCrmSalesOrderConfirmed:
-		var ev domain.SaleCompletedEvent
+		var ev domain.SalesOrderConfirmedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}

@@ -27,11 +27,11 @@ run: ## Start all services
 	@echo ""
 	@echo "Individual Services:"
 	@echo "  Finance:      http://localhost:8001"
-	@echo "  HR:           http://localhost:8002"
-	@echo "  SCM:          http://localhost:8003"
+	@echo "  HR:           http://localhost:8003"
+	@echo "  SCM:          http://localhost:8006"
 	@echo "  Manufacturing: http://localhost:8004"
-	@echo "  CRM:          http://localhost:8005"
-	@echo "  Projects:     http://localhost:8006"
+	@echo "  CRM:          http://localhost:8002"
+	@echo "  Projects:     http://localhost:8005"
 
 stop: ## Stop all services
 	@echo "🛑 Stopping ERP Microservices..."
@@ -54,19 +54,19 @@ health: ## Check health of all services
 	@curl -s http://localhost:8001/health || echo "❌ Not responding"
 	@echo ""
 	@echo "HR Service:"
-	@curl -s http://localhost:8002/health || echo "❌ Not responding"
+	@curl -s http://localhost:8003/health || echo "❌ Not responding"
 	@echo ""
 	@echo "SCM Service:"
-	@curl -s http://localhost:8003/health || echo "❌ Not responding"
+	@curl -s http://localhost:8006/health || echo "❌ Not responding"
 	@echo ""
 	@echo "Manufacturing Service:"
 	@curl -s http://localhost:8004/health || echo "❌ Not responding"
 	@echo ""
 	@echo "CRM Service:"
-	@curl -s http://localhost:8005/health || echo "❌ Not responding"
+	@curl -s http://localhost:8002/health || echo "❌ Not responding"
 	@echo ""
 	@echo "Projects Service:"
-	@curl -s http://localhost:8006/health || echo "❌ Not responding"
+	@curl -s http://localhost:8005/health || echo "❌ Not responding"
 
 test: ## Test Hello World APIs
 	@echo "🧪 Testing Hello World APIs..."
@@ -96,8 +96,8 @@ test-direct: ## Test services directly (bypass gateway)
 	@echo "🧪 Testing services directly..."
 	@echo ""
 	@echo "Finance: " && curl -s http://localhost:8001/ | jq '.message'
-	@echo "HR: " && curl -s http://localhost:8002/ | jq '.message'
-	@echo "SCM: " && curl -s http://localhost:8003/ | jq '.message'
+	@echo "HR: " && curl -s http://localhost:8003/ | jq '.message'
+	@echo "SCM: " && curl -s http://localhost:8006/ | jq '.message'
 	@echo "Manufacturing: " && curl -s http://localhost:8004/ | jq '.message'
-	@echo "CRM: " && curl -s http://localhost:8005/ | jq '.message'
-	@echo "Projects: " && curl -s http://localhost:8006/ | jq '.message'
+	@echo "CRM: " && curl -s http://localhost:8002/ | jq '.message'
+	@echo "Projects: " && curl -s http://localhost:8005/ | jq '.message'

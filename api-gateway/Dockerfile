@@ -1,7 +1,8 @@
 # api-gateway/Dockerfile
 FROM golang:1.23-alpine AS builder
-WORKDIR /app
+WORKDIR /
 COPY shared/ ./shared/
+WORKDIR /app
 COPY api-gateway/ ./
 RUN go mod tidy && go build -o main cmd/main.go
 

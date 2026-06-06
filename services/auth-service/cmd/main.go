@@ -135,11 +135,24 @@ func seedAuthData(userSvc *service.UserService, rbacSvc *service.RBACService) {
 	pCreateCustomer, _ := rbacSvc.CreatePermission(ctx, "crm:customer:create", "Create customers")
 	pReadCustomer, _ := rbacSvc.CreatePermission(ctx, "crm:customer:read", "View customers")
 
+	pReadHR, _ := rbacSvc.CreatePermission(ctx, "hr:*:read", "Read HR")
+	pReadSCM, _ := rbacSvc.CreatePermission(ctx, "scm:*:read", "Read SCM")
+	pReadM, _ := rbacSvc.CreatePermission(ctx, "m:*:read", "Read Manufacturing")
+	pReadCRM, _ := rbacSvc.CreatePermission(ctx, "crm:*:read", "Read CRM")
+	pReadPM, _ := rbacSvc.CreatePermission(ctx, "pm:*:read", "Read Projects")
+	pReadFM, _ := rbacSvc.CreatePermission(ctx, "fm:*:read", "Read Finance")
+
 	// Link permissions to Admin Role
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pCreateProduct.ID)
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadProduct.ID)
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pCreateCustomer.ID)
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadCustomer.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadHR.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadSCM.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadM.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadCRM.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadPM.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadFM.ID)
 
 	// Link permissions to Manager Role
 	_ = rbacSvc.AssignPermissionToRole(ctx, managerRole.ID, pReadProduct.ID)
@@ -148,11 +161,11 @@ func seedAuthData(userSvc *service.UserService, rbacSvc *service.RBACService) {
 	// Link permissions to Clerk Role
 	_ = rbacSvc.AssignPermissionToRole(ctx, clerkRole.ID, pReadProduct.ID)
 
-	// Create initial admin user
+	// Create initial admin user (CreateUser hashes the password)
 	adminUser := &domain.User{
 		Username:     "admin",
 		Email:        "admin@erp.com",
-		PasswordHash: "admin123", // Simple plain password for mock purposes
+		PasswordHash: "admin123",
 		FirstName:    "System",
 		LastName:     "Administrator",
 	}

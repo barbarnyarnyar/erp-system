@@ -44,11 +44,6 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) setupRoutes() {
-	// Health check
-	s.router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "healthy", "service": "api-gateway"})
-	})
-
 	// Auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(s.config.JWTSecret, s.config.Services.AuthService)
 	
@@ -62,6 +57,17 @@ func (s *Server) setupRoutes() {
 		"crm":  s.config.Services.CRMService,
 		"pm":   s.config.Services.PMService,
 	})
+
+	// API Gateway health check
+	s.router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "healthy",
+			"service": "api-gateway",
+		})
+	})
+
+	// Auth service health passthrough
+	s.router.GET("/health/auth", proxyHandler.ProxyToService("auth"))
 
 	// Public routes (no authentication required)
 	public := s.router.Group("/api/v1")
@@ -85,7 +91,7 @@ func (s *Server) setupRoutes() {
 		}
 
 		// Financial Management routes
-		fmGroup := protected.Group("/fm")
+		fmGroup := protected.Group("/finance")
 		fmGroup.Use(authMiddleware.RequirePermission("fm", "*", "read"))
 		{
 			// Accounts
@@ -154,7 +160,7 @@ func (s *Server) setupRoutes() {
 		}
 
 		// Manufacturing routes
-		mGroup := protected.Group("/m")
+		mGroup := protected.Group("/manufacturing")
 		mGroup.Use(authMiddleware.RequirePermission("m", "*", "read"))
 		{
 			mGroup.Any("/*path", proxyHandler.ProxyToService("m"))
@@ -168,7 +174,7 @@ func (s *Server) setupRoutes() {
 		}
 
 		// Project Management routes
-		pmGroup := protected.Group("/pm")
+		pmGroup := protected.Group("/projects")
 		pmGroup.Use(authMiddleware.RequirePermission("pm", "*", "read"))
 		{
 			pmGroup.Any("/*path", proxyHandler.ProxyToService("pm"))

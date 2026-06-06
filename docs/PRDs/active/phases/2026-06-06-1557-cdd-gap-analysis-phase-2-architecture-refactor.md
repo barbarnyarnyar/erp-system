@@ -3,7 +3,7 @@
 **Source PRD**: docs/PRDs/active/2026-06-06-1557-cdd-gap-analysis.md
 **PRD ID**: PRD-2026-06-06-1557
 **Phase**: 2 of 6
-**Status**: Draft
+**Status**: Completed
 **Created**: June 06, 2026
 
 ---
@@ -180,11 +180,11 @@ No backward-compatible delegate methods — all call sites updated to use the ap
 
 ## Definition of Done
 
-- [ ] Task 1: `MaintenanceService` exists with 7 methods
-- [ ] Task 2: `QualityService` has all 4 CDD methods
-- [ ] Task 3: `CostingService` has all 2 CDD methods
-- [ ] Task 4: `ProductionService` has exactly 16 CDD methods
-- [ ] Task 5: main.go wires 5 components (BOM/Production/Quality/Maintenance/Costing)
-- [ ] Task 6: All routes use correct service structs
-- [ ] `make build` passes
-- [ ] `make test` passes
+- [x] Task 1: `MaintenanceService` exists with 7 methods
+- [x] Task 2: `QualityService` has all 4 CDD methods
+- [x] Task 3: `CostingService` has all 2 CDD methods
+- [x] Task 4: `ProductionService` has exactly 16 CDD methods
+- [x] Task 5: main.go wires 5 components (BOM/Production/Quality/Maintenance/Costing)
+- [x] Task 6: All routes use correct service structs
+- [x] `make build` passes
+- [x] `make test` passes

@@ -24,10 +24,13 @@ func NewKafkaConsumer(
 	topics := []string{
 		// domain.TopicScmInventoryAvailable,
 		domain.TopicScmShipmentDelivered,
-		domain.TopicFinPaymentReceived,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicFinPaymentReceived,
 		// domain.TopicFinCreditCheckCompleted,
-		domain.TopicMfgProductionCompleted,
-		domain.TopicPrjProjectCompleted,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicMfgProductionCompleted,
+		// TODO: connect when handler does real work (currently log-only)
+		// domain.TopicPrjProjectCompleted,
 		// domain.TopicHrEmployeePerformance,
 	}
 
@@ -71,7 +74,7 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	// TODO: connect when scm publishes scm.inventory.available
+		// TODO: connect when scm publishes scm.inventory.available
 	/*
 	case domain.TopicScmInventoryAvailable:
 		var ev domain.InventoryAvailableEvent
@@ -94,6 +97,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		return nil
 
+	// TODO: connect when handler does real work (currently log-only)
+	/*
 	case domain.TopicFinPaymentReceived:
 		var ev domain.PaymentReceivedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -101,6 +106,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
 		return nil
+	*/
 
 	// TODO: connect when fm/fin publishes fin.credit.check.completed
 	/*
@@ -113,6 +119,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		return nil
 	*/
 
+	// TODO: connect when handler does real work (currently log-only)
+	/*
 	case domain.TopicMfgProductionCompleted:
 		var ev domain.ProductionCompletedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -128,6 +136,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("Processing Project Completed: Custom project %s completed. Updating status of project-linked sales orders.", ev.ProjectID)
 		return nil
+	*/
 
 	// TODO: connect when hr publishes hr.employee.performance
 	/*

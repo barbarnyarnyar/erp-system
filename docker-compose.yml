@@ -44,6 +44,26 @@ services:
       - "29092:29092"
     restart: unless-stopped
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - JWT_SECRET=your-super-secret-key
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - FM_SERVICE_URL=http://fm-service:8001
+      - HR_SERVICE_URL=http://hr-service:8003
+      - SCM_SERVICE_URL=http://scm-service:8006
+      - M_SERVICE_URL=http://m-service:8004
+      - CRM_SERVICE_URL=http://crm-service:8002
+      - PM_SERVICE_URL=http://pm-service:8006
+    depends_on:
+      - auth-service
+    restart: unless-stopped
+
   auth-service:
     build: ./services/auth-service
     ports:
@@ -87,9 +107,9 @@ services:
   pm-service:
     build: ./services/pm-service
     ports:
-      - "8005:8005"
+      - "8005:8006"
     environment:
-      - PORT=8005
+      - PORT=8006
     restart: unless-stopped
 
   scm-service:

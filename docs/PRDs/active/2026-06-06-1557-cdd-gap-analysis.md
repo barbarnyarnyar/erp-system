@@ -246,19 +246,76 @@ Auth has zero `consumer_events` (`auth.cdd:127-134`). When HR processes an offbo
 
 Our previous design decision ("No consumer needed — auth events are fire-and-forget") only considered whether *downstream* services need auth events. It missed the reverse direction: Auth needs to consume `hr.employee.terminated` to deactivate accounts. This is a security vulnerability, not an intentional design choice.
 
+### 2.19 HR Salary Field Bypasses Compensation History (HR)
+
+`Employee` in `hr.cdd:35-51` has `salary: decimal` (line 48) as a directly mutable field. `EmployeeCompensationHistory` (lines 53-60) exists to track changes, but `updateEmployee` at line 240 accepts `salary: decimal` as a parameter — allowing direct mutation that bypasses the history entity entirely.
+
+| Issue | Impact |
+|-------|--------|
+| `Employee.salary` is writable via `updateEmployee` | Service can update salary without creating a history record |
+| No enforcement that salary changes go through history | Payroll audits can produce inaccurate results if history is incomplete |
+| `hr.salary.changed` event at line 425 | Event fires on change, but nothing enforces the history record being created |
+
+Fix: remove `salary` from `updateEmployee` parameters; create a dedicated `updateCompensation(employeeId, salary, effectiveDate, changedBy)` method that writes to `EmployeeCompensationHistory` and recomputes `Employee.salary` from the latest history entry. `Employee.salary` becomes a computed/read-only field.
+
+### 2.20 Auth validateToken Returns Raw Object (Auth)
+
+`AuthService.validateToken(token: string)` at `auth.cdd:79` returns `object` — a generic, unvalidated type that provides zero contract safety for callers.
+
+Fix: define `struct TokenClaims { user_id: uuid, tenant_id: uuid, roles: list<string> }` and change the return type to `TokenClaims`. This gives all downstream consumers a typed contract for token payloads.
+
+### 2.21 Milestone Entity Referenced by Events But Missing (PM)
+
+`pm.cdd:294-296` defines two events — `prj.milestone.achieved` and `prj.milestone.delayed` — and the `ProjectPlanningService` description (line 140) mentions "milestones". But no `entity Milestone` exists anywhere in the CDD.
+
+| Issue | Impact |
+|-------|--------|
+| `prj.milestone.achieved` event | References payload `MilestoneAchievedEvent` — no entity to provide the ID |
+| `prj.milestone.delayed` event | Same — no entity to source the payload |
+| No milestone functions | `createMilestone`, `completeMilestone` don't exist |
+| No milestone fields on Project | No `milestone_id` or milestone tracking |
+
+Fix: add `entity Milestone { id, project_id, name, target_date, completion_date, status, created_at }` to PM CDD + add `createMilestone`, `completeMilestone` functions to `ProjectPlanningService`.
+
+### 2.22 No Dedicated confirmSalesOrder Function (CRM)
+
+`SalesOrderService` at `crm.cdd:195-213` has a generic `updateSalesOrder(id, status)` that handles all status transitions via `status: string`. There's no dedicated `confirmSalesOrder` function.
+
+| Issue | Impact |
+|-------|--------|
+| No typed function for confirmation | Stock check, credit check, and event firing all mixed into one generic `updateSalesOrder` |
+| `crm.sales.order.confirmed` event | Must be fired manually inside generic method — no compile-time guarantee |
+| Missing order lifecycle validation | No function-level guard preventing wrong transitions (e.g., CANCEL → CONFIRMED) |
+
+Fix: add `func confirmSalesOrder(id: string, paymentTerms: string @optional): SalesOrder` that performs stock availability check, credit limit check, fires `crm.sales.order.confirmed`, and returns the confirmed order. Keep `updateSalesOrder` for status transitions like SHIPPED, DELIVERED, CANCELLED.
+
+### 2.23 Missing Customer Interaction Log (CRM)
+
+CRM has `ServiceTicket` for support but no entity for tracking sales/customer interactions such as calls, meetings, emails, or notes.
+
+| Interaction | Entity? |
+|-------------|---------|
+| Service/support tickets | ✅ `ServiceTicket` (line 111) |
+| Sales calls | ❌ Missing |
+| Meeting notes | ❌ Missing |
+| Email history | ❌ Missing (individual `crm.email.sent` event exists but no entity) |
+| General notes | ❌ Missing |
+
+Fix: add `entity CustomerInteraction { id, customer_id, type (CALL, MEETING, EMAIL, NOTE), subject, description, interaction_date, created_by, created_at }` to CRM CDD.
+
 ## 3. Definition of Done
 
 - [x] **2.0 resolved**: Transaction + TransactionLine entities added to `fm.cdd` (not removed — they have full repo+memory implementations)
 - [ ] **2.1 resolved**: All 7 FM entities have repository interfaces + memory implementations
 - [ ] **2.2 resolved**: All 5 missing service methods implemented
 - [ ] **2.3 resolved**: All 27 entities have HTTP CRUD routes
-- [ ] **2.4 resolved**: `MaintenanceService` extracted from God struct into its own Go struct; `ProductionService` composed with `MaintenanceService` as a dependency for internal cross-calls
-- [ ] **2.5 resolved**: Event integrity: 0 missing publishers, 0 dead consumer subscriptions, topic names consistent; auth consumer marked intentional (no changes)
-- [ ] **2.6 resolved**: Single gateway implementation with auth deployed; route prefix convention decided: `/finance/`, `/manufacturing/`, `/projects/` (matches `make test`)
-- [ ] Gateway port mappings match code defaults
-- [ ] Dockerfile EXPOSE ports match code defaults
-- [ ] Plaintext passwords migrated to bcrypt
-- [ ] JWT secret moved to environment variable
+- [x] **2.4 resolved**: `MaintenanceService` extracted from God struct into its own Go struct; `ProductionService` composed with `MaintenanceService` as a dependency for internal cross-calls
+- [x] **2.5 resolved**: Event integrity: 0 missing publishers, 0 dead consumer subscriptions, topic names consistent (Auth `hr.employee.terminated` handled by separate 2.18 task)
+- [x] **2.6 resolved**: Single gateway implementation with auth deployed; route prefix convention decided: `/finance/`, `/manufacturing/`, `/projects/` (matches `make test`)
+- [x] Gateway port mappings match code defaults
+- [x] Dockerfile EXPOSE ports match code defaults
+- [x] Plaintext passwords migrated to bcrypt
+- [x] JWT secret moved to environment variable
 - [ ] Kafka publish errors at least logged (not discarded with `_ =`)
 - [ ] **2.7 resolved**: InventoryItem invariant enforced via validation guard or CHECK constraint
 - [ ] **2.8 resolved**: All raw string enum fields replaced with typed constants in domain layer
@@ -271,6 +328,11 @@ Our previous design decision ("No consumer needed — auth events are fire-and-f
 - [ ] **2.16 resolved**: OpportunityStageHistory entity exists with stage, changed_at, changed_by; stage transitions recorded on every `updateOpportunity`
 - [ ] **2.17 resolved**: User has `security_stamp` bumped on deactivation/role change/password change; Session has `is_revoked`; JWT validation checks both
 - [ ] **2.18 resolved**: Auth consumer subscribes to `hr.employee.terminated` and calls `deactivateUser` on termination events
+- [ ] **2.19 resolved**: `Employee.salary` is read-only/computed from latest `EmployeeCompensationHistory` entry; `updateEmployee` no longer accepts `salary`; dedicated `updateCompensation` method enforces history on every change
+- [ ] **2.20 resolved**: `validateToken` returns `struct TokenClaims` instead of raw `object`
+- [ ] **2.21 resolved**: Milestone entity exists with id, project_id, name, target_date, completion_date, status; createMilestone + completeMilestone functions exist in ProjectPlanningService
+- [ ] **2.22 resolved**: Dedicated `confirmSalesOrder` function exists with stock/credit validation and typed event fire
+- [ ] **2.23 resolved**: CustomerInteraction entity exists with id, customer_id, type, subject, description, interaction_date, created_by
 - [ ] All changes verified by `make test` passing
 
 ## 3.5 Resolved Design Decisions
@@ -285,6 +347,8 @@ Our previous design decision ("No consumer needed — auth events are fire-and-f
 | ProductionService ↔ MaintenanceService coupling? | **Composition** — `ProductionService` holds a `MaintenanceService` reference; calls internal maintenance methods through it | Avoids circular deps, keeps services independently testable, matches how `QualityService` uses `ProductionService` |
 | DLQ as separate feature? | **Yes, new Phase 6** — DLQ is a new architectural feature, not a gap fix | Keeps Phase 1 focused on existing contract compliance; DLQ can be prioritized independently |
 | JournalEntry auditing fields? | **Add `posted_by`/`posted_at`, remove `updated_at`** — accounting best practice requires immutable ledger rows; only DRAFT entries can be updated, POSTED entries must be reversed | Improves audit trail; removes misleading `updated_at` that suggests mutable entries |
+| HR salary field bypass? | **Remove `salary` from `updateEmployee`, create `updateCompensation` method** — all salary changes must route through `EmployeeCompensationHistory`; `Employee.salary` becomes computed from latest history entry | Prevents audit gaps from direct field mutation; addresses the #1 HR criticism across all assessments |
+| Auth `validateToken` return type? | **Replace `object` with `struct TokenClaims { user_id, tenant_id, roles }`** — provides typed contract for all token consumers | Eliminates the only remaining `object` return type in the CDD |
 
 ## 4. Priority-Ordered Execution Plan
 
@@ -312,37 +376,67 @@ Our previous design decision ("No consumer needed — auth events are fire-and-f
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 9 | Phase S5: Add 7 missing FM repository implementations | 1d | Entities exist in domain but can't be stored |
-| 10 | Phase S6: Implement 5 missing service methods | 1d | CDD-defined business logic absent |
-| 11 | Phase S7: Add HTTP routes for 14 entities with existing services | 1.5d | API endpoints for entities with existing repos+methods |
-| 12 | Phase S8: Add HTTP routes for remaining 13 entities (need new handlers) | 1.5d | Auth roles/permissions, FM vendor bills, etc. |
-| 13 | Phase S8.5: GL balance enforcement in `UpdateJournalEntry` + atomicity fix | 1d | `CreateJournalEntry` has check but `Update` bypasses it; account updates not atomic with entry save |
-| 14 | **Phase S8.6: Wrap `ConvertLead()` in transaction for Customer + Opportunity atomicity** | **1d** | **Partial writes can create orphan Customers if Opportunity creation fails** |
+| 11 | Phase S5: Add 7 missing FM repository implementations | 1d | Entities exist in domain but can't be stored |
+| 12 | Phase S6: Implement 5 missing service methods | 1d | CDD-defined business logic absent |
+| 13 | Phase S7: Add HTTP routes for 14 entities with existing services | 1.5d | API endpoints for entities with existing repos+methods |
+| 14 | Phase S8: Add HTTP routes for remaining 13 entities (need new handlers) | 1.5d | Auth roles/permissions, FM vendor bills, etc. |
+| 15 | Phase S8.5: GL balance enforcement in `UpdateJournalEntry` + atomicity fix | 1d | `CreateJournalEntry` has check but `Update` bypasses it; account updates not atomic with entry save |
+| 16 | **Phase S8.6: Wrap `ConvertLead()` in transaction for Customer + Opportunity atomicity** | **1d** | **Partial writes can create orphan Customers if Opportunity creation fails** |
+| 17 | **Phase S8.7: Remove `salary` from `updateEmployee`, create `updateCompensation` that enforces history records** | **1d** | **`Employee.salary` is directly writable, bypassing `EmployeeCompensationHistory`; assessment #1 HR criticism** |
+| 18 | **Phase S8.8: Add Milestone entity + createMilestone/completeMilestone functions to PM** | **0.5d** | **Events `prj.milestone.achieved`/`prj.milestone.delayed` reference a non-existent entity; can never fire** |
+| 19 | **Phase S8.9: Add dedicated `confirmSalesOrder` function to CRM with stock/credit validation** | **0.5d** | **Current `updateSalesOrder(status)` mixes stock check, credit check, and event fire into one generic method** |
 
 ### P3 — Event Integrity + Type Safety (broken integrations + string enums + auditing)
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 15 | Phase S9: Fix missing event publishes (31 events) + add dead sub comments | 1.5d | Events define service integrations |
-| 16 | Phase S9: Fix topic naming inconsistency (FM → `crm.sales.order.confirmed`) | 0.5d | Cross-service integration broken |
-| 17 | Phase S9: Migrate fm-service 21 hardcoded topic strings to constants | 0.5d | Code quality: bypasses typed constants |
-| 18 | Phase S9.5: Migrate 7+ raw string enum fields to typed constants + fix `ConfidenceLevel` float64 → decimal (SCM) | 1d | Comments ignored at runtime — invalid values corrupt state silently; float64 bug causes forecast drift |
-| 19 | **Phase S9.6: Add PositionHistory + DepartmentHistory + OpportunityStageHistory audit entities with event-driven trails** | **1.5d** | **Salary and pipeline stage changes are tracked, but position/department/stage changes have zero history** |
+| 20 | Phase S9: Fix missing event publishes (31 events) + add dead sub comments | 1.5d | Events define service integrations |
+| 21 | Phase S9: Fix topic naming inconsistency (FM → `crm.sales.order.confirmed`) | 0.5d | Cross-service integration broken |
+| 22 | Phase S9: Migrate fm-service 21 hardcoded topic strings to constants | 0.5d | Code quality: bypasses typed constants |
+| 23 | Phase S9.5: Migrate 7+ raw string enum fields to typed constants + fix `ConfidenceLevel` float64 → decimal (SCM) | 1d | Comments ignored at runtime — invalid values corrupt state silently; float64 bug causes forecast drift |
+| 24 | **Phase S9.6: Add PositionHistory + DepartmentHistory + OpportunityStageHistory audit entities with event-driven trails** | **1.5d** | **Salary and pipeline stage changes are tracked, but position/department/stage changes have zero history** |
 
 ### P4 — Architecture & Remaining Security (works but messy)
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 20 | Phase S10: Gateway — reconcile route prefixes + deploy new router | 1d | Alignment: Needed before auth can be enabled |
-| 21 | Phase S10: Gateway — enable JWT+RBAC middleware | 1d | Depends on bcrypt + JWT env (P1) |
-| 22 | Phase S11: Extract MaintenanceService from God struct | 1.5d | ProductionService holds 12 methods from other services |
-| 23 | Phase S12: TLS config stubs (all 7 services) | 0.5d | Prep: No behavioral change |
-| 24 | Phase S12: Admin seed user on auth startup | 0.5d | Enables gateway login testing |
-| 25 | **Phase S12.5: Add `posted_by`/`posted_at` to JournalEntry + drop `updated_at` + guard `Update` on POSTED** | **1d** | **Auditing gap: ledger entries should be structurally immutable; `updated_at` suggests mutable entries** |
+| 25 | Phase S10: Gateway — reconcile route prefixes + deploy new router | 1d | Alignment: Needed before auth can be enabled |
+| 26 | Phase S10: Gateway — enable JWT+RBAC middleware | 1d | Depends on bcrypt + JWT env (P1) |
+| 27 | Phase S11: Extract MaintenanceService from God struct | 1.5d | ProductionService holds 12 methods from other services |
+| 28 | Phase S12: TLS config stubs (all 7 services) | 0.5d | Prep: No behavioral change |
+| 29 | Phase S12: Admin seed user on auth startup | 0.5d | Enables gateway login testing |
+| 30 | **Phase S12.5: Add `posted_by`/`posted_at` to JournalEntry + drop `updated_at` + guard `Update` on POSTED** | **1d** | **Auditing gap: ledger entries should be structurally immutable; `updated_at` suggests mutable entries** |
+| 31 | **Phase S12.6: Replace `validateToken` return type `object` with `struct TokenClaims`** | **0.25d** | **Last raw `object` return type; downstream consumers get typed contract** |
+| 32 | **Phase S12.7: Add CustomerInteraction entity (calls, meetings, emails, notes) to CRM** | **1d** | **CRM has ServiceTicket for support but no entity for sales interaction tracking** |
 
 ### P5 — Optional
 
 | Step | Task | Est. Time | Rationale |
 |------|------|-----------|-----------|
-| 26 | Phase S14: Dead-letter queue for consumer errors | 2-3d | New Feature: Not a gap, not required for correctness |
-| 27 | Phase S15: Verification (all DoD items) | 1d | Final check after all above done |
+| 33 | Phase S14: Dead-letter queue for consumer errors | 2-3d | New Feature: Not a gap, not required for correctness |
+| 34 | Phase S15: Verification (all DoD items) | 1d | Final check after all above done |
+
+## 5. Future Roadmap — Phase 2 Features
+
+Beyond the current gap-fix plan, these are natural extensions for a complete ERP. None are gaps (the CDD doesn't claim them), but they're standard enterprise features worth planning.
+
+| Domain | Feature | Est. Effort | Rationale |
+|--------|---------|-------------|-----------|
+| **FM** | Fixed Assets (depreciation, disposal, revaluation) | 3d | Standard accounting module; tracks asset lifecycle, tax schedules |
+| **FM** | Inter-Company Accounting (transfer pricing, eliminations) | 3d | Multi-entity/consolidation support |
+| **HR** | Performance Management (reviews, goals, 360 feedback) | 3d | Beyond core HR; ties compensation to performance |
+| **HR** | Recruiting & Onboarding (applicant tracking, offer letters) | 2d | Extends HR lifecycle from hire to retire |
+| **M** | Master Production Scheduling (MPS engine) | 4d | Goes beyond MRP stub; capacity-constrained planning, what-if scenarios |
+| **M** | Shop Floor Control (real-time machine monitoring, SCADA) | 3d | IoT integration for OEE tracking |
+| **SCM** | Supplier Portal (RFQ, bidding, scorecards) | 3d | Extends procurement with supplier collaboration |
+| **SCM** | Warehouse Management (bin locations, picking waves, putaway) | 4d | Beyond basic receipts/shipments; full WMS |
+| **CRM** | Marketing Automation (email campaigns, lead scoring, A/B) | 3d | Beyond basic Campaign entity |
+| **CRM** | Customer Portal (self-service, ticket tracking) | 2d | Customer-facing support interface |
+| **PM** | Gantt Charts / Timeline Visualization | 2d | Visual scheduling beyond entity modeling |
+| **PM** | Budget vs Actual Dashboard | 1.5d | Integrates PM expenses with FM budgets |
+| **Cross** | Business Intelligence (reporting, dashboards, OLAP) | 5d | Aggregated KPIs across all modules |
+| **Cross** | EDI / B2B Integration (cXML, EDIFACT) | 4d | Electronic procurement/sales with partners |
+| **Cross** | Document Management (DMS, contract repository) | 3d | Centralized file storage with versioning |
+| **Cross** | Audit Log (immutable event store, compliance) | 3d | System-wide audit trail beyond individual history tables |
+
+**Total Phase 2 Estimate:** ~48 days (3-4 months for a small team).

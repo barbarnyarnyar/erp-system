@@ -103,8 +103,8 @@ type PurchaseOrderCreatedEvent struct {
 	Timestamp       time.Time       `json:"timestamp"`
 }
 
-// SaleCompletedEvent from CRM
-type SaleCompletedEvent struct {
+// SalesOrderConfirmedEvent from CRM
+type SalesOrderConfirmedEvent struct {
 	CustomerID   string          `json:"customer_id"`
 	SalesOrderID string          `json:"sales_order_id"`
 	TotalAmount  decimal.Decimal `json:"total_amount"`

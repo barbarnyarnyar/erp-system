@@ -11,15 +11,18 @@ import (
 )
 
 type ProductionService struct {
-	poRepo      domain.ProductionOrderRepository
-	woRepo      domain.WorkOrderRepository
-	bomRepo     domain.BillOfMaterialsRepository
-	compRepo    domain.BOMComponentRepository
-	routingRepo domain.RoutingOperationRepository
-	wcRepo      domain.WorkCenterRepository
-	laborRepo   domain.LaborReportRepository
-	costRepo    domain.CostingRecordRepository
-	publisher   domain.EventPublisher
+	poRepo         domain.ProductionOrderRepository
+	woRepo         domain.WorkOrderRepository
+	bomRepo        domain.BillOfMaterialsRepository
+	compRepo       domain.BOMComponentRepository
+	routingRepo    domain.RoutingOperationRepository
+	wcRepo         domain.WorkCenterRepository
+	laborRepo      domain.LaborReportRepository
+	costRepo       domain.CostingRecordRepository
+	publisher      domain.EventPublisher
+	maintenanceSvc *MaintenanceService
+	qualitySvc     *QualityService
+	costingSvc     *CostingService
 }
 
 func NewProductionService(
@@ -44,6 +47,18 @@ func NewProductionService(
 		costRepo:    costRepo,
 		publisher:   publisher,
 	}
+}
+
+func (s *ProductionService) SetMaintenanceService(maintSvc *MaintenanceService) {
+	s.maintenanceSvc = maintSvc
+}
+
+func (s *ProductionService) SetQualityService(qualitySvc *QualityService) {
+	s.qualitySvc = qualitySvc
+}
+
+func (s *ProductionService) SetCostingService(costingSvc *CostingService) {
+	s.costingSvc = costingSvc
 }
 
 func (s *ProductionService) CreateProductionOrder(ctx context.Context, bomID string, quantity int, scheduledDate time.Time, salesOrderID string) (*domain.ProductionOrder, error) {

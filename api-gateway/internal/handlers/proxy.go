@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,7 +50,25 @@ func (p *ProxyHandler) ProxyToService(serviceName string) gin.HandlerFunc {
 			c.Request.Header.Set("X-Username", username.(string))
 		}
 
+		// Rewrite path for backend services that do not expect the service name prefix
+		originalPath := c.Request.URL.Path
+		switch serviceName {
+		case "fm":
+			c.Request.URL.Path = strings.Replace(c.Request.URL.Path, "/api/v1/finance", "/api/v1", 1)
+		case "hr":
+			c.Request.URL.Path = strings.Replace(c.Request.URL.Path, "/api/v1/hr", "/api/v1", 1)
+		case "scm":
+			c.Request.URL.Path = strings.Replace(c.Request.URL.Path, "/api/v1/scm", "/api/v1", 1)
+		case "m":
+			c.Request.URL.Path = strings.Replace(c.Request.URL.Path, "/api/v1/manufacturing", "/api/v1", 1)
+		case "crm":
+			c.Request.URL.Path = strings.Replace(c.Request.URL.Path, "/api/v1/crm", "/api/v1", 1)
+		}
+
 		// Proxy the request
 		proxy.ServeHTTP(c.Writer, c.Request)
+
+		// Restore original path
+		c.Request.URL.Path = originalPath
 	}
 }

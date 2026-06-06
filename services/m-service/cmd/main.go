@@ -64,6 +64,10 @@ func main() {
 	maintSvc := service.NewMaintenanceService(machineRepo, equipRepo, maintRepo, publisher)
 	costingSvc := service.NewCostingService(costRepo, poRepo, compRepo, publisher)
 
+	prodSvc.SetMaintenanceService(maintSvc)
+	prodSvc.SetQualityService(qualitySvc)
+	prodSvc.SetCostingService(costingSvc)
+
 	// 5. Initialize Handlers
 	bomHandler := handlers.NewBOMHandler(bomSvc)
 	prodHandler := handlers.NewProductionHandler(prodSvc)

@@ -27,7 +27,8 @@ func NewKafkaConsumer(
 	demandSvc *service.DemandPlanningService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicCrmSalesOrderCreated,
+		// TODO: connect when pick list creation logic is implemented
+		// domain.TopicCrmSalesOrderCreated,
 		domain.TopicCrmCustomerDemandForecast,
 		domain.TopicMfgMaterialRequired,
 		domain.TopicMfgMaterialConsumed,
@@ -79,6 +80,8 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
+	// TODO: connect when pick list creation logic is implemented
+	/*
 	case domain.TopicCrmSalesOrderCreated:
 		var ev domain.SalesOrderCreatedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
@@ -86,6 +89,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		log.Printf("[SCM-CONSUMER] Processing Sales Order Created: creating pick list for Order %s, Customer: %s", ev.OrderNumber, ev.CustomerID)
 		return nil
+	*/
 
 	case domain.TopicCrmCustomerDemandForecast:
 		var ev domain.CustomerDemandForecastEvent
