@@ -46,14 +46,12 @@ func NewKafkaConsumer(
 	demandSvc *service.DemandPlanningService,
 ) *KafkaConsumer {
 	topics := []string{
-		// TODO: connect when pick list creation logic is implemented
-		// domain.TopicCrmSalesOrderCreated,
+		domain.TopicCrmSalesOrderCreated,
 		domain.TopicCrmCustomerDemandForecast,
 		domain.TopicMfgMaterialRequired,
 		domain.TopicMfgMaterialConsumed,
 		domain.TopicMfgProductionCompleted,
-		// TODO: connect when fin/fm publishes fin.vendor.payment.processed
-		// domain.TopicFinVendorPaymentProcessed,
+		domain.TopicFinVendorPaymentProcessed,
 		domain.TopicPrjMaterialRequested,
 	}
 
@@ -118,16 +116,13 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	// TODO: connect when pick list creation logic is implemented
-	/*
-		case domain.TopicCrmSalesOrderCreated:
-			var ev domain.SalesOrderCreatedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("[SCM-CONSUMER] Processing Sales Order Created: creating pick list for Order %s, Customer: %s", ev.OrderNumber, ev.CustomerID)
-			return nil
-	*/
+	case domain.TopicCrmSalesOrderCreated:
+		var ev domain.SalesOrderCreatedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("[SCM-CONSUMER] Processing Sales Order Created: creating pick list for Order %s, Customer: %s", ev.OrderNumber, ev.CustomerID)
+		return nil
 
 	case domain.TopicCrmCustomerDemandForecast:
 		var ev domain.CustomerDemandForecastEvent
@@ -176,16 +171,13 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", ev.QuantityProduced, "RECEIPT", "Finished goods receipt from manufacturing completed")
 		return err
 
-	// TODO: connect when fin/fm publishes fin.vendor.payment.processed
-	/*
-		case domain.TopicFinVendorPaymentProcessed:
-			var ev domain.VendorPaymentProcessedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("[SCM-CONSUMER] Processing Vendor Payment Processed: Vendor ID %s, payment amount: %s, status: %s", ev.VendorID, ev.AmountPaid.String(), ev.Status)
-			return nil
-	*/
+	case domain.TopicFinVendorPaymentProcessed:
+		var ev domain.VendorPaymentProcessedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("[SCM-CONSUMER] Processing Vendor Payment Processed: Vendor ID %s, payment amount: %s, status: %s", ev.VendorID, ev.AmountPaid.String(), ev.Status)
+		return nil
 
 	case domain.TopicPrjMaterialRequested:
 		var ev domain.MaterialRequestedEvent

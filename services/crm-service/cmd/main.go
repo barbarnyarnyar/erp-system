@@ -66,7 +66,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	kafkaSub := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, kafkaPub, orderSvc)
+	kafkaSub := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, kafkaPub, orderSvc, leadSvc, oppSvc, custInteractionSvc)
 	go kafkaSub.Start(ctx)
 	defer kafkaSub.Close()
 

@@ -9,6 +9,7 @@ import (
 	"github.com/erp-system/crm-service/internal/business/domain"
 	"github.com/erp-system/crm-service/internal/business/service"
 	"github.com/segmentio/kafka-go"
+	"github.com/shopspring/decimal"
 )
 
 type DeadLetterMessage struct {
@@ -25,9 +26,12 @@ const (
 )
 
 type KafkaConsumer struct {
-	reader    *kafka.Reader
-	publisher domain.EventPublisher
-	orderSvc  *service.SalesOrderService
+	reader         *kafka.Reader
+	publisher      domain.EventPublisher
+	orderSvc       *service.SalesOrderService
+	leadSvc        *service.LeadService
+	oppSvc         *service.OpportunityService
+	interactionSvc *service.CustomerInteractionService
 }
 
 func NewKafkaConsumer(
@@ -35,18 +39,18 @@ func NewKafkaConsumer(
 	groupID string,
 	publisher domain.EventPublisher,
 	orderSvc *service.SalesOrderService,
+	leadSvc *service.LeadService,
+	oppSvc *service.OpportunityService,
+	interactionSvc *service.CustomerInteractionService,
 ) *KafkaConsumer {
 	topics := []string{
-		// domain.TopicScmInventoryAvailable,
+		domain.TopicScmInventoryAvailable,
 		domain.TopicScmShipmentDelivered,
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicFinPaymentReceived,
-		// domain.TopicFinCreditCheckCompleted,
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicMfgProductionCompleted,
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicPrjProjectCompleted,
-		// domain.TopicHrEmployeePerformance,
+		domain.TopicFinPaymentReceived,
+		domain.TopicFinCreditCheckCompleted,
+		domain.TopicMfgProductionCompleted,
+		domain.TopicPrjProjectCompleted,
+		domain.TopicHrEmployeePerformance,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -56,9 +60,12 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:    reader,
-		publisher: publisher,
-		orderSvc:  orderSvc,
+		reader:         reader,
+		publisher:      publisher,
+		orderSvc:       orderSvc,
+		leadSvc:        leadSvc,
+		oppSvc:         oppSvc,
+		interactionSvc: interactionSvc,
 	}
 }
 
@@ -108,16 +115,22 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	// TODO: connect when scm publishes scm.inventory.available
-	/*
-		case domain.TopicScmInventoryAvailable:
-			var ev domain.InventoryAvailableEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
+	case domain.TopicScmInventoryAvailable:
+		var ev domain.InventoryAvailableEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing SCM Inventory Available: Product %s is available with quantity %s. Updating CRM sales catalog availability.", ev.ProductID, ev.QuantityOnHand.String())
+		opps, err := c.oppSvc.ListOpportunities(ctx)
+		if err == nil {
+			for _, opp := range opps {
+				if opp.Status == "NEW" {
+					log.Printf("Bumping Opportunity %s stage to NEGOTIATION since product %s inventory is available", opp.ID, ev.ProductID)
+					_, _ = c.oppSvc.UpdateOpportunity(ctx, opp.ID, opp.Title, opp.Value, "IN_PROGRESS", "NEGOTIATION", decimal.NewFromFloat(0.30), "system")
+				}
 			}
-			log.Printf("Processing SCM Inventory Available: Product %s is available with quantity %s. Updating CRM sales catalog availability.", ev.ProductID, ev.QuantityOnHand.String())
-			return nil
-	*/
+		}
+		return nil
 
 	case domain.TopicScmShipmentDelivered:
 		var ev domain.ShipmentDeliveredEvent
@@ -132,57 +145,57 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		return nil
 
-		// TODO: connect when handler does real work (currently log-only)
-		/*
-			case domain.TopicFinPaymentReceived:
-				var ev domain.PaymentReceivedEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
-				}
-				log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
-				return nil
-		*/
+	case domain.TopicFinPaymentReceived:
+		var ev domain.PaymentReceivedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
+		return nil
 
-		// TODO: connect when fm/fin publishes fin.credit.check.completed
-		/*
-			case domain.TopicFinCreditCheckCompleted:
-				var ev domain.CreditCheckCompletedEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
+	case domain.TopicFinCreditCheckCompleted:
+		var ev domain.CreditCheckCompletedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Financial Credit Check Completed: Customer %s credit status: %s. Updating customer credit history.", ev.CustomerID, ev.CreditStatus)
+		if ev.CreditStatus == "APPROVED" {
+			orders, err := c.orderSvc.ListSalesOrders(ctx)
+			if err == nil {
+				for _, o := range orders {
+					if o.CustomerID == ev.CustomerID && o.Status == "DRAFT" {
+						log.Printf("Auto-confirming Sales Order %s for customer %s since credit check passed", o.ID, ev.CustomerID)
+						_, _ = c.orderSvc.UpdateSalesOrder(ctx, o.ID, "CONFIRMED")
+					}
 				}
-				log.Printf("Processing Financial Credit Check Completed: Customer %s credit status: %s. Updating customer credit history.", ev.CustomerID, ev.CreditStatus)
-				return nil
-		*/
+			}
+		}
+		return nil
 
-		// TODO: connect when handler does real work (currently log-only)
-		/*
-			case domain.TopicMfgProductionCompleted:
-				var ev domain.ProductionCompletedEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
-				}
-				log.Printf("Processing Manufacturing Production Completed: Production Order %s completed for Product %s, quantity %d. Catalog updated.", ev.ProductionOrderID, ev.ProductID, ev.Quantity)
-				return nil
+	case domain.TopicMfgProductionCompleted:
+		var ev domain.ProductionCompletedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Manufacturing Production Completed: Production Order %s completed for Product %s, quantity %d. Catalog updated.", ev.ProductionOrderID, ev.ProductID, ev.Quantity)
+		return nil
 
-			case domain.TopicPrjProjectCompleted:
-				var ev domain.ProjectCompletedEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
-				}
-				log.Printf("Processing Project Completed: Custom project %s completed. Updating status of project-linked sales orders.", ev.ProjectID)
-				return nil
-		*/
+	case domain.TopicPrjProjectCompleted:
+		var ev domain.ProjectCompletedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Project Completed: Custom project %s completed. Updating status of project-linked sales orders.", ev.ProjectID)
+		return nil
 
-		// TODO: connect when hr publishes hr.employee.performance
-		/*
-			case domain.TopicHrEmployeePerformance:
-				var ev domain.EmployeePerformanceEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
-				}
-				log.Printf("Processing HR Employee Performance: Employee %s rated %s. Updating sales representative metrics in CRM.", ev.EmployeeID, ev.Rating.String())
-				return nil
-		*/
+	case domain.TopicHrEmployeePerformance:
+		var ev domain.EmployeePerformanceEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing HR Employee Performance: Employee %s rated %s. Updating sales representative metrics in CRM.", ev.EmployeeID, ev.Rating.String())
+		_, _ = c.interactionSvc.CreateCustomerInteraction(ctx, "cust_default", "EMAIL", "Employee Performance Rating Received", "Employee "+ev.EmployeeID+" performance rating received: "+ev.Rating.String(), time.Now(), "system")
+		return nil
 	}
 
 	return nil

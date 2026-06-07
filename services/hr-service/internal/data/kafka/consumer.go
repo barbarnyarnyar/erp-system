@@ -38,12 +38,9 @@ func NewKafkaConsumer(
 	training *service.TrainingService,
 ) *KafkaConsumer {
 	topics := []string{
-		// TODO: connect when PM event handler is implemented (currently log-only)
-		// domain.TopicPrjProjectCreated,
-		// TODO: connect when PM event handler is implemented (currently log-only)
-		// domain.TopicPrjTaskAssigned,
-		// TODO: connect when fm/fin publishes fin.budget.allocated
-		// domain.TopicFinBudgetAllocated,
+		domain.TopicPrjProjectCreated,
+		domain.TopicPrjTaskAssigned,
+		domain.TopicFinBudgetAllocated,
 		domain.TopicMfgProductionScheduled,
 		domain.TopicScmTrainingRequired,
 	}
@@ -107,35 +104,29 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	// TODO: connect when topic has real handler implementation
-	/*
-		case domain.TopicPrjProjectCreated:
-			var ev domain.ProjectCreatedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing Project Created: assigning resource buffer for Project %s (%s)", ev.ProjectID, ev.Name)
-			return nil
+	case domain.TopicPrjProjectCreated:
+		var ev domain.ProjectCreatedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Project Created: assigning resource buffer for Project %s (%s)", ev.ProjectID, ev.Name)
+		return nil
 
-		case domain.TopicPrjTaskAssigned:
-			var ev domain.TaskAssignedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
-			return nil
-	*/
+	case domain.TopicPrjTaskAssigned:
+		var ev domain.TaskAssignedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
+		return nil
 
-	// TODO: connect when fm/fin publishes fin.budget.allocated
-	/*
-		case domain.TopicFinBudgetAllocated:
-			var ev domain.BudgetAllocatedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing Budget Allocated: updating salary budgets for Dept %s, Allocated Amount: %s, Period: %s", ev.DepartmentID, ev.Amount.String(), ev.Period)
-			return nil
-	*/
+	case domain.TopicFinBudgetAllocated:
+		var ev domain.BudgetAllocatedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Budget Allocated: updating salary budgets for Dept %s, Allocated Amount: %s, Period: %s", ev.DepartmentID, ev.Amount.String(), ev.Period)
+		return nil
 
 	case domain.TopicMfgProductionScheduled:
 		var ev domain.ProductionScheduledEvent

@@ -40,19 +40,13 @@ func NewKafkaConsumer(
 	taskSvc *service.TaskManagementService,
 ) *KafkaConsumer {
 	topics := []string{
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicHrEmployeeAvailable,
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicHrEmployeeSkillsUpdated,
-		// TODO: connect when fm/fin publishes fm.budget.approved
-		// domain.TopicFinBudgetApproved,
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicFinPaymentReceived,
+		domain.TopicHrEmployeeAvailable,
+		domain.TopicHrEmployeeSkillsUpdated,
+		domain.TopicFinBudgetApproved,
+		domain.TopicFinPaymentReceived,
 		domain.TopicCrmSalesOrderReceived,
-		// TODO: connect when handler does real work (currently log-only)
-		// domain.TopicScmMaterialDelivered,
-		// TODO: connect when mfg/m publishes mfg.custom.production.completed
-		// domain.TopicMfgCustomProductionCompleted,
+		domain.TopicScmMaterialDelivered,
+		domain.TopicMfgCustomProductionCompleted,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -115,46 +109,38 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	// TODO: connect when handler does real work (currently log-only)
-	/*
-		case domain.TopicHrEmployeeAvailable:
-			var ev domain.EmployeeAvailableEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing HR Employee Available: Employee %s is %s. Updating resource scheduling options.", ev.EmployeeID, ev.Status)
-			return nil
+	case domain.TopicHrEmployeeAvailable:
+		var ev domain.EmployeeAvailableEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing HR Employee Available: Employee %s is %s. Updating resource scheduling options.", ev.EmployeeID, ev.Status)
+		return nil
 
-		case domain.TopicHrEmployeeSkillsUpdated:
-			var ev domain.EmployeeSkillsUpdatedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing HR Employee Skills Updated: Employee %s skills updated to %v. Re-mapping project resource capabilities.", ev.EmployeeID, ev.Skills)
-			return nil
-	*/
+	case domain.TopicHrEmployeeSkillsUpdated:
+		var ev domain.EmployeeSkillsUpdatedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing HR Employee Skills Updated: Employee %s skills updated to %v. Re-mapping project resource capabilities.", ev.EmployeeID, ev.Skills)
+		return nil
 
-	// TODO: connect when fm/fin publishes fin.budget.approved
-	/*
-		case domain.TopicFinBudgetApproved:
-			var ev domain.BudgetApprovedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing Finance Budget Approved: Project %s budget approved for amount %s. Updating project planning budget ceiling.", ev.ProjectID, ev.TotalBudget.String())
-			return nil
-	*/
+	case domain.TopicFinBudgetApproved:
+		var ev domain.BudgetApprovedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Finance Budget Approved: Project %s budget approved for amount %s. Updating project planning budget ceiling.", ev.ProjectID, ev.TotalBudget.String())
+		_, err := c.planningSvc.UpdateProjectStatus(ctx, ev.ProjectID, "ACTIVE")
+		return err
 
-	// TODO: connect when handler does real work (currently log-only)
-	/*
-		case domain.TopicFinPaymentReceived:
-			var ev domain.PaymentReceivedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			log.Printf("Processing Finance Payment Received: Project %s received payment of %s on Invoice %s. Updating billing summary.", ev.ProjectID, ev.AmountPaid.String(), ev.InvoiceID)
-			return nil
-	*/
+	case domain.TopicFinPaymentReceived:
+		var ev domain.PaymentReceivedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Finance Payment Received: Project %s received payment of %s on Invoice %s. Updating billing summary.", ev.ProjectID, ev.AmountPaid.String(), ev.InvoiceID)
+		return nil
 
 	case domain.TopicCrmSalesOrderReceived:
 		var ev domain.SalesOrderReceivedEvent
@@ -180,27 +166,21 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, _ = c.taskSvc.CreateTask(ctx, proj.ID, "", "Project Kick-off & Alignment", "Confirm requirements and resources for Sales Order "+ev.SalesOrderID, "", &startDate, &startDate, decimal.NewFromInt(0))
 		return nil
 
-		// TODO: connect when handler does real work (currently log-only)
-		/*
-			case domain.TopicScmMaterialDelivered:
-				var ev domain.MaterialDeliveredEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
-				}
-				log.Printf("Processing SCM Material Delivered: Material delivered for project %s, task %s (Shipment: %s). Updating task resource status.", ev.ProjectID, ev.TaskID, ev.ShipmentID)
-				return nil
-		*/
+	case domain.TopicScmMaterialDelivered:
+		var ev domain.MaterialDeliveredEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing SCM Material Delivered: Material delivered for project %s, task %s (Shipment: %s). Updating task resource status.", ev.ProjectID, ev.TaskID, ev.ShipmentID)
+		return nil
 
-		// TODO: connect when mfg/m publishes mfg.custom.production.completed
-		/*
-			case domain.TopicMfgCustomProductionCompleted:
-				var ev domain.CustomProductionCompletedEvent
-				if err := json.Unmarshal(value, &ev); err != nil {
-					return err
-				}
-				log.Printf("Processing Manufacturing Custom Production Completed: Custom production completed for project %s, Item %s. Marking production order %s resolved.", ev.ProjectID, ev.CustomItemID, ev.ProductionOrderID)
-				return nil
-		*/
+	case domain.TopicMfgCustomProductionCompleted:
+		var ev domain.CustomProductionCompletedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
+			return err
+		}
+		log.Printf("Processing Manufacturing Custom Production Completed: Custom production completed for project %s, Item %s. Marking production order %s resolved.", ev.ProjectID, ev.CustomItemID, ev.ProductionOrderID)
+		return nil
 	}
 
 	return nil

@@ -63,8 +63,7 @@ func NewKafkaConsumer(
 		domain.TopicHrPayrollProcessed,
 		domain.TopicHrExpenseSubmitted,
 		domain.TopicScmPurchaseOrderCreated,
-		// TODO: connect when scm publishes scm.invoice.received
-		// domain.TopicScmInvoiceReceived,
+		domain.TopicScmInvoiceReceived,
 		domain.TopicScmInventoryValued,
 		domain.TopicCrmSalesOrderConfirmed,
 		domain.TopicCrmCustomerCreated,
@@ -254,25 +253,22 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "PO-LIAB-"+ev.PurchaseOrderID, "Create AP liability for PO "+ev.PONumber, lines)
 		return err
 
-	// TODO: connect when SCM publishes scm.invoice.received
-	/*
-		case domain.TopicScmInvoiceReceived:
-			var ev domain.InvoiceReceivedEvent
-			if err := json.Unmarshal(value, &ev); err != nil {
-				return err
-			}
-			lines := []domain.VendorBillLine{
-				{
-					ID:          "vbl_" + ev.InvoiceNo,
-					Description: "SCM Vendor Invoice " + ev.InvoiceNo,
-					Quantity:    1,
-					UnitPrice:   ev.TotalAmount,
-					LineTotal:   ev.TotalAmount,
-				},
-			}
-			_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
+	case domain.TopicScmInvoiceReceived:
+		var ev domain.InvoiceReceivedEvent
+		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
-	*/
+		}
+		lines := []domain.VendorBillLine{
+			{
+				ID:          "vbl_" + ev.InvoiceNo,
+				Description: "SCM Vendor Invoice " + ev.InvoiceNo,
+				Quantity:    1,
+				UnitPrice:   ev.TotalAmount,
+				LineTotal:   ev.TotalAmount,
+			},
+		}
+		_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
+		return err
 
 	case domain.TopicScmInventoryValued:
 		var ev domain.InventoryValuedEvent
