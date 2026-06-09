@@ -106,28 +106,46 @@ This ERP system provides a complete business management solution with the follow
    cd erp-microservices
    ```
 
-2. **Start all services**
+2. **⚠️ Setup secure credentials**
+   ```bash
+   # Generate strong credentials for development/production
+   ./scripts/setup-secrets.sh --auto
+   
+   # Or use interactive setup
+   ./scripts/setup-secrets.sh
+   ```
+
+3. **Start all services**
    ```bash
    docker-compose up -d
    ```
 
-3. **Verify services are running**
+4. **Verify services are running**
    ```bash
    docker-compose ps
    ```
 
-4. **Access the application**
+5. **Access the application**
    - API Gateway: http://localhost:8080
-   - Grafana Dashboard: http://localhost:3000 (admin/admin)
+   - Check health: `make health`
 
-5. **Initialize sample data**
+6. **Initialize sample data**
    ```bash
    make seed-data
    ```
 
 ## ⚙️ Configuration
 
-### Environment Variables
+### ⚠️ SECURITY: Environment Variables
+
+**IMPORTANT**: Generate strong credentials before running services!
+
+```bash
+# Auto-generate credentials
+./scripts/setup-secrets.sh --auto
+```
+
+This will create a `.env` file with secure values for:
 
 Create a `.env` file in the project root:
 

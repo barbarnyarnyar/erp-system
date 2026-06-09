@@ -153,7 +153,75 @@ Services use environment variables for configuration:
 - `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE` - PostgreSQL settings
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` - Redis settings  
 - `KAFKA_BROKERS` - Message queue connection string
+- `JWT_SECRET` - JWT signing secret (MUST be changed in production)
 - `ENV` - Environment (development/production)
+
+### ⚠️ SECURITY: Credentials & Secrets Management
+
+**CRITICAL**: Default credentials must be changed before production deployment!
+
+#### Setup Secure Credentials
+
+```bash
+# Auto-generate strong credentials
+./scripts/setup-secrets.sh --auto
+
+# Or interactive setup
+./scripts/setup-secrets.sh --interactive
+```
+
+This creates a `.env` file with:
+- Strong PostgreSQL credentials (32 char random)
+- Strong Redis password (32 char random)
+- Secure JWT secret (256-bit)
+- Secure admin credentials
+
+#### Environment Variables Required
+
+```env
+# These MUST be set (no defaults)
+POSTGRES_USER=<strong-username>
+POSTGRES_PASSWORD=<strong-password>
+REDIS_PASSWORD=<strong-password>
+JWT_SECRET=<256-bit-hex-string>
+
+# Optional (have defaults)
+POSTGRES_DB=erp_db
+KAFKA_BROKERS=kafka:9092
+ENVIRONMENT=development
+```
+
+#### Production Checklist
+
+Before deploying to production:
+
+- [ ] Generate strong credentials via `./scripts/setup-secrets.sh`
+- [ ] Store `.env` in a secrets manager (Vault, AWS Secrets Manager, HashiCorp, etc.)
+- [ ] Never commit `.env` to version control (it's in `.gitignore`)
+- [ ] Change admin password immediately after first login
+- [ ] Implement TLS/HTTPS for all services
+- [ ] Set up proper authentication (OAuth2, SAML, etc.)
+- [ ] Enable rate limiting and DDoS protection
+- [ ] Configure audit logging
+- [ ] Set up secrets rotation policy
+- [ ] Run security scanning tools (gosec, snyk, etc.)
+
+#### JWT Secret Generation
+
+```bash
+# Generate a secure JWT secret
+openssl rand -hex 32
+
+# Or use this in a script
+JWT_SECRET=$(openssl rand -hex 32)
+```
+
+#### Password Generation
+
+```bash
+# Generate strong passwords
+openssl rand -base64 32  # For PostgreSQL & Redis
+```
 
 ## Key Technologies
 
@@ -172,11 +240,12 @@ Services use environment variables for configuration:
 - Services communicate via HTTP APIs and asynchronous events through Kafka
 - All services expose `/health` endpoints for monitoring
 - The project uses conventional Git commits and maintains comprehensive API documentation
-- Service entry points are inconsistent: `fm-service` uses `cmd/server/main.go`, others use `cmd/main.go`
+- All services use standardized entry point: `cmd/main.go`
 - Each service may have its own database and migration files
 - `common-utils` directories in services are symlinked to shared utilities
 - Use `golangci-lint` for Go code linting (install separately)
 - Use `air` for development hot reloading (install separately)
+- **SECURITY**: All default credentials must be externalized via `.env` - see Configuration section
 
 ## Prerequisites for Development
 

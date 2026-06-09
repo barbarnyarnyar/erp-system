@@ -4,9 +4,9 @@ services:
   postgres:
     image: postgres:13
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-      POSTGRES_DB: ${POSTGRES_DB:-erp_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5435:5432"
     volumes:
@@ -15,6 +15,7 @@ services:
 
   redis:
     image: redis:6
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
     restart: unless-stopped
@@ -52,7 +53,7 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
-      - JWT_SECRET=your-super-secret-key
+      - JWT_SECRET=${JWT_SECRET}
       - AUTH_SERVICE_URL=http://auth-service:8000
       - FM_SERVICE_URL=http://fm-service:8001
       - HR_SERVICE_URL=http://hr-service:8003
@@ -72,7 +73,7 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
-      - JWT_SECRET=your-super-secret-key
+      - JWT_SECRET=${JWT_SECRET}
       - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
