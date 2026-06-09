@@ -17,8 +17,7 @@ Each service follows Clean Architecture patterns:
 ```
 services/{service-name}/
 ├── cmd/
-│   ├── main.go              # Application entry point (some services)
-│   └── server/main.go       # Alternative entry point (some services)
+│   └── main.go              # Application entry point
 ├── internal/
 │   ├── api/
 │   │   ├── handlers/        # HTTP request handlers
@@ -33,9 +32,7 @@ services/{service-name}/
 └── Dockerfile
 ```
 
-**Note**: Entry points vary by service:
-- `fm-service`: Uses `cmd/server/main.go`
-- Other services: Use `cmd/main.go`
+**Note**: All services now use the standardized `cmd/main.go` entry point.
 
 ### Shared Components
 - `shared/` directory contains common utilities, templates, and shared Go modules
@@ -110,7 +107,7 @@ make migrate-create name=migration_name
 docker-compose up -d postgres kafka redis
 
 # Run individual services locally
-cd services/fm-service && go run cmd/server/main.go
+cd services/fm-service && go run cmd/main.go
 cd services/hr-service && go run cmd/main.go
 # etc.
 ```
@@ -123,18 +120,18 @@ cd services/hr-service && go run cmd/main.go
 # Individual service builds
 cd services/fm-service
 go mod tidy
-go build -o bin/main cmd/server/main.go
+go build -o bin/main cmd/main.go
 ```
 
 ## Service Ports and URLs
 
 ### Production Ports (via API Gateway - port 8080)
 - Financial Management: `/api/v1/fm/*` → fm-service:8001
-- Human Resources: `/api/v1/hr/*` → hr-service:8002  
-- Supply Chain: `/api/v1/scm/*` → scm-service:8003
+- Human Resources: `/api/v1/hr/*` → hr-service:8003  
+- Supply Chain: `/api/v1/scm/*` → scm-service:8006
 - Manufacturing: `/api/v1/m/*` → m-service:8004
-- CRM: `/api/v1/crm/*` → crm-service:8005
-- Project Management: `/api/v1/pm/*` → pm-service:8006
+- CRM: `/api/v1/crm/*` → crm-service:8002
+- Project Management: `/api/v1/pm/*` → pm-service:8005
 
 **Note**: The Makefile test routes use different patterns:
 - Finance: `/api/v1/finance/hello`
@@ -143,11 +140,11 @@ go build -o bin/main cmd/server/main.go
 
 ### Direct Service Access (Development)
 - fm-service: http://localhost:8001
-- hr-service: http://localhost:8002
-- scm-service: http://localhost:8003
+- hr-service: http://localhost:8003
+- scm-service: http://localhost:8006
 - m-service: http://localhost:8004
-- crm-service: http://localhost:8005
-- pm-service: http://localhost:8006
+- crm-service: http://localhost:8002
+- pm-service: http://localhost:8005
 
 ## Configuration
 

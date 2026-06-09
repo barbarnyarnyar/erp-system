@@ -59,7 +59,7 @@ services:
       - SCM_SERVICE_URL=http://scm-service:8006
       - M_SERVICE_URL=http://m-service:8004
       - CRM_SERVICE_URL=http://crm-service:8002
-      - PM_SERVICE_URL=http://pm-service:8006
+      - PM_SERVICE_URL=http://pm-service:8005
     depends_on:
       - auth-service
     restart: unless-stopped
@@ -125,9 +125,9 @@ services:
       context: .
       dockerfile: services/pm-service/Dockerfile
     ports:
-      - "8005:8006"
+      - "8005:8005"
     environment:
-      - PORT=8006
+      - PORT=8005
       - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
