@@ -154,13 +154,18 @@ func (s *ProjectPlanningService) UpdateProjectStatus(ctx context.Context, id str
 }
 
 func (s *ProjectPlanningService) RequestCustomOrder(ctx context.Context, projectID, customItemID string, quantity int, requiredBy time.Time) error {
-	return s.publisher.Publish(ctx, domain.TopicPrjCustomOrderCreated, projectID, domain.PrjCustomOrderCreatedEvent{
+	err := s.publisher.Publish(ctx, domain.TopicPrjCustomOrderCreated, projectID, domain.PrjCustomOrderCreatedEvent{
 		ProjectID:    projectID,
 		CustomItemID: customItemID,
 		Quantity:     quantity,
 		RequiredBy:   requiredBy,
 		Timestamp:    time.Now(),
 	})
+	if err != nil {
+		utils.LogPublishErr("pm-service", domain.TopicPrjCustomOrderCreated, err)
+		return err
+	}
+	return nil
 }
 
 func (s *ProjectPlanningService) DelayProject(ctx context.Context, projectID string, delayDays int) (*domain.Project, error) {

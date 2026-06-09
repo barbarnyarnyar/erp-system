@@ -181,13 +181,18 @@ func (s *TaskManagementService) ListDependencies(ctx context.Context, taskID str
 }
 
 func (s *TaskManagementService) RequestMaterial(ctx context.Context, projectID, taskID, productID string, qty int) error {
-	return s.publisher.Publish(ctx, domain.TopicPrjMaterialRequested, projectID, domain.MaterialRequestedEvent{
+	err := s.publisher.Publish(ctx, domain.TopicPrjMaterialRequested, projectID, domain.MaterialRequestedEvent{
 		ProjectID:   projectID,
 		TaskID:      taskID,
 		ProductID:   productID,
 		QtyRequired: qty,
 		Timestamp:   time.Now(),
 	})
+	if err != nil {
+		utils.LogPublishErr("pm-service", domain.TopicPrjMaterialRequested, err)
+		return err
+	}
+	return nil
 }
 
 func (s *TaskManagementService) MarkTaskOverdue(ctx context.Context, taskID string) (*domain.Task, error) {

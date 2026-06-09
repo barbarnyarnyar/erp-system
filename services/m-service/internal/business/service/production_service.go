@@ -209,6 +209,7 @@ func (s *ProductionService) ConsumeMaterials(ctx context.Context, productionOrde
 			Timestamp:         time.Now(),
 		})
 		if err != nil {
+			utils.LogPublishErr("m-service", domain.TopicMfgMaterialConsumed, err)
 			return err
 		}
 	}
@@ -228,6 +229,7 @@ func (s *ProductionService) ReceiveFinishedGoods(ctx context.Context, production
 		Timestamp:         time.Now(),
 	})
 	if err != nil {
+		utils.LogPublishErr("m-service", domain.TopicMfgProductionCompleted, err)
 		return err
 	}
 	return nil
