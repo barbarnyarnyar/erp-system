@@ -1,731 +1,192 @@
-struct RequisitionLineInput {
-    product_id           uuid
-    quantity_requested   integer
-    estimated_unit_price decimal
+// ============================================================================
+// MODULE BOUNDARY: SUPPLY CHAIN MANAGEMENT (SCM)
+// Architectural Pattern: Multi-Tenant Event-Driven Logistics Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Suppliers, Purchase Orders, Inventory Ledger, Concurrency Shield
+// ============================================================================
+
+namespace erp.logistics;
+
+enum PurchaseOrderStatus {
+    DRAFT,
+    PENDING_APPROVAL,
+    APPROVED,
+    PARTIALLY_RECEIVED,
+    FULLY_RECEIVED,
+    CANCELLED
 }
 
-struct POLineInput {
-    product_id       uuid
-    quantity_ordered integer
-    unit_price       decimal
-    description      string
+enum InventoryTransactionType {
+    PURCHASE_RECEIPT,    
+    SALES_SHIPMENT,      
+    PRODUCTION_ISSUE, 
+    PRODUCTION_RECEIPT,     
+    CYCLE_COUNT_ADJ      
 }
 
-struct ReceiptLineInput {
-    product_id        uuid
-    quantity_received integer
-    unit_cost         decimal
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
 }
 
-struct ShipmentLineInput {
-    product_id       uuid
-    quantity_shipped integer
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
 }
 
-service SCM {
-    // =============================================================
-    // ENUM DEFINITIONS
-    // =============================================================
-
-    enum ProductType {
-        RAW_MATERIAL
-        WORK_IN_PROGRESS
-        FINISHED_GOOD
-        CONSUMABLE
-        FIXED_ASSET
-    }
-
-    enum LocationType {
-        WAREHOUSE
-        RETAIL
-        TRANSIT
-        PRODUCTION
-    }
-
-    enum InventoryMovementType {
-        RECEIPT
-        ISSUE
-        TRANSFER
-        ADJUSTMENT
-    }
-
-    enum PurchaseRequisitionStatus {
-        DRAFT
-        SUBMITTED
-        APPROVED
-        REJECTED
-        CANCELLED
-    }
-
-    enum PurchaseOrderStatus {
-        DRAFT
-        SUBMITTED
-        APPROVED
-        SHIPPED
-        DELIVERED
-        CANCELLED
-    }
-
-    enum ReceiptStatus {
-        PENDING
-        RECEIVED
-        CANCELLED
-    }
-
-    enum ShipmentStatus {
-        PENDING
-        SHIPPED
-        DELIVERED
-        CANCELLED
-    }
-
-    enum StockTransferStatus {
-        PENDING
-        TRANSFERRED
-        CANCELLED
-    }
-
-    enum VendorContractStatus {
-        ACTIVE
-        EXPIRED
-        TERMINATED
-    }
-
-    // =============================================================
-    // PRODUCT & SUPPLIER ENTITIES
-    // -------------------------------------------------------------
-
-    entity ProductCategory {
-        id          uuid      @primary
-        code        string    @unique
-        name        string    @min_length(1) @max_length(100)
-        description string    @optional @max_length(500)
-    }
-
-    entity Product {
-        id              uuid      @primary
-        product_code    string    @unique
-        product_name    string    @min_length(1) @max_length(200)
-        description     string    @optional @max_length(2000)
-        product_type    ProductType
-        category_id     uuid      @reference(ProductCategory.id) @optional
-        unit_of_measure string    @max_length(50)
-        standard_cost   decimal   @min(0)
-        list_price      decimal   @min(0)
-        is_active       boolean
-        created_at      timestamp
-        updated_at      timestamp
-    }
-
-    entity Location {
-        id            uuid      @primary
-        location_code string    @unique
-        location_name string    @min_length(1) @max_length(200)
-        location_type LocationType
-        is_active     boolean
-        created_at    timestamp
-        updated_at    timestamp
-    }
-
-    entity Supplier {
-        id            uuid      @primary
-        supplier_code string    @unique
-        supplier_name string    @min_length(1) @max_length(200)
-        contact_name  string    @optional @max_length(200)
-        email         string    @optional @pattern(email)
-        phone         string    @optional
-        is_active     boolean
-        created_at    timestamp
-        updated_at    timestamp
-    }
-
-    entity VendorContract {
-        id              uuid      @primary
-        contract_number string    @unique
-        supplier_id     uuid      @reference(Supplier.id)
-        start_date      date
-        end_date        date
-        terms           string    @max_length(5000)
-        status          VendorContractStatus
-        created_at      timestamp
-        updated_at      timestamp
-    }
-
-    // -------------------------------------------------------------
-    // INVENTORY ENTITIES
-    // -------------------------------------------------------------
-
-    entity InventoryItem {
-        id                 uuid      @primary
-        product_id         uuid      @reference(Product.id)
-        location_id        uuid      @reference(Location.id)
-        quantity_on_hand   integer   @min(0)
-        quantity_reserved  integer   @min(0)
-        quantity_available integer   @min(0)
-        reorder_point      integer   @min(0)
-        maximum_stock      integer   @min(0)
-        unit_cost          decimal   @min(0)
-        created_at         timestamp
-        updated_at         timestamp
-    }
-
-    entity InventoryMovement {
-        id            uuid      @primary
-        product_id    uuid      @reference(Product.id)
-        location_id   uuid      @reference(Location.id)
-        movement_type InventoryMovementType
-        quantity      integer
-        unit_cost     decimal   @min(0)
-        reference_type string
-        reference_id  string
-        notes         string    @optional @max_length(500)
-        created_at    timestamp
-    }
-
-    entity StockTransfer {
-        id               uuid      @primary
-        from_location_id uuid      @reference(Location.id)
-        to_location_id   uuid      @reference(Location.id)
-        product_id       uuid      @reference(Product.id)
-        quantity         integer   @positive
-        status           StockTransferStatus
-        transferred_at   timestamp @optional
-        created_at       timestamp
-        updated_at       timestamp
-    }
-
-    // -------------------------------------------------------------
-    // PURCHASING & REQUISITION ENTITIES
-    // -------------------------------------------------------------
-
-    entity PurchaseRequisition {
-        id            uuid      @primary
-        req_number    string    @unique
-        requester_id  uuid      @reference(Employee.id)
-        request_date  date
-        status        PurchaseRequisitionStatus
-        total_amount  decimal   @min(0)
-        notes         string    @optional @max_length(1000)
-        created_at    timestamp
-        updated_at    timestamp
-    }
-
-    entity PurchaseRequisitionLine {
-        id                      uuid      @primary
-        purchase_requisition_id uuid      @reference(PurchaseRequisition.id)
-        product_id              uuid      @reference(Product.id)
-        quantity_requested      integer   @positive
-        estimated_unit_price    decimal   @min(0)
-        line_total              decimal   @min(0)
-    }
-
-    entity PurchaseOrder {
-        id                uuid      @primary
-        po_number         string    @unique
-        supplier_id       uuid      @reference(Supplier.id)
-        order_date        date
-        expected_delivery date
-        status            PurchaseOrderStatus
-        total_amount      decimal   @min(0)
-        notes             string    @optional @max_length(1000)
-        created_at        timestamp
-        updated_at        timestamp
-    }
-
-    entity PurchaseOrderLine {
-        id                uuid      @primary
-        purchase_order_id uuid      @reference(PurchaseOrder.id)
-        product_id        uuid      @reference(Product.id)
-        quantity_ordered  integer   @positive
-        quantity_received integer   @min(0)
-        unit_price        decimal   @min(0)
-        line_total        decimal   @min(0)
-        description       string    @optional @max_length(500)
-        created_at        timestamp
-    }
-
-    // -------------------------------------------------------------
-    // WAREHOUSE OPERATIONS ENTITIES
-    // -------------------------------------------------------------
-
-    entity Receipt {
-        id                uuid      @primary
-        receipt_number    string    @unique
-        purchase_order_id uuid      @reference(PurchaseOrder.id) @optional
-        received_date     timestamp
-        status            ReceiptStatus
-        notes             string    @optional @max_length(500)
-        created_at        timestamp
-        updated_at        timestamp
-    }
-
-    entity ReceiptLine {
-        id                uuid      @primary
-        receipt_id        uuid      @reference(Receipt.id)
-        product_id        uuid      @reference(Product.id)
-        quantity_received integer   @positive
-        unit_cost         decimal   @min(0)
-        created_at        timestamp
-    }
-
-    entity Shipment {
-        id                 uuid      @primary
-        shipment_number    string    @unique
-        sales_order_id     uuid      @optional
-        carrier            string    @max_length(200)
-        tracking_number    string    @optional @max_length(200)
-        shipped_date       timestamp
-        estimated_delivery timestamp
-        status             ShipmentStatus
-        notes              string    @optional @max_length(500)
-        created_at         timestamp
-        updated_at         timestamp
-    }
-
-    entity ShipmentLine {
-        id               uuid      @primary
-        shipment_id      uuid      @reference(Shipment.id)
-        product_id       uuid      @reference(Product.id)
-        quantity_shipped integer   @positive
-        created_at       timestamp
-    }
-
-    // -------------------------------------------------------------
-    // DEMAND PLANNING ENTITIES
-    // -------------------------------------------------------------
-
-    entity DemandForecast {
-        id                uuid      @primary
-        product_id        uuid      @reference(Product.id)
-        forecast_date     date
-        forecast_quantity integer   @min(0)
-        confidence_level  decimal   @min(0) @max(100)
-        notes             string    @optional @max_length(500)
-        created_at        timestamp
-        updated_at        timestamp
-    }
-
-    // -------------------------------------------------------------
-    // EVENT PAYLOAD DEFINITIONS
-    // -------------------------------------------------------------
-
-    event_payload ProductCreatedEvent {
-        product_id    uuid
-        product_code  string
-        product_name  string
-        created_at    timestamp
-    }
-
-    event_payload ProductUpdatedEvent {
-        product_id    uuid
-        product_name  string
-        updated_at    timestamp
-    }
-
-    event_payload ProductDiscontinuedEvent {
-        product_id      uuid
-        discontinued_at timestamp
-    }
-
-    event_payload InventoryReceivedEvent {
-        inventory_item_id uuid
-        product_id        uuid
-        location_id       uuid
-        quantity          integer
-        received_at       timestamp
-    }
-
-    event_payload InventoryShippedEvent {
-        inventory_item_id uuid
-        product_id        uuid
-        location_id       uuid
-        quantity          integer
-        shipped_at        timestamp
-    }
-
-    event_payload InventoryAdjustedEvent {
-        inventory_item_id uuid
-        product_id        uuid
-        location_id       uuid
-        adjustment        integer
-        adjusted_at       timestamp
-    }
-
-    event_payload InventoryLowStockEvent {
-        inventory_item_id uuid
-        product_id        uuid
-        location_id       uuid
-        current_quantity  integer
-        reorder_point     integer
-        detected_at       timestamp
-    }
-
-    event_payload InventoryOutOfStockEvent {
-        inventory_item_id uuid
-        product_id        uuid
-        location_id       uuid
-        detected_at       timestamp
-    }
-
-    event_payload InventoryValuedEvent {
-        total_value       decimal
-        valuation_date    timestamp
-    }
-
-    event_payload PurchaseOrderCreatedEvent {
-        po_id           uuid
-        supplier_id     uuid
-        total_amount    decimal
-        created_at      timestamp
-    }
-
-    event_payload PurchaseOrderSentEvent {
-        po_id           uuid
-        sent_at         timestamp
-    }
-
-    event_payload PurchaseOrderReceivedEvent {
-        po_id           uuid
-        received_at     timestamp
-    }
-
-    event_payload PurchaseOrderCancelledEvent {
-        po_id           uuid
-        cancelled_at    timestamp
-    }
-
-    event_payload VendorCreatedEvent {
-        supplier_id     uuid
-        supplier_name   string
-        created_at      timestamp
-    }
-
-    event_payload VendorUpdatedEvent {
-        supplier_id     uuid
-        updated_at      timestamp
-    }
-
-    event_payload VendorPerformanceEvaluatedEvent {
-        supplier_id     uuid
-        score           decimal
-        evaluated_at    timestamp
-    }
-
-    event_payload ShipmentCreatedEvent {
-        shipment_id     uuid
-        sales_order_id  uuid
-        created_at      timestamp
-    }
-
-    event_payload ShipmentDispatchedEvent {
-        shipment_id     uuid
-        dispatched_at   timestamp
-    }
-
-    event_payload ShipmentDeliveredEvent {
-        shipment_id     uuid
-        delivered_at    timestamp
-    }
-
-    event_payload ShipmentDelayedEvent {
-        shipment_id     uuid
-        delay_reason    string
-        detected_at     timestamp
-    }
-
-    event_payload SCMTrainingRequiredEvent {
-        employee_id     uuid
-        training_type   string
-        required_at     timestamp
-    }
-
-    event_payload MaterialDeliveredEvent {
-        material_id     uuid
-        quantity        integer
-        delivered_at    timestamp
-    }
-
-    event_payload SalesOrderCreatedEvent {
-        sales_order_id  uuid
-        customer_id     uuid
-        total_amount    decimal
-        created_at      timestamp
-    }
-
-    event_payload CustomerDemandForecastEvent {
-        customer_id     uuid
-        product_id      uuid
-        forecast_date   date
-        forecast_quantity integer
-        confidence_level decimal
-        created_at      timestamp
-    }
-
-    event_payload MaterialRequiredEvent {
-        production_order_id uuid
-        product_id          uuid
-        quantity            decimal
-        required_at         timestamp
-    }
-
-    event_payload MaterialConsumedEvent {
-        production_order_id uuid
-        component_product_id uuid
-        quantity            decimal
-        consumed_at         timestamp
-    }
-
-    event_payload ProductionCompletedEvent {
-        production_order_id uuid
-        product_id          uuid
-        quantity            integer
-        completed_at        timestamp
-    }
-
-    event_payload VendorPaymentProcessedEvent {
-        payment_id    uuid
-        supplier_id   uuid
-        amount        decimal
-        processed_at  timestamp
-    }
-
-    event_payload MaterialRequestedEvent {
-        project_id    uuid
-        product_id    uuid
-        quantity      integer
-        requested_at  timestamp
-    }
-
-    // -------------------------------------------------------------
-    // SUBDOMAIN SERVICES (COMPONENTS)
-    // -------------------------------------------------------------
-
-    component ProductManagementService {
-        description: "Manages catalog products, categories, and variants"
-
-        func listProducts(): list<Product> {
-            description: "List all products"
-        }
-        func createProduct(code: string, name: string, desc: string, pType: ProductType, uom: string, cost: decimal, price: decimal, categoryId: string): Product {
-            description: "Create a new product"
-        }
-        func getProduct(id: string): Product {
-            description: "Get product details"
-        }
-        func updateProduct(id: string, code: string, name: string, desc: string, pType: ProductType, uom: string, cost: decimal, price: decimal, isActive: boolean, categoryId: string): Product {
-            description: "Update product details"
-        }
-        func deleteProduct(id: string): void {
-            description: "Delete a product"
-        }
-        func listCategories(): list<ProductCategory> {
-            description: "List all product categories"
-        }
-        func createCategory(code: string, name: string, desc: string): ProductCategory {
-            description: "Create a product category"
-        }
-        func getCategory(id: string): ProductCategory {
-            description: "Get product category details"
-        }
-        func updateCategory(id: string, code: string, name: string, desc: string): ProductCategory {
-            description: "Update product category details"
-        }
-        func deleteCategory(id: string): void {
-            description: "Delete a product category"
-        }
-    }
-
-    component SupplierManagementService {
-        description: "Manages SCM vendors, supplier qualifications, and contracts"
-
-        func listSuppliers(): list<Supplier> {
-            description: "List all suppliers"
-        }
-        func createSupplier(code: string, name: string, contact: string, email: string, phone: string): Supplier {
-            description: "Create a new supplier"
-        }
-        func getSupplier(id: string): Supplier {
-            description: "Get supplier details"
-        }
-        func updateSupplier(id: string, code: string, name: string, contact: string, email: string, phone: string, isActive: boolean): Supplier {
-            description: "Update supplier details"
-        }
-        func deleteSupplier(id: string): void {
-            description: "Delete a supplier"
-        }
-        func listContracts(): list<VendorContract> {
-            description: "List all contracts"
-        }
-        func createContract(contractNum: string, supplierId: string, startDate: timestamp, endDate: timestamp, terms: string): VendorContract {
-            description: "Create a vendor contract"
-        }
-        func getContract(id: string): VendorContract {
-            description: "Get vendor contract details"
-        }
-        func updateContract(id: string, contractNum: string, supplierId: string, startDate: timestamp, endDate: timestamp, terms: string, status: VendorContractStatus): VendorContract {
-            description: "Update vendor contract details"
-        }
-        func deleteContract(id: string): void {
-            description: "Delete a vendor contract"
-        }
-    }
-
-    component PurchaseOrderService {
-        description: "Manages purchase requisitions and purchase orders lifecycle"
-
-        func listRequisitions(): list<PurchaseRequisition> {
-            description: "List all purchase requisitions"
-        }
-        func createRequisition(requesterId: string, notes: string, lines: list<RequisitionLineInput>): PurchaseRequisition {
-            description: "Create a purchase requisition"
-        }
-        func getRequisition(id: string): PurchaseRequisition {
-            description: "Get purchase requisition details"
-        }
-        func approveRequisition(id: string): PurchaseRequisition {
-            description: "Approve a purchase requisition"
-        }
-        func listPurchaseOrders(): list<PurchaseOrder> {
-            description: "List all purchase orders"
-        }
-        func createPurchaseOrder(supplierId: string, expectedDelivery: timestamp, notes: string, lines: list<POLineInput>): PurchaseOrder {
-            description: "Create a purchase order"
-        }
-        func getPurchaseOrder(id: string): PurchaseOrder {
-            description: "Get purchase order details"
-        }
-        func updatePurchaseOrderStatus(id: string, status: PurchaseOrderStatus): PurchaseOrder {
-            description: "Update purchase order status"
-        }
-    }
-
-    component InventoryService {
-        description: "Manages warehouse location stock levels, values, and cycle counting"
-
-        func listInventory(): list<InventoryItem> {
-            description: "List all inventory items"
-        }
-        func createInventoryItem(productId: string, locationId: string, qtyOnHand: integer, reorderPoint: integer, maxStock: integer, cost: decimal): InventoryItem {
-            description: "Initialize an inventory item record"
-        }
-        func getInventoryItem(id: string): InventoryItem {
-            description: "Get inventory item by ID"
-        }
-        func updateInventoryItem(id: string, qtyOnHand: integer, qtyReserved: integer, reorderPoint: integer, maxStock: integer, cost: decimal): InventoryItem {
-            description: "Update inventory item record"
-        }
-        func adjustInventory(productId: string, locationId: string, qty: integer, movementType: InventoryMovementType, notes: string): InventoryItem {
-            description: "Log inventory adjustment movement and update stock level"
-        }
-        func reserveStock(productId: string, locationId: string, quantity: integer, referenceId: string): void {
-            description: "Reserve inventory for sales orders or manufacturing runs"
-        }
-        func releaseReservation(referenceId: string): void {
-            description: "Release previously reserved inventory back to available stock"
-        }
-        func createStockTransfer(fromLocationId: string, toLocationId: string, productId: string, quantity: integer): StockTransfer {
-            description: "Create a new warehouse-to-warehouse stock transfer requisition"
-        }
-        func getStockTransfer(id: string): StockTransfer {
-            description: "Get stock transfer details"
-        }
-        func listStockTransfers(): list<StockTransfer> {
-            description: "List all stock transfers"
-        }
-        func executeStockTransfer(id: string): StockTransfer {
-            description: "Fulfill a stock transfer, adjusting source and destination inventory counts"
-        }
-    }
-
-    component WarehouseService {
-        description: "Manages warehouse receipts and outbound shipments"
-
-        func listReceipts(): list<Receipt> {
-            description: "List warehouse receipts"
-        }
-        func createReceipt(purchaseOrderId: string, notes: string, lines: list<ReceiptLineInput>): Receipt {
-            description: "Receive goods matching a Purchase Order"
-        }
-        func getReceipt(id: string): Receipt {
-            description: "Get receipt details"
-        }
-        func listShipments(): list<Shipment> {
-            description: "List outbound shipments"
-        }
-        func createShipment(salesOrderId: string, carrier: string, trackingNumber: string, estimatedDelivery: timestamp, notes: string, lines: list<ShipmentLineInput>): Shipment {
-            description: "Create outbound shipment matching a CRM sales order"
-        }
-        func getShipment(id: string): Shipment {
-            description: "Get shipment details"
-        }
-        func updateShipmentStatus(id: string, status: ShipmentStatus): Shipment {
-            description: "Update shipment status (dispatched, delivered)"
-        }
-    }
-
-    component DemandPlanningService {
-        description: "Manages future stock demand forecasts and safety stock"
-
-        func listForecastsByProduct(productId: string): list<DemandForecast> {
-            description: "List forecasts for a product"
-        }
-        func createForecast(productId: string, forecastDate: timestamp, forecastQuantity: integer, confidenceLevel: decimal, notes: string): DemandForecast {
-            description: "Record a demand forecast entry"
-        }
-        func getForecast(id: string): DemandForecast {
-            description: "Get forecast details"
-        }
-    }
-
-    component ReportService {
-        description: "Generates inventory level, vendor performance, and procurement reports"
-
-        func getInventoryReport(): object {
-            description: "Generate warehouse stock levels and valuation reports"
-        }
-        func getVendorPerformanceReport(): object {
-            description: "Generate supplier performance analytics (fulfillment rate, lead times)"
-        }
-        func getProcurementReport(): object {
-            description: "Generate purchasing behavior and PO summaries"
-        }
-    }
-
-    // -------------------------------------------------------------
-    // KAFKA PUB/SUB EVENT TOPICS
-    // -------------------------------------------------------------
+@table("scm_suppliers")
+@unique_composite(legal_entity_id, supplier_code)
+entity Supplier {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
+    supplier_code: string;                        // Scoped unique constraint inside the tenant
+    name: string;
+    currency: string;                             // ISO 4217 code
+    payment_terms_days: int;
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("scm_warehouses")
+@unique_composite(legal_entity_id, warehouse_code)
+entity Warehouse {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    warehouse_code: string;                       // e.g., "WH_NORTH"
+    name: string;
+    location_address: string;
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("scm_stock_balances")
+@unique_composite(legal_entity_id, warehouse_id, material_id)
+entity StockBalance {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    warehouse_id: uuid @reference(Warehouse.id);
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    
+    quantity_on_hand: decimal @digits(14, 4);
+    quantity_allocated: decimal @digits(14, 4);   
+    quantity_available: decimal @digits(14, 4);   
+    
+    version: int;                                 // Concurrency Verification Shield (Optimistic Locking)
+    updated_at: timestamp;
+}
+
+@table("scm_inventory_transactions")
+entity InventoryTransaction {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    warehouse_id: uuid @reference(Warehouse.id);
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    
+    transaction_type: InventoryTransactionType;
+    quantity_delta: decimal @digits(14, 4);       
+    
+    source_document_id: uuid;                     // Context token (PO ID, Sales Order ID)
+    executed_by_hr_id: uuid;                      // Primitive Ref -> HR.Employee
+    
+    created_at: timestamp;                        // Immutable sub-ledger timestamp logging
+}
+
+@table("scm_purchase_orders")
+entity PurchaseOrder {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    supplier_id: uuid @reference(Supplier.id);
+    
+    po_number: string @unique;
+    status: PurchaseOrderStatus;
+    order_date: date;
+    estimated_delivery_date: date @optional;
+    
+    total_gross_value: decimal @digits(18, 4);
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
+}
+
+@table("scm_purchase_order_lines")
+entity PurchaseOrderLine {
+    id: uuid @primary;
+    purchase_order_id: uuid @reference(PurchaseOrder.id);
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    
+    quantity_ordered: decimal @digits(14, 4);
+    quantity_received: decimal @digits(14, 4);    
+    unit_price: decimal @digits(18, 4);
+    net_line_amount: decimal @digits(18, 4);
+}
+
+@table("scm_transactional_outbox")
+@index_composite(status, created_at)
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           
+    aggregate_id: uuid;                           
+    payload: jsonb;
+    status: OutboxStatus;                         
+    retry_count: int;                             // Retry monitor
+    created_at: timestamp;
+}
+
+@table("scm_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface ProcurementService {
+    PurchaseOrder initiatePurchaseOrder(ctx: context, legalEntityId: uuid, supplierId: uuid, lines: List<PurchaseOrderLineInput>);
+    PurchaseOrder transitionOrderStatus(ctx: context, purchaseOrderId: uuid, newStatus: PurchaseOrderStatus);
+    List<PurchaseOrder> fetchOutstandingOrders(ctx: context, legalEntityId: uuid);
+}
+
+interface InventoryService {
+    void processGoodsReceipt(ctx: context, purchaseOrderId: uuid, warehouseId: uuid, itemsReceived: List<ReceiptItemInput>, operatorHrId: uuid);
+    void reserveInventoryStock(ctx: context, legalEntityId: uuid, salesOrderId: uuid, itemsToReserve: List<ReservationItemInput>);
+    void releaseInventoryReservation(ctx: context, legalEntityId: uuid, salesOrderId: uuid);
+    void processOutboundShipment(ctx: context, salesOrderId: uuid, warehouseId: uuid, itemsShipped: List<ShipmentItemInput>, operatorHrId: uuid);
+    void executeCycleCountAdjustment(ctx: context, legalEntityId: uuid, warehouseId: uuid, materialId: uuid, adjustmentQuantity: decimal, operatorHrId: uuid);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void commitInboundEvent(ctx: context, eventId: uuid, eventType: string, payload: jsonb);
+    void pushToOutbox(ctx: context, eventType: string, aggregateId: uuid, payload: jsonb); 
+}
+
+events Emitters {
     producer_events {
-        scm.product.created: ProductCreatedEvent
-        scm.product.updated: ProductUpdatedEvent
-        scm.product.discontinued: ProductDiscontinuedEvent
-        scm.inventory.received: InventoryReceivedEvent
-        scm.inventory.shipped: InventoryShippedEvent
-        scm.inventory.adjusted: InventoryAdjustedEvent
-        scm.inventory.low.stock: InventoryLowStockEvent
-        scm.inventory.out.of.stock: InventoryOutOfStockEvent
-        scm.inventory.valued: InventoryValuedEvent
-        scm.purchase.order.created: PurchaseOrderCreatedEvent
-        scm.purchase.order.sent: PurchaseOrderSentEvent
-        scm.purchase.order.received: PurchaseOrderReceivedEvent
-        scm.purchase.order.cancelled: PurchaseOrderCancelledEvent
-        scm.vendor.created: VendorCreatedEvent
-        scm.vendor.updated: VendorUpdatedEvent
-        scm.vendor.performance.evaluated: VendorPerformanceEvaluatedEvent
-        scm.shipment.created: ShipmentCreatedEvent
-        scm.shipment.dispatched: ShipmentDispatchedEvent
-        scm.shipment.delivered: ShipmentDeliveredEvent
-        scm.shipment.delayed: ShipmentDelayedEvent
-        scm.training.required: SCMTrainingRequiredEvent
-        scm.material.delivered: MaterialDeliveredEvent
+        scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, vendor_id: uuid, receipt_value: decimal, items: jsonb, timestamp: timestamp }
+        scm.inventory.reservation.completed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, timestamp: timestamp }
+        scm.inventory.reservation.failed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, reason: string, timestamp: timestamp }
+        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, total_cogs_value: decimal, items: jsonb, timestamp: timestamp }
+        scm.asset.received: { event_id: uuid, legal_entity_id: uuid, purchase_order_line_id: uuid, serial_number: string, manufacturer: string, capital_cost: decimal, timestamp: timestamp }
     }
-
     consumer_events {
-        crm.sales.order.created: SalesOrderCreatedEvent
-        crm.customer.demand.forecast: CustomerDemandForecastEvent
-        mfg.material.required: MaterialRequiredEvent
-        mfg.material.consumed: MaterialConsumedEvent
-        mfg.production.completed: ProductionCompletedEvent
-        fin.vendor.payment.processed: VendorPaymentProcessedEvent
-        prj.material.requested: MaterialRequestedEvent
+        plm.material.released: { event_id: uuid, material_id: uuid, sku: string, description: string, procurement_type: string, timestamp: timestamp }
+        crm.sales.order.reservation_requested: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, line_items: jsonb, timestamp: timestamp }
+        crm.sales.order.cancelled: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, timestamp: timestamp }
+        mfg.material.consumed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, quantity: decimal, timestamp: timestamp }
+        mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, warehouse_id: uuid, material_id: uuid, quantity: decimal, unit_cost: decimal, timestamp: timestamp }
+        fm.vendor.paid: { event_id: uuid, bill_id: uuid, legal_entity_id: uuid, vendor_id: uuid, timestamp: timestamp }
     }
 }

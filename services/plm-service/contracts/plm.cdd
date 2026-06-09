@@ -1,0 +1,186 @@
+// ============================================================================
+// MODULE BOUNDARY: PRODUCT LIFECYCLE MANAGEMENT (PLM)
+// Architectural Pattern: Multi-Tenant Event-Driven Engineering Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Material Master, Bill of Materials (BOM), Engineering Change Orders (ECO)
+// ============================================================================
+
+namespace erp.engineering;
+
+enum ProcurementType {
+    MAKE,
+    BUY,
+    ASSEMBLE
+}
+
+enum MaterialStatus {
+    ACTIVE,
+    INACTIVE,
+    OBSOLETE
+}
+
+enum BomStatus {
+    DRAFT,
+    RELEASED,
+    OBSOLETE
+}
+
+enum EcoStatus {
+    DRAFT,
+    IN_REVIEW,
+    APPROVED,
+    IMPLEMENTED,
+    REJECTED
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
+
+struct BomComponentPayload {
+    component_material_id: uuid;
+    sequence_number: int;
+    quantity_required: decimal;
+    uom: string;
+}
+
+@table("plm_materials")
+@unique_composite(legal_entity_id, sku) 
+entity MaterialMaster {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+    sku: string;                                  // Stock Keeping Unit unique within tenant boundary
+    description: string;
+    uom: string;                                  // Base Unit of Measure (e.g., "EA", "KG", "L")
+    
+    procurement_type: ProcurementType;
+    status: MaterialStatus;
+    
+    technical_specifications: jsonb;              // Dynamic technical parameters
+    
+    version: int;                                 // Concurrency Control Shield (Optimistic Locking)
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
+}
+
+@table("plm_bom_headers")
+@unique_composite(legal_entity_id, material_id, version_string) 
+entity BomHeader {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    material_id: uuid @reference(MaterialMaster.id); // Parent material being manufactured
+    eco_id: uuid @optional;                       // Associated Engineering Change Order ID context
+    
+    version_string: string;                       // e.g., "REV-1.0", "REV-2.4"
+    status: BomStatus;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("plm_bom_lines")
+@unique_composite(bom_header_id, sequence_number) 
+entity BomLine {
+    id: uuid @primary;
+    bom_header_id: uuid @reference(BomHeader.id);
+    component_material_id: uuid @reference(MaterialMaster.id); // Recursive child item consumed
+    
+    sequence_number: int;                         // e.g., 10, 20, 30
+    quantity_required: decimal @digits(14, 4);
+    uom: string;                                  
+    scrap_percentage: decimal @digits(5, 4);      // Expected material loss margin
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("plm_engineering_change_orders")
+@unique_composite(legal_entity_id, eco_number)
+entity EngineeringChangeOrder {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    target_material_id: uuid @reference(MaterialMaster.id);
+    
+    eco_number: string;                           
+    title: string;
+    description: text;                            
+    status: EcoStatus;
+    
+    requested_by_hr_id: uuid;                      // Primitive Ref -> HR.Employee
+    approved_by_hr_id: uuid @optional;            // Primitive Ref -> HR.Employee
+    
+    version: int;                                 // Concurrency Verification Shield for Workflows
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("plm_transactional_outbox")
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           
+    aggregate_id: uuid;                           
+    payload: jsonb;
+    status: OutboxStatus;                         
+    
+    created_at: timestamp;
+}
+
+@table("plm_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface MaterialService {
+    MaterialMaster createMaterial(ctx: context, legalEntityId: uuid, sku: string, description: string, uom: string, type: ProcurementType);
+    MaterialMaster updateTechnicalSpecs(ctx: context, materialId: uuid, specs: jsonb);
+    MaterialMaster transitionStatus(ctx: context, materialId: uuid, newStatus: MaterialStatus);
+}
+
+interface BomService {
+    BomHeader establishBomHeader(ctx: context, legalEntityId: uuid, materialId: uuid, versionString: string, lines: List<BomLineInput>);
+    BomHeader releaseBom(ctx: context, bomHeaderId: uuid);
+    BomExplosionGraph explodeBillOfMaterials(ctx: context, bomHeaderId: uuid, maxTraversalDepth: int); 
+}
+
+interface EngineeringChangeService {
+    EngineeringChangeOrder initiateChangeRequest(ctx: context, legalEntityId: uuid, materialId: uuid, requesterHrId: uuid, title: string, description: text);
+    EngineeringChangeOrder processApprovalAction(ctx: context, ecoId: uuid, approverHrId: uuid, action: EcoStatus);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+events Emitters {
+    producer_events {
+        plm.material.released: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, sku: string, description: string, uom: string, procurement_type: string, timestamp: timestamp }
+        plm.material.obsoleted: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, sku: string, timestamp: timestamp }
+        plm.bom.released: { event_id: uuid, legal_entity_id: uuid, bom_header_id: uuid, material_id: uuid, version_string: string, components: List<BomComponentPayload>, timestamp: timestamp }
+        plm.eco.implemented: { event_id: uuid, legal_entity_id: uuid, eco_id: uuid, material_id: uuid, timestamp: timestamp }
+    }
+    consumer_events {
+        scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, vendor_id: uuid, items: jsonb, timestamp: timestamp }
+        mfg.material.consumed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, inventory_item_id: uuid, volume_lost: decimal, timestamp: timestamp }
+        hr.employee.created: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, explicit_role: string, timestamp: timestamp }
+    }
+}

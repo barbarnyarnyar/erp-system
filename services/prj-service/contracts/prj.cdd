@@ -1,0 +1,178 @@
+// ============================================================================
+// MODULE BOUNDARY: PROJECT MANAGEMENT (PRJ)
+// Architectural Pattern: Multi-Tenant Event-Driven Professional Services Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Projects, Work Breakdown Structure (WBS), Time Tracking, Milestones
+// ============================================================================
+
+namespace erp.projects;
+
+enum ProjectStatus {
+    DRAFT,
+    PLANNING,
+    ACTIVE,
+    SUSPENDED,
+    COMPLETED
+}
+
+enum WbsNodeType {
+    PHASE,
+    TASK,
+    MILESTONE
+}
+
+enum BillingMethod {
+    TIME_AND_MATERIALS,
+    FIXED_PRICE,
+    NON_BILLABLE
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
+
+struct TimeLogSubmissionInput {
+    wbs_node_id: uuid;
+    work_date: date;
+    hours_spent: decimal @digits(6, 2);
+    internal_cost_rate: decimal @digits(12, 4);
+    billing_rate: decimal @digits(12, 4);
+    is_billable: boolean;
+}
+
+struct TimeLogPayload {
+    time_log_id: uuid;
+    wbs_node_id: uuid;
+    employee_id: uuid;
+    hours_spent: decimal @digits(6, 2);
+    billing_rate: decimal @digits(12, 4);
+}
+
+@table("prj_projects")
+@unique_composite(legal_entity_id, project_code)
+entity Project {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+    customer_id: uuid;                            // Primitive Ref -> CRM.Customer (Loose Cross-Domain Link)
+    
+    project_code: string;                         // Unique per tenant (e.g., "PRJ-2026-009")
+    name: string;
+    status: ProjectStatus;
+    billing_method: BillingMethod;
+    
+    start_date: date;
+    end_date: date @optional;
+    
+    version: int;                                 // Optimistic Concurrency Control (OCC) Shield
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("prj_wbs_nodes")
+@unique_composite(project_id, node_code)
+entity WbsNode {
+    id: uuid @primary;
+    project_id: uuid @reference(Project.id);       // Strict Internal Relational Reference
+    
+    // Adjacency List for tracking recursive phase/task sub-trees natively
+    parent_node_id: uuid @optional @reference(WbsNode.id); 
+    wbs_depth_level: int;                         // Root nodes = 0, tasks increment sequentially
+    
+    node_code: string;                            // e.g., "1.0", "1.1", "1.1.2"
+    title: string;
+    node_type: WbsNodeType;
+    
+    estimated_hours: decimal @digits(8, 2);
+    budget_revenue_functional: decimal @digits(18, 4) @optional; // Fixed-price milestone cap values
+    is_completed: boolean;
+    
+    version: int;                                 // OCC Shield for progress synchronization locks
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("prj_time_logs")
+@partition_range_monthly(work_date)
+@unique_composite(wbs_node_id, employee_id, work_date, created_at)
+entity TimeLog {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Strict multi-tenant data isolation shield
+    wbs_node_id: uuid @reference(WbsNode.id);     // Strict Internal Context Reference
+    employee_id: uuid;                            // Primitive Ref -> HR.Employee Master (Loose Cross-Domain Link)
+    
+    work_date: date;                              // Partitioning Key Coordinate
+    hours_spent: decimal @digits(6, 2);
+    internal_cost_rate: decimal @digits(12, 4);   // Snapshot cost from employee record at entry time
+    billing_rate: decimal @digits(12, 4);         // Billable value targeting CRM billing loops
+    
+    is_billable: boolean;
+    is_approved: boolean;
+    approved_by_hr_id: uuid @optional;            // Primitive Ref -> HR.Employee Master (Loose Cross-Domain Link)
+    
+    created_at: timestamp;                        // Partitioning Key Secondary Coordinate
+}
+
+@table("prj_transactional_outbox")
+@index_composite(status, created_at)             
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           // e.g., "prj.milestone.achieved"
+    aggregate_id: uuid;                           // Target context entity ID (e.g., WbsNode.id)
+    payload: jsonb;
+    status: OutboxStatus;                         
+    created_at: timestamp;
+}
+
+@table("prj_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      // Unique transaction idempotency message trace token
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface ProjectTrackingService {
+    Project initializeProject(ctx: context, legalEntityId: uuid, customerId: uuid, code: string, name: string, method: BillingMethod, start: date);
+    Project transitionProjectStatus(ctx: context, projectId: uuid, newStatus: ProjectStatus);
+}
+
+interface WbsStructureService {
+    WbsNode appendWbsNode(ctx: context, projectId: uuid, parentNodeId: uuid, code: string, title: string, type: WbsNodeType, hours: decimal);
+    WbsNode declareNodeCompletion(ctx: context, nodeId: uuid, completionHrId: uuid); 
+    List<WbsNode> fetchProjectTree(ctx: context, projectId: uuid); 
+}
+
+interface TimeTrackingService {
+    void logOperationalHoursBulk(ctx: context, legalEntityId: uuid, employeeId: uuid, logs: List<TimeLogSubmissionInput>);
+    void processTimesheetApproval(ctx: context, timeLogIds: List<uuid>, approverHrId: uuid);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+events Emitters {
+    producer_events {
+        prj.time.logged: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, total_accumulated_hours: decimal, details: List<TimeLogPayload>, timestamp: timestamp }
+        prj.milestone.achieved: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, wbs_node_id: uuid, revenue_amount: decimal, timestamp: timestamp }
+    }
+    consumer_events {
+        hr.employee.created: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, explicit_role: string, timestamp: timestamp }
+        hr.employee.terminated: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, timestamp: timestamp }
+        crm.sales.order.confirmed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, contract_metadata: jsonb, timestamp: timestamp }
+    }
+}

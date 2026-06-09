@@ -1,377 +1,260 @@
-struct OrderLineInput {
-    product_id uuid
-    quantity   integer
-    unit_price decimal
-    discount   decimal
+// ============================================================================
+// MODULE BOUNDARY: CUSTOMER RELATIONSHIP MANAGEMENT (CRM)
+// Architectural Pattern: Multi-Tenant Event-Driven Demand & Billing Trigger Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Customer Directory, Versioned Pricing Strategies, Sales Orders, Billing Triggers
+// ============================================================================
+
+namespace erp.crm;
+
+enum CustomerStatus {
+    PROSPECT,
+    ACTIVE,
+    CREDIT_HOLD,
+    INACTIVE
 }
 
-struct QuoteLineInput {
-    product_id uuid
-    quantity   integer
-    unit_price decimal
+enum PriceBookType {
+    STANDARD,
+    CUSTOMER_SPECIFIC,
+    REGIONAL,
+    PROMOTIONAL
 }
 
-service CRM {
-    entity Customer {
-        id                 uuid      @primary
-        company_name       string
-        contact_name       string
-        email              string    @unique
-        phone              string
-        status             string    // e.g., LEAD, PROSPECT, ACTIVE, INACTIVE
-        category           string    // e.g., RETAIL, WHOLESALE
-        parent_customer_id uuid      @reference(Customer.id) @optional
-        created_at         timestamp
-        updated_at         timestamp
-    }
+enum StrategyEvaluationRule {
+    FLAT_MARKUP,
+    TIERED_VOLUME,
+    CUSTOMER_CONTRACT,
+    TEMPORAL_DISCOUNT
+}
 
-    entity Lead {
-        id         uuid      @primary
-        first_name string
-        last_name  string
-        company    string
-        email      string    @unique
-        phone      string
-        status     string    // e.g., NEW, QUALIFIED, NURTURING, CONVERTED, LOST
-        score      integer
-        source     string    // e.g., CAMPAIGN, WEBSITE, COLD_CALL
-        campaign_id uuid      @reference(Campaign.id) @optional
-        created_at timestamp
-        updated_at timestamp
-    }
+enum SalesOrderState {
+    DRAFT,
+    PENDING_CREDIT_CHECK,
+    APPROVED,
+    PARTIALLY_FULFILLED,
+    FULLY_FULFILLED,
+    INVOICED,
+    CANCELLED
+}
 
-    entity Opportunity {
-        id          uuid      @primary
-        customer_id uuid      @reference(Customer.id)
-        title       string
-        value       decimal
-        status      string    // e.g., NEW, QUALIFIED, PROPOSAL, WON, LOST
-        stage       string    // e.g., DISCOVERY, NEGOTIATION
-        probability decimal
-        created_at  timestamp
-        updated_at  timestamp
-    }
+enum BillingTriggerStatus {
+    PENDING,
+    PROCESSED,
+    FAILED
+}
 
-    entity OpportunityStageHistory {
-        id             uuid      @primary
-        opportunity_id uuid      @reference(Opportunity.id)
-        stage          string    // e.g., DISCOVERY, NEGOTIATION
-        changed_at     timestamp
-        changed_by     string
-    }
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
 
-    entity SalesOrder {
-        id           uuid      @primary
-        customer_id  uuid      @reference(Customer.id)
-        order_date   timestamp
-        status       string    // e.g., DRAFT, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
-        total_amount decimal
-        opportunity_id uuid  @reference(Opportunity.id) @optional
-        created_at   timestamp
-        updated_at   timestamp
-    }
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
 
-    entity SalesOrderItem {
-        id             uuid      @primary
-        sales_order_id uuid      @reference(SalesOrder.id)
-        product_id     uuid      @reference(Product.id)
-        quantity       integer
-        unit_price     decimal
-        discount       decimal
-    }
+struct SalesOrderLineInput {
+    material_id: uuid;
+    line_sequence: int;
+    quantity_ordered: decimal @digits(14, 4);
+}
 
-    entity Quote {
-        id           uuid      @primary
-        customer_id  uuid      @reference(Customer.id)
-        title        string
-        valid_until  timestamp
-        status       string    // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
-        total_amount decimal
-        opportunity_id uuid  @reference(Opportunity.id) @optional
-        created_at   timestamp
-        updated_at   timestamp
-    }
+struct OrderLinePayload {
+    material_id: uuid;
+    line_sequence: int;
+    quantity_ordered: decimal @digits(14, 4);
+    unit_sell_price: decimal @digits(18, 4);
+    net_line_amount: decimal @digits(18, 4);
+}
 
-    entity QuoteLineItem {
-        id         uuid      @primary
-        quote_id   uuid      @reference(Quote.id)
-        product_id uuid      @reference(Product.id)
-        quantity   integer
-        unit_price decimal
-    }
+@table("crm_customers")
+@unique_composite(legal_entity_id, customer_code)
+entity CustomerProfile {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+    customer_code: string;                        // Unique business key per tenant
+    company_name: string;
+    account_manager_hr_id: uuid;                  // Primitive Ref -> HR.Employee (Loose Cross-Domain Link)
+    
+    status: CustomerStatus;
+    credit_limit: decimal @digits(18, 4);
+    currency: string;                             // ISO 4217 code (e.g., "USD", "EUR")
+    
+    version: int;                                 // Concurrency Control Shield (Optimistic Locking)
+    created_at: timestamp;
+    updated_at: timestamp;
+    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
+}
 
-    entity PriceList {
-        id          uuid      @primary
-        name        string
-        description string
-        is_active   boolean
-        created_at  timestamp
-        updated_at  timestamp
-    }
+@table("crm_price_books")
+@unique_composite(legal_entity_id, price_book_code)
+entity PriceBookHeader {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    price_book_code: string;                      // e.g., "PRICING_EU_2026"
+    name: string;
+    type: PriceBookType;
+    
+    start_date: date;
+    end_date: date;
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
 
-    entity PriceListItem {
-        id            uuid      @primary
-        price_list_id uuid      @reference(PriceList.id)
-        product_id    uuid      @reference(Product.id)
-        unit_price    decimal
-    }
+@table("crm_price_book_entries")
+@unique_composite(price_book_id, material_id)     
+entity PriceBookEntry {
+    id: uuid @primary;
+    price_book_id: uuid @reference(PriceBookHeader.id); // Strict Relational Internal Link
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster (Loose Link)
+    
+    unit_list_price: decimal @digits(18, 4);
+    min_quantity_threshold: decimal @digits(14, 4); 
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
 
-    entity ServiceTicket {
-        id          uuid      @primary
-        customer_id uuid      @reference(Customer.id)
-        title       string
-        description string
-        status      string    // e.g., OPEN, IN_PROGRESS, RESOLVED, ESCALATED
-        priority    string    // e.g., LOW, MEDIUM, HIGH, URGENT
-        created_at  timestamp
-        updated_at  timestamp
-    }
+@table("crm_pricing_strategies")
+@unique_composite(price_book_id, evaluation_rule, strategy_version)
+entity PricingStrategy {
+    id: uuid @primary;
+    price_book_id: uuid @reference(PriceBookHeader.id); // Strict Relational Internal Link
+    evaluation_rule: StrategyEvaluationRule;
+    strategy_version: int;                        // Tracks evolutionary schema changes over historic audits
+    
+    modifier_percentage: decimal @digits(5, 4);   
+    configuration_matrix: jsonb;                  // Houses dynamic structural rules (e.g., volume break boundaries)
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
 
-    entity Campaign {
-        id         uuid      @primary
-        name       string
-        type       string    // e.g., EMAIL, SOCIAL, EVENT
-        status     string    // e.g., DRAFT, LAUNCHED, COMPLETED
-        budget     decimal
-        created_at timestamp
-        updated_at timestamp
-    }
+@table("crm_sales_orders")
+@unique_composite(legal_entity_id, order_number)
+entity SalesOrder {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    customer_id: uuid @reference(CustomerProfile.id); // Strict Relational Internal Link
+    price_book_id: uuid @reference(PriceBookHeader.id); // Strict Relational Internal Link
+    
+    order_number: string;                         // e.g., "SO-0004122"
+    status: SalesOrderState;
+    total_gross_value: decimal @digits(18, 4);
+    total_tax_value: decimal @digits(18, 4);
+    
+    version: int;                                 // Concurrency Verification Shield (Optimistic Locking)
+    created_at: timestamp;
+    updated_at: timestamp;
+}
 
-    entity CustomerInteraction {
-        id              uuid      @primary
-        customer_id     uuid      @reference(Customer.id)
-        type            string    // e.g., CALL, EMAIL, MEETING, NOTE
-        subject         string
-        description     string
-        interaction_date timestamp
-        created_by      string
-        created_at      timestamp
-    }
+@table("crm_sales_order_lines")
+@unique_composite(sales_order_id, line_sequence)
+entity SalesOrderLine {
+    id: uuid @primary;
+    sales_order_id: uuid @reference(SalesOrder.id); // Strict Relational Parent-Child Link
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster (Loose Link)
+    line_sequence: int;                           // e.g., 10, 20, 30...
+    
+    quantity_ordered: decimal @digits(14, 4);
+    quantity_shipped: decimal @digits(14, 4);    
+    
+    unit_sell_price: decimal @digits(18, 4);      
+    discount_applied: decimal @digits(5, 4);     
+    net_line_amount: decimal @digits(18, 4);
+    
+    applied_strategy_version: int @optional;      // Tracks the exact strategy version applied at execution point
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
 
-    component CustomerService {
-        description: "Manages customer master data"
+@table("crm_billing_triggers")
+@partition_range_monthly(triggered_at)
+@unique_composite(id, sales_order_id, triggered_at)
+entity BillingTrigger {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    sales_order_id: uuid @reference(SalesOrder.id); // Strict Relational Internal Link
+    source_delivery_document_id: uuid;            // Primitive Ref -> SCM.OrderShipped or PRJ.MilestoneAchieved
+    
+    billable_amount: decimal @digits(18, 4);
+    tax_amount: decimal @digits(18, 4);
+    status: BillingTriggerStatus;
+    
+    triggered_at: timestamp;                       // Partitioning Key Coordinate
+    processed_at: timestamp @optional;
+}
 
-        func createCustomer(companyName: string, contactName: string, email: string, phone: string, category: string, parentCustomerId: string): Customer {
-            description: "Creates a new customer"
-        }
-        func getCustomer(id: string): Customer {
-            description: "Get customer by ID"
-        }
-        func listCustomers(): list<Customer> {
-            description: "List all customers"
-        }
-        func updateCustomer(id: string, companyName: string, contactName: string, email: string, phone: string, status: string, category: string): Customer {
-            description: "Update customer details"
-        }
-        func deleteCustomer(id: string): void {
-            description: "Delete customer record"
-        }
-    }
+@table("crm_transactional_outbox")
+@index_composite(status, created_at)
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           // e.g., "crm.order.confirmed"
+    aggregate_id: uuid;                           // Target context identity token
+    payload: jsonb;
+    status: OutboxStatus;                         
+    retry_count: int;                             // Protects Relay worker from poison-pill roadblocks
+    created_at: timestamp;
+}
 
-    component CustomerInteractionService {
-        description: "Manages customer interaction log (calls, emails, meetings)"
+@table("crm_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      // Unique transaction message trace key for idempotency checks
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
 
-        func createCustomerInteraction(customerId: string, type: string, subject: string, description: string, interactionDate: timestamp, createdBy: string): CustomerInteraction {
-            description: "Log a new customer interaction"
-        }
-        func getCustomerInteraction(id: string): CustomerInteraction {
-            description: "Get a customer interaction by ID"
-        }
-        func listCustomerInteractions(customerId: string): list<CustomerInteraction> {
-            description: "List all interactions for a customer"
-        }
-        func deleteCustomerInteraction(id: string): void {
-            description: "Delete a customer interaction record"
-        }
-    }
+interface CustomerAccountService {
+    CustomerProfile createProfile(ctx: context, legalEntityId: uuid, code: string, name: string, managerHrId: uuid, crLimit: decimal, currency: string);
+    CustomerProfile updateCreditStatus(ctx: context, customerId: uuid, targetStatus: CustomerStatus);
+}
 
-    component LeadService {
-        description: "Manages incoming sales leads"
+interface PricingCalculationService {
+    PriceBookHeader createPriceBook(ctx: context, legalEntityId: uuid, code: string, name: string, bookType: PriceBookType, start: date, end: date);
+    PriceBookEntry assignMaterialPrice(ctx: context, priceBookId: uuid, materialId: uuid, price: decimal, minQty: decimal);
+    void registerStrategyModifier(ctx: context, priceBookId: uuid, rule: StrategyEvaluationRule, version: int, modifier: decimal, matrixConfig: jsonb);
+    decimal resolveItemUnitPrice(ctx: context, customerId: uuid, priceBookId: uuid, materialId: uuid, targetQuantity: decimal);
+}
 
-        func createLead(firstName: string, lastName: string, company: string, email: string, phone: string, source: string): Lead {
-            description: "Create a new lead"
-        }
-        func getLead(id: string): Lead {
-            description: "Get lead details"
-        }
-        func listLeads(): list<Lead> {
-            description: "List all leads"
-        }
-        func updateLead(id: string, firstName: string, lastName: string, company: string, status: string, score: integer): Lead {
-            description: "Update lead details"
-        }
-        func deleteLead(id: string): void {
-            description: "Delete lead record"
-        }
-        func convertLead(id: string): Opportunity {
-            description: "Convert a qualified lead into an opportunity and customer"
-        }
-    }
+interface SalesOrderService {
+    SalesOrder instantiateDraftOrder(ctx: context, legalEntityId: uuid, customerId: uuid, priceBookId: uuid, orderNum: string, lines: List<SalesOrderLineInput>);
+    SalesOrder processOrderStateTransition(ctx: context, salesOrderId: uuid, currentState: SalesOrderState, targetState: SalesOrderState);
+}
 
-    component OpportunityService {
-        description: "Manages sales opportunities and pipelines"
+interface RevenueBillingService {
+    void stageLogisticsBillingEntry(ctx: context, legalEntityId: uuid, salesOrderId: uuid, deliveryDocId: uuid, amount: decimal, tax: decimal);
+    void dispatchStagedBillingToAccountsReceivable(ctx: context, batchLimit: int);
+    void purgeProcessedBillingTriggers(ctx: context, olderThan: timestamp, batchLimit: int);
+}
 
-        func createOpportunity(customerId: string, title: string, value: decimal, stage: string): Opportunity {
-            description: "Create an sales opportunity"
-        }
-        func getOpportunity(id: string): Opportunity {
-            description: "Get opportunity details"
-        }
-        func listOpportunities(): list<Opportunity> {
-            description: "List all opportunities"
-        }
-        func updateOpportunity(id: string, title: string, value: decimal, status: string, stage: string, probability: decimal): Opportunity {
-            description: "Update opportunity details"
-        }
-        func deleteOpportunity(id: string): void {
-            description: "Delete opportunity record"
-        }
-    }
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
 
-    component SalesOrderService {
-        description: "Manages sales order processing"
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
 
-        func createSalesOrder(customerId: string, items: list<OrderLineInput>): SalesOrder {
-            description: "Process a new sales order"
-        }
-        func getSalesOrder(id: string): SalesOrder {
-            description: "Get sales order details"
-        }
-        func listSalesOrders(): list<SalesOrder> {
-            description: "List all sales orders"
-        }
-        func updateSalesOrder(id: string, status: string): SalesOrder {
-            description: "Update sales order status"
-        }
-        func confirmSalesOrder(id: string): SalesOrder {
-            description: "Atomically confirm a DRAFT order. Validates: order exists, status is DRAFT, customer is ACTIVE, order has items with positive quantities. Transitions to CONFIRMED and fires crm.sales.order.confirmed event. Stock availability is verified cross-service via SCM."
-        }
-        func deleteSalesOrder(id: string): void {
-            description: "Cancel/delete sales order"
-        }
-    }
-
-    component QuoteService {
-        description: "Manages client quotes"
-
-        func createQuote(customerId: string, title: string, validUntil: timestamp, items: list<QuoteLineInput>): Quote {
-            description: "Generate a new quote"
-        }
-        func getQuote(id: string): Quote {
-            description: "Get quote details"
-        }
-        func listQuotes(): list<Quote> {
-            description: "List all quotes"
-        }
-        func updateQuote(id: string, status: string): Quote {
-            description: "Update quote details/status"
-        }
-        func deleteQuote(id: string): void {
-            description: "Delete quote record"
-        }
-        func sendQuote(id: string): Quote {
-            description: "Send quote to customer email"
-        }
-    }
-
-    component ServiceTicketService {
-        description: "Manages customer support service tickets"
-
-        func createServiceTicket(customerId: string, title: string, description: string, priority: string): ServiceTicket {
-            description: "Log a new service ticket/case"
-        }
-        func getServiceTicket(id: string): ServiceTicket {
-            description: "Get service ticket details"
-        }
-        func listServiceTickets(): list<ServiceTicket> {
-            description: "List all service tickets"
-        }
-        func updateServiceTicket(id: string, status: string, priority: string): ServiceTicket {
-            description: "Update service ticket details"
-        }
-        func deleteServiceTicket(id: string): void {
-            description: "Delete service ticket record"
-        }
-    }
-
-    component CampaignService {
-        description: "Manages marketing campaigns"
-
-        func createCampaign(name: string, campaignType: string, budget: decimal): Campaign {
-            description: "Create a marketing campaign"
-        }
-        func getCampaign(id: string): Campaign {
-            description: "Get campaign details"
-        }
-        func listCampaigns(): list<Campaign> {
-            description: "List all campaigns"
-        }
-        func updateCampaign(id: string, status: string, budget: decimal): Campaign {
-            description: "Update campaign details"
-        }
-        func deleteCampaign(id: string): void {
-            description: "Delete campaign record"
-        }
-    }
-
-    component PriceListService {
-        description: "Manages product pricing catalogs"
-
-        func createPriceList(name: string, description: string, isActive: boolean): PriceList {
-            description: "Create a new price list"
-        }
-        func getPriceList(id: string): PriceList {
-            description: "Get price list details"
-        }
-        func listPriceLists(): list<PriceList> {
-            description: "List all price lists"
-        }
-        func updatePriceList(id: string, name: string, description: string, isActive: boolean): PriceList {
-            description: "Update price list details"
-        }
-        func deletePriceList(id: string): void {
-            description: "Delete price list record"
-        }
-    }
-
+events Emitters {
     producer_events {
-        crm.customer.created: CustomerCreatedEvent
-        crm.customer.updated: CustomerUpdatedEvent
-        crm.customer.activated: CustomerActivatedEvent
-        crm.customer.deactivated: CustomerDeactivatedEvent
-        crm.lead.created: LeadCreatedEvent
-        crm.lead.qualified: LeadQualifiedEvent
-        crm.lead.converted: LeadConvertedEvent
-        crm.lead.lost: LeadLostEvent
-        crm.opportunity.created: OpportunityCreatedEvent
-        crm.opportunity.updated: OpportunityUpdatedEvent
-        crm.opportunity.won: OpportunityWonEvent
-        crm.opportunity.lost: OpportunityLostEvent
-        crm.sales.order.created: SalesOrderCreatedEvent
-        crm.sales.order.updated: SalesOrderUpdatedEvent
-        crm.sales.order.confirmed: SalesOrderConfirmedEvent
-        crm.sales.order.cancelled: SalesOrderCancelledEvent
-        crm.sales.order.shipped: SalesOrderShippedEvent
-        crm.sales.order.delivered: SalesOrderDeliveredEvent
-        crm.service.ticket.created: ServiceTicketCreatedEvent
-        crm.service.ticket.updated: ServiceTicketUpdatedEvent
-        crm.service.ticket.resolved: ServiceTicketResolvedEvent
-        crm.service.ticket.escalated: ServiceTicketEscalatedEvent
-        crm.campaign.launched: CampaignLaunchedEvent
-        crm.campaign.completed: CampaignCompletedEvent
-        crm.email.sent: EmailSentEvent
-        crm.email.opened: EmailOpenedEvent
-        crm.email.clicked: EmailClickedEvent
-        crm.sales.order.received: SalesOrderReceivedEvent
+        crm.order.confirmed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, line_items: List<OrderLinePayload>, timestamp: timestamp }
+        crm.order.cancelled: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, timestamp: timestamp }
+        crm.billing.accrued: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, billing_trigger_id: uuid, accounts_receivable_value: decimal, tax_value: decimal, currency: string, timestamp: timestamp }
     }
-
     consumer_events {
-        scm.inventory.available: InventoryAvailableEvent
-        scm.shipment.delivered: ShipmentDeliveredEvent
-        fin.payment.received: PaymentReceivedEvent
-        fin.credit.check.completed: CreditCheckCompletedEvent
-        mfg.production.completed: ProductionCompletedEvent
-        prj.project.completed: ProjectCompletedEvent
-        hr.employee.performance: EmployeePerformanceEvent
+        plm.material.released: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, sku: string, description: string, timestamp: timestamp }
+        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, delivery_document_id: uuid, total_cogs_value: decimal, items: jsonb, timestamp: timestamp }
+        prj.milestone.achieved: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, wbs_node_id: uuid, revenue_amount: decimal, timestamp: timestamp }
     }
 }

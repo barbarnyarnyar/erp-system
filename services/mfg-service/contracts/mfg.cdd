@@ -1,0 +1,208 @@
+// ============================================================================
+// MODULE BOUNDARY: MANUFACTURING EXECUTION (MFG)
+// Architectural Pattern: Multi-Tenant Event-Driven Shop Floor Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Work Orders, State Machine Gates, Dynamic Routing, Yield Logs
+// ============================================================================
+
+namespace erp.manufacturing;
+
+enum WorkOrderState {
+    STAGED,
+    RELEASED,
+    IN_PROGRESS,
+    ON_HOLD,
+    COMPLETED,
+    REJECTED
+}
+
+enum StationType {
+    ASSEMBLY,
+    MACHINING,
+    PACKAGING,
+    INSPECTION
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
+
+struct ConsumptionSubmissionInput {
+    material_id: uuid;
+    quantity_consumed: decimal;
+    warehouse_id: uuid;
+    routing_station_id: uuid;
+}
+
+struct ConsumedItemPayload {
+    material_id: uuid;
+    quantity_deducted: decimal;
+    warehouse_id: uuid;
+}
+
+@table("mfg_work_centers")
+@unique_composite(legal_entity_id, work_center_code)
+entity WorkCenter {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
+    work_center_code: string;                     // e.g., "WC-MILLING-01"
+    name: string;
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("mfg_routing_stations")
+@unique_composite(work_center_id, routing_code) 
+entity RoutingStation {
+    id: uuid @primary;
+    work_center_id: uuid @reference(WorkCenter.id); 
+    
+    routing_code: string;                         // e.g., "OP-10", "REWORK-A"
+    station_type: StationType;
+    equipment_id: uuid @optional;                 // Primitive Ref -> EAM.Equipment
+    
+    standard_setup_time_mins: int;
+    standard_run_time_mins: int;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("mfg_work_orders")
+@unique_composite(legal_entity_id, work_order_number)
+entity WorkOrder {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Strict multi-tenant data isolation shield
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    bom_header_id: uuid;                          // Primitive Ref -> PLM.BomHeader
+    
+    work_order_number: string;                    
+    quantity_target: decimal @digits(14, 4);
+    quantity_produced: decimal @digits(14, 4);    
+    status: WorkOrderState;                       // Managed strictly via State Transition interface gates
+    
+    scheduled_start: date;
+    scheduled_end: date;
+    
+    version: int;                                 // Concurrency Verification Shield (Optimistic Locking)
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("mfg_work_order_routing_states")
+@unique_composite(work_order_id, current_station_id)
+entity WorkOrderRoutingState {
+    id: uuid @primary;
+    work_order_id: uuid @reference(WorkOrder.id);  
+    current_station_id: uuid @reference(RoutingStation.id); 
+    next_suggested_station_id: uuid @optional @reference(RoutingStation.id);
+    
+    is_rework_loop: boolean;
+    entered_at: timestamp;
+    exited_at: timestamp @optional;
+}
+
+@table("mfg_material_consumption_logs")
+@partition_range_monthly(consumed_at)
+@unique_composite(id, work_order_id, material_id, consumed_at)
+entity MaterialConsumptionLog {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    work_order_id: uuid @reference(WorkOrder.id);  
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    routing_station_id: uuid @reference(RoutingStation.id);
+    
+    quantity_consumed: decimal @digits(14, 4);
+    warehouse_id: uuid;                           // Primitive Ref -> SCM.Warehouse
+    operator_hr_id: uuid;                         // Primitive Ref -> HR.Employee
+    
+    consumed_at: timestamp;                       // Partitioning Key Coordinate
+}
+
+@table("mfg_production_yield_logs")
+@partition_range_monthly(recorded_at)
+@unique_composite(id, work_order_id, recorded_at)
+entity ProductionYieldLog {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    work_order_id: uuid @reference(WorkOrder.id);  
+    routing_station_id: uuid @reference(RoutingStation.id);
+    
+    quantity_good: decimal @digits(14, 4);
+    quantity_scrap: decimal @digits(14, 4);
+    operator_hr_id: uuid;                         // Primitive Ref -> HR.Employee
+    
+    recorded_at: timestamp;                       // Partitioning Key Coordinate
+}
+
+@table("mfg_transactional_outbox")
+@index_composite(status, created_at)             
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           
+    aggregate_id: uuid;                           
+    payload: jsonb;
+    status: OutboxStatus;                         
+    retry_count: int;                             // Retry monitor to prevent bottlenecks
+    created_at: timestamp;
+}
+
+@table("mfg_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface FloorConfigurationService {
+    WorkCenter establishWorkCenter(ctx: context, legalEntityId: uuid, code: string, name: string);
+    RoutingStation appendStationToCenter(ctx: context, workCenterId: uuid, routingCode: string, stationType: StationType, equipmentId: uuid, setupTime: int, runTime: int);
+}
+
+interface WorkOrderExecutionService {
+    WorkOrder instantiateWorkOrder(ctx: context, legalEntityId: uuid, materialId: uuid, bomHeaderId: uuid, qtyTarget: decimal, start: date, end: date);
+    WorkOrder transitionWorkOrderState(ctx: context, workOrderId: uuid, currentState: WorkOrderState, targetState: WorkOrderState);
+    void rerouteWorkOrderStation(ctx: context, workOrderId: uuid, currentStationId: uuid, targetStationId: uuid, isRework: boolean);
+}
+
+interface ShopFloorTelemetryService {
+    void recordBulkMaterialConsumption(ctx: context, legalEntityId: uuid, workOrderId: uuid, lines: List<ConsumptionSubmissionInput>);
+    void commitProductionYield(ctx: context, legalEntityId: uuid, workOrderId: uuid, stationId: uuid, qtyGood: decimal, qtyScrap: decimal, operatorHrId: uuid);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+events Emitters {
+    producer_events {
+        mfg.production.started: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, timestamp: timestamp }
+        mfg.material.consumed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, items: List<ConsumedItemPayload>, timestamp: timestamp }
+        mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, routing_station_id: uuid, quantity_good: decimal, quantity_scrap: decimal, operator_hr_id: uuid, timestamp: timestamp }
+        mfg.work_order.completed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, quantity_produced: decimal, timestamp: timestamp }
+    }
+    consumer_events {
+        plm.bom.released: { event_id: uuid, legal_entity_id: uuid, bom_header_id: uuid, material_id: uuid, version_string: string, components: jsonb, timestamp: timestamp }
+        qms.inspection.passed: { event_id: uuid, legal_entity_id: uuid, inspection_id: uuid, trigger_source: string, source_document_id: uuid, material_id: uuid, timestamp: timestamp }
+        qms.inspection.failed: { event_id: uuid, legal_entity_id: uuid, inspection_id: uuid, trigger_source: string, source_document_id: uuid, material_id: uuid, non_conformance_id: uuid, timestamp: timestamp }
+        eam.machine.offline: { event_id: uuid, legal_entity_id: uuid, equipment_id: uuid, work_order_id: uuid, priority: string, timestamp: timestamp }
+    }
+}

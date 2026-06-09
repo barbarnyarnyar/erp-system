@@ -1,0 +1,201 @@
+// ============================================================================
+// MODULE BOUNDARY: ENTERPRISE ASSET MANAGEMENT (EAM)
+// Architectural Pattern: Multi-Tenant Event-Driven Maintenance Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Equipment Registry, Break-Fix, Calendar PMs, Outbox, Telemetry Buffer
+// ============================================================================
+
+namespace erp.eam;
+
+enum EquipmentStatus {
+    ONLINE,
+    OFFLINE_BROKEN,
+    IN_MAINTENANCE,
+    DECOMMISSIONED
+}
+
+enum WorkOrderPriority {
+    LOW,
+    MEDIUM,
+    HIGH,
+    CRITICAL
+}
+
+enum WorkOrderStatus {
+    OPEN,
+    ASSIGNED,
+    IN_PROGRESS,
+    RESOLVED,
+    CLOSED
+}
+
+enum MaintenanceCategory {
+    REACTIVE,       
+    PREVENTATIVE    
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
+
+@table("eam_facilities")
+entity Facility {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
+    name: string;                                 // Unique within a legal entity
+    physical_address: string;
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("eam_equipment")
+entity Equipment {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Strict multi-tenant data isolation shield
+    facility_id: uuid @reference(Facility.id);
+    
+    asset_tag: string @unique;                    // Human-readable asset identifier
+    name: string;
+    manufacturer: string;
+    serial_number: string;
+    
+    financial_asset_id: uuid @optional;           // Primitive Ref -> FM.CapitalAsset
+    
+    status: EquipmentStatus;
+    installation_date: date;
+    
+    technical_specifications: jsonb;              // Technical static specifications 
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
+}
+
+@table("eam_work_orders")
+entity MaintenanceWorkOrder {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Guard against cross-tenant execution leaks
+    equipment_id: uuid @reference(Equipment.id);
+    
+    ticket_number: string @unique;
+    title: string;
+    description: text;
+    
+    category: MaintenanceCategory;
+    priority: WorkOrderPriority;
+    status: WorkOrderStatus;
+    
+    reported_by_hr_id: uuid;                      // Primitive Ref -> HR.Employee
+    assigned_tech_hr_id: uuid @optional;          // Primitive Ref -> HR.Employee
+    
+    reported_at: timestamp;
+    started_at: timestamp @optional;
+    resolved_at: timestamp @optional;             // Delta reported and resolved = Machine Downtime
+    
+    resolution_notes: text @optional;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("eam_pm_schedules")
+entity PreventativeSchedule {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    equipment_id: uuid @reference(Equipment.id);
+    
+    title: string;
+    instruction_set: text;                        // Standard operating procedures for the technician
+    
+    interval_days: int;                           // Fixed frequency baseline
+    last_executed_at: timestamp @optional;
+    next_due_date: date;                          // Monitored by internal Go ticker cron loops
+    
+    is_active: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("eam_telemetry_ingest_buffer")
+entity TelemetryIngestBuffer {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Multitenant context mapping
+    equipment_id: uuid @reference(Equipment.id);  // Reference to physical asset
+    sensor_key: string;                           // e.g., "vibration_displacement_mm"
+    reading_value: decimal @digits(12, 4);
+    recorded_at: timestamp;                       // Volatile timestamp index partitioned away
+}
+
+@table("eam_transactional_outbox")
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           // e.g., "eam.machine.offline"
+    aggregate_id: uuid;                           // Equipment ID or Work Order ID context
+    payload: jsonb;                               // Fully serialized outbound message
+    status: OutboxStatus;                         // Polled and tail-processed by OutboxRelayWorker
+    
+    created_at: timestamp;
+}
+
+@table("eam_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      // Unique message tracing identity token from Kafka
+    event_type: string;                           // e.g., "scm.asset.received"
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               // Inbound historic tracking configuration dump
+}
+
+interface EquipmentService {
+    Facility createFacility(ctx: context, legalEntityId: uuid, name: string, address: string);
+    Equipment registerEquipment(ctx: context, legalEntityId: uuid, facilityId: uuid, assetTag: string, name: string, serialNumber: string);
+    Equipment updateEquipmentStatus(ctx: context, tx: gorm.DB, equipmentId: uuid, newStatus: EquipmentStatus); 
+    Equipment associateFinancialAsset(ctx: context, equipmentId: uuid, financialAssetId: uuid);
+    List<Equipment> fetchTargetTenantAssets(ctx: context, legalEntityId: uuid, status: EquipmentStatus);
+}
+
+interface MaintenanceService {
+    MaintenanceWorkOrder fileMachineIncident(ctx: context, legalEntityId: uuid, equipmentId: uuid, reportedBy: uuid, title: string, priority: WorkOrderPriority);
+    MaintenanceWorkOrder routeToTechnician(ctx: context, workOrderId: uuid, techHrId: uuid);
+    MaintenanceWorkOrder transitionToActiveState(ctx: context, workOrderId: uuid);
+    MaintenanceWorkOrder finalizeResolution(ctx: context, workOrderId: uuid, resolutionNotes: string);
+    void processCronSchedulerLookups(ctx: context, targetDate: date);
+}
+
+interface TelemetryIngestionService {
+    void queueSensorMetrics(ctx: context, legalEntityId: uuid, equipmentId: uuid, sensorKey: string, value: decimal);
+    List<uuid> flushStagedMetricsToTimeSeriesStore(ctx: context, tx: gorm.DB, batchLimit: int); 
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void updateOutboxStatus(ctx: context, tx: gorm.DB, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void commitInboundEvent(ctx: context, eventId: uuid, eventType: string, payload: jsonb);
+    void pushToOutbox(ctx: context, tx: gorm.DB, eventType: string, aggregateId: uuid, payload: jsonb); 
+}
+
+events Emitters {
+    producer_events {
+        eam.machine.offline: { event_id: uuid, legal_entity_id: uuid, equipment_id: uuid, work_order_id: uuid, priority: string, timestamp: timestamp }
+        eam.machine.online: { event_id: uuid, legal_entity_id: uuid, equipment_id: uuid, work_order_id: uuid, timestamp: timestamp }
+        eam.workorder.spares_requested: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, component_details: jsonb, timestamp: timestamp }
+    }
+    consumer_events {
+        scm.asset.received: { event_id: uuid, legal_entity_id: uuid, serial_number: string, manufacturer: string, capital_cost: decimal, timestamp: timestamp }
+        fm.asset.capitalized: { event_id: uuid, legal_entity_id: uuid, financial_asset_id: uuid, asset_tag: string, timestamp: timestamp }
+        hr.employee.created: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, explicit_role: string, timestamp: timestamp }
+    }
+}

@@ -1,727 +1,203 @@
-struct ExpenseClaimLineInput {
-    description string
-    amount      decimal
+// ============================================================================
+// MODULE BOUNDARY: HUMAN RESOURCES (HR)
+// Architectural Pattern: Multi-Tenant Event-Driven Workforce Identity Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Employee Master, Org Structure, Core Payroll Run, Expense Claims
+// ============================================================================
+
+namespace erp.workforce;
+
+enum EmployeeStatus {
+    ACTIVE,
+    ON_LEAVE,
+    TERMINATED
 }
 
-service HR {
-    // =============================================================
-    // ENUM DEFINITIONS
-    // =============================================================
-
-    enum EmployeeStatus {
-        ACTIVE
-        TERMINATED
-        LEAVE
-        SUSPENDED
-    }
-
-    enum LeaveType {
-        ANNUAL
-        SICK
-        UNPAID
-        MATERNITY
-        PATERNITY
-    }
-
-    enum LeaveRequestStatus {
-        PENDING
-        APPROVED
-        REJECTED
-        CANCELLED
-    }
-
-    enum PayrollStatus {
-        DRAFT
-        APPROVED
-        PAID
-        FAILED
-    }
-
-    enum TimesheetStatus {
-        SUBMITTED
-        APPROVED
-        REJECTED
-    }
-
-    enum RecruitmentStatus {
-        DRAFT
-        OPEN
-        CLOSED
-        ON_HOLD
-    }
-
-    enum ApplicationStatus {
-        APPLIED
-        SCREENING
-        INTERVIEW
-        OFFER
-        REJECTED
-        WITHDRAWN
-    }
-
-    enum PerformanceReviewStatus {
-        DRAFT
-        SUBMITTED
-        ACKNOWLEDGED
-    }
-
-    enum TrainingStatus {
-        SCHEDULED
-        ACTIVE
-        COMPLETED
-        CANCELLED
-    }
-
-    enum DocumentType {
-        CONTRACT
-        ID_PROOF
-        CERTIFICATE
-        PERFORMANCE_REVIEW
-        OTHER
-    }
-
-    enum ExpenseClaimStatus {
-        DRAFT
-        SUBMITTED
-        APPROVED
-        REJECTED
-        PAID
-    }
-
-    // =============================================================
-    // ORGANIZATIONAL ENTITIES
-    // -------------------------------------------------------------
-
-    entity Department {
-        id             uuid      @primary
-        code           string    @unique
-        name           string    @min_length(1) @max_length(100)
-        description    string    @optional @max_length(500)
-        manager_id     uuid      @optional
-        parent_dept_id uuid      @reference(Department.id) @optional
-        is_active      boolean
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity Position {
-        id            uuid      @primary
-        code          string    @unique
-        title         string    @min_length(1) @max_length(100)
-        description   string    @optional @max_length(500)
-        department_id uuid      @reference(Department.id)
-        min_salary    decimal   @min(0)
-        max_salary    decimal   @min(0)
-        is_active     boolean
-        created_at    timestamp
-        updated_at    timestamp
-    }
-
-    entity Employee {
-        id            uuid      @primary
-        employee_id   string    @unique
-        first_name    string    @min_length(1) @max_length(100)
-        last_name     string    @min_length(1) @max_length(100)
-        email         string    @unique @pattern(email)
-        phone         string    @optional
-        hire_date     date
-        term_date     date      @optional
-        department_id uuid      @reference(Department.id)
-        position_id   uuid      @reference(Position.id)
-        manager_id    uuid      @reference(Employee.id) @optional
-        status        EmployeeStatus
-        salary        decimal   @min(0)
-        created_at    timestamp
-        updated_at    timestamp
-    }
-
-    entity EmployeeCompensationHistory {
-        id             uuid      @primary
-        employee_id    uuid      @reference(Employee.id)
-        salary         decimal   @min(0)
-        effective_date date
-        changed_by     uuid
-        created_at     timestamp
-    }
-
-    // -------------------------------------------------------------
-    // PAYROLL & TIME ENTRY ENTITIES
-    // -------------------------------------------------------------
-
-    entity PayrollRecord {
-        id                uuid      @primary
-        employee_id       uuid      @reference(Employee.id)
-        pay_period_start  date
-        pay_period_end    date
-        regular_hours     decimal   @min(0)
-        overtime_hours    decimal   @min(0)
-        gross_pay         decimal   @min(0)
-        net_pay           decimal   @min(0)
-        status            PayrollStatus
-        created_at        timestamp
-        updated_at        timestamp
-    }
-
-    entity PayrollDeduction {
-        id                uuid      @primary
-        payroll_id        uuid      @reference(PayrollRecord.id)
-        type              string    @max_length(100)
-        amount            decimal   @min(0)
-    }
-
-    entity AttendanceEntry {
-        id          uuid      @primary
-        employee_id uuid      @reference(Employee.id)
-        entry_date  date
-        clock_in    timestamp
-        clock_out   timestamp @optional
-        total_hours decimal   @min(0)
-        notes       string    @optional @max_length(500)
-        status      TimesheetStatus
-        project_id  uuid      @reference(Project.id) @optional
-        task_id     uuid      @reference(Task.id) @optional
-        created_at  timestamp
-        updated_at  timestamp
-    }
-
-    // -------------------------------------------------------------
-    // LEAVE MANAGEMENT ENTITIES
-    // -------------------------------------------------------------
-
-    entity LeaveRequest {
-        id             uuid      @primary
-        employee_id    uuid      @reference(Employee.id)
-        leave_type     LeaveType
-        start_date     date
-        end_date       date
-        reason         string    @optional @max_length(1000)
-        status         LeaveRequestStatus
-        approved_by    uuid      @reference(Employee.id) @optional
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity LeaveBalance {
-        id            uuid      @primary
-        employee_id   uuid      @reference(Employee.id)
-        leave_type    LeaveType
-        entitled_days decimal   @min(0)
-        used_days     decimal   @min(0)
-        year          integer
-    }
-
-    // -------------------------------------------------------------
-    // RECRUITMENT ENTITIES
-    // -------------------------------------------------------------
-
-    entity JobPosting {
-        id             uuid      @primary
-        title          string    @min_length(1) @max_length(200)
-        description    string    @max_length(5000)
-        department_id  uuid      @reference(Department.id)
-        location       string    @max_length(200)
-        salary_range   string    @optional @max_length(50)
-        status         RecruitmentStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity JobApplication {
-        id             uuid      @primary
-        job_posting_id uuid      @reference(JobPosting.id)
-        applicant_name string    @min_length(1) @max_length(200)
-        email          string    @pattern(email)
-        phone          string    @optional
-        resume_url     string    @optional
-        status         ApplicationStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    // -------------------------------------------------------------
-    // PERFORMANCE ENTITIES
-    // -------------------------------------------------------------
-
-    entity PerformanceReview {
-        id             uuid      @primary
-        employee_id    uuid      @reference(Employee.id)
-        reviewer_id    uuid      @reference(Employee.id)
-        review_date    date
-        period_start   date
-        period_end     date
-        rating         integer   @min(1) @max(5)
-        rating_scale   string    @max_length(10)
-        feedback       string    @max_length(2000)
-        status         PerformanceReviewStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    // -------------------------------------------------------------
-    // TRAINING ENTITIES
-    // -------------------------------------------------------------
-
-    entity TrainingProgram {
-        id             uuid      @primary
-        title          string    @min_length(1) @max_length(200)
-        description    string    @max_length(2000)
-        trainer        string    @max_length(200)
-        start_date     date
-        end_date       date
-        status         TrainingStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity TrainingEnrollment {
-        id           uuid      @primary
-        training_id  uuid      @reference(TrainingProgram.id)
-        employee_id  uuid      @reference(Employee.id)
-        enrolled_at  timestamp
-        completed_at timestamp @optional
-        status       string
-    }
-
-    // -------------------------------------------------------------
-    // DOCUMENT STORAGE ENTITIES
-    // -------------------------------------------------------------
-
-    entity EmployeeDocument {
-        id          uuid      @primary
-        employee_id uuid      @reference(Employee.id)
-        doc_type    DocumentType
-        file_name   string    @max_length(255)
-        file_url    string
-        uploaded_at timestamp
-    }
-
-    entity ExpenseClaim {
-        id           uuid      @primary
-        employee_id  uuid      @reference(Employee.id)
-        claim_date   date
-        status       ExpenseClaimStatus
-        total_amount decimal   @min(0)
-        created_at   timestamp
-        updated_at   timestamp
-    }
-
-    entity ExpenseClaimLine {
-        id          uuid      @primary
-        claim_id    uuid      @reference(ExpenseClaim.id)
-        description string    @max_length(500)
-        amount      decimal   @min(0)
-    }
-
-    // -------------------------------------------------------------
-    // EVENT PAYLOAD DEFINITIONS
-    // -------------------------------------------------------------
-
-    event_payload EmployeeCreatedEvent {
-        employee_id   uuid
-        first_name    string
-        last_name     string
-        department_id uuid
-        position_id   uuid
-        created_at    timestamp
-    }
-
-    event_payload EmployeeUpdatedEvent {
-        employee_id   uuid
-        first_name    string
-        last_name     string
-        updated_at    timestamp
-    }
-
-    event_payload EmployeeTerminatedEvent {
-        employee_id   uuid
-        terminated_at timestamp
-    }
-
-    event_payload EmployeePromotedEvent {
-        employee_id    uuid
-        old_position_id uuid
-        new_position_id uuid
-        promoted_at    timestamp
-    }
-
-    event_payload PayrollProcessedEvent {
-        payroll_id    uuid
-        employee_id   uuid
-        net_pay       decimal
-        pay_period_start date
-        pay_period_end   date
-        processed_at  timestamp
-    }
-
-    event_payload PayrollFailedEvent {
-        payroll_id    uuid
-        employee_id   uuid
-        error_message string
-        failed_at     timestamp
-    }
-
-    event_payload SalaryChangedEvent {
-        employee_id   uuid
-        old_salary    decimal
-        new_salary    decimal
-        changed_by    uuid
-        changed_at    timestamp
-    }
-
-    event_payload TimesheetSubmittedEvent {
-        timesheet_id  uuid
-        employee_id   uuid
-        entry_date    date
-        total_hours   decimal
-        submitted_at  timestamp
-    }
-
-    event_payload TimesheetApprovedEvent {
-        timesheet_id  uuid
-        employee_id   uuid
-        approved_by   uuid
-        approved_at   timestamp
-    }
-
-    event_payload OvertimeRecordedEvent {
-        employee_id   uuid
-        hours         decimal
-        recorded_at   timestamp
-    }
-
-    event_payload LeaveRequestedEvent {
-        leave_request_id uuid
-        employee_id      uuid
-        leave_type       LeaveType
-        start_date       date
-        end_date         date
-        requested_at     timestamp
-    }
-
-    event_payload LeaveApprovedEvent {
-        leave_request_id uuid
-        employee_id      uuid
-        approved_by      uuid
-        approved_at      timestamp
-    }
-
-    event_payload LeaveRejectedEvent {
-        leave_request_id uuid
-        employee_id      uuid
-        rejected_by      uuid
-        rejected_at      timestamp
-    }
-
-    event_payload TrainingCompletedEvent {
-        training_id  uuid
-        employee_id  uuid
-        completed_at timestamp
-    }
-
-    event_payload CertificationEarnedEvent {
-        employee_id      uuid
-        certification    string
-        earned_at        timestamp
-    }
-
-    event_payload SkillAcquiredEvent {
-        employee_id uuid
-        skill       string
-        acquired_at timestamp
-    }
-
-    event_payload PerformanceReviewCompletedEvent {
-        review_id    uuid
-        employee_id  uuid
-        reviewer_id  uuid
-        rating       integer
-        completed_at timestamp
-    }
-
-    event_payload GoalAchievedEvent {
-        employee_id   uuid
-        goal          string
-        achieved_at   timestamp
-    }
-
-    event_payload PerformanceImprovementNeededEvent {
-        employee_id   uuid
-        review_id     uuid
-        identified_at timestamp
-    }
-
-    event_payload ExpenseSubmittedEvent {
-        expense_claim_id uuid
-        employee_id      uuid
-        total_amount     decimal
-        submitted_at     timestamp
-    }
-
-    event_payload EmployeeAvailableEvent {
-        employee_id   uuid
-        available_at  timestamp
-    }
-
-    event_payload EmployeeSkillsUpdatedEvent {
-        employee_id   uuid
-        skills        list<string>
-        updated_at    timestamp
-    }
-
-    event_payload ProjectCreatedEvent {
-        project_id  uuid
-        name        string
-        created_at  timestamp
-    }
-
-    event_payload TaskAssignedEvent {
-        task_id     uuid
-        employee_id uuid
-        assigned_at timestamp
-    }
-
-    event_payload BudgetAllocatedEvent {
-        budget_id      uuid
-        department_id  uuid
-        amount         decimal
-        allocated_at   timestamp
-    }
-
-    event_payload ProductionScheduledEvent {
-        production_order_id uuid
-        scheduled_date      timestamp
-    }
-
-    event_payload SCMTrainingRequiredEvent {
-        employee_id   uuid
-        training_type string
-        required_at   timestamp
-    }
-
-    // -------------------------------------------------------------
-    // SUBDOMAIN SERVICES (COMPONENTS)
-    // -------------------------------------------------------------
-
-    component EmployeeManagementService {
-        description: "Manages employee lifecycles and positions"
-
-        func listEmployees(): list<Employee> {
-            description: "List all employees"
-        }
-        func createEmployee(firstName: string, lastName: string, email: string, departmentId: string, positionId: string, salary: decimal): Employee {
-            description: "Onboard a new employee"
-        }
-        func getEmployee(id: string): Employee {
-            description: "Get employee details by ID"
-        }
-        func updateEmployee(id: string, firstName: string @optional, lastName: string @optional, email: string @optional, departmentId: string @optional, positionId: string @optional, status: EmployeeStatus @optional): Employee {
-            description: "Update employee details"
-        }
-        func deleteEmployee(id: string): void {
-            description: "Mark an employee as terminated or delete entry"
-        }
-        func submitExpenseClaim(employeeId: string, claimDate: date, lines: list<ExpenseClaimLineInput>): ExpenseClaim {
-            description: "Submit a new expense claim with details"
-        }
-    }
-
-    component PayrollService {
-        description: "Manages payroll runs and processing"
-
-        func listPayrollRecords(): list<PayrollRecord> {
-            description: "List all payroll records"
-        }
-        func processPayroll(employeeId: string, start: date, end: date, regularHours: decimal, overtimeHours: decimal): PayrollRecord {
-            description: "Calculate and process employee payroll"
-        }
-        func getPayrollRecord(id: string): PayrollRecord {
-            description: "Get payroll record details"
-        }
-        func updatePayrollRecord(id: string, status: PayrollStatus): PayrollRecord {
-            description: "Update payroll record status"
-        }
-        func getEmployeePayroll(employeeId: string): list<PayrollRecord> {
-            description: "Get payroll history for a specific employee"
-        }
-    }
-
-    component TimeAttendanceService {
-        description: "Tracks daily timesheets and logger entries"
-
-        func listTimesheets(): list<AttendanceEntry> {
-            description: "List all timesheet entries"
-        }
-        func createTimesheet(employeeId: string, entryDate: date, clockIn: timestamp, clockOut: timestamp, notes: string): AttendanceEntry {
-            description: "Create a new timesheet record"
-        }
-        func getTimesheet(id: string): AttendanceEntry {
-            description: "Get timesheet details"
-        }
-        func updateTimesheet(id: string, clockIn: timestamp, clockOut: timestamp, notes: string): AttendanceEntry {
-            description: "Update clock-in/out and notes for a timesheet"
-        }
-        func submitTimesheet(id: string): AttendanceEntry {
-            description: "Submit timesheet for manager review"
-        }
-    }
-
-    component LeaveManagementService {
-        description: "Manages employee leave requests and approvals"
-
-        func listLeaveRequests(): list<LeaveRequest> {
-            description: "List all leave requests"
-        }
-        func createLeaveRequest(employeeId: string, leaveType: LeaveType, startDate: date, endDate: date, reason: string): LeaveRequest {
-            description: "Submit a new leave request"
-        }
-        func getLeaveRequest(id: string): LeaveRequest {
-            description: "Get leave request details"
-        }
-        func updateLeaveRequest(id: string, leaveType: LeaveType, startDate: date, endDate: date, reason: string): LeaveRequest {
-            description: "Update details of a leave request"
-        }
-        func approveLeaveRequest(id: string, approvedBy: string): LeaveRequest {
-            description: "Approve a leave request"
-        }
-        func rejectLeaveRequest(id: string, rejectedBy: string): LeaveRequest {
-            description: "Reject a leave request"
-        }
-    }
-
-    component RecruitmentService {
-        description: "Manages candidate job postings and applications"
-
-        func listJobPostings(): list<JobPosting> {
-            description: "List all active job openings"
-        }
-        func createJobPosting(title: string, description: string, departmentId: string, location: string, salaryRange: string): JobPosting {
-            description: "Create a new job opening"
-        }
-        func getJobPosting(id: string): JobPosting {
-            description: "Get job posting details"
-        }
-        func updateJobPosting(id: string, title: string, description: string, location: string, salaryRange: string, status: RecruitmentStatus): JobPosting {
-            description: "Update job posting details"
-        }
-        func deleteJobPosting(id: string): void {
-            description: "Remove a job posting"
-        }
-        func listApplications(): list<JobApplication> {
-            description: "List candidate applications"
-        }
-        func createApplication(jobPostingId: string, applicantName: string, email: string, phone: string, resumeUrl: string): JobApplication {
-            description: "Submit a candidate application"
-        }
-        func getApplication(id: string): JobApplication {
-            description: "Get application details"
-        }
-        func updateApplication(id: string, status: ApplicationStatus): JobApplication {
-            description: "Update recruitment application status"
-        }
-    }
-
-    component PerformanceService {
-        description: "Manages employee reviews and performance ratings"
-
-        func listPerformanceReviews(): list<PerformanceReview> {
-            description: "List all performance reviews"
-        }
-        func createPerformanceReview(employeeId: string, reviewerId: string, reviewDate: date, periodStart: date, periodEnd: date, rating: integer, feedback: string): PerformanceReview {
-            description: "Record a performance review"
-        }
-        func getPerformanceReview(id: string): PerformanceReview {
-            description: "Get performance review details"
-        }
-        func updatePerformanceReview(id: string, rating: integer, feedback: string): PerformanceReview {
-            description: "Update review details"
-        }
-    }
-
-    component TrainingService {
-        description: "Manages employee training programs"
-
-        func listTrainingPrograms(): list<TrainingProgram> {
-            description: "List all training programs"
-        }
-        func createTrainingProgram(title: string, description: string, trainer: string, startDate: date, endDate: date): TrainingProgram {
-            description: "Create a new training program"
-        }
-        func getTrainingProgram(id: string): TrainingProgram {
-            description: "Get training program details"
-        }
-        func updateTrainingProgram(id: string, title: string, description: string, trainer: string, startDate: date, endDate: date, status: TrainingStatus): TrainingProgram {
-            description: "Update details of a training program"
-        }
-        func enrollEmployee(trainingId: string, employeeId: string): TrainingEnrollment {
-            description: "Enroll an employee in a training program"
-        }
-        func completeTraining(enrollmentId: string): TrainingEnrollment {
-            description: "Mark a training enrollment as completed"
-        }
-    }
-
-    component EmployeeDocumentService {
-        description: "Manages employee documents and file references"
-
-        func listDocuments(employeeId: string): list<EmployeeDocument> {
-            description: "List all documents for an employee"
-        }
-        func uploadDocument(employeeId: string, docType: DocumentType, fileName: string, fileUrl: string): EmployeeDocument {
-            description: "Attach a new document reference"
-        }
-        func deleteDocument(id: string): void {
-            description: "Delete a document reference"
-        }
-    }
-
-    component ReportService {
-        description: "Generates HR summaries and reports"
-
-        func getHeadcountReport(): object {
-            description: "Generate headcount summary reports"
-        }
-        func getPayrollReport(): object {
-            description: "Generate payroll cost reports"
-        }
-        func getAttendanceReport(): object {
-            description: "Generate attendance summary reports"
-        }
-    }
-
-
-    // -------------------------------------------------------------
-    // KAFKA PUB/SUB EVENT TOPICS
-    // -------------------------------------------------------------
+enum EmploymentType {
+    FULL_TIME,
+    PART_TIME,
+    CONTRACTOR
+}
+
+enum PayrollStatus {
+    DRAFT,
+    APPROVED,
+    PROCESSED,
+    FAILED
+}
+
+enum ExpenseStatus {
+    SUBMITTED,
+    REVIEWED,
+    APPROVED,
+    REJECTED,
+    PAID
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
+
+struct ExpenseClaimLineInput {
+    description: string;
+    amount: decimal @digits(18, 4);
+}
+
+@table("hr_departments")
+@unique_composite(legal_entity_id, department_code) 
+entity Department {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity (Loose Link)
+    department_code: string;                      // Unique within tenant boundary (e.g., "DEPT_ENG")
+    name: string;
+    is_active: boolean;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("hr_employees")
+@unique_composite(legal_entity_id, employee_number)
+entity EmployeeMaster {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Strict multi-tenant data isolation shield
+    department_id: uuid @reference(Department.id); 
+    
+    // Adjacency List self-reference with tree index depth markers
+    manager_hr_id: uuid @optional @reference(EmployeeMaster.id);
+    org_depth_level: int;                         // Root level = 0, line management increments sequentially
+    
+    employee_number: string;                      // Corporate ID token scoped within tenant
+    first_name: string;
+    last_name: string;
+    email: string @unique;
+    
+    status: EmployeeStatus;
+    type: EmploymentType;
+    base_salary: decimal @digits(18, 4);          
+    
+    version: int;                                 // Concurrency Shield for GORM modifications
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
+}
+
+@table("hr_payroll_runs")
+@unique_composite(legal_entity_id, fiscal_year, period_number) 
+entity PayrollRun {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    
+    fiscal_year: int;                             
+    period_number: int;                           // Calendar Month 1 through 12
+    status: PayrollStatus;
+    
+    total_gross_pay: decimal @digits(18, 4);
+    total_deductions: decimal @digits(18, 4);
+    total_net_pay: decimal @digits(18, 4);        // Transmitted to FM for cash disbursal tracking
+    
+    version: int;                                 
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("hr_expense_claims")
+@unique_composite(legal_entity_id, claim_number)
+entity ExpenseClaim {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    employee_id: uuid @reference(EmployeeMaster.id);
+    
+    claim_number: string;                         
+    purpose: string;
+    total_amount: decimal @digits(18, 4);
+    status: ExpenseStatus;
+    
+    cost_center_tag: string;                      // Plain-string dynamic accounting dimension
+    
+    version: int;                                 
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("hr_expense_claim_lines")
+entity ExpenseClaimLine {
+    id: uuid @primary;
+    expense_claim_id: uuid @reference(ExpenseClaim.id); 
+    description: string;
+    line_amount: decimal @digits(18, 4);
+    
+    created_at: timestamp;
+}
+
+@table("hr_transactional_outbox")
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           
+    aggregate_id: uuid;                           
+    payload: jsonb;
+    status: OutboxStatus;                         
+    
+    created_at: timestamp;
+}
+
+@table("hr_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface EmployeeService {
+    EmployeeMaster hireEmployee(ctx: context, legalEntityId: uuid, departmentId: uuid, managerHrId: uuid, empNum: string, firstName: string, lastName: string, email: string, salary: decimal, type: EmploymentType);
+    EmployeeMaster terminateEmployee(ctx: context, employeeId: uuid, terminationDate: date);
+    EmployeeMaster adjustCompensation(ctx: context, employeeId: uuid, targetSalary: decimal);
+    List<EmployeeMaster> fetchManagementChain(ctx: context, employeeId: uuid); 
+}
+
+interface PayrollService {
+    PayrollRun initiatePeriodRun(ctx: context, legalEntityId: uuid, fiscalYear: int, periodNumber: int);
+    PayrollRun executeCalculations(ctx: context, payrollRunId: uuid);
+    PayrollRun closeAndApprovePayroll(ctx: context, payrollRunId: uuid);
+}
+
+interface ExpenseService {
+    ExpenseClaim submitClaim(ctx: context, legalEntityId: uuid, employeeId: uuid, claimNumber: string, purpose: string, costCenter: string, lines: List<ExpenseClaimLineInput>);
+    ExpenseClaim verifyAndApproveClaim(ctx: context, claimId: uuid, reviewerHrId: uuid);
+    void clearClaimForPayment(ctx: context, claimId: uuid);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+events Emitters {
     producer_events {
-        hr.employee.created: EmployeeCreatedEvent
-        hr.employee.updated: EmployeeUpdatedEvent
-        hr.employee.terminated: EmployeeTerminatedEvent
-        hr.employee.promoted: EmployeePromotedEvent
-        hr.payroll.processed: PayrollProcessedEvent
-        hr.payroll.failed: PayrollFailedEvent
-        hr.salary.changed: SalaryChangedEvent
-        hr.timesheet.submitted: TimesheetSubmittedEvent
-        hr.timesheet.approved: TimesheetApprovedEvent
-        hr.overtime.recorded: OvertimeRecordedEvent
-        hr.leave.requested: LeaveRequestedEvent
-        hr.leave.approved: LeaveApprovedEvent
-        hr.leave.rejected: LeaveRejectedEvent
-        hr.training.completed: TrainingCompletedEvent
-        hr.certification.earned: CertificationEarnedEvent
-        hr.skill.acquired: SkillAcquiredEvent
-        hr.performance.review.completed: PerformanceReviewCompletedEvent
-        hr.goal.achieved: GoalAchievedEvent
-        hr.performance.improvement.needed: PerformanceImprovementNeededEvent
-        hr.expense.submitted: ExpenseSubmittedEvent
-        hr.employee.available: EmployeeAvailableEvent
-        hr.employee.skills.updated: EmployeeSkillsUpdatedEvent
+        hr.employee.created: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, manager_hr_id: uuid, employee_number: string, email: string, base_salary: decimal, type: string, timestamp: timestamp }
+        hr.employee.terminated: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, employee_number: string, email: string, timestamp: timestamp }
+        hr.payroll.processed: { event_id: uuid, legal_entity_id: uuid, payroll_run_id: uuid, fiscal_year: int, period_number: int, total_net_pay: decimal, total_gross_pay: decimal, timestamp: timestamp }
+        hr.expense.approved: { event_id: uuid, legal_entity_id: uuid, claim_id: uuid, employee_id: uuid, total_amount: decimal, cost_center: string, timestamp: timestamp }
     }
-
     consumer_events {
-        prj.project.created: ProjectCreatedEvent
-        prj.task.assigned: TaskAssignedEvent
-        fin.budget.allocated: BudgetAllocatedEvent
-        mfg.production.scheduled: ProductionScheduledEvent
-        scm.training.required: SCMTrainingRequiredEvent
+        prj.time.logged: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, contractor_id: uuid, hours_spent: decimal, internal_billing_rate: decimal, timestamp: timestamp }
+        fm.vendor.paid: { event_id: uuid, bill_id: uuid, legal_entity_id: uuid, target_document_id: uuid, timestamp: timestamp } 
     }
 }

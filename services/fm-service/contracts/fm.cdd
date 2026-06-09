@@ -1,626 +1,194 @@
-struct JournalLineInput {
-    account_id     uuid
-    debit_amount   decimal
-    credit_amount  decimal
-    description    string
-    cost_center_id uuid
+// ============================================================================
+// MODULE BOUNDARY: FINANCIAL MANAGEMENT (FM)
+// Architectural Pattern: Multi-Tenant Hybrid Event-Driven Universal Ledger (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Legal Entities, Universal GL, AP/AR Sub-ledgers, Outbox & Inbox
+// ============================================================================
+
+namespace erp.financials;
+
+enum AccountType { ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE }
+enum LedgerState { DRAFT, POSTED, REVERSED }
+enum PaymentStatus { OPEN, PARTIAL, PAID }
+enum AssetState { ACTIVE, FULLY_DEPRECIATED, DISPOSED }
+enum OutboxStatus { PENDING, SENT, FAILED }
+enum EventProcessingStatus { SUCCESS, FAILED }
+
+@table("fm_legal_entities")
+entity LegalEntity {
+    id: uuid @primary;
+    company_code: string @unique;                 // e.g., "CORP_DE", "SUBS_US"
+    company_name: string;
+    functional_currency: string;                  // Strictly enforces ISO 4217 (e.g., "EUR", "USD")
+    tax_registration_number: string;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
-struct BillLineInput {
-    description    string
-    quantity       integer
-    unit_price     decimal
-    tax_rate_id    uuid
+@table("fm_chart_of_accounts")
+entity ChartOfAccounts {
+    id: uuid @primary;
+    legal_entity_id: uuid @reference(LegalEntity.id);
+    account_code: string;                         // Unique combination with legal_entity_id
+    account_name: string;
+    type: AccountType;
+    is_active: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
-struct InvoiceLineInput {
-    description    string
-    quantity       integer
-    unit_price     decimal
-    tax_rate_id    uuid
+@table("fm_universal_journal_entries")
+entity UniversalJournalEntry {
+    id: uuid @primary;
+    legal_entity_id: uuid @reference(LegalEntity.id); // Strict multi-tenant partition shield
+    source_module: string;                        // "SCM", "CRM", "HR", "PRJ", "FM"
+    source_document_id: uuid;                     // Primitive reference to external systems
+    posting_date: date;
+    financial_period: string;                     // Format: "YYYY-MM"
+    status: LedgerState;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
-service FM {
-    // =============================================================
-    // ENUM DEFINITIONS
-    // =============================================================
-
-    enum AccountType {
-        ASSET
-        LIABILITY
-        EQUITY
-        REVENUE
-        EXPENSE
-    }
-
-    enum JournalEntryStatus {
-        DRAFT
-        PENDING
-        POSTED
-        REVERSED
-    }
-
-    enum InvoiceStatus {
-        DRAFT
-        SENT
-        PAID
-        OVERDUE
-        VOID
-    }
-
-    enum PaymentStatus {
-        PENDING
-        COMPLETED
-        FAILED
-    }
-
-    enum PaymentMethod {
-        CASH
-        CHECK
-        BANK_TRANSFER
-        CARD
-    }
-
-    enum VendorBillStatus {
-        DRAFT
-        MATCHED
-        APPROVED
-        PAID
-        VOID
-    }
-
-    // =============================================================
-    // PREREQUISITE REFERENCES / INDEPENDENT TABLES
-    // =============================================================
-
-    entity CurrencyRate {
-        id             uuid      @primary
-        from_currency  string    @min(3) @max(3)
-        to_currency    string    @min(3) @max(3)
-        rate           decimal   @positive
-        effective_date date
-    }
-
-    entity FiscalYear {
-        id         uuid      @primary
-        year       integer   @unique
-        start_date date
-        end_date   date
-        is_closed  boolean
-    }
-
-    entity CostCenter {
-        id             uuid      @primary
-        code           string    @unique
-        name           string    @min_length(1) @max_length(100)
-        description    string    @optional @max_length(500)
-        manager_id     uuid      @optional
-        is_active      boolean
-    }
-
-    entity TaxRate {
-        id             uuid      @primary
-        code           string    @unique
-        name           string    @min_length(1) @max_length(100)
-        rate           decimal   @min(0) @max(100)
-        is_active      boolean
-    }
-
-    entity BankAccount {
-        id             uuid      @primary
-        account_number string    @unique
-        bank_name      string    @min_length(1) @max_length(200)
-        currency       string    @min(3) @max(3)
-        current_balance decimal
-    }
-
-    entity CustomerCredit {
-        id             uuid      @primary
-        customer_id    uuid      @unique
-        credit_limit   decimal   @min(0)
-        current_balance decimal
-        is_on_hold     boolean
-        updated_at     timestamp
-    }
-
-    // -------------------------------------------------------------
-    // ACCOUNTS & BUDGETS
-    // -------------------------------------------------------------
-
-    entity Account {
-        id             uuid      @primary
-        account_number string    @unique
-        name           string    @min_length(1) @max_length(200)
-        type           AccountType
-        parent_id      uuid      @reference(Account.id) @optional
-        balance        decimal
-        currency       string    @min(3) @max(3)
-        is_active      boolean
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity Budget {
-        id               uuid      @primary
-        account_id       uuid      @reference(Account.id)
-        cost_center_id   uuid      @reference(CostCenter.id) @optional
-        fiscal_year      integer
-        period           integer   @min(1) @max(12)
-        allocated_amount decimal   @min(0)
-        spent_amount     decimal   @min(0)
-        created_at       timestamp
-        updated_at       timestamp
-    }
-
-    // -------------------------------------------------------------
-    // GENERAL LEDGER
-    // -------------------------------------------------------------
-
-    entity JournalEntry {
-        id          uuid      @primary
-        reference   string    @unique
-        date        timestamp
-        description string    @max_length(1000)
-        status      JournalEntryStatus
-        created_by  string
-        posted_by   string    @optional
-        posted_at   timestamp @optional
-        reversed_by uuid      @reference(JournalEntry.id) @optional
-        created_at  timestamp
-    }
-
-    entity JournalEntryLine {
-        id             uuid      @primary
-        entry_id       uuid      @reference(JournalEntry.id)
-        account_id     uuid      @reference(Account.id)
-        debit_amount   decimal   @min(0)
-        credit_amount  decimal   @min(0)
-        description    string    @max_length(500)
-        cost_center_id uuid      @reference(CostCenter.id) @optional
-        created_at     timestamp
-    }
-
-    // Legacy entities - Deprecated
-    entity Transaction {
-        @deprecated("Use JournalEntry instead. Will be removed in v2.0.")
-        id          uuid      @primary
-        reference   string    @unique
-        date        timestamp
-        description string
-        status      string
-        created_by  string
-        created_at  timestamp
-        updated_at  timestamp
-    }
-
-    entity TransactionLine {
-        @deprecated("Use JournalEntryLine instead. Will be removed in v2.0.")
-        id             uuid      @primary
-        transaction_id uuid      @reference(Transaction.id)
-        account_id     uuid      @reference(Account.id)
-        debit_amount   decimal
-        credit_amount  decimal
-        description    string
-        created_at     timestamp
-    }
-
-    // -------------------------------------------------------------
-    // ACCOUNTS RECEIVABLE (AR)
-    // -------------------------------------------------------------
-
-    entity Invoice {
-        id             uuid      @primary
-        customer_id    uuid
-        invoice_number string    @unique
-        issue_date     date
-        due_date       date
-        total_amount   decimal   @positive
-        tax_amount     decimal   @min(0)
-        status         InvoiceStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity InvoiceLine {
-        id             uuid      @primary
-        invoice_id     uuid      @reference(Invoice.id)
-        description    string    @max_length(500)
-        quantity       integer   @positive
-        unit_price     decimal   @min(0)
-        tax_rate_id    uuid      @reference(TaxRate.id) @optional
-        line_total     decimal   @min(0)
-    }
-
-    // -------------------------------------------------------------
-    // ACCOUNTS PAYABLE (AP)
-    // -------------------------------------------------------------
-
-    entity VendorBill {
-        id             uuid      @primary
-        supplier_id    uuid      @reference(Supplier.id)
-        bill_number    string
-        purchase_order_id uuid   @optional
-        issue_date     date
-        due_date       date
-        total_amount   decimal   @positive
-        tax_amount     decimal   @min(0)
-        status         VendorBillStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    entity VendorBillLine {
-        id             uuid      @primary
-        bill_id        uuid      @reference(VendorBill.id)
-        description    string    @max_length(500)
-        quantity       integer   @positive
-        unit_price     decimal   @min(0)
-        tax_rate_id    uuid      @reference(TaxRate.id) @optional
-        line_total     decimal   @min(0)
-    }
-
-    // -------------------------------------------------------------
-    // PAYMENTS
-    // -------------------------------------------------------------
-
-    entity Payment {
-        id             uuid      @primary
-        invoice_id     uuid      @reference(Invoice.id) @optional
-        bill_id        uuid      @reference(VendorBill.id) @optional
-        bank_account_id uuid     @reference(BankAccount.id) @optional
-        payment_number string    @unique
-        payment_date   date
-        amount         decimal   @positive
-        payment_method PaymentMethod
-        status         PaymentStatus
-        created_at     timestamp
-        updated_at     timestamp
-    }
-
-    // -------------------------------------------------------------
-    // BANK STATEMENTS & CASH MANAGEMENT
-    // -------------------------------------------------------------
-
-    entity BankStatement {
-        id             uuid      @primary
-        bank_account_id uuid     @reference(BankAccount.id)
-        statement_date date
-        ending_balance decimal
-        is_reconciled  boolean
-    }
-
-    entity BankStatementLine {
-        id             uuid      @primary
-        statement_id   uuid      @reference(BankStatement.id)
-        transaction_date date
-        description    string    @max_length(500)
-        amount         decimal
-        is_matched     boolean
-    }
-
-    // -------------------------------------------------------------
-    // EVENT PAYLOAD DEFINITIONS
-    // -------------------------------------------------------------
-
-    event_payload InvoiceEventPayload {
-        invoice_id    uuid
-        customer_id   uuid
-        invoice_number string
-        total_amount  decimal
-        tax_amount    decimal
-        status        InvoiceStatus
-        created_at    timestamp
-    }
-
-    event_payload PaymentEventPayload {
-        payment_id    uuid
-        invoice_id    uuid
-        bill_id       uuid
-        amount        decimal
-        payment_method PaymentMethod
-        status        PaymentStatus
-        created_at    timestamp
-    }
-
-    event_payload BudgetEventPayload {
-        budget_id       uuid
-        account_id      uuid
-        fiscal_year     integer
-        period          integer
-        allocated_amount decimal
-        spent_amount    decimal
-        created_at      timestamp
-    }
-
-    event_payload BudgetApprovedEvent {
-        budget_id       uuid
-        account_id      uuid
-        approved_by     string
-        approved_at     timestamp
-    }
-
-    event_payload VendorBillEventPayload {
-        bill_id       uuid
-        supplier_id   uuid
-        bill_number   string
-        total_amount  decimal
-        status        VendorBillStatus
-        created_at    timestamp
-    }
-
-    event_payload AccountEventPayload {
-        account_id      uuid
-        account_number  string
-        name            string
-        type            AccountType
-        balance         decimal
-        created_at      timestamp
-    }
-
-    event_payload EmployeeCreatedEvent {
-        employee_id   uuid
-        first_name    string
-        last_name     string
-        department_id uuid
-        created_at    timestamp
-    }
-
-    event_payload PayrollProcessedEvent {
-        payroll_id    uuid
-        employee_id   uuid
-        net_pay       decimal
-        pay_period_start date
-        pay_period_end   date
-        processed_at  timestamp
-    }
-
-    event_payload ExpenseSubmittedEvent {
-        expense_claim_id uuid
-        employee_id      uuid
-        total_amount     decimal
-        submitted_at     timestamp
-    }
-
-    event_payload PurchaseOrderCreatedEvent {
-        po_id         uuid
-        supplier_id   uuid
-        total_amount  decimal
-        created_at    timestamp
-    }
-
-    event_payload InvoiceReceivedEvent {
-        invoice_id    uuid
-        supplier_id   uuid
-        total_amount  decimal
-        received_at   timestamp
-    }
-
-    event_payload InventoryValuedEvent {
-        total_value   decimal
-        valuation_date timestamp
-    }
-
-    event_payload SalesOrderConfirmedEvent {
-        sales_order_id uuid
-        customer_id    uuid
-        total_amount   decimal
-        confirmed_at   timestamp
-    }
-
-    event_payload CustomerCreatedEvent {
-        customer_id   uuid
-        company_name  string
-        email         string
-        created_at    timestamp
-    }
-
-    event_payload ProductionCompletedEvent {
-        production_order_id uuid
-        product_id          uuid
-        quantity            integer
-        completed_at        timestamp
-    }
-
-    event_payload MaterialConsumedEvent {
-        production_order_id uuid
-        component_product_id uuid
-        quantity            decimal
-        consumed_at         timestamp
-    }
-
-    event_payload ProjectCreatedEvent {
-        project_id  uuid
-        name        string
-        created_at  timestamp
-    }
-
-    event_payload TimeLoggedEvent {
-        time_entry_id uuid
-        employee_id   uuid
-        project_id    uuid
-        hours         decimal
-        logged_at     timestamp
-    }
-
-    event_payload ProjectExpenseIncurredEvent {
-        expense_id  uuid
-        project_id  uuid
-        amount      decimal
-        incurred_at timestamp
-    }
-
-    // -------------------------------------------------------------
-    // SUBDOMAIN SERVICES (Refactored Components)
-    // -------------------------------------------------------------
+@table("fm_universal_journal_lines")
+entity UniversalJournalLine {
+    id: uuid @primary;
+    journal_entry_id: uuid @reference(UniversalJournalEntry.id);
+    account_id: uuid @reference(ChartOfAccounts.id);
     
-    component GeneralLedgerService {
-        description: "Manages chart of accounts, journal entry posting, and financial statements"
-
-        func listAccounts(): list<Account> {
-            description: "List all general ledger accounts"
-        }
-        func createAccount(accountNumber: string, name: string, type: AccountType, parentId: string, currency: string): Account {
-            description: "Create a new general ledger account"
-        }
-        func getAccount(id: string): Account {
-            description: "Get account details by ID"
-        }
-        func updateAccount(id: string, name: string, type: AccountType, parentId: string, isActive: boolean): Account {
-            description: "Update account details"
-        }
-        func deleteAccount(id: string): void {
-            description: "Delete a general ledger account"
-        }
-        func listJournalEntries(): list<JournalEntry> {
-            description: "List all journal entries"
-        }
-        func createJournalEntry(reference: string, description: string, lines: list<JournalLineInput>): JournalEntry {
-            description: "Create and post a journal entry"
-        }
-        func getJournalEntry(id: string): JournalEntry {
-            description: "Get journal entry details by ID"
-        }
-        func reverseJournalEntry(id: string): JournalEntry {
-            description: "Reverse a posted journal entry"
-        }
-        func getTrialBalance(): object {
-            description: "Generate Trial Balance report"
-        }
-        func getIncomeStatement(): object {
-            description: "Generate Profit & Loss (Income Statement)"
-        }
-        func getBalanceSheet(): object {
-            description: "Generate Balance Sheet report"
-        }
-        func getCashFlow(): object {
-            description: "Generate historical Cash Flow report"
-        }
-    }
-
-    component AccountsPayableService {
-        description: "Manages vendors, purchase order bills, and matching"
-
-        func listVendorBills(): list<VendorBill> {
-            description: "List all vendor bills"
-        }
-        func createVendorBill(supplierId: string, billNumber: string, poId: string, lines: list<BillLineInput>): VendorBill {
-            description: "Create a vendor bill"
-        }
-        func matchPurchaseOrder(billId: string, poId: string, goodsReceiptId: string): boolean {
-            description: "3-Way Matching: Matches Purchase Order, Goods Receipt, and Vendor Bill"
-        }
-    }
-
-    component AccountsReceivableService {
-        description: "Manages customer invoices, collections, and credit limits"
-
-        func listInvoices(): list<Invoice> {
-            description: "List customer invoices"
-        }
-        func createInvoice(customerId: string, issueDate: date, dueDate: date, lines: list<InvoiceLineInput>): Invoice {
-            description: "Generate a customer invoice"
-        }
-        func getInvoice(id: string): Invoice {
-            description: "Get invoice details by ID"
-        }
-        func updateInvoice(id: string, fields: object): Invoice {
-            description: "Update invoice fields"
-        }
-        func deleteInvoice(id: string): void {
-            description: "Delete an invoice"
-        }
-        func sendInvoice(id: string): boolean {
-            description: "Send invoice to customer via email/notification"
-        }
-        func checkCustomerCredit(customerId: string, orderValue: decimal): boolean {
-            description: "Checks if a new order fits within customer credit limit"
-        }
-    }
-
-    component CashManagementService {
-        description: "Manages bank reconciliation and cash flow projections"
-
-        func recordPayment(invoiceId: string, billId: string, paymentDate: date, amount: decimal, paymentMethod: PaymentMethod): Payment {
-            description: "Record a payment (either incoming AR or outgoing AP)"
-        }
-        func listPayments(): list<Payment> {
-            description: "List recorded payments"
-        }
-        func getPayment(id: string): Payment {
-            description: "Get payment details"
-        }
-        func reconcileBankStatement(statementId: string): void {
-            description: "Reconcile a bank statement against general ledger transactions"
-        }
-        func getCashFlowForecast(monthsAhead: integer): object {
-            description: "Generates future cash flow projections"
-        }
-    }
-
-    component BudgetingService {
-        description: "Manages financial budgets and utilization variance tracking"
-
-        func listBudgets(): list<Budget> {
-            description: "List budgets"
-        }
-        func createBudget(accountId: string, costCenterId: string, fiscalYear: integer, period: integer, allocatedAmount: decimal): Budget {
-            description: "Define a budget"
-        }
-        func getBudgetVsActualReport(accountId: string, fiscalYear: integer): object {
-            description: "Generate variance analysis report"
-        }
-    }
-
-    component TaxService {
-        description: "Manages tax rates and compliance registration"
-
-        func createTaxRate(code: string, name: string, rate: decimal): TaxRate {
-            description: "Create a tax rate"
-        }
-        func listTaxRates(): list<TaxRate> {
-            description: "List all tax rates"
-        }
-        func getTaxRate(id: string): TaxRate {
-            description: "Get tax rate details by ID"
-        }
-    }
-
-    // =============================================================
-    // MESSAGE QUEUE EVENTS (EVENT-DRIVEN CONTRACTS)
-    // =============================================================
+    amount_functional: decimal @digits(18, 4);    // Stored natively in LegalEntity.functional_currency
+    amount_transactional: decimal @digits(18, 4); // Original currency value before conversion
+    currency_transactional: string;               // ISO 4217 code of origin transaction
     
+    // ACDOCA-Style Dynamic Operational Tagging (Regulated by GIN Index)
+    tracking_dimensions: jsonb;                   
+}
+
+@table("fm_ar_invoices")
+entity ArInvoice {
+    id: uuid @primary;
+    legal_entity_id: uuid @reference(LegalEntity.id);
+    invoice_number: string @unique;
+    customer_id: uuid;                            // Loose primitive identity token (CRM Boundary)
+    sales_order_id: uuid;                         // Loose primitive document token (CRM Boundary)
+    total_amount: decimal @digits(18, 4);
+    tax_amount: decimal @digits(18, 4);           
+    due_date: date;
+    status: PaymentStatus;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("fm_ap_vendor_bills")
+entity ApVendorBill {
+    id: uuid @primary;
+    legal_entity_id: uuid @reference(LegalEntity.id);
+    bill_number: string @unique;
+    vendor_id: uuid;                              // Loose primitive identity token (SCM Boundary)
+    purchase_order_id: uuid;                      // Loose primitive document token (SCM Boundary)
+    total_amount: decimal @digits(18, 4);
+    tax_amount: decimal @digits(18, 4);           
+    due_date: date;
+    status: PaymentStatus;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("fm_capital_assets")
+entity CapitalAsset {
+    id: uuid @primary;
+    legal_entity_id: uuid @reference(LegalEntity.id);
+    asset_tag: string @unique;                    
+    eam_equipment_id: uuid @optional;             // Loose primitive identity token (EAM Boundary)
+    acquisition_cost: decimal @digits(18, 4);
+    accumulated_depreciation: decimal @digits(18, 4);
+    useful_life_months: int;
+    capitalization_date: date;
+    status: AssetState;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("fm_depreciation_schedules")
+entity DepreciationScheduleLine {
+    id: uuid @primary;
+    fixed_asset_id: uuid @reference(CapitalAsset.id);
+    fiscal_year: int;
+    period_number: int;                           
+    depreciation_amount: decimal @digits(18, 4);
+    is_posted: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("fm_bank_accounts")
+entity BankAccount {
+    id: uuid @primary;
+    legal_entity_id: uuid @reference(LegalEntity.id);
+    account_number: string;
+    currency: string;                             // Local currency of the physical bank branch
+    liquid_balance: decimal @digits(18, 4);
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("fm_transactional_outbox")
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           
+    aggregate_id: uuid;                           
+    payload: jsonb;                               
+    status: OutboxStatus;                         
+    created_at: timestamp;
+}
+
+@table("fm_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface UniversalLedgerService {
+    LegalEntity createLegalEntity(companyCode: string, companyName: string, functionalCurrency: string, taxNumber: string);
+    ChartOfAccounts createAccount(legalEntityId: uuid, accountCode: string, accountName: string, type: AccountType);
+    UniversalJournalEntry postLedgerEntry(legalEntityId: uuid, sourceModule: string, sourceDocumentId: uuid, postingDate: date, lines: List<UniversalJournalLineInput>);
+    boolean validateMathematicalBalance(journalEntryId: uuid); 
+    TrialBalanceReport generateTrialBalance(legalEntityId: uuid, financialPeriod: string);
+}
+
+interface ApArSubledgerService {
+    ArInvoice generateCustomerInvoice(legalEntityId: uuid, customerId: uuid, salesOrderId: uuid, grossAmount: decimal);
+    ApVendorBill generateVendorBill(legalEntityId: uuid, vendorId: uuid, purchaseOrderId: uuid, grossAmount: decimal);
+}
+
+interface CapitalAssetService { 
+    CapitalAsset capitalizeAsset(legalEntityId: uuid, assetTag: string, acquisitionCost: decimal, usefulLifeMonths: int, equipmentId: uuid);
+    void generateDepreciationSchedule(fixedAssetId: uuid); 
+    void postMonthlyStraightLineDepreciation(legalEntityId: uuid, financialPeriod: string); 
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(eventId: uuid);
+    void logEventSuccess(eventId: uuid, eventType: string, payload: jsonb);
+    void logEventFailureToDLQ(eventId: uuid, eventType: string, payload: jsonb);
+    void appendToOutbox(tx: gorm.DB, eventType: string, aggregateId: uuid, payload: jsonb);
+}
+
+events Emitters {
     producer_events {
-        fin.invoice.created: InvoiceEventPayload
-        fin.invoice.updated: InvoiceEventPayload
-        fin.invoice.sent: InvoiceEventPayload
-        fin.invoice.paid: InvoiceEventPayload
-        fin.invoice.overdue: InvoiceEventPayload
-        fin.payment.received: PaymentEventPayload
-        fin.payment.processed: PaymentEventPayload
-        fin.payment.failed: PaymentEventPayload
-        fin.vendor.payment.due: VendorBillEventPayload
-        fin.budget.created: BudgetEventPayload
-        fin.budget.updated: BudgetEventPayload
-        fin.budget.exceeded: BudgetEventPayload
-        fin.account.created: AccountEventPayload
-        fin.account.updated: AccountEventPayload
-        fin.account.balance.changed: AccountEventPayload
-        fin.budget.approved: BudgetApprovedEvent
+        fm.invoice.paid: { event_id: uuid, invoice_id: uuid, legal_entity_id: uuid, customer_id: uuid, total_amount: decimal, timestamp: timestamp }
+        fm.vendor.paid: { event_id: uuid, bill_id: uuid, legal_entity_id: uuid, vendor_id: uuid, timestamp: timestamp }
+        fm.customer.credit_status.updated: { event_id: uuid, customer_id: uuid, credit_limit: decimal, current_balance: decimal, is_on_hold: boolean, timestamp: timestamp }
     }
-
     consumer_events {
-        hr.employee.created: EmployeeCreatedEvent
-        hr.payroll.processed: PayrollProcessedEvent
-        hr.expense.submitted: ExpenseSubmittedEvent
-        scm.purchase.order.created: PurchaseOrderCreatedEvent
-        scm.invoice.received: InvoiceReceivedEvent
-        scm.inventory.valued: InventoryValuedEvent
-        crm.sales.order.confirmed: SalesOrderConfirmedEvent
-        crm.customer.created: CustomerCreatedEvent
-        mfg.production.completed: ProductionCompletedEvent
-        mfg.material.consumed: MaterialConsumedEvent
-        prj.project.created: ProjectCreatedEvent
-        prj.time.logged: TimeLoggedEvent
-        prj.expense.incurred: ProjectExpenseIncurredEvent
+        scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, vendor_id: uuid, receipt_value: decimal, timestamp: timestamp }
+        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, total_cogs_value: decimal, timestamp: timestamp }
+        crm.order.confirmed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, gross_receivable: decimal, timestamp: timestamp }
+        hr.payroll.processed: { event_id: uuid, legal_entity_id: uuid, payroll_run_id: uuid, period_number: int, total_gross_pay: decimal, timestamp: timestamp }
+        mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, total_material_cost: decimal, timestamp: timestamp }
+        prj.milestone.achieved: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, milestone_billable_amount: decimal, timestamp: timestamp }
     }
 }

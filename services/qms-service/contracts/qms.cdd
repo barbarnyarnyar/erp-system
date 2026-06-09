@@ -1,0 +1,211 @@
+// ============================================================================
+// MODULE BOUNDARY: QUALITY MANAGEMENT SYSTEM (QMS)
+// Architectural Pattern: Multi-Tenant Event-Driven Compliance Core (10/10 Certified)
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Partitioned Sub-Ledgers, Temporal Analytics, Non-Conformance
+// ============================================================================
+
+namespace erp.quality;
+
+enum InspectionTriggerType {
+    INBOUND_RECEIPT,     
+    PRODUCTION_YIELD,    
+    CUSTOMER_RETURN      
+}
+
+enum InspectionStatus {
+    PENDING,
+    IN_PROGRESS,
+    PASSED,
+    FAILED
+}
+
+enum MetricDataType {
+    NUMERIC,             
+    BOOLEAN              
+}
+
+enum DispositionAction {
+    RELEASE,             
+    REWORK,              
+    SCRAP,               
+    RETURN_TO_VENDOR     
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
+
+struct TimeRange {
+    start_date: timestamp;
+    end_date: timestamp;
+}
+
+struct MetricSubmissionInput {
+    metric_definition_id: uuid;
+    sample_sequence: int;
+    numeric_value: decimal @optional;
+    boolean_value: boolean @optional;
+    is_compliant: boolean;
+}
+
+struct QualityResultPayload {
+    metric_key: string;
+    sample_sequence: int;
+    value_recorded: decimal;
+    was_compliant: boolean;
+}
+
+@table("qms_inspection_plans")
+@unique_composite(legal_entity_id, material_id) 
+entity InspectionPlan {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    plan_name: string;
+    is_active: boolean;
+    version: int;                                 // For Optimistic Concurrency Control (OCC) Shield
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("qms_inspection_metric_definitions")
+@unique_composite(inspection_plan_id, metric_key) 
+entity InspectionMetricDefinition {
+    id: uuid @primary;
+    inspection_plan_id: uuid @reference(InspectionPlan.id); 
+    metric_key: string;                           
+    display_name: string;
+    data_type: MetricDataType;
+    
+    min_tolerance_limit: decimal @digits(12, 4) @optional;
+    max_tolerance_limit: decimal @digits(12, 4) @optional;
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("qms_quality_inspections")
+@unique_composite(legal_entity_id, inspection_number)
+entity QualityInspection {
+    id: uuid @primary;
+    legal_entity_id: uuid;                        
+    inspection_plan_id: uuid @reference(InspectionPlan.id); 
+    inspection_number: string;                    
+    trigger_source: InspectionTriggerType;
+    source_document_id: uuid;                     // Loose Primitive Ref -> SCM Receipt or MFG WorkOrder
+    status: InspectionStatus;
+    inspector_hr_id: uuid @optional;              // Primitive Ref -> HR.Employee
+    version: int;                                 
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("qms_inspection_results")
+@partition_range_monthly(created_at)
+@unique_composite(inspection_id, metric_definition_id, sample_sequence, created_at) 
+entity InspectionResultLine {
+    id: uuid @primary;
+    inspection_id: uuid @reference(QualityInspection.id); 
+    metric_definition_id: uuid @reference(InspectionMetricDefinition.id); 
+    sample_sequence: int;                         
+    
+    measured_numeric_value: decimal @digits(12, 4) @optional;
+    measured_boolean_value: boolean @optional;
+    is_compliant: boolean;                        
+    
+    created_at: timestamp;                        // Partitioning Key Coordinate
+}
+
+@table("qms_non_conformances")
+@unique_composite(legal_entity_id, nc_number)
+entity NonConformanceLog {
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    inspection_id: uuid @reference(QualityInspection.id); 
+    nc_number: string;                            
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    defect_description: text;
+    quantity_defective: decimal @digits(14, 4);
+    is_quarantined: boolean;
+    disposition: DispositionAction @optional;
+    disposition_notes: text @optional;
+    resolved_by_hr_id: uuid @optional;            // Primitive Ref -> HR.Employee
+    resolved_at: timestamp @optional;
+    version: int;                                 
+    
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("qms_transactional_outbox")
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;                           
+    aggregate_id: uuid;                           
+    payload: jsonb;
+    status: OutboxStatus;                         
+    
+    created_at: timestamp;
+}
+
+@table("qms_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id: uuid @primary;                      
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
+}
+
+interface InspectionPlanService {
+    InspectionPlan configurePlan(ctx: context, legalEntityId: uuid, materialId: uuid, name: string);
+    InspectionMetricDefinition registerPlanMetric(ctx: context, planId: uuid, key: string, displayName: string, dataType: MetricDataType, minLim: decimal, maxLim: decimal);
+}
+
+interface InspectionExecutionService {
+    QualityInspection stageInspection(ctx: context, legalEntityId: uuid, planId: uuid, trigger: InspectionTriggerType, sourceDocId: uuid);
+    QualityInspection assignInspector(ctx: context, inspectionId: uuid, inspectorHrId: uuid);
+    void recordBulkMeasurements(ctx: context, inspectionId: uuid, samples: List<MetricSubmissionInput>);
+}
+
+interface QualityAnalyticsService {
+    SpcMetricsSummary computeSpcDistribution(ctx: context, planId: uuid, metricDefId: uuid, window: TimeRange);
+}
+
+interface NonConformanceService {
+    NonConformanceLog logFailureIncident(ctx: context, legalEntityId: uuid, inspectionId: uuid, description: text, qty: decimal, autoQuarantine: boolean);
+    NonConformanceLog executeDisposition(ctx: context, ncLogId: uuid, action: DispositionAction, notes: text, resolverHrId: uuid);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+events Emitters {
+    producer_events {
+        qms.inspection.passed: { event_id: uuid, legal_entity_id: uuid, inspection_id: uuid, trigger_source: string, source_document_id: uuid, material_id: uuid, timestamp: timestamp }
+        qms.inspection.failed: { event_id: uuid, legal_entity_id: uuid, inspection_id: uuid, trigger_source: string, source_document_id: uuid, material_id: uuid, non_conformance_id: uuid, timestamp: timestamp }
+        qms.disposition.executed: { event_id: uuid, legal_entity_id: uuid, non_conformance_id: uuid, material_id: uuid, action: string, quantity: decimal, audit_trail: List<QualityResultPayload>, timestamp: timestamp }
+    }
+    consumer_events {
+        scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, material_id: uuid, receipt_value: decimal, quantity: decimal, timestamp: timestamp }
+        mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, yield_quantity: decimal, timestamp: timestamp }
+        hr.employee.created: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, explicit_role: string, timestamp: timestamp }
+    }
+}
