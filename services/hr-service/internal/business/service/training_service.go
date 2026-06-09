@@ -158,7 +158,7 @@ func (s *TrainingService) EarnCertification(ctx context.Context, employeeID, cer
 		ExpiryDate:        expiryDate,
 		Timestamp:         time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrCertificationEarned, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrCertificationEarned, err)
 		return err
 	}
 	return nil
@@ -171,7 +171,7 @@ func (s *TrainingService) AcquireSkill(ctx context.Context, employeeID, skillNam
 		Proficiency: proficiency,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrSkillAcquired, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrSkillAcquired, err)
 		return err
 	}
 	return nil

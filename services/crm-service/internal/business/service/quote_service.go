@@ -132,7 +132,7 @@ func (s *QuoteService) OpenEmail(ctx context.Context, emailID string) error {
 		EmailID:   emailID,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmEmailOpened, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmEmailOpened, err)
 		return err
 	}
 	return nil
@@ -144,7 +144,7 @@ func (s *QuoteService) ClickEmail(ctx context.Context, emailID string, url strin
 		URL:       url,
 		Timestamp: time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmEmailClicked, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmEmailClicked, err)
 		return err
 	}
 	return nil

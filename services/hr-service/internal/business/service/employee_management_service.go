@@ -379,7 +379,7 @@ func (s *EmployeeManagementService) UpdateEmployeeAvailability(ctx context.Conte
 		Status:     status,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeAvailable, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrEmployeeAvailable, err)
 		return err
 	}
 	return nil
@@ -391,7 +391,7 @@ func (s *EmployeeManagementService) UpdateEmployeeSkills(ctx context.Context, em
 		Skills:     skills,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrEmployeeSkillsUpdated, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrEmployeeSkillsUpdated, err)
 		return err
 	}
 	return nil

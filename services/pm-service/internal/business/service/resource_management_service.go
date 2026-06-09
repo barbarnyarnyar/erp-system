@@ -88,7 +88,7 @@ func (s *ResourceManagementService) CheckResourceOverallocation(ctx context.Cont
 		TotalCapacity: totalCapacity,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicPrjResourceOverallocated, err)
+		utils.LogPublishErr("pm-service", domain.TopicPrjResourceOverallocated, err)
 		return err
 	}
 	return nil

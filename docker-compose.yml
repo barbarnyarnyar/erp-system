@@ -125,7 +125,7 @@ services:
       context: .
       dockerfile: services/pm-service/Dockerfile
     ports:
-      - "8005:8006"
+      - "8006:8006"
     environment:
       - PORT=8006
       - KAFKA_BROKERS=kafka:9092

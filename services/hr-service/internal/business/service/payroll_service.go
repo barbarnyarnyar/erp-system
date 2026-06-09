@@ -134,7 +134,7 @@ func (s *PayrollService) FailPayroll(ctx context.Context, employeeID string, sta
 		Reason:      reason,
 		Timestamp:   time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicHrPayrollFailed, err)
+		utils.LogPublishErr("hr-service", domain.TopicHrPayrollFailed, err)
 		return err
 	}
 	return nil

@@ -218,7 +218,7 @@ func (s *SalesOrderService) ReceiveSalesOrder(ctx context.Context, salesOrderID,
 		TotalAmount:  totalAmount,
 		Timestamp:    time.Now(),
 	}); err != nil {
-		log.Printf("ERROR: failed to publish event %s: %v", domain.TopicCrmSalesOrderReceived, err)
+		utils.LogPublishErr("crm-service", domain.TopicCrmSalesOrderReceived, err)
 		return err
 	}
 	return nil
