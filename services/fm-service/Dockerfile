@@ -8,7 +8,7 @@ WORKDIR /app
 COPY services/fm-service/ ./
 
 # Build the application
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/server/main.go
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd
 
 # Final stage
 FROM alpine:latest

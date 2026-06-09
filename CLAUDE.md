@@ -17,8 +17,7 @@ Each service follows Clean Architecture patterns:
 ```
 services/{service-name}/
 ├── cmd/
-│   ├── main.go              # Application entry point (some services)
-│   └── server/main.go       # Alternative entry point (some services)
+│   └── main.go              # Application entry point
 ├── internal/
 │   ├── api/
 │   │   ├── handlers/        # HTTP request handlers
@@ -33,9 +32,7 @@ services/{service-name}/
 └── Dockerfile
 ```
 
-**Note**: Entry points vary by service:
-- `fm-service`: Uses `cmd/server/main.go`
-- Other services: Use `cmd/main.go`
+**Note**: All services now use the standardized `cmd/main.go` entry point.
 
 ### Shared Components
 - `shared/` directory contains common utilities, templates, and shared Go modules
@@ -110,7 +107,7 @@ make migrate-create name=migration_name
 docker-compose up -d postgres kafka redis
 
 # Run individual services locally
-cd services/fm-service && go run cmd/server/main.go
+cd services/fm-service && go run cmd/main.go
 cd services/hr-service && go run cmd/main.go
 # etc.
 ```
@@ -123,18 +120,18 @@ cd services/hr-service && go run cmd/main.go
 # Individual service builds
 cd services/fm-service
 go mod tidy
-go build -o bin/main cmd/server/main.go
+go build -o bin/main cmd/main.go
 ```
 
 ## Service Ports and URLs
 
 ### Production Ports (via API Gateway - port 8080)
 - Financial Management: `/api/v1/fm/*` → fm-service:8001
-- Human Resources: `/api/v1/hr/*` → hr-service:8002  
-- Supply Chain: `/api/v1/scm/*` → scm-service:8003
+- Human Resources: `/api/v1/hr/*` → hr-service:8003  
+- Supply Chain: `/api/v1/scm/*` → scm-service:8006
 - Manufacturing: `/api/v1/m/*` → m-service:8004
-- CRM: `/api/v1/crm/*` → crm-service:8005
-- Project Management: `/api/v1/pm/*` → pm-service:8006
+- CRM: `/api/v1/crm/*` → crm-service:8002
+- Project Management: `/api/v1/pm/*` → pm-service:8005
 
 **Note**: The Makefile test routes use different patterns:
 - Finance: `/api/v1/finance/hello`
@@ -143,11 +140,11 @@ go build -o bin/main cmd/server/main.go
 
 ### Direct Service Access (Development)
 - fm-service: http://localhost:8001
-- hr-service: http://localhost:8002
-- scm-service: http://localhost:8003
+- hr-service: http://localhost:8003
+- scm-service: http://localhost:8006
 - m-service: http://localhost:8004
-- crm-service: http://localhost:8005
-- pm-service: http://localhost:8006
+- crm-service: http://localhost:8002
+- pm-service: http://localhost:8005
 
 ## Configuration
 
@@ -156,7 +153,75 @@ Services use environment variables for configuration:
 - `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE` - PostgreSQL settings
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` - Redis settings  
 - `KAFKA_BROKERS` - Message queue connection string
+- `JWT_SECRET` - JWT signing secret (MUST be changed in production)
 - `ENV` - Environment (development/production)
+
+### ⚠️ SECURITY: Credentials & Secrets Management
+
+**CRITICAL**: Default credentials must be changed before production deployment!
+
+#### Setup Secure Credentials
+
+```bash
+# Auto-generate strong credentials
+./scripts/setup-secrets.sh --auto
+
+# Or interactive setup
+./scripts/setup-secrets.sh --interactive
+```
+
+This creates a `.env` file with:
+- Strong PostgreSQL credentials (32 char random)
+- Strong Redis password (32 char random)
+- Secure JWT secret (256-bit)
+- Secure admin credentials
+
+#### Environment Variables Required
+
+```env
+# These MUST be set (no defaults)
+POSTGRES_USER=<strong-username>
+POSTGRES_PASSWORD=<strong-password>
+REDIS_PASSWORD=<strong-password>
+JWT_SECRET=<256-bit-hex-string>
+
+# Optional (have defaults)
+POSTGRES_DB=erp_db
+KAFKA_BROKERS=kafka:9092
+ENVIRONMENT=development
+```
+
+#### Production Checklist
+
+Before deploying to production:
+
+- [ ] Generate strong credentials via `./scripts/setup-secrets.sh`
+- [ ] Store `.env` in a secrets manager (Vault, AWS Secrets Manager, HashiCorp, etc.)
+- [ ] Never commit `.env` to version control (it's in `.gitignore`)
+- [ ] Change admin password immediately after first login
+- [ ] Implement TLS/HTTPS for all services
+- [ ] Set up proper authentication (OAuth2, SAML, etc.)
+- [ ] Enable rate limiting and DDoS protection
+- [ ] Configure audit logging
+- [ ] Set up secrets rotation policy
+- [ ] Run security scanning tools (gosec, snyk, etc.)
+
+#### JWT Secret Generation
+
+```bash
+# Generate a secure JWT secret
+openssl rand -hex 32
+
+# Or use this in a script
+JWT_SECRET=$(openssl rand -hex 32)
+```
+
+#### Password Generation
+
+```bash
+# Generate strong passwords
+openssl rand -base64 32  # For PostgreSQL & Redis
+```
 
 ## Key Technologies
 
@@ -175,11 +240,12 @@ Services use environment variables for configuration:
 - Services communicate via HTTP APIs and asynchronous events through Kafka
 - All services expose `/health` endpoints for monitoring
 - The project uses conventional Git commits and maintains comprehensive API documentation
-- Service entry points are inconsistent: `fm-service` uses `cmd/server/main.go`, others use `cmd/main.go`
+- All services use standardized entry point: `cmd/main.go`
 - Each service may have its own database and migration files
 - `common-utils` directories in services are symlinked to shared utilities
 - Use `golangci-lint` for Go code linting (install separately)
 - Use `air` for development hot reloading (install separately)
+- **SECURITY**: All default credentials must be externalized via `.env` - see Configuration section
 
 ## Prerequisites for Development
 
