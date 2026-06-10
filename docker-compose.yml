@@ -58,9 +58,9 @@ services:
       - FM_SERVICE_URL=http://fm-service:8001
       - HR_SERVICE_URL=http://hr-service:8003
       - SCM_SERVICE_URL=http://scm-service:8006
-      - M_SERVICE_URL=http://m-service:8004
+      - M_SERVICE_URL=http://mfg-service:8004
       - CRM_SERVICE_URL=http://crm-service:8002
-      - PM_SERVICE_URL=http://pm-service:8005
+      - PM_SERVICE_URL=http://prj-service:8005
     depends_on:
       - auth-service
     restart: unless-stopped
@@ -110,10 +110,10 @@ services:
       - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 
-  m-service:
+  mfg-service:
     build:
       context: .
-      dockerfile: services/m-service/Dockerfile
+      dockerfile: services/mfg-service/Dockerfile
     ports:
       - "8004:8004"
     environment:
@@ -124,7 +124,7 @@ services:
   pm-service:
     build:
       context: .
-      dockerfile: services/pm-service/Dockerfile
+      dockerfile: services/prj-service/Dockerfile
     ports:
       - "8005:8005"
     environment:
