@@ -192,6 +192,17 @@ interface ReliableMessagingService {
     void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
 }
 
+
+interface MaintenanceService {
+    MachineLog logMachineStatus(ctx: context, workCenterId: uuid, statusCode: string, message: string, severity: string);
+    Equipment createEquipment(ctx: context, workCenterId: uuid, name: string);
+    MaintenanceOrder scheduleMaintenance(ctx: context, equipmentId: uuid, description: string, maintType: string);
+    MaintenanceOrder completeMaintenance(ctx: context, id: uuid);
+    List<MaintenanceOrder> listMaintenanceSchedules(ctx: context);
+    MaintenanceOrder getMaintenanceSchedule(ctx: context, id: uuid);
+    MaintenanceOrder updateMaintenanceSchedule(ctx: context, id: uuid, status: string, completedAt: timestamp);
+}
+
 events Emitters {
     producer_events {
         mfg.production.started: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, timestamp: timestamp }
