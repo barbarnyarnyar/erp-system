@@ -34,6 +34,25 @@ func main() {
 	budgetRepo := memory.NewMemoryBudgetRepo()
 	vendorBillRepo := memory.NewMemoryVendorBillRepo()
 
+	// Register new memory repository instances (or SQL if DB connection is active, but here we inject memory)
+	currencyRateRepo := memory.NewMemoryCurrencyRateRepo()
+	fiscalYearRepo := memory.NewMemoryFiscalYearRepo()
+	costCenterRepo := memory.NewMemoryCostCenterRepo()
+	bankAccountRepo := memory.NewMemoryBankAccountRepo()
+	customerCreditRepo := memory.NewMemoryCustomerCreditRepo()
+	bankStatementRepo := memory.NewMemoryBankStatementRepo()
+	transactionRepo := memory.NewMemoryTransactionRepo()
+
+	// Suppress unused variables since they might not be added to service constructors yet
+	_ = currencyRateRepo
+	_ = fiscalYearRepo
+	_ = costCenterRepo
+	_ = bankAccountRepo
+	_ = customerCreditRepo
+	_ = bankStatementRepo
+	_ = transactionRepo
+
+
 	// Initialize application services
 	generalLedgerSvc := service.NewGeneralLedgerService(
 		accountRepo,
@@ -47,6 +66,7 @@ func main() {
 	cashManagementSvc := service.NewCashManagementService(
 		paymentRepo,
 		invoiceRepo,
+		bankStatementRepo,
 		kafkaPublisher,
 	)
 	accountsPayableSvc := service.NewAccountsPayableService(

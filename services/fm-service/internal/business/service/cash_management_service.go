@@ -13,13 +13,15 @@ import (
 type CashManagementService struct {
 	payments  domain.PaymentRepository
 	invoices  domain.InvoiceRepository
+	statements domain.BankStatementRepository
 	publisher domain.EventPublisher
 }
 
-func NewCashManagementService(payments domain.PaymentRepository, invoices domain.InvoiceRepository, publisher domain.EventPublisher) *CashManagementService {
+func NewCashManagementService(payments domain.PaymentRepository, invoices domain.InvoiceRepository, statements domain.BankStatementRepository, publisher domain.EventPublisher) *CashManagementService {
 	return &CashManagementService{
 		payments:  payments,
 		invoices:  invoices,
+		statements: statements,
 		publisher: publisher,
 	}
 }
@@ -138,4 +140,11 @@ func (s *CashManagementService) GetCashFlowForecast(ctx context.Context, monthsA
 		"projected_cash_outflow": decimal.NewFromInt(80000),
 		"net_cash_flow":          decimal.NewFromInt(45000),
 	}, nil
+}
+
+func (s *CashManagementService) GetBankStatement(ctx context.Context, id string) (*domain.BankStatement, []domain.BankStatementLine, error) {
+	if s.statements == nil {
+		return nil, nil, fmt.Errorf("bank statement repository not initialized")
+	}
+	return s.statements.GetByID(ctx, id)
 }

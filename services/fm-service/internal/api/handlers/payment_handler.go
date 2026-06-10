@@ -63,3 +63,15 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": payment})
 }
+
+func (h *PaymentHandler) GetBankStatementLines(c *gin.Context) {
+	id := c.Param("id")
+	_, lines, err := h.svc.GetBankStatement(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "bank statement not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": lines,
+	})
+}

@@ -83,3 +83,15 @@ func (h *VendorBillHandler) CreateVendorBill(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"data": bill})
 }
+
+func (h *VendorBillHandler) GetVendorBillLines(c *gin.Context) {
+	id := c.Param("id")
+	_, lines, err := h.svc.GetVendorBill(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "vendor bill not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": lines,
+	})
+}

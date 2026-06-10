@@ -57,6 +57,7 @@ func SetupRoutes(
 			invoices.PUT("/:id", invHandler.UpdateInvoice)
 			invoices.DELETE("/:id", invHandler.DeleteInvoice)
 			invoices.POST("/:id/send", invHandler.SendInvoice)
+			invoices.GET("/:id/lines", invHandler.GetInvoiceLines)
 		}
 
 		// Payments routes
@@ -67,11 +68,19 @@ func SetupRoutes(
 			payments.GET("/:id", payHandler.GetPayment)
 		}
 
+
+		// Bank Statements routes
+		bankStatements := v1.Group("/bank-statements")
+		{
+			bankStatements.GET("/:id/lines", payHandler.GetBankStatementLines)
+		}
+
 		// Vendor Bills routes
 		vendorBills := v1.Group("/vendor-bills")
 		{
 			vendorBills.GET("", billHandler.GetVendorBills)
 			vendorBills.POST("", billHandler.CreateVendorBill)
+			vendorBills.GET("/:id/lines", billHandler.GetVendorBillLines)
 		}
 
 		// Reports routes
