@@ -1,204 +1,307 @@
-service Auth {
-    // =============================================================
-    // ENUM DEFINITIONS
-    // =============================================================
+// ============================================================================
+// MODULE BOUNDARY: AUTHENTICATION & AUTHORIZATION (AUTH)
+// Architectural Pattern: Multi-Tenant Event-Driven Identity & Access Core
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: User Identity, Session Management, RBAC, Store Assignment
+// ============================================================================
 
-    enum UserRoleType {
-        ADMIN
-        MANAGER
-        EMPLOYEE
-        VIEWER
-    }
+namespace erp.identity;
 
-    // =============================================================
-    // ENTITY DEFINITIONS
-    // =============================================================
+// ============================================================================
+// ENUM DEFINITIONS
+// ============================================================================
 
-    entity User {
-        id             uuid      @primary
-        username       string    @unique @min_length(3) @max_length(50)
-        email          string    @unique @pattern(email)
-        password_hash  string
-        first_name     string    @min_length(1) @max_length(100)
-        last_name      string    @min_length(1) @max_length(100)
-        is_active      boolean
-        security_stamp string    @optional
-        created_at     timestamp
-        updated_at     timestamp
-    }
+enum UserStatus {
+    ACTIVE,
+    INACTIVE,
+    SUSPENDED
+}
 
-    entity Session {
-        id            uuid      @primary
-        user_id       uuid      @reference(User.id)
-        refresh_token string    @unique
-        ip_address    string    @optional
-        user_agent    string    @optional
-        is_revoked    boolean   @optional
-        expires_at    timestamp
-        created_at    timestamp
-    }
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
 
-    entity Role {
-        id            uuid      @primary
-        name          string    @unique
-        description   string    @max_length(500)
-        created_at    timestamp
-        updated_at    timestamp
-    }
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
 
-    entity Permission {
-        id            uuid      @primary
-        code          string    @unique
-        description   string    @max_length(500)
-        created_at    timestamp
-        updated_at    timestamp
-    }
+// ============================================================================
+// SHARED VALUE OBJECTS
+// ============================================================================
 
-    entity UserRole {
-        id            uuid      @primary
-        user_id       uuid      @reference(User.id)
-        role_id       uuid      @reference(Role.id)
-        created_at    timestamp
-        assigned_by   uuid      @optional
-    }
+struct TokenClaims {
+    user_id:        uuid;
+    legal_entity_id: uuid;                        // Strict multi-tenant partition token
+    roles:          List<string>;                 // Role codes for downstream RBAC evaluation
+    permissions:    List<string>;                 // Flattened permission codes for fast middleware check
+    expires_at:     timestamp;
+}
 
-    entity UserStore {
-        id            uuid      @primary
-        user_id       uuid      @reference(User.id)
-        store_id      uuid
-        assigned_at   timestamp
-    }
+struct CreateUserInput {
+    username:        string;
+    email:           string;
+    password:        string;                      // Raw plaintext — hashed inside service before persist
+    first_name:      string;
+    last_name:       string;
+    legal_entity_id: uuid;
+    initial_store_id: uuid @optional;
+    role_ids:        List<uuid>;
+}
 
-    entity RolePermission {
-        id            uuid      @primary
-        role_id       uuid      @reference(Role.id)
-        permission_id uuid      @reference(Permission.id)
-        created_at    timestamp
-        assigned_by   uuid      @optional
-    }
+// ============================================================================
+// ENTITY DEFINITIONS
+// ============================================================================
 
-    // =============================================================
-    // SHARED VALUE OBJECTS
-    // =============================================================
+@table("auth_users")
+@unique_composite(legal_entity_id, username)
+@unique_composite(legal_entity_id, email)
+entity User {
+    id:             uuid      @primary;
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
 
-    struct TokenClaims {
-        description: "Canonical typed contract for decoded JWT payload."
-        user_id    string
-        tenant_id  string
-        roles      list<string>
-    }
+    username:       string;                       // Unique within tenant boundary
+    email:          string;                       // Unique within tenant boundary
+    password_hash:  string;                       // bcrypt hash — never returned in API responses
+    first_name:     string;
+    last_name:      string;
 
-    // =============================================================
-    // EVENT PAYLOAD DEFINITIONS
-    // =============================================================
+    status:         UserStatus;                   // ACTIVE / INACTIVE / SUSPENDED
+    security_stamp: string;                       // Rotated on every password change — invalidates all sessions
 
-    event_payload UserEventPayload {
-        user_id    string
-        username   string
-        email      string
-        is_active  boolean
-        created_at timestamp
-    }
+    version:        int;                          // Concurrency Control Shield (Optimistic Locking)
 
-    event_payload UserRoleEventPayload {
-        user_id    string
-        role_id    string
-        role_name  string
-        assigned_by string
-        created_at timestamp
-    }
+    created_at:     timestamp;
+    updated_at:     timestamp;
+    deleted_at:     timestamp @optional;          // GORM Native Soft Delete Support
+}
 
-    event_payload UserStoreEventPayload {
-        user_id    string
-        store_id   string
-        assigned_at timestamp
-    }
+@table("auth_sessions")
+@index_composite(user_id, is_revoked)
+entity Session {
+    id:             uuid      @primary;
+    user_id:        uuid      @reference(User.id);
 
-    event_payload PasswordChangedEventPayload {
-        user_id    string
-        changed_at timestamp
-    }
+    refresh_token:  string    @unique;            // Cryptographically random — used for token refresh
+    ip_address:     string    @optional;          // Audit trail for security forensics
+    user_agent:     string    @optional;          // Device fingerprint for anomaly detection
 
-    event_payload HREmployeeTerminatedEvent {
-        employee_id string
-        user_id     string
-        terminated_at timestamp
-    }
+    is_revoked:     boolean;                      // Explicitly revoked sessions (logout / admin force)
+    expires_at:     timestamp;                    // Hard expiry — cron purges stale sessions
 
-    // =============================================================
-    // SUBDOMAIN SERVICES (Split Components)
-    // =============================================================
+    created_at:     timestamp;
+}
 
-    component AuthService {
-        description: "Manages login, logout, token verification and refresh"
+@table("auth_roles")
+@unique_composite(legal_entity_id, name)
+entity Role {
+    id:             uuid      @primary;
+    legal_entity_id: uuid;                        // Roles are scoped per tenant
 
-        func authenticateUser(username: string, password: string): string {
-            description: "Verifies credentials and returns a JWT token"
-        }
-        func refreshToken(refreshToken: string): string {
-            description: "Issue a new access token using a refresh token"
-        }
-        func revokeToken(sessionId: string): void {
-            description: "Revoke a session (logout)"
-        }
-        func validateToken(token: string): TokenClaims {
-            description: "Decodes and validates a JWT token, returning a typed TokenClaims struct"
-        }
-    }
+    name:           string;                       // e.g., "ADMIN", "MANAGER", "VIEWER"
+    description:    string;
 
-    component UserService {
-        description: "Manages user accounts and store assignments"
+    version:        int;                          // OCC Shield
 
-        func createUser(user: User, initialStoreId: string, roleIds: list<string>): User {
-            description: "Create a user and establish initial store and role relations"
-        }
-        func updateUser(userId: string, firstName: string @optional, lastName: string @optional, email: string @optional, isActive: boolean @optional): User {
-            description: "Update user details"
-        }
-        func updateCredentials(userId: string, newPassword: string): boolean {
-            description: "Securely update a user password"
-        }
-        func deactivateUser(userId: string): void {
-            description: "Deactivate user account"
-        }
-        func assignUserToStore(userId: string, storeId: string): void {
-            description: "Links a user to a store"
-        }
-        func removeUserFromStore(userId: string, storeId: string): void {
-            description: "Removes a user from a store"
-        }
-    }
+    created_at:     timestamp;
+    updated_at:     timestamp;
+}
 
-    component RBACService {
-        description: "Manages Roles, Permissions, and User role assignments"
+@table("auth_permissions")
+@unique_composite(legal_entity_id, code)
+entity Permission {
+    id:             uuid      @primary;
+    legal_entity_id: uuid;
 
-        func createRole(name: string, description: string): Role {
-            description: "Create a new role"
-        }
-        func createPermission(code: string, description: string): Permission {
-            description: "Create a new permission"
-        }
-        func assignPermissionToRole(roleId: string, permissionId: string): void {
-            description: "Assign a permission to a role"
-        }
-        func validatePermissions(userId: string, permission: string): boolean {
-            description: "Checks if user has permission"
-        }
-    }
+    code:           string;                       // e.g., "invoices:write", "employees:read"
+    description:    string;
 
-    // =============================================================
-    // MESSAGE QUEUE EVENTS (EVENT-DRIVEN CONTRACTS)
-    // =============================================================
-    
+    created_at:     timestamp;
+    updated_at:     timestamp;
+}
+
+@table("auth_user_roles")
+@unique_composite(user_id, role_id)
+entity UserRole {
+    id:             uuid      @primary;
+    user_id:        uuid      @reference(User.id);
+    role_id:        uuid      @reference(Role.id);
+
+    assigned_by_user_id: uuid @optional;          // Audit trail — who granted this role
+
+    created_at:     timestamp;
+}
+
+@table("auth_role_permissions")
+@unique_composite(role_id, permission_id)
+entity RolePermission {
+    id:             uuid      @primary;
+    role_id:        uuid      @reference(Role.id);
+    permission_id:  uuid      @reference(Permission.id);
+
+    assigned_by_user_id: uuid @optional;          // Audit trail — who granted this permission
+
+    created_at:     timestamp;
+}
+
+@table("auth_user_stores")
+@unique_composite(user_id, store_id)
+entity UserStore {
+    id:             uuid      @primary;
+    user_id:        uuid      @reference(User.id);
+    store_id:       uuid;                         // Primitive Ref -> store context (Loose Cross-Domain Link)
+
+    assigned_by_user_id: uuid @optional;
+    assigned_at:    timestamp;
+}
+
+// ============================================================================
+// INFRASTRUCTURE TABLES — Outbox + Inbox (Reliable Messaging Pattern)
+// ============================================================================
+
+@table("auth_transactional_outbox")
+@index_composite(status, created_at)
+entity TransactionalOutbox {
+    id:             uuid      @primary;
+    event_type:     string;                       // e.g., "auth.user.created"
+    aggregate_id:   uuid;                         // User.id or Role.id context token
+    payload:        jsonb;                        // Fully serialized outbound event message
+    status:         OutboxStatus;                 // Polled by OutboxRelayWorker goroutine
+    retry_count:    int;                          // Protects relay worker from poison-pill loops
+
+    created_at:     timestamp;
+}
+
+@table("auth_kafka_event_inbox")
+entity KafkaEventInbox {
+    event_id:           uuid      @primary;       // Kafka message key — idempotency deduplication token
+    event_type:         string;                   // e.g., "hr.employee.terminated"
+    processed_at:       timestamp;
+    processing_status:  EventProcessingStatus;
+    payload:            jsonb;                    // Inbound event payload archived for audit replay
+}
+
+// ============================================================================
+// SERVICE INTERFACES
+// ============================================================================
+
+interface TokenService {
+    // Verifies username + password, creates Session, returns signed JWT.
+    // Hashes provided password and compares to stored password_hash.
+    // On success: appends auth.user.authenticated event to outbox.
+    string issueAccessToken(ctx: context, legalEntityId: uuid, username: string, password: string);
+
+    // Issues a new short-lived access token from a valid, non-revoked refresh token.
+    // Validates Session.expires_at and Session.is_revoked before issuing.
+    string refreshAccessToken(ctx: context, refreshToken: string);
+
+    // Marks Session.is_revoked = true. Downstream services must flush cached claims.
+    // Fires auth.session.revoked event via outbox.
+    void revokeSession(ctx: context, sessionId: uuid);
+
+    // Decodes and cryptographically verifies JWT signature.
+    // Returns typed TokenClaims struct consumed by every downstream middleware.
+    // Called synchronously on every inbound request across all 8 other modules.
+    TokenClaims validateAccessToken(ctx: context, token: string);
+}
+
+interface UserService {
+    // Creates User, UserRole, and UserStore records atomically in one transaction.
+    // Appends auth.user.created to outbox within the same transaction.
+    User provisionUser(ctx: context, input: CreateUserInput);
+
+    // Updates mutable profile fields only. Never touches password_hash.
+    User updateProfile(ctx: context, userId: uuid, firstName: string @optional, lastName: string @optional, email: string @optional);
+
+    // Rotates password_hash and security_stamp in one atomic write.
+    // Revokes all active sessions. Appends auth.password.changed to outbox.
+    void rotateCredentials(ctx: context, userId: uuid, currentPassword: string, newPassword: string);
+
+    // Sets User.status = INACTIVE and revokes all sessions.
+    // Triggered internally or by hr.employee.terminated consumer event.
+    void suspendUser(ctx: context, userId: uuid);
+
+    // Binds a user to a branch store for location-scoped access.
+    // Appends auth.user.store.assigned to outbox.
+    void assignToStore(ctx: context, userId: uuid, storeId: uuid, assignedBy: uuid);
+
+    // Removes store binding. User loses location-scoped access immediately.
+    void removeFromStore(ctx: context, userId: uuid, storeId: uuid);
+}
+
+interface RBACService {
+    // Creates a named role scoped to the legal entity.
+    Role defineRole(ctx: context, legalEntityId: uuid, name: string, description: string);
+
+    // Creates a permission code scoped to the legal entity.
+    Permission definePermission(ctx: context, legalEntityId: uuid, code: string, description: string);
+
+    // Wires a permission to a role. Appends auth.role.permission.assigned to outbox.
+    // Downstream services should flush permission caches on this event.
+    void grantPermissionToRole(ctx: context, roleId: uuid, permissionId: uuid, grantedBy: uuid);
+
+    // Assigns a role to a user. Appends auth.user.role.assigned to outbox.
+    void assignRoleToUser(ctx: context, userId: uuid, roleId: uuid, assignedBy: uuid);
+
+    // Removes a role from a user. Appends auth.user.role.revoked to outbox.
+    void revokeRoleFromUser(ctx: context, userId: uuid, roleId: uuid);
+
+    // Fast permission check called by every downstream service middleware.
+    // Evaluates UserRole -> RolePermission chain for the given permission code.
+    boolean checkPermission(ctx: context, userId: uuid, permissionCode: string);
+
+    // Returns flattened list of all permission codes for a user.
+    // Used to hydrate TokenClaims.permissions on login.
+    List<string> resolveUserPermissions(ctx: context, userId: uuid);
+}
+
+interface OutboxRelayWorker {
+    // Fetches PENDING outbox entries ordered by created_at ASC up to batch limit.
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+
+    // Records retry attempt with error notes for observability.
+    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
+
+    // Transitions outbox entry to SENT or FAILED after relay attempt.
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    // Returns true if event_id already exists in KafkaEventInbox.
+    // Called at the top of every consumer handler before business logic.
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+
+    // Wraps inbound event processing in idempotency guard + business routine.
+    // Commits KafkaEventInbox record and runs businessRoutine atomically.
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+// ============================================================================
+// MESSAGE QUEUE EVENTS (EVENT-DRIVEN CONTRACTS)
+// ============================================================================
+
+events Emitters {
     producer_events {
-        auth.user.created: UserEventPayload
-        auth.user.deactivated: UserEventPayload
-        auth.user.role.assigned: UserRoleEventPayload
-        auth.user.store.assigned: UserStoreEventPayload
-        auth.password.changed: PasswordChangedEventPayload
+        auth.user.created:          { event_id: uuid, legal_entity_id: uuid, user_id: uuid, username: string, email: string, timestamp: timestamp }
+        auth.user.suspended:        { event_id: uuid, legal_entity_id: uuid, user_id: uuid, username: string, timestamp: timestamp }
+        auth.user.role.assigned:    { event_id: uuid, legal_entity_id: uuid, user_id: uuid, role_id: uuid, role_name: string, assigned_by: uuid, timestamp: timestamp }
+        auth.user.role.revoked:     { event_id: uuid, legal_entity_id: uuid, user_id: uuid, role_id: uuid, timestamp: timestamp }
+        auth.user.store.assigned:   { event_id: uuid, legal_entity_id: uuid, user_id: uuid, store_id: uuid, assigned_by: uuid, timestamp: timestamp }
+        auth.password.changed:      { event_id: uuid, legal_entity_id: uuid, user_id: uuid, timestamp: timestamp }
+        auth.session.revoked:       { event_id: uuid, legal_entity_id: uuid, user_id: uuid, session_id: uuid, timestamp: timestamp }
     }
 
     consumer_events {
-        hr.employee.terminated: HREmployeeTerminatedEvent
+        hr.employee.created:        { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, email: string, employee_number: string, timestamp: timestamp }
+        // On receipt: call provisionUser() with default EMPLOYEE role for the legal entity.
+
+        hr.employee.terminated:     { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, user_id: uuid, email: string, timestamp: timestamp }
+        // On receipt: call suspendUser() — revokes all sessions and sets status = INACTIVE.
+
+        fm.legal_entity.created:    { event_id: uuid, legal_entity_id: uuid, company_code: string, company_name: string, timestamp: timestamp }
+        // On receipt: seed default roles (ADMIN, MANAGER, EMPLOYEE, VIEWER) and baseline
+        // permissions for the new legal entity partition.
     }
 }
