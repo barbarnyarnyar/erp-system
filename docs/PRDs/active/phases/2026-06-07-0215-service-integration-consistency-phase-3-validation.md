@@ -17,9 +17,9 @@ This phase focuses on validating the system's consistency improvements and docum
 
 ### In Scope
 
-- Running full uncached Go test suites for all 7 microservices.
+- Running full uncached Go test suites for all 9 microservices.
 - Running API Gateway routing tests/verification suite.
-- Validating the complete Docker-compose build and clean boot up of all 7 services.
+- Validating the complete Docker-compose build and clean boot up of all 9 services.
 - Writing and publishing `ADR-002-Entity-Decoupling-Patterns`.
 
 ### Out of Scope
@@ -49,15 +49,15 @@ This phase focuses on validating the system's consistency improvements and docum
 
 ### Task 1: Testing and Verification
 
-- [ ] Execute full uncached Go test suites across all 7 microservices using `go test -count=1 ./...`.
+- [ ] Execute full uncached Go test suites across all 9 microservices using `go test -count=1 ./...`.
 - [ ] Run the API Gateway routing verification suite to ensure proper path mapping.
-- [ ] Validate Docker-compose build and clean boot up of all 7 services. Note: If the environment runs out of memory, verify start-up script or logs.
+- [ ] Validate Docker-compose build and clean boot up of all 9 services. Note: If the environment runs out of memory, verify start-up script or logs.
 
 **Acceptance Criteria:**
 
 - All Go tests pass.
 - API Gateway correctly routes the new endpoints.
-- `docker-compose up --build` succeeds, and all 7 services enter a healthy state.
+- `docker-compose up --build` succeeds, and all 9 services enter a healthy state.
 
 **Files / Areas:**
 
