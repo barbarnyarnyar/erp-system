@@ -123,6 +123,17 @@ func (s *Server) setupRoutes() {
 			fmGroup.PUT("/invoices/:id", 
 				authMiddleware.RequirePermission("fm", "invoices", "write"),
 				proxyHandler.ProxyToService("fm"))
+			fmGroup.GET("/invoices/:id/lines", proxyHandler.ProxyToService("fm"))
+
+			// Vendor Bills
+			fmGroup.GET("/vendor-bills", proxyHandler.ProxyToService("fm"))
+			fmGroup.POST("/vendor-bills",
+				authMiddleware.RequirePermission("fm", "invoices", "write"),
+				proxyHandler.ProxyToService("fm"))
+			fmGroup.GET("/vendor-bills/:id/lines", proxyHandler.ProxyToService("fm"))
+
+			// Bank Statements
+			fmGroup.GET("/bank-statements/:id/lines", proxyHandler.ProxyToService("fm"))
 
 			// Payments
 			fmGroup.GET("/payments", proxyHandler.ProxyToService("fm"))
@@ -157,6 +168,9 @@ func (s *Server) setupRoutes() {
 		scmGroup := protected.Group("/scm")
 		scmGroup.Use(authMiddleware.RequirePermission("scm", "*", "read"))
 		{
+			scmGroup.GET("/purchase-orders/:id/lines", proxyHandler.ProxyToService("scm"))
+			scmGroup.GET("/receipts/:id/lines", proxyHandler.ProxyToService("scm"))
+			scmGroup.GET("/shipments/:id/lines", proxyHandler.ProxyToService("scm"))
 			scmGroup.Any("", proxyHandler.ProxyToService("scm"))
 			scmGroup.Any("/*path", proxyHandler.ProxyToService("scm"))
 		}

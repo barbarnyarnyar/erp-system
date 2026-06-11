@@ -116,3 +116,15 @@ func (h *InvoiceHandler) SendInvoice(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "invoice sent successfully"})
 }
+
+func (h *InvoiceHandler) GetInvoiceLines(c *gin.Context) {
+	id := c.Param("id")
+	_, lines, err := h.svc.GetInvoice(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": lines,
+	})
+}

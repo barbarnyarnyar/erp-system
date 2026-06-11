@@ -72,3 +72,7 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 func (s *AccountsPayableService) ListVendorBills(ctx context.Context) ([]domain.VendorBill, error) {
 	return s.bills.List(ctx)
 }
+
+func (s *AccountsPayableService) GetVendorBill(ctx context.Context, id string) (*domain.VendorBill, []domain.VendorBillLine, error) {
+	return s.bills.GetByID(ctx, id)
+}
