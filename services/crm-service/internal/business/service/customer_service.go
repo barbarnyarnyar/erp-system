@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
+	"github.com/shopspring/decimal"
 )
 
 type CustomerService struct {
@@ -21,18 +22,32 @@ func NewCustomerService(customerRepo domain.CustomerRepository, publisher domain
 	}
 }
 
-func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, contactName, email, phone, category, parentCustomerID string) (*domain.Customer, error) {
+func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, contactName, email, phone, category, parentCustomerID string) (*domain.CustomerProfile, error) {
 	id := utils.NewID("cust")
-	cust := &domain.Customer{
-		ID:          id,
-		CompanyName: companyName,
-		ContactName: contactName,
-		Email:       email,
-		Phone:       phone,
-		Status:      domain.CustomerStatusActive,
-		Category:    category,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+	cust := &domain.CustomerProfile{
+		ID:                 id,
+		LegalEntityID:      "default_entity_id",
+		CustomerCode:       "CODE-" + id[:8],
+		CompanyName:        companyName,
+		AccountManagerHrID: "default_manager_id",
+		Status:             domain.CustomerStatusACTIVE,
+		CreditLimit:        decimal.NewFromInt(50000),
+		Currency:           "USD",
+		Version:            1,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
+	if contactName != "" {
+		cust.ContactName = &contactName
+	}
+	if email != "" {
+		cust.Email = &email
+	}
+	if phone != "" {
+		cust.Phone = &phone
+	}
+	if category != "" {
+		cust.Category = &category
 	}
 	if parentCustomerID != "" {
 		cust.ParentCustomerID = &parentCustomerID
@@ -63,15 +78,15 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, conta
 	return cust, nil
 }
 
-func (s *CustomerService) GetCustomer(ctx context.Context, id string) (*domain.Customer, error) {
+func (s *CustomerService) GetCustomer(ctx context.Context, id string) (*domain.CustomerProfile, error) {
 	return s.customerRepo.GetByID(ctx, id)
 }
 
-func (s *CustomerService) ListCustomers(ctx context.Context) ([]domain.Customer, error) {
+func (s *CustomerService) ListCustomers(ctx context.Context) ([]domain.CustomerProfile, error) {
 	return s.customerRepo.List(ctx)
 }
 
-func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, companyName, contactName, email, phone, status, category string) (*domain.Customer, error) {
+func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, companyName, contactName, email, phone, status, category string) (*domain.CustomerProfile, error) {
 	statusEnum := domain.CustomerStatus(status)
 	if !statusEnum.IsValid() {
 		return nil, fmt.Errorf("invalid customer status: %s", status)
@@ -84,11 +99,27 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 
 	oldStatus := cust.Status
 	cust.CompanyName = companyName
-	cust.ContactName = contactName
-	cust.Email = email
-	cust.Phone = phone
+	if contactName != "" {
+		cust.ContactName = &contactName
+	} else {
+		cust.ContactName = nil
+	}
+	if email != "" {
+		cust.Email = &email
+	} else {
+		cust.Email = nil
+	}
+	if phone != "" {
+		cust.Phone = &phone
+	} else {
+		cust.Phone = nil
+	}
 	cust.Status = statusEnum
-	cust.Category = category
+	if category != "" {
+		cust.Category = &category
+	} else {
+		cust.Category = nil
+	}
 	cust.UpdatedAt = time.Now()
 
 	err = s.customerRepo.Update(ctx, cust)
@@ -106,14 +137,14 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 	}
 
 	if oldStatus != statusEnum {
-		if statusEnum == domain.CustomerStatusActive {
+		if statusEnum == domain.CustomerStatusACTIVE {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerActivated, id, domain.CustomerActivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),
 			}); err != nil {
 				utils.LogPublishErr("crm-service", domain.TopicCrmCustomerActivated, err)
 			}
-		} else if statusEnum == domain.CustomerStatusInactive {
+		} else if statusEnum == domain.CustomerStatusINACTIVE {
 			if err := s.publisher.Publish(ctx, domain.TopicCrmCustomerDeactivated, id, domain.CustomerDeactivatedEvent{
 				CustomerID: id,
 				Timestamp:  time.Now(),

@@ -63,7 +63,7 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinAccountCreated, acc.ID, domain.AccountEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmAccountCreated, acc.ID, domain.AccountEventPayload{
 		ID:            acc.ID,
 		AccountNumber: acc.AccountNumber,
 		Name:          acc.Name,
@@ -72,7 +72,7 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 		Currency:      acc.Currency,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinAccountCreated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmAccountCreated, err)
 	}
 
 	return acc, nil
@@ -114,7 +114,7 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinAccountUpdated, acc.ID, domain.AccountEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmAccountUpdated, acc.ID, domain.AccountEventPayload{
 		ID:            acc.ID,
 		AccountNumber: acc.AccountNumber,
 		Name:          acc.Name,
@@ -123,7 +123,7 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 		Currency:      acc.Currency,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinAccountUpdated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmAccountUpdated, err)
 	}
 
 	return acc, nil
@@ -220,7 +220,7 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 	for _, l := range lines {
 		acc, err := s.accounts.GetByID(ctx, l.AccountID)
 		if err == nil {
-			if err := s.publisher.Publish(ctx, domain.TopicFinAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
+			if err := s.publisher.Publish(ctx, domain.TopicFmAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
 				ID:            acc.ID,
 				AccountNumber: acc.AccountNumber,
 				Name:          acc.Name,
@@ -229,7 +229,7 @@ func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc
 				Currency:      acc.Currency,
 				Timestamp:     time.Now(),
 			}); err != nil {
-				utils.LogPublishErr("fm-service", domain.TopicFinAccountBalanceChanged, err)
+				utils.LogPublishErr("fm-service", domain.TopicFmAccountBalanceChanged, err)
 			}
 		}
 	}
@@ -463,7 +463,7 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 	for accountID := range snapshots {
 		acc, err := s.accounts.GetByID(ctx, accountID)
 		if err == nil {
-			if err := s.publisher.Publish(ctx, domain.TopicFinAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
+			if err := s.publisher.Publish(ctx, domain.TopicFmAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
 				ID:            acc.ID,
 				AccountNumber: acc.AccountNumber,
 				Name:          acc.Name,
@@ -472,7 +472,7 @@ func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string
 				Currency:      acc.Currency,
 				Timestamp:     time.Now(),
 			}); err != nil {
-				utils.LogPublishErr("fm-service", domain.TopicFinAccountBalanceChanged, err)
+				utils.LogPublishErr("fm-service", domain.TopicFmAccountBalanceChanged, err)
 			}
 		}
 	}

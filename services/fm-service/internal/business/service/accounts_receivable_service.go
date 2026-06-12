@@ -53,7 +53,7 @@ func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, customerI
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceCreated, inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceCreated, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:    inv.CustomerID,
 		InvoiceNumber: inv.InvoiceNumber,
@@ -61,7 +61,7 @@ func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, customerI
 		Status:        inv.Status,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinInvoiceCreated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceCreated, err)
 	}
 
 	return inv, nil
@@ -88,7 +88,7 @@ func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceUpdated, inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceUpdated, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:    inv.CustomerID,
 		InvoiceNumber: inv.InvoiceNumber,
@@ -96,7 +96,7 @@ func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string
 		Status:        inv.Status,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinInvoiceUpdated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceUpdated, err)
 	}
 
 	return inv, nil
@@ -119,7 +119,7 @@ func (s *AccountsReceivableService) SendInvoice(ctx context.Context, id string) 
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceSent, inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceSent, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:    inv.CustomerID,
 		InvoiceNumber: inv.InvoiceNumber,
@@ -127,7 +127,7 @@ func (s *AccountsReceivableService) SendInvoice(ctx context.Context, id string) 
 		Status:        inv.Status,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinInvoiceSent, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceSent, err)
 	}
 
 	return true, nil
@@ -155,7 +155,7 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		return err
 	}
 
-	if err := s.publisher.Publish(ctx, domain.TopicFinInvoiceOverdue, inv.ID, domain.InvoiceEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceOverdue, inv.ID, domain.InvoiceEventPayload{
 		ID:            inv.ID,
 		CustomerID:    inv.CustomerID,
 		InvoiceNumber: inv.InvoiceNumber,
@@ -163,7 +163,7 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		Status:        inv.Status,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinInvoiceOverdue, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceOverdue, err)
 	}
 	return nil
 }

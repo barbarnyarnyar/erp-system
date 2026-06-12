@@ -55,7 +55,7 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinVendorPaymentDue, bill.ID, domain.VendorBillEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmVendorPaymentDue, bill.ID, domain.VendorBillEventPayload{
 		ID:         bill.ID,
 		VendorID:   bill.SupplierID,
 		BillNumber: bill.BillNumber,
@@ -63,7 +63,7 @@ func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierI
 		DueDate:    bill.DueDate,
 		Timestamp:  time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinVendorPaymentDue, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmVendorPaymentDue, err)
 	}
 
 	return bill, nil

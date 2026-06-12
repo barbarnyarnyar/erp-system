@@ -17,7 +17,7 @@ func newPostedEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, acco
 	t.Helper()
 	ctx := context.Background()
 	acc := &domain.Account{
-		ID: "acc_a", AccountNumber: "1000", Name: "Cash", Type: domain.AccountTypeAsset,
+		ID: "acc_a", AccountNumber: "1000", Name: "Cash", Type: domain.AccountTypeASSET,
 		Balance: decimal.Zero, Currency: "USD", IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}
 	_ = accountRepo.Create(ctx, acc)
@@ -40,7 +40,7 @@ func newPendingEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, acc
 	t.Helper()
 	ctx := context.Background()
 	acc := &domain.Account{
-		ID: "acc_b", AccountNumber: "2000", Name: "Bank", Type: domain.AccountTypeAsset,
+		ID: "acc_b", AccountNumber: "2000", Name: "Bank", Type: domain.AccountTypeASSET,
 		Balance: decimal.Zero, Currency: "USD", IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}
 	_ = accountRepo.Create(ctx, acc)

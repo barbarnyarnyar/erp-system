@@ -2,9 +2,8 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type Quote struct {
@@ -12,9 +11,9 @@ type Quote struct {
 	CustomerID    string          `json:"customer_id"`
 	Title         string          `json:"title"`
 	ValidUntil    time.Time       `json:"valid_until"`
-	Status        string          `json:"status"` // e.g., DRAFT, SENT, ACCEPTED, EXPIRED, REJECTED
+	Status        string          `json:"status"`
 	TotalAmount   decimal.Decimal `json:"total_amount"`
-	OpportunityID *string         `json:"opportunity_id"`
+	OpportunityID *string         `json:"opportunity_id,omitempty"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }

@@ -2,9 +2,8 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type BankStatementLine struct {

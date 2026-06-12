@@ -2,35 +2,17 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
-
-type OpportunityStage string
-
-const (
-	OpportunityStageDiscovery   OpportunityStage = "DISCOVERY"
-	OpportunityStageNegotiation OpportunityStage = "NEGOTIATION"
-	OpportunityStageClosedWon   OpportunityStage = "CLOSED_WON"
-	OpportunityStageClosedLost  OpportunityStage = "CLOSED_LOST"
-)
-
-func (s OpportunityStage) IsValid() bool {
-	switch s {
-	case OpportunityStageDiscovery, OpportunityStageNegotiation, OpportunityStageClosedWon, OpportunityStageClosedLost:
-		return true
-	}
-	return false
-}
 
 type Opportunity struct {
 	ID          string           `json:"id"`
 	CustomerID  string           `json:"customer_id"`
 	Title       string           `json:"title"`
 	Value       decimal.Decimal  `json:"value"`
-	Status      string           `json:"status"` // e.g., NEW, QUALIFIED, PROPOSAL, WON, LOST
-	Stage       OpportunityStage `json:"stage"`  // e.g., DISCOVERY, NEGOTIATION
+	Status      string           `json:"status"`
+	Stage       OpportunityStage `json:"stage"`
 	Probability decimal.Decimal  `json:"probability"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`

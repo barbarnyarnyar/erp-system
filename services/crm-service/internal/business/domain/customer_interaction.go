@@ -8,7 +8,7 @@ import (
 type CustomerInteraction struct {
 	ID              string    `json:"id"`
 	CustomerID      string    `json:"customer_id"`
-	Type            string    `json:"type"` // e.g., CALL, EMAIL, MEETING, NOTE
+	Type            string    `json:"type"`
 	Subject         string    `json:"subject"`
 	Description     string    `json:"description"`
 	InteractionDate time.Time `json:"interaction_date"`

@@ -12,10 +12,10 @@ type Lead struct {
 	Company    string    `json:"company"`
 	Email      string    `json:"email"`
 	Phone      string    `json:"phone"`
-	Status     string    `json:"status"` // e.g., NEW, QUALIFIED, NURTURING, CONVERTED, LOST
+	Status     string    `json:"status"`
 	Score      int       `json:"score"`
-	Source     string    `json:"source"` // e.g., CAMPAIGN, WEBSITE, COLD_CALL
-	CampaignID *string   `json:"campaign_id"`
+	Source     string    `json:"source"`
+	CampaignID *string   `json:"campaign_id,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

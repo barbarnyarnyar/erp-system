@@ -2,21 +2,20 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type Payment struct {
 	ID            string          `json:"id"`
-	InvoiceID     *string         `json:"invoice_id"`
-	BillID        *string         `json:"bill_id"`
-	BankAccountID *string         `json:"bank_account_id"`
+	InvoiceID     *string         `json:"invoice_id,omitempty"`
+	BillID        *string         `json:"bill_id,omitempty"`
+	BankAccountID *string         `json:"bank_account_id,omitempty"`
 	PaymentNumber string          `json:"payment_number"`
 	PaymentDate   time.Time       `json:"payment_date"`
 	Amount        decimal.Decimal `json:"amount"`
-	PaymentMethod string          `json:"payment_method"` // e.g., CASH, CHECK, BANK_TRANSFER, CARD
-	Status        string          `json:"status"`         // e.g., PENDING, COMPLETED, FAILED
+	PaymentMethod string          `json:"payment_method"`
+	Status        string          `json:"status"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }

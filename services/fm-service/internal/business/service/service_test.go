@@ -35,8 +35,8 @@ func TestGeneralLedgerService_CreateAccount_PublishesEvent(t *testing.T) {
 	}
 
 	ev := publisher.Events[0]
-	if ev.Topic != "fin.account.created" {
-		t.Errorf("expected topic fin.account.created, got %s", ev.Topic)
+	if ev.Topic != domain.TopicFmAccountCreated {
+		t.Errorf("expected topic %s, got %s", domain.TopicFmAccountCreated, ev.Topic)
 	}
 
 	payload, ok := ev.Payload.(domain.AccountEventPayload)
@@ -78,8 +78,8 @@ func TestAccountsReceivableService_CreateInvoice_PublishesEvent(t *testing.T) {
 	}
 
 	ev := publisher.Events[0]
-	if ev.Topic != "fin.invoice.created" {
-		t.Errorf("expected topic fin.invoice.created, got %s", ev.Topic)
+	if ev.Topic != domain.TopicFmInvoiceCreated {
+		t.Errorf("expected topic %s, got %s", domain.TopicFmInvoiceCreated, ev.Topic)
 	}
 }
 

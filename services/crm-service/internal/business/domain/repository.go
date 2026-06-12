@@ -3,10 +3,10 @@ package domain
 import "context"
 
 type CustomerRepository interface {
-	Create(ctx context.Context, customer *Customer) error
-	GetByID(ctx context.Context, id string) (*Customer, error)
-	List(ctx context.Context) ([]Customer, error)
-	Update(ctx context.Context, customer *Customer) error
+	Create(ctx context.Context, customer *CustomerProfile) error
+	GetByID(ctx context.Context, id string) (*CustomerProfile, error)
+	List(ctx context.Context) ([]CustomerProfile, error)
+	Update(ctx context.Context, customer *CustomerProfile) error
 	Delete(ctx context.Context, id string) error
 }
 
@@ -34,9 +34,9 @@ type SalesOrderRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type SalesOrderItemRepository interface {
-	Create(ctx context.Context, item *SalesOrderItem) error
-	ListByOrderID(ctx context.Context, orderID string) ([]SalesOrderItem, error)
+type SalesOrderLineRepository interface {
+	Create(ctx context.Context, item *SalesOrderLine) error
+	ListByOrderID(ctx context.Context, orderID string) ([]SalesOrderLine, error)
 }
 
 type QuoteRepository interface {
@@ -52,17 +52,17 @@ type QuoteLineItemRepository interface {
 	ListByQuoteID(ctx context.Context, quoteID string) ([]QuoteLineItem, error)
 }
 
-type PriceListRepository interface {
-	Create(ctx context.Context, priceList *PriceList) error
-	GetByID(ctx context.Context, id string) (*PriceList, error)
-	List(ctx context.Context) ([]PriceList, error)
-	Update(ctx context.Context, priceList *PriceList) error
+type PriceBookHeaderRepository interface {
+	Create(ctx context.Context, priceBook *PriceBookHeader) error
+	GetByID(ctx context.Context, id string) (*PriceBookHeader, error)
+	List(ctx context.Context) ([]PriceBookHeader, error)
+	Update(ctx context.Context, priceBook *PriceBookHeader) error
 	Delete(ctx context.Context, id string) error
 }
 
-type PriceListItemRepository interface {
-	Create(ctx context.Context, item *PriceListItem) error
-	ListByPriceListID(ctx context.Context, priceListID string) ([]PriceListItem, error)
+type PriceBookEntryRepository interface {
+	Create(ctx context.Context, item *PriceBookEntry) error
+	ListByPriceBookID(ctx context.Context, priceBookID string) ([]PriceBookEntry, error)
 }
 
 type ServiceTicketRepository interface {

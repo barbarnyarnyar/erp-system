@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type SalesOrderStatus string
+type SalesOrderStatus = SalesOrderState
 
 const (
 	SalesOrderStatusDraft     SalesOrderStatus = "DRAFT"
@@ -14,15 +14,6 @@ const (
 	SalesOrderStatusDelivered SalesOrderStatus = "DELIVERED"
 	SalesOrderStatusCancelled SalesOrderStatus = "CANCELLED"
 )
-
-func (s SalesOrderStatus) IsValid() bool {
-	switch s {
-	case SalesOrderStatusDraft, SalesOrderStatusConfirmed, SalesOrderStatusShipped,
-		SalesOrderStatusDelivered, SalesOrderStatusCancelled:
-		return true
-	}
-	return false
-}
 
 var (
 	ErrOrderNotConfirmable = errors.New("sales order is not in a confirmable state")
@@ -34,10 +25,10 @@ var (
 )
 
 func (o *SalesOrder) CanConfirm() bool {
-	return o != nil && o.Status == string(SalesOrderStatusDraft)
+	return o != nil && o.Status == SalesOrderStatusDraft
 }
 
 func (o *SalesOrder) MarkConfirmed(at time.Time) {
-	o.Status = string(SalesOrderStatusConfirmed)
+	o.Status = SalesOrderStatusConfirmed
 	o.UpdatedAt = at
 }

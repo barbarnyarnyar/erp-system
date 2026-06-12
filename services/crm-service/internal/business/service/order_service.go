@@ -18,14 +18,14 @@ type SalesOrderItemInput struct {
 
 type SalesOrderService struct {
 	orderRepo     domain.SalesOrderRepository
-	orderItemRepo domain.SalesOrderItemRepository
+	orderItemRepo domain.SalesOrderLineRepository
 	customerRepo  domain.CustomerRepository
 	publisher     domain.EventPublisher
 }
 
 func NewSalesOrderService(
 	orderRepo domain.SalesOrderRepository,
-	orderItemRepo domain.SalesOrderItemRepository,
+	orderItemRepo domain.SalesOrderLineRepository,
 	customerRepo domain.CustomerRepository,
 	publisher domain.EventPublisher,
 ) *SalesOrderService {
@@ -47,13 +47,17 @@ func (s *SalesOrderService) CreateSalesOrder(ctx context.Context, customerID str
 	}
 
 	order := &domain.SalesOrder{
-		ID:          orderID,
-		CustomerID:  customerID,
-		OrderDate:   time.Now(),
-		Status:      "DRAFT",
-		TotalAmount: total,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:              orderID,
+		LegalEntityID:   "default_entity_id",
+		CustomerID:      customerID,
+		PriceBookID:     "default_price_book_id",
+		OrderNumber:     "SO-" + orderID[:8],
+		Status:          domain.SalesOrderStateDRAFT,
+		TotalGrossValue: total,
+		TotalTaxValue:   decimal.Zero,
+		Version:         1,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	err := s.orderRepo.Create(ctx, order)
@@ -61,15 +65,21 @@ func (s *SalesOrderService) CreateSalesOrder(ctx context.Context, customerID str
 		return nil, err
 	}
 
-	for _, it := range items {
+	for i, it := range items {
 		itemID := utils.NewID("soi")
-		item := &domain.SalesOrderItem{
-			ID:           itemID,
-			SalesOrderID: orderID,
-			ProductID:    it.ProductID,
-			Quantity:     it.Quantity,
-			UnitPrice:    it.UnitPrice,
-			Discount:     it.Discount,
+		subtotal := decimal.NewFromInt(int64(it.Quantity)).Mul(it.UnitPrice).Sub(it.Discount)
+		item := &domain.SalesOrderLine{
+			ID:              itemID,
+			SalesOrderID:    orderID,
+			MaterialID:      it.ProductID,
+			LineSequence:    (i + 1) * 10,
+			QuantityOrdered: decimal.NewFromInt(int64(it.Quantity)),
+			QuantityShipped: decimal.Zero,
+			UnitSellPrice:   it.UnitPrice,
+			DiscountApplied: it.Discount,
+			NetLineAmount:   subtotal,
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
 		}
 		_ = s.orderItemRepo.Create(ctx, item)
 	}
@@ -100,7 +110,7 @@ func (s *SalesOrderService) UpdateSalesOrder(ctx context.Context, id string, sta
 		return nil, err
 	}
 
-	order.Status = status
+	order.Status = domain.SalesOrderState(status)
 	order.UpdatedAt = time.Now()
 
 	err = s.orderRepo.Update(ctx, order)
@@ -111,7 +121,7 @@ func (s *SalesOrderService) UpdateSalesOrder(ctx context.Context, id string, sta
 	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderUpdated, id, domain.SalesOrderUpdatedEvent{
 		SalesOrderID: id,
 		Status:       status,
-		TotalAmount:  order.TotalAmount,
+		TotalAmount:  order.TotalGrossValue,
 		Timestamp:    time.Now(),
 	}); err != nil {
 		utils.LogPublishErr("crm-service", domain.TopicCrmSalesOrderUpdated, err)
@@ -122,7 +132,7 @@ func (s *SalesOrderService) UpdateSalesOrder(ctx context.Context, id string, sta
 		if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderConfirmed, id, domain.SalesOrderConfirmedEvent{
 			SalesOrderID: id,
 			CustomerID:   order.CustomerID,
-			TotalAmount:  order.TotalAmount,
+			TotalAmount:  order.TotalGrossValue,
 			Timestamp:    time.Now(),
 		}); err != nil {
 			utils.LogPublishErr("crm-service", domain.TopicCrmSalesOrderConfirmed, err)
@@ -168,7 +178,7 @@ func (s *SalesOrderService) ConfirmSalesOrder(ctx context.Context, id string) (*
 	if err != nil {
 		return nil, domain.ErrCustomerNotFound
 	}
-	if customer.Status != domain.CustomerStatusActive {
+	if customer.Status != domain.CustomerStatusACTIVE {
 		return nil, domain.ErrCustomerNotActive
 	}
 
@@ -177,7 +187,7 @@ func (s *SalesOrderService) ConfirmSalesOrder(ctx context.Context, id string) (*
 		return nil, domain.ErrOrderHasNoItems
 	}
 	for _, it := range items {
-		if it.Quantity <= 0 {
+		if it.QuantityOrdered.LessThanOrEqual(decimal.Zero) {
 			return nil, domain.ErrInvalidItemQuantity
 		}
 	}
@@ -190,7 +200,7 @@ func (s *SalesOrderService) ConfirmSalesOrder(ctx context.Context, id string) (*
 	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderConfirmed, order.ID, domain.SalesOrderConfirmedEvent{
 		SalesOrderID: order.ID,
 		CustomerID:   order.CustomerID,
-		TotalAmount:  order.TotalAmount,
+		TotalAmount:  order.TotalGrossValue,
 		Timestamp:    time.Now(),
 	}); err != nil {
 		utils.LogPublishErr("crm-service", domain.TopicCrmSalesOrderConfirmed, err)

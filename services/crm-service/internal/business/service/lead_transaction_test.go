@@ -186,7 +186,7 @@ func TestOpportunityStageHistory(t *testing.T) {
 	if len(hist) != 1 {
 		t.Fatalf("expected 1 history record, got %d", len(hist))
 	}
-	if hist[0].Stage != domain.OpportunityStageDiscovery {
+	if hist[0].Stage != domain.OpportunityStageDISCOVERY {
 		t.Errorf("expected stage DISCOVERY, got %s", hist[0].Stage)
 	}
 
@@ -201,7 +201,7 @@ func TestOpportunityStageHistory(t *testing.T) {
 	if len(hist) != 2 {
 		t.Fatalf("expected 2 history records, got %d", len(hist))
 	}
-	if hist[1].Stage != domain.OpportunityStageNegotiation || hist[1].ChangedBy != "sales_rep_1" {
+	if hist[1].Stage != domain.OpportunityStageNEGOTIATION || hist[1].ChangedBy != "sales_rep_1" {
 		t.Errorf("unexpected stage history entry: %+v", hist[1])
 	}
 }

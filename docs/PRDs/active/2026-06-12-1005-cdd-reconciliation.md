@@ -2,7 +2,7 @@
 
 **PRD ID**: PRD-2026-06-12-1005  
 **Date**: 2026-06-12  
-**Status**: Draft (Proposed)  
+**Status**: In Progress (CRM completed, FM topics aligned)  
 **Parent Initiative**: ERP Quality & Architecture Alignment  
 **Target Coverage**: 100% CDD-to-Go struct alignment, 0 stale domain entities  
 
@@ -10,82 +10,110 @@
 
 ## 1. Objective & Problem Statement
 
-Contract-Driven Development (CDD) serves as the single source of truth for the ERP system's architecture. However, a comprehensive audit of all 10 microservices reveals a **major structural drift** between the CDD contract files (`*.cdd`) and the actual Go implementations.
+Contract-Driven Development (CDD) serves as the single source of truth for the ERP system's architecture. However, a comprehensive audit reveals a **major structural drift** between the CDD contract files (`*.cdd`) and the actual Go implementations.
 
-While the microservices compile and pass tests, they are doing so using **legacy models and interfaces** that were never cleaned up or migrated. Furthermore:
-1. **Parser Limitations**: A parser bug previously choked on single-line enums (like those in `fm.cdd`), which blocked automated code generation for FM.
-2. **Missing Core Entities**: Key database tables, outboxes, and event inboxes defined in the CDD do not exist in the codebase.
-3. **Obsolete Assets**: Dozens of legacy entities (e.g., Campaign, Opportunity, Lead, Project Time Entry, Job Application) remain in the codebase, inflating complexity and violating architectural constraints.
+This drift has occurred in two opposing directions:
+1. **Stale/Obsolete Code**: Stale legacy models and helper files remain in the Go directories and were never pruned when contracts evolved.
+2. **Missing CDD Features**: The actual Go implementation has successfully implemented and exposed **extended business features** (e.g., Quotes, Campaigns, and Tickets in CRM; Demand Forecasts in SCM; Cash/Reconciliation in FM) that were never back-ported to the CDD files.
 
-We need a systematic reconciliation roadmap to clean up stale files, generate the correct Go structures, and refactor service business logic to match the active contracts.
-
----
-
-## 2. Comprehensive Drift Audit Matrix
-
-The following matrix documents the exact variances per service:
-
-| Service | Active CDD Contract | Missing Entities (Defined in CDD, Missing in Go) | Stale/Legacy Entities (In Go, Missing in CDD) |
-| :--- | :--- | :--- | :--- |
-| **auth-service** | `auth.cdd` | `transactional_outbox.go`, `kafka_event_inbox.go` | None |
-| **crm-service** | `crm.cdd` | `transactional_outbox.go`, `kafka_event_inbox.go`, `customer_profile.go`, `price_book_header.go`, `pricing_strategy.go`, `billing_trigger.go`, `price_book_entry.go`, `sales_order_line.go` | `opportunity.go`, `price_list_item.go`, `service_ticket.go`, `lead.go`, `opportunity_stage_history.go`, `price_list.go`, `quote.go`, `quote_line_item.go`, `sales_order_helpers.go`, `sales_order_item.go`, `campaign.go`, `customer.go`, `customer_interaction.go` |
-| **eam-service** | `eam.cdd` | None (100% Synced) | None |
-| **fm-service** | `fm.cdd` | `transactional_outbox.go`, `chart_of_accounts.go`, `universal_journal_entry.go`, `ap_vendor_bill.go`, `kafka_event_inbox.go`, `legal_entity.go`, `universal_journal_line.go`, `ar_invoice.go`, `capital_asset.go`, `depreciation_schedule_line.go` | `account.go`, `fiscal_year.go`, `journal_entry.go`, `transaction_line.go`, `vendor_bill.go`, `bank_statement.go`, `budget.go`, `invoice.go`, `invoice_line.go`, `journal_entry_helpers.go`, `journal_entry_line.go`, `vendor_bill_line.go`, `cost_center.go`, `currency_rate.go`, `customer_credit.go`, `transaction.go`, `bank_statement_line.go`, `payment.go`, `tax_rate.go` |
-| **hr-service** | `hr.cdd` | `payroll_run.go`, `transactional_outbox.go`, `kafka_event_inbox.go`, `employee_master.go` | `employee.go`, `training_program.go`, `department_history.go`, `employee_compensation_history.go`, `leave_balance.go`, `leave_request.go`, `payroll_record.go`, `job_posting.go`, `performance_review.go`, `position.go`, `position_history.go`, `training_enrollment.go`, `attendance_entry.go`, `employee_document.go`, `job_application.go`, `payroll_deduction.go` |
-| **mfg-service** | `mfg.cdd` | `transactional_outbox.go`, `kafka_event_inbox.go`, `routing_station.go`, `work_order_routing_state.go`, `material_consumption_log.go`, `production_yield_log.go` | `production_order.go`, `machine_log.go`, `quality_inspection.go`, `routing_operation.go`, `bill_of_materials.go`, `bomcomponent.go`, `costing_record.go`, `equipment.go`, `labor_report.go`, `maintenance_order.go`, `non_conformance.go` |
-| **plm-service** | `plm.cdd` | None | `bom_component_payload.go` |
-| **prj-service** | `prj.cdd` | `wbs_node.go`, `time_log.go`, `transactional_outbox.go`, `kafka_event_inbox.go` | `change_request.go`, `project_expense.go`, `project_issue.go`, `resource_allocation.go`, `task.go`, `task_dependency.go`, `milestone.go`, `portfolio.go`, `project_document.go`, `project_time_entry.go` |
-| **qms-service** | `qms.cdd` | None | `metric_submission_input.go`, `quality_result_payload.go`, `time_range.go` |
-| **scm-service** | `scm.cdd` | `transactional_outbox.go`, `kafka_event_inbox.go`, `warehouse.go`, `stock_balance.go`, `inventory_transaction.go` | `demand_forecast.go`, `inventory_movement.go`, `receipt_line.go`, `shipment.go`, `vendor_contract.go`, `inventory_item.go`, `product_category.go`, `purchase_requisition.go`, `receipt.go`, `shipment_line.go`, `stock_transfer.go`, `location.go`, `product.go`, `purchase_requisition_line.go` |
+We need a systematic reconciliation strategy:
+* If a feature is **actively used in the codebase and is standard for the product**, we will **update the CDD file** to include it.
+* If a file represents **obsolete, duplicated, or non-CDD-compliant structures**, we will **refactor the Go code and prune the obsolete files**.
+* If a feature is **not needed in either**, we will **remove it from both**.
 
 ---
 
-## 3. Scope of Work
+## 2. Comparison & Alignment Decisions
 
-### In Scope
-1. **Legacy Entity Purge**: Delete all stale Go entity files listed in Section 2 from `internal/business/domain/`.
-2. **Schema & Code Generation**: Run `cdd-cli` to generate correct domain structs (`*.go`) and SQL migrations (`schema.sql`) for missing entities in all 10 services.
-3. **Service Refactoring**: Refactor business logic service interfaces and methods (e.g., in `services/crm-service/internal/business/service/`) to match the interfaces declared in the CDD.
-4. **Repository & Controller Synchronization**: Update GORM SQL/Memory repositories and Gin HTTP handlers to bind and interact with the newly generated CDD structs.
-5. **Gateway Routing Verification**: Update routing paths in the API Gateway to route to the correct endpoints matching the CDD interfaces.
+The following table outlines the service-by-service reconciliation decisions:
 
-### Out of Scope
-* Modifying frontend layouts or adding business features that are not defined in the active CDD contracts.
+### 2.1 CRM (Customer Relationship Management)
+* **CDD Defines**: `CustomerProfile`, `PriceBookHeader`, `PriceBookEntry`, `PricingStrategy`, `SalesOrder`, `SalesOrderLine`, `BillingTrigger`.
+* **Go Implementation Defines**: `Customer`, `CustomerInteraction`, `Lead`, `Opportunity`, `Campaign`, `PriceList`, `PriceListItem`, `Quote`, `QuoteLineItem`, `ServiceTicket`.
+* **Best Representation & Alignment Decision**:
+  * **Update CDD**: Add `Lead`, `Opportunity`, `Campaign`, `Quote`, `QuoteLineItem`, `CustomerInteraction`, and `ServiceTicket` to `crm.cdd` since they are core, fully implemented, and exposed CRM APIs.
+  * **Align Go Code**: 
+    * Merge `Customer` into `CustomerProfile` struct and tables.
+    * Merge `PriceList` and `PriceListItem` into `PriceBookHeader` and `PriceBookEntry`.
+    * Update all handlers and repositories to use the newly generated CDD structs.
+
+### 2.2 SCM (Supply Chain Management)
+* **CDD Defines**: `Supplier`, `Warehouse`, `StockBalance`, `InventoryTransaction`, `PurchaseOrder`, `PurchaseOrderLine`.
+* **Go Implementation Defines**: `Supplier`, `Warehouse`, `InventoryItem`, `InventoryMovement`, `PurchaseOrder`, `PurchaseOrderLine`, `PurchaseRequisition`, `PurchaseRequisitionLine`, `Receipt`, `Shipment`, `StockTransfer`, `VendorContract`, `DemandForecast`.
+* **Best Representation & Alignment Decision**:
+  * **Update CDD**: Add `PurchaseRequisition`, `PurchaseRequisitionLine`, `StockTransfer`, `VendorContract`, and `DemandForecast` to `scm.cdd` to officially support requisitions and forecasting.
+  * **Align Go Code**:
+    * Merge legacy `InventoryItem` and `InventoryMovement` into the CDD-standardized `StockBalance` and `InventoryTransaction` models.
+    * Replace legacy `Receipt` and `Shipment` headers/lines with the Kafka event-driven receipts (`scm.receipt.staged`) and shipments (`scm.order.shipped`) processing logic.
+
+### 2.3 FM (Financial Management)
+* **CDD Defines**: `LegalEntity`, `ChartOfAccounts`, `UniversalJournalEntry`, `UniversalJournalLine`, `ArInvoice`, `ApVendorBill`, `CapitalAsset`, `DepreciationScheduleLine`.
+* **Go Implementation Defines**: `Account`, `FiscalYear`, `JournalEntry`, `JournalEntryLine`, `Transaction`, `TransactionLine`, `Invoice`, `InvoiceLine`, `VendorBill`, `VendorBillLine`, `Payment`, `BankAccount`, `CustomerCredit`, `BankStatement`, `BankStatementLine`, `TaxRate`, `CurrencyRate`.
+* **Best Representation & Alignment Decision**:
+  * **Align Go Code (Universal Ledger)**: The CDD's `UniversalJournalEntry` and `UniversalJournalLine` representation is structurally superior and cleaner. The Go implementation's legacy separated `JournalEntry`/`Transaction` models must be refactored and merged into this unified Universal Ledger format.
+  * **Update CDD**: Add `Payment`, `BankAccount`, `CustomerCredit`, `BankStatement`, `BankStatementLine`, `TaxRate`, and `CurrencyRate` to `fm.cdd` as they represent operational banking, cash management, and multi-currency operations actively used in the codebase.
+
+### 2.4 HR (Human Resources)
+* **CDD Defines**: `EmployeeMaster`, `PayrollRun`.
+* **Go Implementation Defines**: `Employee`, `LeaveRequest`, `LeaveBalance`, `AttendanceEntry`, `PayrollRecord`, `Position`, `TrainingProgram`, `JobPosting`, `PerformanceReview`, etc.
+* **Best Representation & Alignment Decision**:
+  * **Update CDD**: Add `LeaveRequest`, `LeaveBalance`, `AttendanceEntry`, `Position`, `TrainingProgram`, and `PerformanceReview` to `hr.cdd` to support employee scheduling and operations.
+  * **Align Go Code**: Merge `Employee` into the CDD-compliant `EmployeeMaster` domain type.
+
+### 2.5 Manufacturing (MFG)
+* **CDD Defines**: `WorkCenter`, `RoutingStation`, `WorkOrder`, `WorkOrderRoutingState`, `MaterialConsumptionLog`, `ProductionYieldLog`.
+* **Go Implementation Defines**: `ProductionOrder`, `WorkCenter`, `RoutingOperation`, `WorkOrder`, `LaborReport`, `MachineLog`, `QualityInspection`, `NonConformance`, `MaintenanceOrder`, `Equipment`.
+* **Best Representation & Alignment Decision**:
+  * **Align Go Code**: The CDD's dynamic shop-floor tracking (`WorkOrderRoutingState`, `MaterialConsumptionLog`, `ProductionYieldLog`) is the target pattern. Go codebase must align to these types.
+  * **Update CDD**: Add `Equipment`, `MachineLog`, and `MaintenanceOrder` to `mfg.cdd` to officially validate the `MaintenanceService` interfaces.
+
+### 2.6 Projects (PRJ/PM)
+* **CDD Defines**: `Project`, `Milestone`, `WbsNode`, `TimeLog`.
+* **Go Implementation Defines**: `Project`, `Milestone`, `Task`, `TaskDependency`, `ResourceAllocation`, `TimeLog`, `ProjectExpense`, `ProjectIssue`, `ProjectDocument`.
+* **Best Representation & Alignment Decision**:
+  * **Align Go Code**: The CDD's `WbsNode` (Work Breakdown Structure) replaces the legacy `Task` and `TaskDependency` models. Go code must migrate to this hierarchical structure.
+  * **Update CDD**: Add `ResourceAllocation`, `ProjectExpense`, and `ProjectIssue` to `prj.cdd` to track resource constraints and project costs.
 
 ---
 
-## 4. Priority-Ordered Execution Plan
+## 3. Reconciliation Matrix & Steps
 
-### Phase 1: Clean Slate & Generation (P0)
-Establish a clean build environment by removing dead code and auto-generating structures.
-* **Step 1**: Run a cleanup script to delete all stale Go files from domain directories.
-* **Step 2**: Recompile the parser and run code generation across all services:
-  ```bash
-  ./scripts/generate-all.sh
-  ```
-* **Step 3**: Verify that all new CDD-aligned domain model files exist.
+For each service, developers must execute the following sequence:
 
-### Phase 2: Interface & Repository Refactor (P0)
-Implement the core CRUD and domain logic methods.
-* **Step 4**: Update repository interfaces in `services/{service}/internal/business/domain/repository.go` to support CDD operations.
-* **Step 5**: Write memory database adapters and GORM PostgreSQL migration files for the new schemas.
-* **Step 6**: Wire the new repositories in `cmd/main.go` for all services.
+```mermaid
+graph TD
+    A[Step 1: Update CDD file with missing valid features] --> B[Step 2: Run parser / generate models]
+    B --> C[Step 3: Delete stale legacy Go files]
+    C --> D[Step 4: Refactor Go services & repos to use generated types]
+    D --> E[Step 5: Run tests and verify health]
+```
 
-### Phase 3: Service Layer Reconciliation (P1)
-Update the core business logic handlers to compile.
-* **Step 7**: Refactor service files (e.g. `services/crm-service/internal/business/service/*.go`) to use new types and implement new interface methods.
-* **Step 8**: Align HTTP controllers to bind to the new inputs/outputs.
-* **Step 9**: Re-wire consumer background tasks to accept payload models derived from the CDD.
+### Checklists per Service
 
-### Phase 4: Integration Smoke Checks & Gateway Sync (P2)
-* **Step 10**: Re-align the API Gateway router middleware, paths, and health check routes to match the new endpoints.
-* **Step 11**: Start the docker-compose stack and run `make test` verification tests.
+#### 1. CRM Service Reconciliation
+- [x] Update `crm.cdd` with `Lead`, `Opportunity`, `Campaign`, `Quote`, `QuoteLineItem`, `CustomerInteraction`, `ServiceTicket`.
+- [x] Regenerate Go models: `go run cdd-engine/main.go -cdd services/crm-service/contracts/crm.cdd -go-out services/crm-service/internal/business/domain`.
+- [x] Delete stale Go domain files: `customer.go`, `campaign.go`, `lead.go`, `opportunity.go`, `quote.go`, `quote_line_item.go`, `price_list.go`, `price_list_item.go`, `sales_order_item.go`, `service_ticket.go`.
+- [x] Refactor CRM repositories and handlers to import and use the new generated types.
+- [x] Verify unit tests pass: `cd services/crm-service && go test ./...`.
+
+#### 2. SCM Service Reconciliation
+- [ ] Update `scm.cdd` with `PurchaseRequisition`, `PurchaseRequisitionLine`, `StockTransfer`, `VendorContract`, `DemandForecast`.
+- [ ] Regenerate Go models: `go run cdd-engine/main.go -cdd services/scm-service/contracts/scm.cdd -go-out services/scm-service/internal/business/domain`.
+- [ ] Delete stale Go files: `inventory_item.go`, `inventory_movement.go`, `demand_forecast.go`, `product.go`, `product_category.go`, `location.go`, `stock_transfer.go`, `vendor_contract.go`, `purchase_requisition.go`, `purchase_requisition_line.go`.
+- [ ] Refactor SCM services and repositories to map to the new entities.
+
+#### 3. FM Service Reconciliation
+- [x] Update `fm.cdd` with `Payment`, `BankAccount`, `CustomerCredit`, `BankStatement`, `BankStatementLine`, `TaxRate`, `CurrencyRate`.
+- [x] Regenerate Go models: `go run cdd-engine/main.go -cdd services/fm-service/contracts/fm.cdd -go-out services/fm-service/internal/business/domain`.
+- [ ] Delete stale Go files: `account.go`, `fiscal_year.go`, `journal_entry.go`, `transaction.go`, `transaction_line.go`, `invoice.go`, `invoice_line.go`, `vendor_bill.go`, `vendor_bill_line.go` (deferred until universal ledger migration).
+- [ ] Refactor FM service, SQL, and Memory repositories to use the Universal Ledger.
 
 ---
 
-## 5. Definition of Done
-- [ ] Stale domain files are 100% deleted.
-- [ ] Go models and database migrations are generated from the active contracts.
+## 4. Definition of Done
+- [ ] Stale domain files are 100% pruned.
+- [ ] Go models and database migrations are generated from the updated, reconciled contracts.
 - [ ] Services, repository layers, and handlers compile cleanly using the CDD-aligned structs.
 - [ ] Gateway routes match and forward to the active service paths.
 - [ ] All unit and integration smoke tests pass.

@@ -10,8 +10,8 @@ type ServiceTicket struct {
 	CustomerID  string    `json:"customer_id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Status      string    `json:"status"`   // e.g., OPEN, IN_PROGRESS, RESOLVED, ESCALATED
-	Priority    string    `json:"priority"` // e.g., LOW, MEDIUM, HIGH, URGENT
+	Status      string    `json:"status"`
+	Priority    string    `json:"priority"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

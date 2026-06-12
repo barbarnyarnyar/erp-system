@@ -46,8 +46,8 @@ func NewKafkaConsumer(
 	topics := []string{
 		domain.TopicScmInventoryAvailable,
 		domain.TopicScmShipmentDelivered,
-		domain.TopicFinPaymentReceived,
-		domain.TopicFinCreditCheckCompleted,
+		domain.TopicFmPaymentReceived,
+		domain.TopicFmCreditCheckCompleted,
 		domain.TopicMfgProductionCompleted,
 		domain.TopicPrjProjectCompleted,
 		domain.TopicHrEmployeePerformance,
@@ -145,7 +145,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		return nil
 
-	case domain.TopicFinPaymentReceived:
+	case domain.TopicFmPaymentReceived:
 		var ev domain.PaymentReceivedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
@@ -153,7 +153,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		log.Printf("Processing Financial Payment Received: Invoice %s, ref %s for amount %s received. Updating customer payment history in CRM.", ev.InvoiceID, ev.ReferenceID, ev.Amount.String())
 		return nil
 
-	case domain.TopicFinCreditCheckCompleted:
+	case domain.TopicFmCreditCheckCompleted:
 		var ev domain.CreditCheckCompletedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err

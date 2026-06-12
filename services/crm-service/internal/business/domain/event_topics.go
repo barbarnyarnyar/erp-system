@@ -3,6 +3,9 @@ package domain
 
 const (
 	// Producer Events
+	TopicCrmOrderConfirmed            = "crm.order.confirmed"
+	TopicCrmOrderCancelled            = "crm.order.cancelled"
+	TopicCrmBillingAccrued            = "crm.billing.accrued"
 	TopicCrmCustomerCreated           = "crm.customer.created"
 	TopicCrmCustomerUpdated           = "crm.customer.updated"
 	TopicCrmCustomerActivated         = "crm.customer.activated"
@@ -34,11 +37,14 @@ const (
 	TopicCrmCustomerInteractionLogged = "crm.customer.interaction.logged"
 
 	// Consumer Events
-	TopicScmInventoryAvailable   = "scm.inventory.available"
-	TopicScmShipmentDelivered    = "scm.shipment.delivered"
-	TopicFinPaymentReceived      = "fin.payment.received"
-	TopicFinCreditCheckCompleted = "fin.credit.check.completed"
-	TopicMfgProductionCompleted  = "mfg.production.completed"
-	TopicPrjProjectCompleted     = "prj.project.completed"
-	TopicHrEmployeePerformance   = "hr.employee.performance"
+	TopicPlmMaterialReleased    = "plm.material.released"
+	TopicScmOrderShipped        = "scm.order.shipped"
+	TopicPrjMilestoneAchieved   = "prj.milestone.achieved"
+	TopicScmInventoryAvailable  = "scm.inventory.available"
+	TopicScmShipmentDelivered   = "scm.shipment.delivered"
+	TopicFmPaymentReceived      = "fm.payment.received"
+	TopicFmCreditCheckCompleted = "fm.credit.check.completed"
+	TopicMfgProductionCompleted = "mfg.production.completed"
+	TopicPrjProjectCompleted    = "prj.project.completed"
+	TopicHrEmployeePerformance  = "hr.employee.performance"
 )

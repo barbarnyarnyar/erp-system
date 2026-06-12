@@ -27,7 +27,7 @@ const (
 	TopicHrExpenseSubmittedDeadLetter      = domain.TopicHrExpenseSubmitted + ".dead-letter"
 	TopicScmPurchaseOrderCreatedDeadLetter = domain.TopicScmPurchaseOrderCreated + ".dead-letter"
 	TopicScmInventoryValuedDeadLetter      = domain.TopicScmInventoryValued + ".dead-letter"
-	TopicCrmSalesOrderConfirmedDeadLetter  = domain.TopicCrmSalesOrderConfirmed + ".dead-letter"
+	TopicCrmOrderConfirmedDeadLetter  = domain.TopicCrmOrderConfirmed + ".dead-letter"
 	TopicCrmCustomerCreatedDeadLetter      = domain.TopicCrmCustomerCreated + ".dead-letter"
 	TopicMfgProductionCompletedDeadLetter  = domain.TopicMfgProductionCompleted + ".dead-letter"
 	TopicMfgMaterialConsumedDeadLetter     = domain.TopicMfgMaterialConsumed + ".dead-letter"
@@ -65,7 +65,7 @@ func NewKafkaConsumer(
 		domain.TopicScmPurchaseOrderCreated,
 		domain.TopicScmInvoiceReceived,
 		domain.TopicScmInventoryValued,
-		domain.TopicCrmSalesOrderConfirmed,
+		domain.TopicCrmOrderConfirmed,
 		domain.TopicCrmCustomerCreated,
 		domain.TopicMfgProductionCompleted,
 		domain.TopicMfgMaterialConsumed,
@@ -302,7 +302,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		_, err = c.gl.CreateJournalEntry(ctx, "INV-VAL-"+ev.LocationID, "Update inventory accounts valuation", lines)
 		return err
 
-	case domain.TopicCrmSalesOrderConfirmed:
+	case domain.TopicCrmOrderConfirmed:
 		var ev domain.SalesOrderConfirmedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err

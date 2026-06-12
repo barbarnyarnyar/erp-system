@@ -2,18 +2,20 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type SalesOrder struct {
-	ID            string          `json:"id"`
-	CustomerID    string          `json:"customer_id"`
-	OrderDate     time.Time       `json:"order_date"`
-	Status        string          `json:"status"` // e.g., DRAFT, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
-	TotalAmount   decimal.Decimal `json:"total_amount"`
-	OpportunityID *string         `json:"opportunity_id"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	ID              string          `json:"id"`
+	LegalEntityID   string          `json:"legal_entity_id"`
+	CustomerID      string          `json:"customer_id"`   // Strict Relational Internal Link
+	PriceBookID     string          `json:"price_book_id"` // Strict Relational Internal Link
+	OrderNumber     string          `json:"order_number"`  // e.g., "SO-0004122"
+	Status          SalesOrderState `json:"status"`
+	TotalGrossValue decimal.Decimal `json:"total_gross_value"`
+	TotalTaxValue   decimal.Decimal `json:"total_tax_value"`
+	Version         int             `json:"version"` // Concurrency Verification Shield (Optimistic Locking)
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }

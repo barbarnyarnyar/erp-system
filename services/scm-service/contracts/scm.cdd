@@ -35,6 +35,12 @@ enum EventProcessingStatus {
     FAILED
 }
 
+struct RequisitionLineInput {
+    product_id: uuid;
+    quantity_requested: int;
+    estimated_unit_price: decimal;
+}
+
 @table("scm_suppliers")
 @unique_composite(legal_entity_id, supplier_code)
 entity Supplier {
@@ -147,10 +153,73 @@ entity KafkaEventInbox {
     payload: jsonb;                               
 }
 
+@table("scm_demand_forecasts")
+entity DemandForecast {
+    id: uuid @primary;
+    product_id: uuid;
+    forecast_date: timestamp;
+    forecast_quantity: int;
+    confidence_level: decimal;
+    notes: string;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("scm_vendor_contracts")
+entity VendorContract {
+    id: uuid @primary;
+    contract_number: string;
+    supplier_id: uuid @reference(Supplier.id);
+    start_date: timestamp;
+    end_date: timestamp;
+    terms: string;
+    status: string;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("scm_purchase_requisitions")
+entity PurchaseRequisition {
+    id: uuid @primary;
+    req_number: string;
+    requester_id: uuid;
+    request_date: timestamp;
+    status: string;
+    total_amount: decimal;
+    notes: string;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("scm_purchase_requisition_lines")
+entity PurchaseRequisitionLine {
+    id: uuid @primary;
+    purchase_requisition_id: uuid @reference(PurchaseRequisition.id);
+    product_id: uuid;
+    quantity_requested: int;
+    estimated_unit_price: decimal;
+    line_total: decimal;
+}
+
+@table("scm_stock_transfers")
+entity StockTransfer {
+    id: uuid @primary;
+    from_location_id: uuid;
+    to_location_id: uuid;
+    product_id: uuid;
+    quantity: int;
+    status: string;
+    transferred_at: timestamp @optional;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
 interface ProcurementService {
     PurchaseOrder initiatePurchaseOrder(ctx: context, legalEntityId: uuid, supplierId: uuid, lines: List<PurchaseOrderLineInput>);
     PurchaseOrder transitionOrderStatus(ctx: context, purchaseOrderId: uuid, newStatus: PurchaseOrderStatus);
     List<PurchaseOrder> fetchOutstandingOrders(ctx: context, legalEntityId: uuid);
+    PurchaseRequisition initiatePurchaseRequisition(ctx: context, requesterId: uuid, lines: List<RequisitionLineInput>, notes: string);
+    PurchaseRequisition processRequisitionApproval(ctx: context, reqId: uuid, action: string);
 }
 
 interface InventoryService {
@@ -159,6 +228,8 @@ interface InventoryService {
     void releaseInventoryReservation(ctx: context, legalEntityId: uuid, salesOrderId: uuid);
     void processOutboundShipment(ctx: context, salesOrderId: uuid, warehouseId: uuid, itemsShipped: List<ShipmentItemInput>, operatorHrId: uuid);
     void executeCycleCountAdjustment(ctx: context, legalEntityId: uuid, warehouseId: uuid, materialId: uuid, adjustmentQuantity: decimal, operatorHrId: uuid);
+    StockTransfer requestStockTransfer(ctx: context, fromLocationId: uuid, toLocationId: uuid, productId: uuid, quantity: int);
+    StockTransfer executeStockTransfer(ctx: context, transferId: uuid);
 }
 
 interface OutboxRelayWorker {

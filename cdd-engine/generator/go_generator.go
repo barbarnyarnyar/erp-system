@@ -226,9 +226,8 @@ func GenerateGoModels(service *parser.Service, outputDir string) error {
 			buf.WriteString("\tswitch e {\n")
 			for _, value := range enum.Values {
 				constName := fmt.Sprintf("%s%s", enum.Name, strings.ToUpper(value))
-				buf.WriteString(fmt.Sprintf("\tcase %s:\n", constName))
+				buf.WriteString(fmt.Sprintf("\tcase %s:\n\t\treturn true\n", constName))
 			}
-			buf.WriteString("\t\treturn true\n")
 			buf.WriteString("\t}\n")
 			buf.WriteString("\treturn false\n")
 			buf.WriteString("}\n\n")
@@ -289,6 +288,10 @@ func GenerateGoModels(service *parser.Service, outputDir string) error {
 }
 
 func mapCDDTypeToGo(cddType string) string {
+	if strings.HasPrefix(cddType, "List<") && strings.HasSuffix(cddType, ">") {
+		elemType := cddType[5 : len(cddType)-1]
+		return "[]" + mapCDDTypeToGo(elemType)
+	}
 	switch strings.ToLower(cddType) {
 	case "uuid", "string", "text":
 		return "string"
@@ -301,6 +304,9 @@ func mapCDDTypeToGo(cddType string) string {
 	case "integer", "int":
 		return "int"
 	default:
+		if len(cddType) > 0 && cddType[0] >= 'A' && cddType[0] <= 'Z' {
+			return cddType
+		}
 		return "interface{}"
 	}
 }

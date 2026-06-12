@@ -55,7 +55,7 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 	}
 
 	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFinBudgetCreated, budget.ID, domain.BudgetEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmBudgetCreated, budget.ID, domain.BudgetEventPayload{
 		AccountID:       budget.AccountID,
 		CostCenterID:    budget.CostCenterID,
 		FiscalYear:      budget.FiscalYear,
@@ -64,7 +64,7 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 		SpentAmount:     budget.SpentAmount,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinBudgetCreated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmBudgetCreated, err)
 	}
 
 	return budget, nil
@@ -116,7 +116,7 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 	_ = s.budgets.Update(ctx, bud)
 
 	// Publish budget updated event
-	if err := s.publisher.Publish(ctx, domain.TopicFinBudgetUpdated, bud.ID, domain.BudgetEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmBudgetUpdated, bud.ID, domain.BudgetEventPayload{
 		AccountID:       bud.AccountID,
 		CostCenterID:    bud.CostCenterID,
 		FiscalYear:      bud.FiscalYear,
@@ -125,12 +125,12 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 		SpentAmount:     bud.SpentAmount,
 		Timestamp:       time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinBudgetUpdated, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmBudgetUpdated, err)
 	}
 
 	if newSpent.GreaterThan(bud.AllocatedAmount) {
 		// Publish budget exceeded event
-		if err := s.publisher.Publish(ctx, domain.TopicFinBudgetExceeded, bud.ID, domain.BudgetEventPayload{
+		if err := s.publisher.Publish(ctx, domain.TopicFmBudgetExceeded, bud.ID, domain.BudgetEventPayload{
 			AccountID:       bud.AccountID,
 			CostCenterID:    bud.CostCenterID,
 			FiscalYear:      bud.FiscalYear,
@@ -139,7 +139,7 @@ func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accou
 			SpentAmount:     bud.SpentAmount,
 			Timestamp:       time.Now(),
 		}); err != nil {
-			utils.LogPublishErr("fm-service", domain.TopicFinBudgetExceeded, err)
+			utils.LogPublishErr("fm-service", domain.TopicFmBudgetExceeded, err)
 		}
 	}
 

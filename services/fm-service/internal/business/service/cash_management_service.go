@@ -60,7 +60,7 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 		_ = s.invoices.Update(ctx, inv)
 
 		// Publish invoice paid event
-		if err := s.publisher.Publish(ctx, domain.TopicFinInvoicePaid, inv.ID, domain.InvoiceEventPayload{
+		if err := s.publisher.Publish(ctx, domain.TopicFmInvoicePaid, inv.ID, domain.InvoiceEventPayload{
 			ID:            inv.ID,
 			CustomerID:    inv.CustomerID,
 			InvoiceNumber: inv.InvoiceNumber,
@@ -68,7 +68,7 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 			Status:        inv.Status,
 			Timestamp:     time.Now(),
 		}); err != nil {
-			utils.LogPublishErr("fm-service", domain.TopicFinInvoicePaid, err)
+			utils.LogPublishErr("fm-service", domain.TopicFmInvoicePaid, err)
 		}
 	}
 	if billID != "" {
@@ -78,7 +78,7 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 	err := s.payments.Create(ctx, payment)
 	if err != nil {
 		// Publish payment failed event
-		if err := s.publisher.Publish(ctx, domain.TopicFinPaymentFailed, payment.ID, domain.PaymentEventPayload{
+		if err := s.publisher.Publish(ctx, domain.TopicFmPaymentFailed, payment.ID, domain.PaymentEventPayload{
 			ID:            payment.ID,
 			InvoiceID:     payment.InvoiceID,
 			BillID:        payment.BillID,
@@ -88,13 +88,13 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 			Status:        "FAILED",
 			Timestamp:     time.Now(),
 		}); err != nil {
-			utils.LogPublishErr("fm-service", domain.TopicFinPaymentFailed, err)
+			utils.LogPublishErr("fm-service", domain.TopicFmPaymentFailed, err)
 		}
 		return nil, err
 	}
 
 	// Publish payment received and processed events
-	if err := s.publisher.Publish(ctx, domain.TopicFinPaymentReceived, payment.ID, domain.PaymentEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmPaymentReceived, payment.ID, domain.PaymentEventPayload{
 		ID:            payment.ID,
 		InvoiceID:     payment.InvoiceID,
 		BillID:        payment.BillID,
@@ -104,10 +104,10 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 		Status:        payment.Status,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinPaymentReceived, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmPaymentReceived, err)
 	}
 
-	if err := s.publisher.Publish(ctx, domain.TopicFinPaymentProcessed, payment.ID, domain.PaymentEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicFmPaymentProcessed, payment.ID, domain.PaymentEventPayload{
 		ID:            payment.ID,
 		InvoiceID:     payment.InvoiceID,
 		BillID:        payment.BillID,
@@ -117,7 +117,7 @@ func (s *CashManagementService) RecordPayment(ctx context.Context, invoiceID, bi
 		Status:        payment.Status,
 		Timestamp:     time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFinPaymentProcessed, err)
+		utils.LogPublishErr("fm-service", domain.TopicFmPaymentProcessed, err)
 	}
 
 	return payment, nil

@@ -3,12 +3,15 @@ package domain
 
 import (
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type BankAccount struct {
-	ID             string          `json:"id"`
-	AccountNumber  string          `json:"account_number"`
-	BankName       string          `json:"bank_name"`
-	Currency       string          `json:"currency"`
-	CurrentBalance decimal.Decimal `json:"current_balance"`
+	ID            string          `json:"id"`
+	LegalEntityID string          `json:"legal_entity_id"`
+	AccountNumber string          `json:"account_number"`
+	Currency      string          `json:"currency"` // Local currency of the physical bank branch
+	LiquidBalance decimal.Decimal `json:"liquid_balance"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }

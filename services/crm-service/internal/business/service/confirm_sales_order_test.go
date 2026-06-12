@@ -18,55 +18,69 @@ type failingCustomerRepo struct {
 	err error
 }
 
-func (f *failingCustomerRepo) GetByID(ctx context.Context, id string) (*domain.Customer, error) {
+func (f *failingCustomerRepo) GetByID(ctx context.Context, id string) (*domain.CustomerProfile, error) {
 	return nil, f.err
 }
 
-func setupConfirmFixtures(t *testing.T) (svc *service.SalesOrderService, orderRepo domain.SalesOrderRepository, orderItemRepo domain.SalesOrderItemRepository, custRepo domain.CustomerRepository, pub *sharedtesting.MockPublisher) {
+func setupConfirmFixtures(t *testing.T) (svc *service.SalesOrderService, orderRepo domain.SalesOrderRepository, orderItemRepo domain.SalesOrderLineRepository, custRepo domain.CustomerRepository, pub *sharedtesting.MockPublisher) {
 	t.Helper()
 	orderRepo = memory.NewSalesOrderRepository()
-	orderItemRepo = memory.NewSalesOrderItemRepository()
+	orderItemRepo = memory.NewSalesOrderLineRepository()
 	custRepo = memory.NewCustomerRepository()
 	pub = &sharedtesting.MockPublisher{}
 	svc = service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 	return
 }
 
-func seedDraftOrderWithCustomer(t *testing.T, orderRepo domain.SalesOrderRepository, orderItemRepo domain.SalesOrderItemRepository, custRepo domain.CustomerRepository) (orderID, customerID string) {
+func seedDraftOrderWithCustomer(t *testing.T, orderRepo domain.SalesOrderRepository, orderItemRepo domain.SalesOrderLineRepository, custRepo domain.CustomerRepository) (orderID, customerID string) {
 	t.Helper()
 	ctx := context.Background()
-	customer := &domain.Customer{
-		ID:          "cust_1",
-		CompanyName: "Acme",
-		ContactName: "John",
-		Email:       "john@acme.com",
-		Status:      domain.CustomerStatusActive,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+	customer := &domain.CustomerProfile{
+		ID:                 "cust_1",
+		LegalEntityID:      "default_entity_id",
+		CustomerCode:       "CODE-cust_1",
+		CompanyName:        "Acme",
+		AccountManagerHrID: "default_manager_id",
+		Status:             domain.CustomerStatusACTIVE,
+		CreditLimit:        decimal.NewFromInt(50000),
+		Currency:           "USD",
+		Version:            1,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
 	}
 	if err := custRepo.Create(ctx, customer); err != nil {
 		t.Fatalf("seed customer: %v", err)
 	}
 
 	order := &domain.SalesOrder{
-		ID:          "so_1",
-		CustomerID:  customer.ID,
-		OrderDate:   time.Now(),
-		Status:      string(domain.SalesOrderStatusDraft),
-		TotalAmount: decimal.NewFromInt(100),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:              "so_1",
+		LegalEntityID:   "default_entity_id",
+		CustomerID:      customer.ID,
+		PriceBookID:     "default_price_book_id",
+		OrderNumber:     "SO-so_1",
+		Status:          domain.SalesOrderStateDRAFT,
+		TotalGrossValue: decimal.NewFromInt(100),
+		TotalTaxValue:   decimal.Zero,
+		Version:         1,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 	if err := orderRepo.Create(ctx, order); err != nil {
 		t.Fatalf("seed order: %v", err)
 	}
 
-	item := &domain.SalesOrderItem{
-		ID:           "soi_1",
-		SalesOrderID: order.ID,
-		ProductID:    "prod_1",
-		Quantity:     2,
-		UnitPrice:    decimal.NewFromInt(50),
+	item := &domain.SalesOrderLine{
+		ID:              "soi_1",
+		SalesOrderID:    order.ID,
+		MaterialID:      "prod_1",
+		LineSequence:    10,
+		QuantityOrdered: decimal.NewFromInt(2),
+		QuantityShipped: decimal.Zero,
+		UnitSellPrice:   decimal.NewFromInt(50),
+		DiscountApplied: decimal.Zero,
+		NetLineAmount:   decimal.NewFromInt(100),
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 	if err := orderItemRepo.Create(ctx, item); err != nil {
 		t.Fatalf("seed item: %v", err)
@@ -83,7 +97,7 @@ func TestConfirmSalesOrder_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got.Status != string(domain.SalesOrderStatusConfirmed) {
+	if got.Status != domain.SalesOrderStatusConfirmed {
 		t.Errorf("status = %q, want %q", got.Status, domain.SalesOrderStatusConfirmed)
 	}
 
@@ -111,7 +125,7 @@ func TestConfirmSalesOrder_NotDraft(t *testing.T) {
 	orderID, _ := seedDraftOrderWithCustomer(t, orderRepo, orderItemRepo, custRepo)
 
 	order, _ := orderRepo.GetByID(context.Background(), orderID)
-	order.Status = string(domain.SalesOrderStatusConfirmed)
+	order.Status = domain.SalesOrderStatusConfirmed
 	if err := orderRepo.Update(context.Background(), order); err != nil {
 		t.Fatalf("set confirmed: %v", err)
 	}
@@ -127,7 +141,7 @@ func TestConfirmSalesOrder_CustomerInactive(t *testing.T) {
 	orderID, customerID := seedDraftOrderWithCustomer(t, orderRepo, orderItemRepo, custRepo)
 
 	cust, _ := custRepo.GetByID(context.Background(), customerID)
-	cust.Status = domain.CustomerStatusInactive
+	cust.Status = domain.CustomerStatusINACTIVE
 	if err := custRepo.Update(context.Background(), cust); err != nil {
 		t.Fatalf("deactivate customer: %v", err)
 	}
@@ -140,23 +154,39 @@ func TestConfirmSalesOrder_CustomerInactive(t *testing.T) {
 
 func TestConfirmSalesOrder_CustomerNotFound(t *testing.T) {
 	orderRepo := memory.NewSalesOrderRepository()
-	orderItemRepo := memory.NewSalesOrderItemRepository()
+	orderItemRepo := memory.NewSalesOrderLineRepository()
 	custRepo := memory.NewCustomerRepository()
 	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 
 	ctx := context.Background()
 	order := &domain.SalesOrder{
-		ID:          "so_x",
-		CustomerID:  "ghost",
-		OrderDate:   time.Now(),
-		Status:      string(domain.SalesOrderStatusDraft),
-		TotalAmount: decimal.NewFromInt(10),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:              "so_x",
+		LegalEntityID:   "default_entity_id",
+		CustomerID:      "ghost",
+		PriceBookID:     "default_price_book_id",
+		OrderNumber:     "SO-so_x",
+		Status:          domain.SalesOrderStateDRAFT,
+		TotalGrossValue: decimal.NewFromInt(10),
+		TotalTaxValue:   decimal.Zero,
+		Version:         1,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 	_ = orderRepo.Create(ctx, order)
-	item := &domain.SalesOrderItem{ID: "soi_x", SalesOrderID: order.ID, ProductID: "p", Quantity: 1, UnitPrice: decimal.NewFromInt(10)}
+	item := &domain.SalesOrderLine{
+		ID:              "soi_x",
+		SalesOrderID:    order.ID,
+		MaterialID:      "p",
+		LineSequence:    10,
+		QuantityOrdered: decimal.NewFromInt(1),
+		QuantityShipped: decimal.Zero,
+		UnitSellPrice:   decimal.NewFromInt(10),
+		DiscountApplied: decimal.Zero,
+		NetLineAmount:   decimal.NewFromInt(10),
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
 	_ = orderItemRepo.Create(ctx, item)
 
 	_, err := svc.ConfirmSalesOrder(ctx, order.ID)
@@ -167,18 +197,38 @@ func TestConfirmSalesOrder_CustomerNotFound(t *testing.T) {
 
 func TestConfirmSalesOrder_EmptyItems(t *testing.T) {
 	orderRepo := memory.NewSalesOrderRepository()
-	orderItemRepo := memory.NewSalesOrderItemRepository()
+	orderItemRepo := memory.NewSalesOrderLineRepository()
 	custRepo := memory.NewCustomerRepository()
 	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 
 	ctx := context.Background()
-	cust := &domain.Customer{ID: "c1", Status: domain.CustomerStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	cust := &domain.CustomerProfile{
+		ID:                 "c1",
+		LegalEntityID:      "default_entity_id",
+		CustomerCode:       "CODE-c1",
+		CompanyName:        "Acme",
+		AccountManagerHrID: "default_manager_id",
+		Status:             domain.CustomerStatusACTIVE,
+		CreditLimit:        decimal.NewFromInt(50000),
+		Currency:           "USD",
+		Version:            1,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
 	_ = custRepo.Create(ctx, cust)
 	order := &domain.SalesOrder{
-		ID: "so_e", CustomerID: "c1", OrderDate: time.Now(),
-		Status: string(domain.SalesOrderStatusDraft), TotalAmount: decimal.Zero,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		ID:              "so_e",
+		LegalEntityID:   "default_entity_id",
+		CustomerID:      "c1",
+		PriceBookID:     "default_price_book_id",
+		OrderNumber:     "SO-so_e",
+		Status:          domain.SalesOrderStateDRAFT,
+		TotalGrossValue: decimal.Zero,
+		TotalTaxValue:   decimal.Zero,
+		Version:         1,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 	_ = orderRepo.Create(ctx, order)
 
@@ -190,21 +240,53 @@ func TestConfirmSalesOrder_EmptyItems(t *testing.T) {
 
 func TestConfirmSalesOrder_InvalidItemQuantity(t *testing.T) {
 	orderRepo := memory.NewSalesOrderRepository()
-	orderItemRepo := memory.NewSalesOrderItemRepository()
+	orderItemRepo := memory.NewSalesOrderLineRepository()
 	custRepo := memory.NewCustomerRepository()
 	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 
 	ctx := context.Background()
-	cust := &domain.Customer{ID: "c1", Status: domain.CustomerStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	cust := &domain.CustomerProfile{
+		ID:                 "c1",
+		LegalEntityID:      "default_entity_id",
+		CustomerCode:       "CODE-c1",
+		CompanyName:        "Acme",
+		AccountManagerHrID: "default_manager_id",
+		Status:             domain.CustomerStatusACTIVE,
+		CreditLimit:        decimal.NewFromInt(50000),
+		Currency:           "USD",
+		Version:            1,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
 	_ = custRepo.Create(ctx, cust)
 	order := &domain.SalesOrder{
-		ID: "so_q", CustomerID: "c1", OrderDate: time.Now(),
-		Status: string(domain.SalesOrderStatusDraft), TotalAmount: decimal.Zero,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		ID:              "so_q",
+		LegalEntityID:   "default_entity_id",
+		CustomerID:      "c1",
+		PriceBookID:     "default_price_book_id",
+		OrderNumber:     "SO-so_q",
+		Status:          domain.SalesOrderStateDRAFT,
+		TotalGrossValue: decimal.Zero,
+		TotalTaxValue:   decimal.Zero,
+		Version:         1,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 	_ = orderRepo.Create(ctx, order)
-	item := &domain.SalesOrderItem{ID: "soi_q", SalesOrderID: order.ID, ProductID: "p", Quantity: 0, UnitPrice: decimal.NewFromInt(10)}
+	item := &domain.SalesOrderLine{
+		ID:              "soi_q",
+		SalesOrderID:    order.ID,
+		MaterialID:      "p",
+		LineSequence:    10,
+		QuantityOrdered: decimal.Zero,
+		QuantityShipped: decimal.Zero,
+		UnitSellPrice:   decimal.NewFromInt(10),
+		DiscountApplied: decimal.Zero,
+		NetLineAmount:   decimal.Zero,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
 	_ = orderItemRepo.Create(ctx, item)
 
 	_, err := svc.ConfirmSalesOrder(ctx, order.ID)

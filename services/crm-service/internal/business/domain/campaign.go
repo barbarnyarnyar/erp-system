@@ -2,16 +2,15 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type Campaign struct {
 	ID        string          `json:"id"`
 	Name      string          `json:"name"`
-	Type      string          `json:"type"`   // e.g., EMAIL, SOCIAL, EVENT
-	Status    string          `json:"status"` // e.g., DRAFT, LAUNCHED, COMPLETED
+	Type      string          `json:"type"`
+	Status    string          `json:"status"`
 	Budget    decimal.Decimal `json:"budget"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`

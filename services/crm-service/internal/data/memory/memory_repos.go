@@ -15,47 +15,47 @@ import (
 
 type CustomerRepository struct {
 	mu        sync.RWMutex
-	customers map[string]domain.Customer
+	customers map[string]domain.CustomerProfile
 }
 
 func NewCustomerRepository() *CustomerRepository {
 	return &CustomerRepository{
-		customers: make(map[string]domain.Customer),
+		customers: make(map[string]domain.CustomerProfile),
 	}
 }
 
-func (r *CustomerRepository) Create(ctx context.Context, customer *domain.Customer) error {
+func (r *CustomerRepository) Create(ctx context.Context, customer *domain.CustomerProfile) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.customers[customer.ID] = *customer
 	return nil
 }
 
-func (r *CustomerRepository) GetByID(ctx context.Context, id string) (*domain.Customer, error) {
+func (r *CustomerRepository) GetByID(ctx context.Context, id string) (*domain.CustomerProfile, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	c, ok := r.customers[id]
 	if !ok {
-		return nil, fmt.Errorf("customer not found: %s", id)
+		return nil, fmt.Errorf("customer profile not found: %s", id)
 	}
 	return &c, nil
 }
 
-func (r *CustomerRepository) List(ctx context.Context) ([]domain.Customer, error) {
+func (r *CustomerRepository) List(ctx context.Context) ([]domain.CustomerProfile, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	list := make([]domain.Customer, 0, len(r.customers))
+	list := make([]domain.CustomerProfile, 0, len(r.customers))
 	for _, c := range r.customers {
 		list = append(list, c)
 	}
 	return list, nil
 }
 
-func (r *CustomerRepository) Update(ctx context.Context, customer *domain.Customer) error {
+func (r *CustomerRepository) Update(ctx context.Context, customer *domain.CustomerProfile) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.customers[customer.ID]; !ok {
-		return fmt.Errorf("customer not found: %s", customer.ID)
+		return fmt.Errorf("customer profile not found: %s", customer.ID)
 	}
 	r.customers[customer.ID] = *customer
 	return nil
@@ -245,28 +245,28 @@ func (r *SalesOrderRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-type SalesOrderItemRepository struct {
+type SalesOrderLineRepository struct {
 	mu    sync.RWMutex
-	items map[string]domain.SalesOrderItem
+	items map[string]domain.SalesOrderLine
 }
 
-func NewSalesOrderItemRepository() *SalesOrderItemRepository {
-	return &SalesOrderItemRepository{
-		items: make(map[string]domain.SalesOrderItem),
+func NewSalesOrderLineRepository() *SalesOrderLineRepository {
+	return &SalesOrderLineRepository{
+		items: make(map[string]domain.SalesOrderLine),
 	}
 }
 
-func (r *SalesOrderItemRepository) Create(ctx context.Context, item *domain.SalesOrderItem) error {
+func (r *SalesOrderLineRepository) Create(ctx context.Context, item *domain.SalesOrderLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.items[item.ID] = *item
 	return nil
 }
 
-func (r *SalesOrderItemRepository) ListByOrderID(ctx context.Context, orderID string) ([]domain.SalesOrderItem, error) {
+func (r *SalesOrderLineRepository) ListByOrderID(ctx context.Context, orderID string) ([]domain.SalesOrderLine, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.SalesOrderItem
+	var list []domain.SalesOrderLine
 	for _, it := range r.items {
 		if it.SalesOrderID == orderID {
 			list = append(list, it)
@@ -365,88 +365,88 @@ func (r *QuoteLineItemRepository) ListByQuoteID(ctx context.Context, quoteID str
 }
 
 // ==========================================
-// Price List Memory Repositories
+// Price Book Memory Repositories
 // ==========================================
 
-type PriceListRepository struct {
+type PriceBookHeaderRepository struct {
 	mu         sync.RWMutex
-	priceLists map[string]domain.PriceList
+	priceBooks map[string]domain.PriceBookHeader
 }
 
-func NewPriceListRepository() *PriceListRepository {
-	return &PriceListRepository{
-		priceLists: make(map[string]domain.PriceList),
+func NewPriceBookHeaderRepository() *PriceBookHeaderRepository {
+	return &PriceBookHeaderRepository{
+		priceBooks: make(map[string]domain.PriceBookHeader),
 	}
 }
 
-func (r *PriceListRepository) Create(ctx context.Context, priceList *domain.PriceList) error {
+func (r *PriceBookHeaderRepository) Create(ctx context.Context, priceBook *domain.PriceBookHeader) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.priceLists[priceList.ID] = *priceList
+	r.priceBooks[priceBook.ID] = *priceBook
 	return nil
 }
 
-func (r *PriceListRepository) GetByID(ctx context.Context, id string) (*domain.PriceList, error) {
+func (r *PriceBookHeaderRepository) GetByID(ctx context.Context, id string) (*domain.PriceBookHeader, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	pl, ok := r.priceLists[id]
+	pl, ok := r.priceBooks[id]
 	if !ok {
-		return nil, fmt.Errorf("price list not found: %s", id)
+		return nil, fmt.Errorf("price book not found: %s", id)
 	}
 	return &pl, nil
 }
 
-func (r *PriceListRepository) List(ctx context.Context) ([]domain.PriceList, error) {
+func (r *PriceBookHeaderRepository) List(ctx context.Context) ([]domain.PriceBookHeader, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	list := make([]domain.PriceList, 0, len(r.priceLists))
-	for _, pl := range r.priceLists {
+	list := make([]domain.PriceBookHeader, 0, len(r.priceBooks))
+	for _, pl := range r.priceBooks {
 		list = append(list, pl)
 	}
 	return list, nil
 }
 
-func (r *PriceListRepository) Update(ctx context.Context, priceList *domain.PriceList) error {
+func (r *PriceBookHeaderRepository) Update(ctx context.Context, priceBook *domain.PriceBookHeader) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.priceLists[priceList.ID]; !ok {
-		return fmt.Errorf("price list not found: %s", priceList.ID)
+	if _, ok := r.priceBooks[priceBook.ID]; !ok {
+		return fmt.Errorf("price book not found: %s", priceBook.ID)
 	}
-	r.priceLists[priceList.ID] = *priceList
+	r.priceBooks[priceBook.ID] = *priceBook
 	return nil
 }
 
-func (r *PriceListRepository) Delete(ctx context.Context, id string) error {
+func (r *PriceBookHeaderRepository) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.priceLists, id)
+	delete(r.priceBooks, id)
 	return nil
 }
 
-type PriceListItemRepository struct {
+type PriceBookEntryRepository struct {
 	mu    sync.RWMutex
-	items map[string]domain.PriceListItem
+	items map[string]domain.PriceBookEntry
 }
 
-func NewPriceListItemRepository() *PriceListItemRepository {
-	return &PriceListItemRepository{
-		items: make(map[string]domain.PriceListItem),
+func NewPriceBookEntryRepository() *PriceBookEntryRepository {
+	return &PriceBookEntryRepository{
+		items: make(map[string]domain.PriceBookEntry),
 	}
 }
 
-func (r *PriceListItemRepository) Create(ctx context.Context, item *domain.PriceListItem) error {
+func (r *PriceBookEntryRepository) Create(ctx context.Context, item *domain.PriceBookEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.items[item.ID] = *item
 	return nil
 }
 
-func (r *PriceListItemRepository) ListByPriceListID(ctx context.Context, priceListID string) ([]domain.PriceListItem, error) {
+func (r *PriceBookEntryRepository) ListByPriceBookID(ctx context.Context, priceBookID string) ([]domain.PriceBookEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.PriceListItem
+	var list []domain.PriceBookEntry
 	for _, it := range r.items {
-		if it.PriceListID == priceListID {
+		if it.PriceBookID == priceBookID {
 			list = append(list, it)
 		}
 	}
