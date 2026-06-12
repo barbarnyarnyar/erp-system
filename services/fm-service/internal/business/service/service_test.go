@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"testing"
 	"time"
@@ -11,15 +12,12 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-import sharedtesting "erp-system/shared/testing"
-
-type MockPublisher = sharedtesting.MockPublisher
 type MockEvent = sharedtesting.MockEvent
 
 func TestGeneralLedgerService_CreateAccount_PublishesEvent(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()
 	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
 
@@ -53,7 +51,7 @@ func TestGeneralLedgerService_CreateAccount_PublishesEvent(t *testing.T) {
 
 func TestAccountsReceivableService_CreateInvoice_PublishesEvent(t *testing.T) {
 	invoices := memory.NewMemoryInvoiceRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	svc := service.NewAccountsReceivableService(invoices, publisher)
 
@@ -88,7 +86,7 @@ func TestAccountsReceivableService_CreateInvoice_PublishesEvent(t *testing.T) {
 func TestGeneralLedgerService_UpdateJournalEntry(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()
 	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
 

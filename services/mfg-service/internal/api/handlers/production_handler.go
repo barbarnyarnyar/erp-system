@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -11,10 +12,14 @@ import (
 
 type ProductionHandler struct {
 	svc *service.ProductionService
+	response *utils.ResponseHelper
 }
 
-func NewProductionHandler(svc *service.ProductionService) *ProductionHandler {
-	return &ProductionHandler{svc: svc}
+func NewProductionHandler(svc *service.ProductionService, response *utils.ResponseHelper) *ProductionHandler {
+	return &ProductionHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *ProductionHandler) CreateProductionPlan(c *gin.Context) {
@@ -26,13 +31,13 @@ func (h *ProductionHandler) CreateProductionPlan(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	po, err := h.svc.CreateProductionOrder(c.Request.Context(), req.BomID, req.Quantity, req.ScheduledDate, req.SalesOrderID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -42,7 +47,7 @@ func (h *ProductionHandler) CreateProductionPlan(c *gin.Context) {
 func (h *ProductionHandler) ListProductionPlans(c *gin.Context) {
 	list, err := h.svc.ListProductionPlans(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -52,7 +57,7 @@ func (h *ProductionHandler) GetProductionPlanDetails(c *gin.Context) {
 	id := c.Param("id")
 	po, err := h.svc.GetProductionPlan(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "production plan not found"})
+		h.response.NotFound(c, "production plan not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": po})
@@ -67,13 +72,13 @@ func (h *ProductionHandler) UpdateProductionPlan(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	po, err := h.svc.UpdateProductionPlan(c.Request.Context(), id, req.Quantity, req.ScheduledDate, req.Status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -84,7 +89,7 @@ func (h *ProductionHandler) CompleteProductionOrder(c *gin.Context) {
 	id := c.Param("id")
 	po, err := h.svc.CompleteProductionOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": po})
@@ -93,7 +98,7 @@ func (h *ProductionHandler) CompleteProductionOrder(c *gin.Context) {
 func (h *ProductionHandler) ListWorkOrders(c *gin.Context) {
 	list, err := h.svc.ListWorkOrders(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -109,13 +114,13 @@ func (h *ProductionHandler) CreateWorkOrder(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	wo, err := h.svc.CreateWorkOrder(c.Request.Context(), req.ProductionOrderID, req.SequenceNumber, req.WorkCenterID, req.ScheduledStart, req.ScheduledEnd)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -126,7 +131,7 @@ func (h *ProductionHandler) GetWorkOrderDetails(c *gin.Context) {
 	id := c.Param("id")
 	wo, err := h.svc.GetWorkOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "work order not found"})
+		h.response.NotFound(c, "work order not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": wo})
@@ -143,13 +148,13 @@ func (h *ProductionHandler) UpdateWorkOrder(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	wo, err := h.svc.UpdateWorkOrder(c.Request.Context(), id, req.Status, req.ScheduledStart, req.ScheduledEnd, req.ActualStart, req.ActualEnd)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -160,7 +165,7 @@ func (h *ProductionHandler) DeleteWorkOrder(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeleteWorkOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "work order deleted successfully"})
@@ -170,7 +175,7 @@ func (h *ProductionHandler) StartWorkOrder(c *gin.Context) {
 	id := c.Param("id")
 	wo, err := h.svc.StartWorkOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": wo})
@@ -184,19 +189,19 @@ func (h *ProductionHandler) ReportLabor(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	hoursDec, err := decimal.NewFromString(req.HoursWorked)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid hours_worked decimal"})
+		h.response.BadRequest(c, "invalid hours_worked decimal")
 		return
 	}
 
 	lr, err := h.svc.ReportLabor(c.Request.Context(), id, req.EmployeeID, hoursDec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -207,7 +212,7 @@ func (h *ProductionHandler) CompleteWorkOrder(c *gin.Context) {
 	id := c.Param("id")
 	wo, err := h.svc.CompleteWorkOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": wo})

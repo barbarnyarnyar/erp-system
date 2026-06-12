@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -26,6 +27,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	utils.InitLogger("crm-service")
+	responseHelper := utils.NewResponseHelper("crm-service")
+
 
 	log.Printf("Starting crm-service in %s environment...", cfg.Server.Env)
 
@@ -85,9 +89,9 @@ func main() {
 		})
 	})
 
-	custLeadHandler := handlers.NewCustomerLeadHandler(custSvc, leadSvc)
-	salesOppHandler := handlers.NewSalesOpportunityHandler(oppSvc, orderSvc, quoteSvc, ticketSvc, campSvc, plSvc)
-	custInteractionHandler := handlers.NewCustomerInteractionHandler(custInteractionSvc)
+	custLeadHandler := handlers.NewCustomerLeadHandler(custSvc, leadSvc, responseHelper)
+	salesOppHandler := handlers.NewSalesOpportunityHandler(oppSvc, orderSvc, quoteSvc, ticketSvc, campSvc, plSvc, responseHelper)
+	custInteractionHandler := handlers.NewCustomerInteractionHandler(custInteractionSvc, responseHelper)
 
 	routes.SetupCRMRoutes(r, custLeadHandler, salesOppHandler, custInteractionHandler)
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -10,10 +11,14 @@ import (
 
 type MaintenanceHandler struct {
 	svc *service.MaintenanceService
+	response *utils.ResponseHelper
 }
 
-func NewMaintenanceHandler(svc *service.MaintenanceService) *MaintenanceHandler {
-	return &MaintenanceHandler{svc: svc}
+func NewMaintenanceHandler(svc *service.MaintenanceService, response *utils.ResponseHelper) *MaintenanceHandler {
+	return &MaintenanceHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *MaintenanceHandler) LogMachineStatus(c *gin.Context) {
@@ -25,7 +30,7 @@ func (h *MaintenanceHandler) LogMachineStatus(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -36,7 +41,7 @@ func (h *MaintenanceHandler) LogMachineStatus(c *gin.Context) {
 
 	logEntry, err := h.svc.LogMachineStatus(c.Request.Context(), id, req.StatusCode, req.Message, severity)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -50,13 +55,13 @@ func (h *MaintenanceHandler) CreateEquipment(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	eq, err := h.svc.CreateEquipment(c.Request.Context(), req.WorkCenterID, req.Name)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -71,13 +76,13 @@ func (h *MaintenanceHandler) ScheduleMaintenance(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	mo, err := h.svc.ScheduleMaintenance(c.Request.Context(), equipmentID, req.Description, req.MaintenanceType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -88,7 +93,7 @@ func (h *MaintenanceHandler) CompleteMaintenance(c *gin.Context) {
 	id := c.Param("id")
 	mo, err := h.svc.CompleteMaintenance(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -98,7 +103,7 @@ func (h *MaintenanceHandler) CompleteMaintenance(c *gin.Context) {
 func (h *MaintenanceHandler) ListMaintenanceSchedules(c *gin.Context) {
 	list, err := h.svc.ListMaintenanceSchedules(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -108,7 +113,7 @@ func (h *MaintenanceHandler) GetMaintenanceScheduleDetails(c *gin.Context) {
 	id := c.Param("id")
 	mo, err := h.svc.GetMaintenanceSchedule(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "maintenance schedule not found"})
+		h.response.NotFound(c, "maintenance schedule not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": mo})
@@ -122,13 +127,13 @@ func (h *MaintenanceHandler) UpdateMaintenanceSchedule(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	mo, err := h.svc.UpdateMaintenanceSchedule(c.Request.Context(), id, req.Status, req.CompletedAt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 

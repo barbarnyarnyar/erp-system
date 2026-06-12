@@ -1,6 +1,7 @@
 package service
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"testing"
 	"time"
@@ -9,15 +10,11 @@ import (
 	"github.com/erp-system/hr-service/internal/data/memory"
 )
 
-import sharedtesting "erp-system/shared/testing"
-
-type MockPublisher = sharedtesting.MockPublisher
-
 func newTrainingService(t *testing.T) (*TrainingService, *memory.MemoryTrainingProgramRepo, *memory.MemoryTrainingEnrollmentRepo) {
 	t.Helper()
 	tpRepo := memory.NewMemoryTrainingProgramRepo()
 	teRepo := memory.NewMemoryTrainingEnrollmentRepo()
-	svc := NewTrainingService(tpRepo, teRepo, &MockPublisher{})
+	svc := NewTrainingService(tpRepo, teRepo, &sharedtesting.MockPublisher{})
 	return svc, tpRepo, teRepo
 }
 

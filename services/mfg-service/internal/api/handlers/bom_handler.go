@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/m-service/internal/business/service"
@@ -10,10 +11,14 @@ import (
 
 type BOMHandler struct {
 	svc *service.BOMService
+	response *utils.ResponseHelper
 }
 
-func NewBOMHandler(svc *service.BOMService) *BOMHandler {
-	return &BOMHandler{svc: svc}
+func NewBOMHandler(svc *service.BOMService, response *utils.ResponseHelper) *BOMHandler {
+	return &BOMHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *BOMHandler) CreateBillOfMaterials(c *gin.Context) {
@@ -24,13 +29,13 @@ func (h *BOMHandler) CreateBillOfMaterials(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	bom, err := h.svc.CreateBillOfMaterials(c.Request.Context(), req.ProductID, req.Version, req.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -41,7 +46,7 @@ func (h *BOMHandler) GetBillOfMaterials(c *gin.Context) {
 	id := c.Param("id")
 	bom, err := h.svc.GetBillOfMaterials(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "BOM not found"})
+		h.response.NotFound(c, "BOM not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": bom})
@@ -50,7 +55,7 @@ func (h *BOMHandler) GetBillOfMaterials(c *gin.Context) {
 func (h *BOMHandler) ListBOMs(c *gin.Context) {
 	list, err := h.svc.ListBOMs(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -65,13 +70,13 @@ func (h *BOMHandler) UpdateBillOfMaterials(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	bom, err := h.svc.UpdateBillOfMaterials(c.Request.Context(), id, req.ProductID, req.Version, req.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -82,7 +87,7 @@ func (h *BOMHandler) DeleteBillOfMaterials(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeleteBillOfMaterials(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "BOM deleted successfully"})
@@ -92,7 +97,7 @@ func (h *BOMHandler) GetBOMComponents(c *gin.Context) {
 	bomID := c.Param("id")
 	components, err := h.svc.GetBOMComponents(c.Request.Context(), bomID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": components})
@@ -107,24 +112,24 @@ func (h *BOMHandler) AddBOMComponent(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	qtyDec, err := decimal.NewFromString(req.Quantity)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid quantity decimal"})
+		h.response.BadRequest(c, "invalid quantity decimal")
 		return
 	}
 	wasteDec, err := decimal.NewFromString(req.WasteFactor)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid waste_factor decimal"})
+		h.response.BadRequest(c, "invalid waste_factor decimal")
 		return
 	}
 
 	comp, err := h.svc.AddBOMComponent(c.Request.Context(), bomID, req.ComponentProductID, qtyDec, wasteDec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -136,7 +141,7 @@ func (h *BOMHandler) RemoveBOMComponent(c *gin.Context) {
 	componentID := c.Param("componentId")
 	err := h.svc.RemoveBOMComponent(c.Request.Context(), bomID, componentID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "BOM component removed successfully"})
@@ -151,7 +156,7 @@ func (h *BOMHandler) CreateWorkCenter(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -160,7 +165,7 @@ func (h *BOMHandler) CreateWorkCenter(c *gin.Context) {
 
 	wc, err := h.svc.CreateWorkCenter(c.Request.Context(), req.Code, req.Name, capacityDec, rateDec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -171,7 +176,7 @@ func (h *BOMHandler) GetWorkCenterDetails(c *gin.Context) {
 	id := c.Param("id")
 	wc, err := h.svc.GetWorkCenter(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "work center not found"})
+		h.response.NotFound(c, "work center not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": wc})
@@ -180,7 +185,7 @@ func (h *BOMHandler) GetWorkCenterDetails(c *gin.Context) {
 func (h *BOMHandler) ListWorkCenters(c *gin.Context) {
 	list, err := h.svc.ListWorkCenters(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -197,7 +202,7 @@ func (h *BOMHandler) UpdateWorkCenter(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -206,7 +211,7 @@ func (h *BOMHandler) UpdateWorkCenter(c *gin.Context) {
 
 	wc, err := h.svc.UpdateWorkCenter(c.Request.Context(), id, req.Code, req.Name, req.Status, capacityDec, rateDec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -217,7 +222,7 @@ func (h *BOMHandler) DeleteWorkCenter(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeleteWorkCenter(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "work center deleted successfully"})
@@ -226,7 +231,7 @@ func (h *BOMHandler) DeleteWorkCenter(c *gin.Context) {
 func (h *BOMHandler) ListRoutings(c *gin.Context) {
 	list, err := h.svc.ListRoutings(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -243,7 +248,7 @@ func (h *BOMHandler) CreateRouting(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -252,7 +257,7 @@ func (h *BOMHandler) CreateRouting(c *gin.Context) {
 
 	op, err := h.svc.CreateRoutingOperation(c.Request.Context(), req.BomID, req.SequenceNumber, req.WorkCenterID, req.OperationName, setupDec, runDec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -263,7 +268,7 @@ func (h *BOMHandler) GetRoutingDetails(c *gin.Context) {
 	id := c.Param("id")
 	op, err := h.svc.GetRoutingByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "routing not found"})
+		h.response.NotFound(c, "routing not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": op})
@@ -281,7 +286,7 @@ func (h *BOMHandler) UpdateRouting(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -290,7 +295,7 @@ func (h *BOMHandler) UpdateRouting(c *gin.Context) {
 
 	op, err := h.svc.UpdateRouting(c.Request.Context(), id, req.BomID, req.SequenceNumber, req.WorkCenterID, req.OperationName, setupDec, runDec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -301,7 +306,7 @@ func (h *BOMHandler) DeleteRouting(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeleteRouting(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "routing deleted successfully"})

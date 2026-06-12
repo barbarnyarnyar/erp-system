@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -11,16 +12,20 @@ import (
 
 type PayrollHandler struct {
 	svc *service.PayrollService
+	response *utils.ResponseHelper
 }
 
-func NewPayrollHandler(svc *service.PayrollService) *PayrollHandler {
-	return &PayrollHandler{svc: svc}
+func NewPayrollHandler(svc *service.PayrollService, response *utils.ResponseHelper) *PayrollHandler {
+	return &PayrollHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *PayrollHandler) GetPayrollRecords(c *gin.Context) {
 	list, err := h.svc.ListPayrollRecords(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -36,7 +41,7 @@ func (h *PayrollHandler) ProcessPayroll(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -51,7 +56,7 @@ func (h *PayrollHandler) ProcessPayroll(c *gin.Context) {
 
 	pr, err := h.svc.ProcessPayroll(c.Request.Context(), req.EmployeeID, req.PayPeriodStart, req.PayPeriodEnd, regHours, otHours)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -62,7 +67,7 @@ func (h *PayrollHandler) GetPayrollRecord(c *gin.Context) {
 	id := c.Param("id")
 	pr, err := h.svc.GetPayrollRecord(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "payroll record not found"})
+		h.response.NotFound(c, "payroll record not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": pr})
@@ -75,13 +80,13 @@ func (h *PayrollHandler) UpdatePayrollRecord(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	pr, err := h.svc.UpdatePayrollRecord(c.Request.Context(), id, req.Status)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -92,7 +97,7 @@ func (h *PayrollHandler) GetEmployeePayroll(c *gin.Context) {
 	empID := c.Param("id")
 	list, err := h.svc.GetEmployeePayroll(c.Request.Context(), empID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -11,16 +12,20 @@ import (
 
 type LeaveHandler struct {
 	svc *service.LeaveManagementService
+	response *utils.ResponseHelper
 }
 
-func NewLeaveHandler(svc *service.LeaveManagementService) *LeaveHandler {
-	return &LeaveHandler{svc: svc}
+func NewLeaveHandler(svc *service.LeaveManagementService, response *utils.ResponseHelper) *LeaveHandler {
+	return &LeaveHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *LeaveHandler) GetLeaveRequests(c *gin.Context) {
 	list, err := h.svc.ListLeaveRequests(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -36,7 +41,7 @@ func (h *LeaveHandler) GetLeaveBalances(c *gin.Context) {
 		balances, err = h.svc.ListLeaveBalances(c.Request.Context())
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": balances})
@@ -52,13 +57,13 @@ func (h *LeaveHandler) CreateLeaveRequest(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	lr, err := h.svc.CreateLeaveRequest(c.Request.Context(), req.EmployeeID, req.LeaveType, req.StartDate, req.EndDate, req.Reason)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -69,7 +74,7 @@ func (h *LeaveHandler) GetLeaveRequest(c *gin.Context) {
 	id := c.Param("id")
 	lr, err := h.svc.GetLeaveRequest(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "leave request not found"})
+		h.response.NotFound(c, "leave request not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": lr})
@@ -85,13 +90,13 @@ func (h *LeaveHandler) UpdateLeaveRequest(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	lr, err := h.svc.UpdateLeaveRequest(c.Request.Context(), id, req.LeaveType, req.StartDate, req.EndDate, req.Reason)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -105,13 +110,13 @@ func (h *LeaveHandler) ApproveLeaveRequest(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	lr, err := h.svc.ApproveLeaveRequest(c.Request.Context(), id, req.ApprovedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -125,13 +130,13 @@ func (h *LeaveHandler) RejectLeaveRequest(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	lr, err := h.svc.RejectLeaveRequest(c.Request.Context(), id, req.RejectedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 

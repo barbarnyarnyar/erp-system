@@ -63,7 +63,7 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(ctx context.Context, supplier
 		totalAmount = totalAmount.Add(lineTotal)
 
 		line := domain.PurchaseOrderLine{
-			ID:               fmt.Sprintf("pol_%d", time.Now().UnixNano()+int64(len(poLines))),
+			ID:               utils.NewID("po-line"),
 			PurchaseOrderID:  poID,
 			ProductID:        l.ProductID,
 			QuantityOrdered:  l.QuantityOrdered,
@@ -237,7 +237,7 @@ func (s *PurchaseOrderService) CreatePurchaseRequisition(ctx context.Context, re
 		totalAmount = totalAmount.Add(lineTotal)
 
 		line := domain.PurchaseRequisitionLine{
-			ID:                    fmt.Sprintf("reql_%d", time.Now().UnixNano()+int64(len(reqLines))),
+			ID:                    utils.NewID("req-line"),
 			PurchaseRequisitionID: reqID,
 			ProductID:             l.ProductID,
 			QuantityRequested:     l.QuantityRequested,

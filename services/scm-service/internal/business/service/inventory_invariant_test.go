@@ -1,6 +1,7 @@
 package service
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"testing"
 
@@ -9,17 +10,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-import sharedtesting "erp-system/shared/testing"
-
-type MockPublisher = sharedtesting.MockPublisher
-
 func newInventoryService(t *testing.T) *InventoryService {
 	t.Helper()
 	return NewInventoryService(
 		memory.NewMemoryInventoryItemRepo(),
 		memory.NewMemoryInventoryMovementRepo(),
 		memory.NewMemoryStockTransferRepo(),
-		&MockPublisher{},
+		&sharedtesting.MockPublisher{},
 	)
 }
 

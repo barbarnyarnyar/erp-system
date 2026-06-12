@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/hr-service/internal/business/service"
@@ -9,16 +10,20 @@ import (
 
 type ReportHandler struct {
 	svc *service.ReportService
+	response *utils.ResponseHelper
 }
 
-func NewReportHandler(svc *service.ReportService) *ReportHandler {
-	return &ReportHandler{svc: svc}
+func NewReportHandler(svc *service.ReportService, response *utils.ResponseHelper) *ReportHandler {
+	return &ReportHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *ReportHandler) GetHeadcountReport(c *gin.Context) {
 	rep, err := h.svc.GetHeadcountReport(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": rep})
@@ -27,7 +32,7 @@ func (h *ReportHandler) GetHeadcountReport(c *gin.Context) {
 func (h *ReportHandler) GetPayrollReport(c *gin.Context) {
 	rep, err := h.svc.GetPayrollReport(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": rep})
@@ -36,7 +41,7 @@ func (h *ReportHandler) GetPayrollReport(c *gin.Context) {
 func (h *ReportHandler) GetAttendanceReport(c *gin.Context) {
 	rep, err := h.svc.GetAttendanceReport(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": rep})

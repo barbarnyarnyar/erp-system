@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -10,16 +11,20 @@ import (
 
 type TrainingHandler struct {
 	svc *service.TrainingService
+	response *utils.ResponseHelper
 }
 
-func NewTrainingHandler(svc *service.TrainingService) *TrainingHandler {
-	return &TrainingHandler{svc: svc}
+func NewTrainingHandler(svc *service.TrainingService, response *utils.ResponseHelper) *TrainingHandler {
+	return &TrainingHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *TrainingHandler) GetTrainingPrograms(c *gin.Context) {
 	list, err := h.svc.ListTrainingPrograms(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -35,13 +40,13 @@ func (h *TrainingHandler) CreateTrainingProgram(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	tp, err := h.svc.CreateTrainingProgram(c.Request.Context(), req.Title, req.Description, req.Trainer, req.StartDate, req.EndDate)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -52,7 +57,7 @@ func (h *TrainingHandler) GetTrainingProgram(c *gin.Context) {
 	id := c.Param("id")
 	tp, err := h.svc.GetTrainingProgram(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "training program not found"})
+		h.response.NotFound(c, "training program not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": tp})
@@ -70,13 +75,13 @@ func (h *TrainingHandler) UpdateTrainingProgram(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	tp, err := h.svc.UpdateTrainingProgram(c.Request.Context(), id, req.Title, req.Description, req.Trainer, req.StartDate, req.EndDate, req.Status)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -90,13 +95,13 @@ func (h *TrainingHandler) EnrollEmployee(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	enrollment, err := h.svc.EnrollEmployee(c.Request.Context(), trainingID, req.EmployeeID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -108,7 +113,7 @@ func (h *TrainingHandler) CompleteTraining(c *gin.Context) {
 
 	enrollment, err := h.svc.CompleteTraining(c.Request.Context(), enrollmentID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 

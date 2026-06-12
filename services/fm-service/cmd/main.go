@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -21,6 +22,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
+	utils.InitLogger("fm-service")
+	responseHelper := utils.NewResponseHelper("fm-service")
+
 
 	// Initialize Kafka Publisher
 	kafkaPublisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
@@ -97,12 +101,12 @@ func main() {
 	defer kafkaConsumer.Close()
 
 	// Initialize handlers
-	accHandler := handlers.NewAccountHandler(generalLedgerSvc)
-	txHandler := handlers.NewTransactionHandler(generalLedgerSvc)
-	repHandler := handlers.NewReportHandler(generalLedgerSvc)
-	invHandler := handlers.NewInvoiceHandler(accountsReceivableSvc)
-	payHandler := handlers.NewPaymentHandler(cashManagementSvc)
-	billHandler := handlers.NewVendorBillHandler(accountsPayableSvc)
+	accHandler := handlers.NewAccountHandler(generalLedgerSvc, responseHelper)
+	txHandler := handlers.NewTransactionHandler(generalLedgerSvc, responseHelper)
+	repHandler := handlers.NewReportHandler(generalLedgerSvc, responseHelper)
+	invHandler := handlers.NewInvoiceHandler(accountsReceivableSvc, responseHelper)
+	payHandler := handlers.NewPaymentHandler(cashManagementSvc, responseHelper)
+	billHandler := handlers.NewVendorBillHandler(accountsPayableSvc, responseHelper)
 
 	// Initialize Gin router
 	router := gin.Default()

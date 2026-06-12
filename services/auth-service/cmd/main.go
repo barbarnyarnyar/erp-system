@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -26,6 +27,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	utils.InitLogger("auth-service")
+	responseHelper := utils.NewResponseHelper("auth-service")
+
 
 	log.Printf("Starting auth-service in %s environment...", cfg.Server.Env)
 
@@ -101,8 +105,8 @@ func main() {
 		})
 	})
 
-	handler := handlers.NewIdentityHandler(authSvc, userSvc, rbacSvc)
-	rbacHandler := handlers.NewRBACHandler(rbacSvc)
+	handler := handlers.NewIdentityHandler(authSvc, userSvc, rbacSvc, responseHelper)
+	rbacHandler := handlers.NewRBACHandler(rbacSvc, responseHelper)
 	routes.SetupAuthRoutes(r, handler, rbacHandler)
 
 	// 7. Start HTTP server with graceful shutdown

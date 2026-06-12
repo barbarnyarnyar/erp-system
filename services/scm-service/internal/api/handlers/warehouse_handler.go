@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -10,10 +11,14 @@ import (
 
 type WarehouseHandler struct {
 	svc *service.WarehouseService
+	response *utils.ResponseHelper
 }
 
-func NewWarehouseHandler(svc *service.WarehouseService) *WarehouseHandler {
-	return &WarehouseHandler{svc: svc}
+func NewWarehouseHandler(svc *service.WarehouseService, response *utils.ResponseHelper) *WarehouseHandler {
+	return &WarehouseHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 // ============================================================================
@@ -23,7 +28,7 @@ func NewWarehouseHandler(svc *service.WarehouseService) *WarehouseHandler {
 func (h *WarehouseHandler) GetReceipts(c *gin.Context) {
 	list, err := h.svc.ListReceipts(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -41,7 +46,7 @@ func (h *WarehouseHandler) CreateReceipt(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -56,7 +61,7 @@ func (h *WarehouseHandler) CreateReceipt(c *gin.Context) {
 
 	rec, err := h.svc.CreateReceipt(c.Request.Context(), req.PurchaseOrderID, req.Notes, linesInput)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -67,7 +72,7 @@ func (h *WarehouseHandler) GetReceipt(c *gin.Context) {
 	id := c.Param("id")
 	rec, err := h.svc.GetReceipt(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "receipt not found"})
+		h.response.NotFound(c, "receipt not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": rec})
@@ -81,13 +86,13 @@ func (h *WarehouseHandler) UpdateReceipt(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	rec, err := h.svc.UpdateReceipt(c.Request.Context(), id, req.Status, req.Notes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -101,7 +106,7 @@ func (h *WarehouseHandler) UpdateReceipt(c *gin.Context) {
 func (h *WarehouseHandler) GetShipments(c *gin.Context) {
 	list, err := h.svc.ListShipments(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -121,7 +126,7 @@ func (h *WarehouseHandler) CreateShipment(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -141,7 +146,7 @@ func (h *WarehouseHandler) CreateShipment(c *gin.Context) {
 
 	shp, err := h.svc.CreateShipment(c.Request.Context(), req.Carrier, req.TrackingNumber, estDeliveryTime, req.Notes, linesInput)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -152,7 +157,7 @@ func (h *WarehouseHandler) GetShipment(c *gin.Context) {
 	id := c.Param("id")
 	shp, err := h.svc.GetShipment(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "shipment not found"})
+		h.response.NotFound(c, "shipment not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": shp})
@@ -166,13 +171,13 @@ func (h *WarehouseHandler) UpdateShipment(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	shp, err := h.svc.UpdateShipment(c.Request.Context(), id, req.Status, req.Notes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -183,7 +188,7 @@ func (h *WarehouseHandler) GetReceiptLines(c *gin.Context) {
 	id := c.Param("id")
 	lines, err := h.svc.ListReceiptLines(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": lines})
@@ -193,7 +198,7 @@ func (h *WarehouseHandler) GetShipmentLines(c *gin.Context) {
 	id := c.Param("id")
 	lines, err := h.svc.ListShipmentLines(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": lines})

@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"erp-system/shared/utils"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"
@@ -73,7 +71,7 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 
 	// Create deductions breakdown
 	ded1 := &domain.PayrollDeduction{
-		ID:        fmt.Sprintf("ded_tax_%d", time.Now().UnixNano()),
+		ID:        utils.NewID("ded-tax"),
 		PayrollID: pr.ID,
 		Type:      "Income Tax",
 		Amount:    incomeTaxAmt,
@@ -81,7 +79,7 @@ func (s *PayrollService) ProcessPayroll(ctx context.Context, employeeID string, 
 	_ = s.deductions.Create(ctx, ded1)
 
 	ded2 := &domain.PayrollDeduction{
-		ID:        fmt.Sprintf("ded_ss_%d", time.Now().UnixNano()),
+		ID:        utils.NewID("ded-ss"),
 		PayrollID: pr.ID,
 		Type:      "Social Security",
 		Amount:    socialSecurityAmt,

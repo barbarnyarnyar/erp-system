@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -11,16 +12,20 @@ import (
 
 type PurchaseOrderHandler struct {
 	svc *service.PurchaseOrderService
+	response *utils.ResponseHelper
 }
 
-func NewPurchaseOrderHandler(svc *service.PurchaseOrderService) *PurchaseOrderHandler {
-	return &PurchaseOrderHandler{svc: svc}
+func NewPurchaseOrderHandler(svc *service.PurchaseOrderService, response *utils.ResponseHelper) *PurchaseOrderHandler {
+	return &PurchaseOrderHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *PurchaseOrderHandler) GetPurchaseOrders(c *gin.Context) {
 	list, err := h.svc.ListPurchaseOrders(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -40,7 +45,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -65,7 +70,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c *gin.Context) {
 
 	po, err := h.svc.CreatePurchaseOrder(c.Request.Context(), req.SupplierID, deliveryTime, req.Notes, linesInput)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -76,7 +81,7 @@ func (h *PurchaseOrderHandler) GetPurchaseOrder(c *gin.Context) {
 	id := c.Param("id")
 	po, err := h.svc.GetPurchaseOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "purchase order not found"})
+		h.response.NotFound(c, "purchase order not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": po})
@@ -91,7 +96,7 @@ func (h *PurchaseOrderHandler) UpdatePurchaseOrder(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -102,7 +107,7 @@ func (h *PurchaseOrderHandler) UpdatePurchaseOrder(c *gin.Context) {
 
 	po, err := h.svc.UpdatePurchaseOrder(c.Request.Context(), id, deliveryTime, req.Status, req.Notes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -113,7 +118,7 @@ func (h *PurchaseOrderHandler) DeletePurchaseOrder(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeletePurchaseOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "purchase order deleted successfully"})
@@ -123,7 +128,7 @@ func (h *PurchaseOrderHandler) SendPurchaseOrder(c *gin.Context) {
 	id := c.Param("id")
 	po, err := h.svc.SendPurchaseOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": po})
@@ -134,7 +139,7 @@ func (h *PurchaseOrderHandler) SendPurchaseOrder(c *gin.Context) {
 func (h *PurchaseOrderHandler) GetPurchaseRequisitions(c *gin.Context) {
 	list, err := h.svc.ListPurchaseRequisitions(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -153,7 +158,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseRequisition(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -177,7 +182,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseRequisition(c *gin.Context) {
 
 	pr, err := h.svc.CreatePurchaseRequisition(c.Request.Context(), req.RequesterID, reqDate, req.Notes, linesInput)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -188,7 +193,7 @@ func (h *PurchaseOrderHandler) GetPurchaseRequisition(c *gin.Context) {
 	id := c.Param("id")
 	pr, err := h.svc.GetPurchaseRequisition(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "purchase requisition not found"})
+		h.response.NotFound(c, "purchase requisition not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": pr})
@@ -203,7 +208,7 @@ func (h *PurchaseOrderHandler) UpdatePurchaseRequisition(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -214,7 +219,7 @@ func (h *PurchaseOrderHandler) UpdatePurchaseRequisition(c *gin.Context) {
 
 	pr, err := h.svc.UpdatePurchaseRequisition(c.Request.Context(), id, reqDate, req.Status, req.Notes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -225,7 +230,7 @@ func (h *PurchaseOrderHandler) DeletePurchaseRequisition(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeletePurchaseRequisition(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "purchase requisition deleted successfully"})
@@ -235,7 +240,7 @@ func (h *PurchaseOrderHandler) ApprovePurchaseRequisition(c *gin.Context) {
 	id := c.Param("id")
 	pr, err := h.svc.ApprovePurchaseRequisition(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": pr})
@@ -245,7 +250,7 @@ func (h *PurchaseOrderHandler) RejectPurchaseRequisition(c *gin.Context) {
 	id := c.Param("id")
 	pr, err := h.svc.RejectPurchaseRequisition(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": pr})
@@ -255,7 +260,7 @@ func (h *PurchaseOrderHandler) GetPurchaseOrderLines(c *gin.Context) {
 	poID := c.Param("id")
 	lines, err := h.svc.ListPurchaseOrderLines(c.Request.Context(), poID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": lines})
@@ -265,7 +270,7 @@ func (h *PurchaseOrderHandler) GetPurchaseRequisitionLines(c *gin.Context) {
 	reqID := c.Param("id")
 	lines, err := h.svc.ListPurchaseRequisitionLines(c.Request.Context(), reqID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": lines})

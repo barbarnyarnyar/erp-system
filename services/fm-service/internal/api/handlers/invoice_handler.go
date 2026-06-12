@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -12,16 +13,20 @@ import (
 
 type InvoiceHandler struct {
 	svc *service.AccountsReceivableService
+	response *utils.ResponseHelper
 }
 
-func NewInvoiceHandler(svc *service.AccountsReceivableService) *InvoiceHandler {
-	return &InvoiceHandler{svc: svc}
+func NewInvoiceHandler(svc *service.AccountsReceivableService, response *utils.ResponseHelper) *InvoiceHandler {
+	return &InvoiceHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *InvoiceHandler) GetInvoices(c *gin.Context) {
 	invoices, err := h.svc.ListInvoices(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": invoices})
@@ -40,7 +45,7 @@ func (h *InvoiceHandler) CreateInvoice(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -60,7 +65,7 @@ func (h *InvoiceHandler) CreateInvoice(c *gin.Context) {
 
 	invoice, err := h.svc.CreateInvoice(c.Request.Context(), req.CustomerID, req.IssueDate, req.DueDate, domainLines)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -71,7 +76,7 @@ func (h *InvoiceHandler) GetInvoice(c *gin.Context) {
 	id := c.Param("id")
 	invoice, lines, err := h.svc.GetInvoice(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+		h.response.NotFound(c, "invoice not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -84,13 +89,13 @@ func (h *InvoiceHandler) UpdateInvoice(c *gin.Context) {
 	id := c.Param("id")
 	var req map[string]interface{}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	invoice, err := h.svc.UpdateInvoice(c.Request.Context(), id, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -101,7 +106,7 @@ func (h *InvoiceHandler) DeleteInvoice(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeleteInvoice(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "invoice deleted successfully"})
@@ -111,7 +116,7 @@ func (h *InvoiceHandler) SendInvoice(c *gin.Context) {
 	id := c.Param("id")
 	ok, err := h.svc.SendInvoice(c.Request.Context(), id)
 	if err != nil || !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send invoice"})
+		h.response.InternalServerError(c, "failed to send invoice", nil)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "invoice sent successfully"})
@@ -121,7 +126,7 @@ func (h *InvoiceHandler) GetInvoiceLines(c *gin.Context) {
 	id := c.Param("id")
 	_, lines, err := h.svc.GetInvoice(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+		h.response.NotFound(c, "invoice not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

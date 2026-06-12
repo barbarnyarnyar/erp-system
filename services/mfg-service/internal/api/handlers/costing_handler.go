@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	"net/http"
 
@@ -10,17 +11,21 @@ import (
 
 type CostingHandler struct {
 	svc *service.CostingService
+	response *utils.ResponseHelper
 }
 
-func NewCostingHandler(svc *service.CostingService) *CostingHandler {
-	return &CostingHandler{svc: svc}
+func NewCostingHandler(svc *service.CostingService, response *utils.ResponseHelper) *CostingHandler {
+	return &CostingHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *CostingHandler) GetCosting(c *gin.Context) {
 	poID := c.Param("id")
 	cost, err := h.svc.GetCostingRecord(c.Request.Context(), poID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "costing record not found"})
+		h.response.NotFound(c, "costing record not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": cost})

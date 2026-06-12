@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -16,16 +17,15 @@ type ProjectHandler struct {
 	timeSvc      *service.TimeExpenseService
 	collabSvc    *service.CollaborationService
 	analyticsSvc *service.PortfolioAnalyticsService
+	response *utils.ResponseHelper
 }
 
-func NewProjectHandler(
-	planningSvc *service.ProjectPlanningService,
+func NewProjectHandler(planningSvc *service.ProjectPlanningService,
 	taskSvc *service.TaskManagementService,
 	resourceSvc *service.ResourceManagementService,
 	timeSvc *service.TimeExpenseService,
 	collabSvc *service.CollaborationService,
-	analyticsSvc *service.PortfolioAnalyticsService,
-) *ProjectHandler {
+	analyticsSvc *service.PortfolioAnalyticsService, response *utils.ResponseHelper) *ProjectHandler {
 	return &ProjectHandler{
 		planningSvc:  planningSvc,
 		taskSvc:      taskSvc,
@@ -33,6 +33,7 @@ func NewProjectHandler(
 		timeSvc:      timeSvc,
 		collabSvc:    collabSvc,
 		analyticsSvc: analyticsSvc,
+		response: response,
 	}
 }
 
@@ -49,13 +50,13 @@ type CreatePortfolioReq struct {
 func (h *ProjectHandler) CreatePortfolio(c *gin.Context) {
 	var req CreatePortfolioReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	p, err := h.planningSvc.CreatePortfolio(c.Request.Context(), req.Name, req.Description, req.ManagerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, p)
@@ -64,7 +65,7 @@ func (h *ProjectHandler) CreatePortfolio(c *gin.Context) {
 func (h *ProjectHandler) ListPortfolios(c *gin.Context) {
 	list, err := h.planningSvc.ListPortfolios(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -74,7 +75,7 @@ func (h *ProjectHandler) GetPortfolio(c *gin.Context) {
 	id := c.Param("id")
 	p, err := h.planningSvc.GetPortfolio(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, p)
@@ -84,7 +85,7 @@ func (h *ProjectHandler) GetPortfolioSummary(c *gin.Context) {
 	id := c.Param("id")
 	summary, err := h.analyticsSvc.GetPortfolioSummary(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, summary)
@@ -106,13 +107,13 @@ type CreateProjectReq struct {
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	var req CreateProjectReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	p, err := h.planningSvc.CreateProject(c.Request.Context(), req.Name, req.Description, req.StartDate, req.EndDate, req.PortfolioID, req.BudgetID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, p)
@@ -121,7 +122,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
 	list, err := h.planningSvc.ListProjects(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -131,7 +132,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 	id := c.Param("id")
 	p, err := h.planningSvc.GetProject(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, p)
@@ -145,13 +146,13 @@ func (h *ProjectHandler) UpdateProjectStatus(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateProjectStatusReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	p, err := h.planningSvc.UpdateProjectStatus(c.Request.Context(), id, req.Status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, p)
@@ -175,13 +176,13 @@ func (h *ProjectHandler) CreateTask(c *gin.Context) {
 	projectID := c.Param("id")
 	var req CreateTaskReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	t, err := h.taskSvc.CreateTask(c.Request.Context(), projectID, req.ParentID, req.Title, req.Description, req.AssignedTo, req.StartDate, req.EndDate, req.EstimatedHours)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, t)
@@ -191,7 +192,7 @@ func (h *ProjectHandler) ListTasks(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.taskSvc.ListTasksByProject(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -207,13 +208,13 @@ func (h *ProjectHandler) UpdateTaskProgress(c *gin.Context) {
 	taskID := c.Param("task_id")
 	var req UpdateTaskProgressReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	t, err := h.taskSvc.UpdateTaskProgress(c.Request.Context(), taskID, req.Progress, req.ActualHours, req.Status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, t)
@@ -227,13 +228,13 @@ func (h *ProjectHandler) AssignTask(c *gin.Context) {
 	taskID := c.Param("task_id")
 	var req AssignTaskReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	t, err := h.taskSvc.AssignTask(c.Request.Context(), taskID, req.EmployeeID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, t)
@@ -252,13 +253,13 @@ func (h *ProjectHandler) AddTaskDependency(c *gin.Context) {
 	taskID := c.Param("task_id")
 	var req AddDependencyReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	dep, err := h.taskSvc.AddTaskDependency(c.Request.Context(), taskID, req.DependsOnTaskID, req.DependencyType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, dep)
@@ -280,13 +281,13 @@ func (h *ProjectHandler) AllocateResource(c *gin.Context) {
 	projectID := c.Param("id")
 	var req AllocateResourceReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	alloc, err := h.resourceSvc.AllocateResource(c.Request.Context(), projectID, req.UserID, req.Role, req.AllocationPercentage, req.StartDate, req.EndDate)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, alloc)
@@ -296,7 +297,7 @@ func (h *ProjectHandler) ListAllocations(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.resourceSvc.ListAllocations(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -318,13 +319,13 @@ func (h *ProjectHandler) LogTime(c *gin.Context) {
 	projectID := c.Param("id")
 	var req LogTimeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	entry, err := h.timeSvc.LogTime(c.Request.Context(), projectID, req.TaskID, req.UserID, req.EntryDate, req.Hours, req.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, entry)
@@ -338,13 +339,13 @@ func (h *ProjectHandler) ApproveTime(c *gin.Context) {
 	entryID := c.Param("time_id")
 	var req ApproveTimeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	entry, err := h.timeSvc.ApproveTime(c.Request.Context(), entryID, req.ApprovedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, entry)
@@ -354,7 +355,7 @@ func (h *ProjectHandler) ListTimeEntries(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.timeSvc.ListTimeEntries(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -378,13 +379,13 @@ func (h *ProjectHandler) LogExpense(c *gin.Context) {
 	projectID := c.Param("id")
 	var req LogExpenseReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	exp, err := h.timeSvc.LogExpense(c.Request.Context(), projectID, req.TaskID, req.UserID, req.Amount, req.Currency, req.ExpenseDate, req.Category, req.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, exp)
@@ -398,13 +399,13 @@ func (h *ProjectHandler) ApproveExpense(c *gin.Context) {
 	expenseID := c.Param("expense_id")
 	var req ApproveExpenseReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	exp, err := h.timeSvc.ApproveExpense(c.Request.Context(), expenseID, req.ApprovedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, exp)
@@ -414,7 +415,7 @@ func (h *ProjectHandler) ListExpenses(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.timeSvc.ListExpenses(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -435,13 +436,13 @@ func (h *ProjectHandler) UploadDocument(c *gin.Context) {
 	projectID := c.Param("id")
 	var req UploadDocReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	doc, err := h.collabSvc.UploadDocument(c.Request.Context(), projectID, req.Name, req.FilePath, req.FileSize, req.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, doc)
@@ -451,7 +452,7 @@ func (h *ProjectHandler) ListDocuments(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.collabSvc.ListDocuments(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -472,13 +473,13 @@ func (h *ProjectHandler) LogIssue(c *gin.Context) {
 	projectID := c.Param("id")
 	var req LogIssueReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	issue, err := h.collabSvc.LogIssue(c.Request.Context(), projectID, req.Title, req.Description, req.Severity, req.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, issue)
@@ -492,13 +493,13 @@ func (h *ProjectHandler) ResolveIssue(c *gin.Context) {
 	issueID := c.Param("issue_id")
 	var req ResolveIssueReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	issue, err := h.collabSvc.ResolveIssue(c.Request.Context(), issueID, req.AssignedTo)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, issue)
@@ -508,7 +509,7 @@ func (h *ProjectHandler) ListIssues(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.collabSvc.ListIssues(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -530,13 +531,13 @@ func (h *ProjectHandler) CreateChangeRequest(c *gin.Context) {
 	projectID := c.Param("id")
 	var req CreateChangeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	cr, err := h.collabSvc.CreateChangeRequest(c.Request.Context(), projectID, req.Title, req.Description, req.Reason, req.ImpactAnalysis, req.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, cr)
@@ -550,13 +551,13 @@ func (h *ProjectHandler) ApproveChangeRequest(c *gin.Context) {
 	requestID := c.Param("request_id")
 	var req ApproveChangeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	cr, err := h.collabSvc.ApproveChangeRequest(c.Request.Context(), requestID, req.ApprovedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, cr)
@@ -566,7 +567,7 @@ func (h *ProjectHandler) ListChangeRequests(c *gin.Context) {
 	projectID := c.Param("id")
 	list, err := h.collabSvc.ListChangeRequests(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -586,13 +587,13 @@ func (h *ProjectHandler) RequestMaterial(c *gin.Context) {
 	projectID := c.Param("id")
 	var req RequestMaterialReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	err := h.taskSvc.RequestMaterial(c.Request.Context(), projectID, req.TaskID, req.ProductID, req.Quantity)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Material request event successfully published to SCM"})
@@ -608,13 +609,13 @@ func (h *ProjectHandler) RequestCustomOrder(c *gin.Context) {
 	projectID := c.Param("id")
 	var req RequestCustomOrderReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	err := h.planningSvc.RequestCustomOrder(c.Request.Context(), projectID, req.CustomItemID, req.Quantity, req.RequiredBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Custom order request event successfully published to Manufacturing"})

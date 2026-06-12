@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -21,6 +22,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	utils.InitLogger("hr-service")
+	responseHelper := utils.NewResponseHelper("hr-service")
+
 
 	// 2. Initialize Event Publisher (Kafka)
 	publisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
@@ -63,15 +67,15 @@ func main() {
 	reportSvc := service.NewReportService(empRepo, payrollRepo, timesheetRepo)
 
 	// 5. Initialize Handlers
-	empHandler := handlers.NewEmployeeHandler(empSvc)
-	payrollHandler := handlers.NewPayrollHandler(payrollSvc)
-	timesheetHandler := handlers.NewTimesheetHandler(timesheetSvc)
-	leaveHandler := handlers.NewLeaveHandler(leaveSvc)
-	recruitmentHandler := handlers.NewRecruitmentHandler(recruitmentSvc)
-	perfHandler := handlers.NewPerformanceHandler(perfSvc)
-	trainingHandler := handlers.NewTrainingHandler(trainingSvc)
-	docHandler := handlers.NewDocumentHandler(docSvc)
-	reportHandler := handlers.NewReportHandler(reportSvc)
+	empHandler := handlers.NewEmployeeHandler(empSvc, responseHelper)
+	payrollHandler := handlers.NewPayrollHandler(payrollSvc, responseHelper)
+	timesheetHandler := handlers.NewTimesheetHandler(timesheetSvc, responseHelper)
+	leaveHandler := handlers.NewLeaveHandler(leaveSvc, responseHelper)
+	recruitmentHandler := handlers.NewRecruitmentHandler(recruitmentSvc, responseHelper)
+	perfHandler := handlers.NewPerformanceHandler(perfSvc, responseHelper)
+	trainingHandler := handlers.NewTrainingHandler(trainingSvc, responseHelper)
+	docHandler := handlers.NewDocumentHandler(docSvc, responseHelper)
+	reportHandler := handlers.NewReportHandler(reportSvc, responseHelper)
 
 	// 5b. Initialize Event Consumer (Kafka)
 	ctx, cancel := context.WithCancel(context.Background())

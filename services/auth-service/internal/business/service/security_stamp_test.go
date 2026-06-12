@@ -1,6 +1,7 @@
 package service
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"testing"
 	"time"
@@ -9,10 +10,6 @@ import (
 	"github.com/erp-system/auth-service/internal/config"
 	"github.com/erp-system/auth-service/internal/data/memory"
 )
-
-import sharedtesting "erp-system/shared/testing"
-
-type MockPublisher = sharedtesting.MockPublisher
 
 func newTestConfig() *config.Config {
 	return &config.Config{
@@ -33,7 +30,7 @@ func newAuthService(t *testing.T) (*AuthService, *UserService, *memory.UserRepos
 	urRepo := memory.NewUserRoleRepository()
 	rpRepo := memory.NewRolePermissionRepository()
 	usRepo := memory.NewUserStoreRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	rbacSvc := NewRBACService(roleRepo, permRepo, urRepo, rpRepo, pub)
 	authSvc := NewAuthService(userRepo, sessRepo, rbacSvc, pub, newTestConfig())
 	userSvc := NewUserService(userRepo, usRepo, urRepo, pub)

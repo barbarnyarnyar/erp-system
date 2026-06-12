@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -12,16 +13,20 @@ import (
 
 type VendorBillHandler struct {
 	svc *service.AccountsPayableService
+	response *utils.ResponseHelper
 }
 
-func NewVendorBillHandler(svc *service.AccountsPayableService) *VendorBillHandler {
-	return &VendorBillHandler{svc: svc}
+func NewVendorBillHandler(svc *service.AccountsPayableService, response *utils.ResponseHelper) *VendorBillHandler {
+	return &VendorBillHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *VendorBillHandler) GetVendorBills(c *gin.Context) {
 	bills, err := h.svc.ListVendorBills(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": bills})
@@ -43,7 +48,7 @@ func (h *VendorBillHandler) CreateVendorBill(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -77,7 +82,7 @@ func (h *VendorBillHandler) CreateVendorBill(c *gin.Context) {
 		domainLines,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -88,7 +93,7 @@ func (h *VendorBillHandler) GetVendorBillLines(c *gin.Context) {
 	id := c.Param("id")
 	_, lines, err := h.svc.GetVendorBill(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "vendor bill not found"})
+		h.response.NotFound(c, "vendor bill not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

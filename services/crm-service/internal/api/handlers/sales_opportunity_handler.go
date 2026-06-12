@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -16,16 +17,15 @@ type SalesOpportunityHandler struct {
 	ticketSvc *service.ServiceTicketService
 	campSvc   *service.CampaignService
 	plSvc     *service.PriceListService
+	response *utils.ResponseHelper
 }
 
-func NewSalesOpportunityHandler(
-	oppSvc *service.OpportunityService,
+func NewSalesOpportunityHandler(oppSvc *service.OpportunityService,
 	orderSvc *service.SalesOrderService,
 	quoteSvc *service.QuoteService,
 	ticketSvc *service.ServiceTicketService,
 	campSvc *service.CampaignService,
-	plSvc *service.PriceListService,
-) *SalesOpportunityHandler {
+	plSvc *service.PriceListService, response *utils.ResponseHelper) *SalesOpportunityHandler {
 	return &SalesOpportunityHandler{
 		oppSvc:    oppSvc,
 		orderSvc:  orderSvc,
@@ -33,6 +33,7 @@ func NewSalesOpportunityHandler(
 		ticketSvc: ticketSvc,
 		campSvc:   campSvc,
 		plSvc:     plSvc,
+		response: response,
 	}
 }
 
@@ -48,13 +49,13 @@ type CreateOpportunityReq struct {
 func (h *SalesOpportunityHandler) CreateOpportunity(c *gin.Context) {
 	var req CreateOpportunityReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	opp, err := h.oppSvc.CreateOpportunity(c.Request.Context(), req.CustomerID, req.Title, req.Value, req.Stage)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -65,7 +66,7 @@ func (h *SalesOpportunityHandler) GetOpportunity(c *gin.Context) {
 	id := c.Param("id")
 	opp, err := h.oppSvc.GetOpportunity(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 
@@ -75,7 +76,7 @@ func (h *SalesOpportunityHandler) GetOpportunity(c *gin.Context) {
 func (h *SalesOpportunityHandler) ListOpportunities(c *gin.Context) {
 	list, err := h.oppSvc.ListOpportunities(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -95,13 +96,13 @@ func (h *SalesOpportunityHandler) UpdateOpportunity(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateOpportunityReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	opp, err := h.oppSvc.UpdateOpportunity(c.Request.Context(), id, req.Title, req.Value, req.Status, req.Stage, req.Probability, req.ChangedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -112,7 +113,7 @@ func (h *SalesOpportunityHandler) DeleteOpportunity(c *gin.Context) {
 	id := c.Param("id")
 	err := h.oppSvc.DeleteOpportunity(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -123,7 +124,7 @@ func (h *SalesOpportunityHandler) GetOpportunityStageHistory(c *gin.Context) {
 	id := c.Param("id")
 	history, err := h.oppSvc.ListOpportunityStageHistory(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -140,13 +141,13 @@ type CreateSalesOrderReq struct {
 func (h *SalesOpportunityHandler) CreateSalesOrder(c *gin.Context) {
 	var req CreateSalesOrderReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	order, err := h.orderSvc.CreateSalesOrder(c.Request.Context(), req.CustomerID, req.Items)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -157,7 +158,7 @@ func (h *SalesOpportunityHandler) GetSalesOrder(c *gin.Context) {
 	id := c.Param("id")
 	order, err := h.orderSvc.GetSalesOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 
@@ -167,7 +168,7 @@ func (h *SalesOpportunityHandler) GetSalesOrder(c *gin.Context) {
 func (h *SalesOpportunityHandler) ListSalesOrders(c *gin.Context) {
 	list, err := h.orderSvc.ListSalesOrders(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -182,13 +183,13 @@ func (h *SalesOpportunityHandler) UpdateSalesOrder(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateSalesOrderReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	order, err := h.orderSvc.UpdateSalesOrder(c.Request.Context(), id, req.Status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -199,7 +200,7 @@ func (h *SalesOpportunityHandler) DeleteSalesOrder(c *gin.Context) {
 	id := c.Param("id")
 	err := h.orderSvc.DeleteSalesOrder(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -218,13 +219,13 @@ type CreateQuoteReq struct {
 func (h *SalesOpportunityHandler) CreateQuote(c *gin.Context) {
 	var req CreateQuoteReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	quote, err := h.quoteSvc.CreateQuote(c.Request.Context(), req.CustomerID, req.Title, req.ValidUntil, req.Items)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -235,7 +236,7 @@ func (h *SalesOpportunityHandler) GetQuote(c *gin.Context) {
 	id := c.Param("id")
 	quote, err := h.quoteSvc.GetQuote(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 
@@ -245,7 +246,7 @@ func (h *SalesOpportunityHandler) GetQuote(c *gin.Context) {
 func (h *SalesOpportunityHandler) ListQuotes(c *gin.Context) {
 	list, err := h.quoteSvc.ListQuotes(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -260,13 +261,13 @@ func (h *SalesOpportunityHandler) UpdateQuote(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateQuoteReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	quote, err := h.quoteSvc.UpdateQuote(c.Request.Context(), id, req.Status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -277,7 +278,7 @@ func (h *SalesOpportunityHandler) DeleteQuote(c *gin.Context) {
 	id := c.Param("id")
 	err := h.quoteSvc.DeleteQuote(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -288,7 +289,7 @@ func (h *SalesOpportunityHandler) SendQuote(c *gin.Context) {
 	id := c.Param("id")
 	quote, err := h.quoteSvc.SendQuote(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -307,13 +308,13 @@ type CreateServiceTicketReq struct {
 func (h *SalesOpportunityHandler) CreateServiceTicket(c *gin.Context) {
 	var req CreateServiceTicketReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	ticket, err := h.ticketSvc.CreateServiceTicket(c.Request.Context(), req.CustomerID, req.Title, req.Description, req.Priority)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -324,7 +325,7 @@ func (h *SalesOpportunityHandler) GetServiceTicket(c *gin.Context) {
 	id := c.Param("id")
 	ticket, err := h.ticketSvc.GetServiceTicket(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 
@@ -334,7 +335,7 @@ func (h *SalesOpportunityHandler) GetServiceTicket(c *gin.Context) {
 func (h *SalesOpportunityHandler) ListServiceTickets(c *gin.Context) {
 	list, err := h.ticketSvc.ListServiceTickets(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -350,13 +351,13 @@ func (h *SalesOpportunityHandler) UpdateServiceTicket(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateServiceTicketReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	ticket, err := h.ticketSvc.UpdateServiceTicket(c.Request.Context(), id, req.Status, req.Priority)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -367,7 +368,7 @@ func (h *SalesOpportunityHandler) DeleteServiceTicket(c *gin.Context) {
 	id := c.Param("id")
 	err := h.ticketSvc.DeleteServiceTicket(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -385,13 +386,13 @@ type CreateCampaignReq struct {
 func (h *SalesOpportunityHandler) CreateCampaign(c *gin.Context) {
 	var req CreateCampaignReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	camp, err := h.campSvc.CreateCampaign(c.Request.Context(), req.Name, req.Type, req.Budget)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -402,7 +403,7 @@ func (h *SalesOpportunityHandler) GetCampaign(c *gin.Context) {
 	id := c.Param("id")
 	camp, err := h.campSvc.GetCampaign(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 
@@ -412,7 +413,7 @@ func (h *SalesOpportunityHandler) GetCampaign(c *gin.Context) {
 func (h *SalesOpportunityHandler) ListCampaigns(c *gin.Context) {
 	list, err := h.campSvc.ListCampaigns(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -428,13 +429,13 @@ func (h *SalesOpportunityHandler) UpdateCampaign(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateCampaignReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	camp, err := h.campSvc.UpdateCampaign(c.Request.Context(), id, req.Status, req.Budget)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -445,7 +446,7 @@ func (h *SalesOpportunityHandler) DeleteCampaign(c *gin.Context) {
 	id := c.Param("id")
 	err := h.campSvc.DeleteCampaign(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -463,13 +464,13 @@ type CreatePriceListReq struct {
 func (h *SalesOpportunityHandler) CreatePriceList(c *gin.Context) {
 	var req CreatePriceListReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	pl, err := h.plSvc.CreatePriceList(c.Request.Context(), req.Name, req.Description, req.IsActive)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -480,7 +481,7 @@ func (h *SalesOpportunityHandler) GetPriceList(c *gin.Context) {
 	id := c.Param("id")
 	pl, err := h.plSvc.GetPriceList(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.response.NotFoundErr(c, err)
 		return
 	}
 
@@ -490,7 +491,7 @@ func (h *SalesOpportunityHandler) GetPriceList(c *gin.Context) {
 func (h *SalesOpportunityHandler) ListPriceLists(c *gin.Context) {
 	list, err := h.plSvc.ListPriceLists(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -507,13 +508,13 @@ func (h *SalesOpportunityHandler) UpdatePriceList(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdatePriceListReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	pl, err := h.plSvc.UpdatePriceList(c.Request.Context(), id, req.Name, req.Description, req.IsActive)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -524,7 +525,7 @@ func (h *SalesOpportunityHandler) DeletePriceList(c *gin.Context) {
 	id := c.Param("id")
 	err := h.plSvc.DeletePriceList(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 

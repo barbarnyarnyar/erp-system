@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/auth-service/internal/business/domain"
@@ -12,17 +13,17 @@ type IdentityHandler struct {
 	authSvc *service.AuthService
 	userSvc *service.UserService
 	rbacSvc *service.RBACService
+	response *utils.ResponseHelper
 }
 
-func NewIdentityHandler(
-	authSvc *service.AuthService,
+func NewIdentityHandler(authSvc *service.AuthService,
 	userSvc *service.UserService,
-	rbacSvc *service.RBACService,
-) *IdentityHandler {
+	rbacSvc *service.RBACService, response *utils.ResponseHelper) *IdentityHandler {
 	return &IdentityHandler{
 		authSvc: authSvc,
 		userSvc: userSvc,
 		rbacSvc: rbacSvc,
+		response: response,
 	}
 }
 
@@ -39,7 +40,7 @@ type RegisterReq struct {
 func (h *IdentityHandler) Register(c *gin.Context) {
 	var req RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -53,7 +54,7 @@ func (h *IdentityHandler) Register(c *gin.Context) {
 
 	created, err := h.userSvc.CreateUser(c.Request.Context(), user, req.InitialStoreID, req.RoleIDs)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -68,7 +69,7 @@ type LoginReq struct {
 func (h *IdentityHandler) Login(c *gin.Context) {
 	var req LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -95,7 +96,7 @@ type RefreshReq struct {
 func (h *IdentityHandler) Refresh(c *gin.Context) {
 	var req RefreshReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -119,7 +120,7 @@ type LogoutReq struct {
 func (h *IdentityHandler) Logout(c *gin.Context) {
 	var req LogoutReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -131,7 +132,7 @@ func (h *IdentityHandler) Logout(c *gin.Context) {
 
 	err = h.authSvc.RevokeToken(c.Request.Context(), session.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -146,13 +147,13 @@ func (h *IdentityHandler) AssignStore(c *gin.Context) {
 	id := c.Param("id")
 	var req AssignStoreReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	err := h.userSvc.AssignUserToStore(c.Request.Context(), id, req.StoreID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -167,13 +168,13 @@ func (h *IdentityHandler) ValidatePermission(c *gin.Context) {
 	id := c.Param("id")
 	var req ValidatePermissionReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	valid, err := h.rbacSvc.ValidatePermissions(c.Request.Context(), id, req.Permission)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -191,13 +192,13 @@ func (h *IdentityHandler) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	updated, err := h.userSvc.UpdateUser(c.Request.Context(), id, req.FirstName, req.LastName, req.Email, req.IsActive)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -208,7 +209,7 @@ func (h *IdentityHandler) Deactivate(c *gin.Context) {
 	id := c.Param("id")
 	err := h.userSvc.DeactivateUser(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 

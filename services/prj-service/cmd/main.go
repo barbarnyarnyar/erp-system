@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -26,6 +27,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	utils.InitLogger("prj-service")
+	responseHelper := utils.NewResponseHelper("prj-service")
+
 
 	log.Printf("Starting pm-service in %s environment on port %s...", cfg.Server.Env, cfg.Server.Port)
 
@@ -98,7 +102,7 @@ func main() {
 		})
 	})
 
-	handler := handlers.NewProjectHandler(planningSvc, taskSvc, resourceSvc, timeSvc, collabSvc, analyticsSvc)
+	handler := handlers.NewProjectHandler(planningSvc, taskSvc, resourceSvc, timeSvc, collabSvc, analyticsSvc, responseHelper)
 	routes.SetupPMRoutes(r, handler)
 
 	// 8. Start HTTP server with graceful shutdown

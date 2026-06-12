@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/scm-service/internal/business/service"
@@ -10,16 +11,20 @@ import (
 
 type InventoryHandler struct {
 	svc *service.InventoryService
+	response *utils.ResponseHelper
 }
 
-func NewInventoryHandler(svc *service.InventoryService) *InventoryHandler {
-	return &InventoryHandler{svc: svc}
+func NewInventoryHandler(svc *service.InventoryService, response *utils.ResponseHelper) *InventoryHandler {
+	return &InventoryHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *InventoryHandler) GetInventoryItems(c *gin.Context) {
 	list, err := h.svc.ListInventory(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -36,7 +41,7 @@ func (h *InventoryHandler) CreateInventoryItem(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -47,7 +52,7 @@ func (h *InventoryHandler) CreateInventoryItem(c *gin.Context) {
 
 	ii, err := h.svc.CreateInventoryItem(c.Request.Context(), req.ProductID, req.LocationID, req.QuantityOnHand, req.ReorderPoint, req.MaximumStock, costDec)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -58,7 +63,7 @@ func (h *InventoryHandler) GetInventoryItem(c *gin.Context) {
 	id := c.Param("id")
 	ii, err := h.svc.GetInventoryItem(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "inventory item not found"})
+		h.response.NotFound(c, "inventory item not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": ii})
@@ -75,7 +80,7 @@ func (h *InventoryHandler) UpdateInventoryItem(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -86,7 +91,7 @@ func (h *InventoryHandler) UpdateInventoryItem(c *gin.Context) {
 
 	ii, err := h.svc.UpdateInventoryItem(c.Request.Context(), id, req.QuantityOnHand, req.QuantityReserved, req.ReorderPoint, req.MaximumStock, costDec)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -111,13 +116,13 @@ func (h *InventoryHandler) ReserveStock(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	err := h.svc.ReserveStock(c.Request.Context(), req.ProductID, req.LocationID, req.Quantity, req.ReferenceID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -130,13 +135,13 @@ func (h *InventoryHandler) ReleaseReservation(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	err := h.svc.ReleaseReservation(c.Request.Context(), req.ReferenceID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -152,13 +157,13 @@ func (h *InventoryHandler) CreateStockTransfer(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	st, err := h.svc.CreateStockTransfer(c.Request.Context(), req.FromLocationID, req.ToLocationID, req.ProductID, req.Quantity)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -169,7 +174,7 @@ func (h *InventoryHandler) GetStockTransfer(c *gin.Context) {
 	id := c.Param("id")
 	st, err := h.svc.GetStockTransfer(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "stock transfer not found"})
+		h.response.NotFound(c, "stock transfer not found")
 		return
 	}
 
@@ -179,7 +184,7 @@ func (h *InventoryHandler) GetStockTransfer(c *gin.Context) {
 func (h *InventoryHandler) GetStockTransfers(c *gin.Context) {
 	list, err := h.svc.ListStockTransfers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -190,7 +195,7 @@ func (h *InventoryHandler) ExecuteStockTransfer(c *gin.Context) {
 	id := c.Param("id")
 	st, err := h.svc.ExecuteStockTransfer(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -200,7 +205,7 @@ func (h *InventoryHandler) ExecuteStockTransfer(c *gin.Context) {
 func (h *InventoryHandler) GetInventoryMovements(c *gin.Context) {
 	list, err := h.svc.ListMovements(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})

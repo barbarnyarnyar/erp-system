@@ -5,7 +5,6 @@ import (
 	"erp-system/shared/utils"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"

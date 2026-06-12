@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -22,6 +23,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	utils.InitLogger("scm-service")
+	responseHelper := utils.NewResponseHelper("scm-service")
+
 
 	// 2. Initialize Event Publisher (Kafka)
 	publisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
@@ -69,13 +73,13 @@ func main() {
 	reportSvc := service.NewReportService(prodRepo, invRepo, supRepo, poRepo, moveRepo, forecastRepo)
 
 	// 5. Initialize Handlers
-	prodHandler := handlers.NewProductHandler(prodSvc)
-	vendorHandler := handlers.NewVendorHandler(supSvc)
-	poHandler := handlers.NewPurchaseOrderHandler(poSvc)
-	invHandler := handlers.NewInventoryHandler(invSvc)
-	whHandler := handlers.NewWarehouseHandler(whSvc)
-	demandHandler := handlers.NewDemandForecastHandler(demandSvc)
-	reportHandler := handlers.NewReportHandler(reportSvc)
+	prodHandler := handlers.NewProductHandler(prodSvc, responseHelper)
+	vendorHandler := handlers.NewVendorHandler(supSvc, responseHelper)
+	poHandler := handlers.NewPurchaseOrderHandler(poSvc, responseHelper)
+	invHandler := handlers.NewInventoryHandler(invSvc, responseHelper)
+	whHandler := handlers.NewWarehouseHandler(whSvc, responseHelper)
+	demandHandler := handlers.NewDemandForecastHandler(demandSvc, responseHelper)
+	reportHandler := handlers.NewReportHandler(reportSvc, responseHelper)
 
 	// 5b. Start Event Consumer (Kafka)
 	ctx, cancel := context.WithCancel(context.Background())

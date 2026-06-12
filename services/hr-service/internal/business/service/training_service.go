@@ -4,7 +4,6 @@ import (
 	"context"
 	"erp-system/shared/utils"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/erp-system/hr-service/internal/business/domain"

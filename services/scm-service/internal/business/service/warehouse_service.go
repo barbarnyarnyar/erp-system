@@ -104,7 +104,7 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 
 	for _, l := range lines {
 		line := domain.ReceiptLine{
-			ID:               fmt.Sprintf("recl_%d", time.Now().UnixNano()+int64(len(savedLines))),
+			ID:               utils.NewID("receipt-line"),
 			ReceiptID:        recID,
 			ProductID:        l.ProductID,
 			QuantityReceived: l.QuantityReceived,
@@ -246,7 +246,7 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 
 	for _, l := range lines {
 		line := domain.ShipmentLine{
-			ID:              fmt.Sprintf("shipl_%d", time.Now().UnixNano()+int64(len(savedLines))),
+			ID:              utils.NewID("shipment-line"),
 			ShipmentID:      shipID,
 			ProductID:       l.ProductID,
 			QuantityShipped: l.QuantityShipped,

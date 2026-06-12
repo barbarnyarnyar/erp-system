@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/erp-system/crm-service/internal/business/domain"
@@ -601,6 +602,9 @@ func (r *OpportunityStageHistoryRepository) ListByOpportunityID(ctx context.Cont
 			list = append(list, h)
 		}
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].ChangedAt.Before(list[j].ChangedAt)
+	})
 	return list, nil
 }
 

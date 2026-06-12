@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/hr-service/internal/business/service"
@@ -9,17 +10,21 @@ import (
 
 type DocumentHandler struct {
 	svc *service.EmployeeDocumentService
+	response *utils.ResponseHelper
 }
 
-func NewDocumentHandler(svc *service.EmployeeDocumentService) *DocumentHandler {
-	return &DocumentHandler{svc: svc}
+func NewDocumentHandler(svc *service.EmployeeDocumentService, response *utils.ResponseHelper) *DocumentHandler {
+	return &DocumentHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *DocumentHandler) GetEmployeeDocuments(c *gin.Context) {
 	empID := c.Param("id")
 	list, err := h.svc.ListDocuments(c.Request.Context(), empID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -34,13 +39,13 @@ func (h *DocumentHandler) UploadEmployeeDocument(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	doc, err := h.svc.UploadDocument(c.Request.Context(), empID, req.DocType, req.FileName, req.FileUrl)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -51,7 +56,7 @@ func (h *DocumentHandler) DeleteEmployeeDocument(c *gin.Context) {
 	docID := c.Param("docId")
 	err := h.svc.DeleteDocument(c.Request.Context(), docID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "document deleted successfully"})

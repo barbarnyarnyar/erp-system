@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"errors"
 	"testing"
@@ -61,7 +62,7 @@ func newPendingEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, acc
 func TestJournalEntry_Create_SetsPostedByAndPostedAt(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()
 	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
 
 	accA, _ := svc.CreateAccount(context.Background(), "1000", "Cash", "ASSET", "", "USD")
@@ -90,7 +91,7 @@ func TestJournalEntry_Create_SetsPostedByAndPostedAt(t *testing.T) {
 func TestJournalEntry_Update_BlocksPosted(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()
 	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
 
 	id := newPostedEntry(t, entries, accounts)
@@ -108,7 +109,7 @@ func TestJournalEntry_Update_BlocksPosted(t *testing.T) {
 func TestJournalEntry_Update_BlocksReversed(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()
 	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
 
 	id := newPostedEntry(t, entries, accounts)
@@ -129,7 +130,7 @@ func TestJournalEntry_Update_BlocksReversed(t *testing.T) {
 func TestJournalEntry_Update_AllowsPending(t *testing.T) {
 	accounts := memory.NewMemoryAccountRepo()
 	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
 
 	id := newPendingEntry(t, entries, accounts)

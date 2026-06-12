@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/fm-service/internal/business/domain"
@@ -11,16 +12,20 @@ import (
 
 type TransactionHandler struct {
 	svc *service.GeneralLedgerService
+	response *utils.ResponseHelper
 }
 
-func NewTransactionHandler(svc *service.GeneralLedgerService) *TransactionHandler {
-	return &TransactionHandler{svc: svc}
+func NewTransactionHandler(svc *service.GeneralLedgerService, response *utils.ResponseHelper) *TransactionHandler {
+	return &TransactionHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 	entries, err := h.svc.ListJournalEntries(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": entries})
@@ -39,7 +44,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -65,7 +70,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 
 	entry, err := h.svc.CreateJournalEntry(c.Request.Context(), req.Reference, req.Description, domainLines)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -76,7 +81,7 @@ func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 	id := c.Param("id")
 	entry, lines, err := h.svc.GetJournalEntry(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "journal entry not found"})
+		h.response.NotFound(c, "journal entry not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -99,7 +104,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -124,7 +129,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 
 	entry, err := h.svc.UpdateJournalEntry(c.Request.Context(), id, req.Reference, req.Description, domainLines)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -135,7 +140,7 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 	id := c.Param("id")
 	err := h.svc.DeleteJournalEntry(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "journal entry deleted successfully"})

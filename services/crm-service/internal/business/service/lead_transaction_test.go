@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"errors"
 	"testing"
@@ -12,9 +13,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-import sharedtesting "erp-system/shared/testing"
-
-type MockPublisher = sharedtesting.MockPublisher
 type MockEvent = sharedtesting.MockEvent
 
 // MockOpportunityRepo that can fail on Create to test rollback
@@ -30,7 +28,7 @@ func TestLeadService_ConvertLead_Success(t *testing.T) {
 	leadRepo := memory.NewLeadRepository()
 	custRepo := memory.NewCustomerRepository()
 	oppRepo := memory.NewOpportunityRepository()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	custSvc := service.NewCustomerService(custRepo, publisher)
 	oppSvc := service.NewOpportunityService(oppRepo, memory.NewOpportunityStageHistoryRepository(), publisher)
@@ -79,7 +77,7 @@ func TestLeadService_ConvertLead_RollbackOnOpportunityFailure(t *testing.T) {
 	custRepo := memory.NewCustomerRepository()
 	// Use failing opportunity repo
 	oppRepo := &MockFailOpportunityRepo{memory.NewOpportunityRepository()}
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	custSvc := service.NewCustomerService(custRepo, publisher)
 	oppSvc := service.NewOpportunityService(oppRepo, memory.NewOpportunityStageHistoryRepository(), publisher)
@@ -123,7 +121,7 @@ func TestLeadService_ConvertLead_RollbackOnPublishFailure(t *testing.T) {
 	leadRepo := memory.NewLeadRepository()
 	custRepo := memory.NewCustomerRepository()
 	oppRepo := memory.NewOpportunityRepository()
-	publisher := &MockPublisher{FailPublish: true}
+	publisher := &sharedtesting.MockPublisher{FailPublish: true}
 
 	custSvc := service.NewCustomerService(custRepo, publisher)
 	oppSvc := service.NewOpportunityService(oppRepo, memory.NewOpportunityStageHistoryRepository(), publisher)
@@ -172,7 +170,7 @@ func TestLeadService_ConvertLead_RollbackOnPublishFailure(t *testing.T) {
 func TestOpportunityStageHistory(t *testing.T) {
 	oppRepo := memory.NewOpportunityRepository()
 	historyRepo := memory.NewOpportunityStageHistoryRepository()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	svc := service.NewOpportunityService(oppRepo, historyRepo, publisher)
 	ctx := context.Background()

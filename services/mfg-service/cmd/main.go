@@ -1,6 +1,7 @@
 package main
 
 import (
+	"erp-system/shared/utils"
 	"context"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
@@ -22,6 +23,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	utils.InitLogger("mfg-service")
+	responseHelper := utils.NewResponseHelper("mfg-service")
+
 
 	// 2. Initialize Event Publisher (Kafka)
 	publisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
@@ -70,11 +74,11 @@ func main() {
 	prodSvc.SetCostingService(costingSvc)
 
 	// 5. Initialize Handlers
-	bomHandler := handlers.NewBOMHandler(bomSvc)
-	prodHandler := handlers.NewProductionHandler(prodSvc)
-	qualityHandler := handlers.NewQualityHandler(qualitySvc)
-	maintHandler := handlers.NewMaintenanceHandler(maintSvc)
-	costingHandler := handlers.NewCostingHandler(costingSvc)
+	bomHandler := handlers.NewBOMHandler(bomSvc, responseHelper)
+	prodHandler := handlers.NewProductionHandler(prodSvc, responseHelper)
+	qualityHandler := handlers.NewQualityHandler(qualitySvc, responseHelper)
+	maintHandler := handlers.NewMaintenanceHandler(maintSvc, responseHelper)
+	costingHandler := handlers.NewCostingHandler(costingSvc, responseHelper)
 
 	// 5b. Initialize Event Consumer (Kafka)
 	ctxCancel, cancel := context.WithCancel(context.Background())

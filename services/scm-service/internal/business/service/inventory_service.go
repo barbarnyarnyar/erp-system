@@ -398,7 +398,7 @@ func (s *InventoryService) ExecuteStockTransfer(ctx context.Context, id string) 
 	s.publishValuation(ctx, fromItem)
 
 	fromMove := &domain.InventoryMovement{
-		ID:            fmt.Sprintf("move_%d_from", time.Now().UnixNano()),
+		ID:            utils.NewID("move-from"),
 		ProductID:     st.ProductID,
 		LocationID:    st.FromLocationID,
 		MovementType:  "ISSUE",
@@ -431,7 +431,7 @@ func (s *InventoryService) ExecuteStockTransfer(ctx context.Context, id string) 
 	s.publishValuation(ctx, toItem)
 
 	toMove := &domain.InventoryMovement{
-		ID:            fmt.Sprintf("move_%d_to", time.Now().UnixNano()),
+		ID:            utils.NewID("move-to"),
 		ProductID:     st.ProductID,
 		LocationID:    st.ToLocationID,
 		MovementType:  "RECEIPT",

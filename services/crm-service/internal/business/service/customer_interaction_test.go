@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"testing"
 	"time"
@@ -12,7 +13,7 @@ import (
 
 func TestCustomerInteraction_Create_AndList(t *testing.T) {
 	repo := memory.NewCustomerInteractionRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewCustomerInteractionService(repo, pub)
 
 	ctx := context.Background()
@@ -48,7 +49,7 @@ func TestCustomerInteraction_Create_AndList(t *testing.T) {
 
 func TestCustomerInteraction_RequiresCustomerIDAndType(t *testing.T) {
 	repo := memory.NewCustomerInteractionRepository()
-	svc := service.NewCustomerInteractionService(repo, &MockPublisher{})
+	svc := service.NewCustomerInteractionService(repo, &sharedtesting.MockPublisher{})
 
 	_, err := svc.CreateCustomerInteraction(context.Background(), "", "CALL", "x", "y", time.Now(), "alice")
 	if err == nil {
@@ -62,7 +63,7 @@ func TestCustomerInteraction_RequiresCustomerIDAndType(t *testing.T) {
 
 func TestCustomerInteraction_Delete(t *testing.T) {
 	repo := memory.NewCustomerInteractionRepository()
-	svc := service.NewCustomerInteractionService(repo, &MockPublisher{})
+	svc := service.NewCustomerInteractionService(repo, &sharedtesting.MockPublisher{})
 
 	ctx := context.Background()
 	ci, _ := svc.CreateCustomerInteraction(ctx, "cust_1", "EMAIL", "Quote sent", "Attached proposal", time.Now(), "bob")

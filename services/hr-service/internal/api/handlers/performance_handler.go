@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -10,16 +11,20 @@ import (
 
 type PerformanceHandler struct {
 	svc *service.PerformanceService
+	response *utils.ResponseHelper
 }
 
-func NewPerformanceHandler(svc *service.PerformanceService) *PerformanceHandler {
-	return &PerformanceHandler{svc: svc}
+func NewPerformanceHandler(svc *service.PerformanceService, response *utils.ResponseHelper) *PerformanceHandler {
+	return &PerformanceHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *PerformanceHandler) GetPerformanceReviews(c *gin.Context) {
 	list, err := h.svc.ListPerformanceReviews(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -37,13 +42,13 @@ func (h *PerformanceHandler) CreatePerformanceReview(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	pr, err := h.svc.CreatePerformanceReview(c.Request.Context(), req.EmployeeID, req.ReviewerID, req.ReviewDate, req.PeriodStart, req.PeriodEnd, req.Rating, req.Feedback)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -54,7 +59,7 @@ func (h *PerformanceHandler) GetPerformanceReview(c *gin.Context) {
 	id := c.Param("id")
 	pr, err := h.svc.GetPerformanceReview(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "performance review not found"})
+		h.response.NotFound(c, "performance review not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": pr})
@@ -68,13 +73,13 @@ func (h *PerformanceHandler) UpdatePerformanceReview(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	pr, err := h.svc.UpdatePerformanceReview(c.Request.Context(), id, req.Rating, req.Feedback)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 

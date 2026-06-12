@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 func TestOpportunity_Update_RecordsStageHistory(t *testing.T) {
 	oppRepo := memory.NewOpportunityRepository()
 	historyRepo := memory.NewOpportunityStageHistoryRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewOpportunityService(oppRepo, historyRepo, pub)
 
 	ctx := context.Background()
@@ -53,7 +54,7 @@ func TestOpportunity_Update_RecordsStageHistory(t *testing.T) {
 func TestOpportunity_Update_SameStage_NoNewHistory(t *testing.T) {
 	oppRepo := memory.NewOpportunityRepository()
 	historyRepo := memory.NewOpportunityStageHistoryRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewOpportunityService(oppRepo, historyRepo, pub)
 
 	ctx := context.Background()
@@ -73,7 +74,7 @@ func TestOpportunity_Update_SameStage_NoNewHistory(t *testing.T) {
 func TestOpportunityStageHistory_TimeOrder(t *testing.T) {
 	oppRepo := memory.NewOpportunityRepository()
 	historyRepo := memory.NewOpportunityStageHistoryRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewOpportunityService(oppRepo, historyRepo, pub)
 
 	ctx := context.Background()

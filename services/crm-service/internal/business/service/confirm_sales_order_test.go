@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	sharedtesting "erp-system/shared/testing"
 	"context"
 	"errors"
 	"testing"
@@ -21,12 +22,12 @@ func (f *failingCustomerRepo) GetByID(ctx context.Context, id string) (*domain.C
 	return nil, f.err
 }
 
-func setupConfirmFixtures(t *testing.T) (svc *service.SalesOrderService, orderRepo domain.SalesOrderRepository, orderItemRepo domain.SalesOrderItemRepository, custRepo domain.CustomerRepository, pub *MockPublisher) {
+func setupConfirmFixtures(t *testing.T) (svc *service.SalesOrderService, orderRepo domain.SalesOrderRepository, orderItemRepo domain.SalesOrderItemRepository, custRepo domain.CustomerRepository, pub *sharedtesting.MockPublisher) {
 	t.Helper()
 	orderRepo = memory.NewSalesOrderRepository()
 	orderItemRepo = memory.NewSalesOrderItemRepository()
 	custRepo = memory.NewCustomerRepository()
-	pub = &MockPublisher{}
+	pub = &sharedtesting.MockPublisher{}
 	svc = service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 	return
 }
@@ -141,7 +142,7 @@ func TestConfirmSalesOrder_CustomerNotFound(t *testing.T) {
 	orderRepo := memory.NewSalesOrderRepository()
 	orderItemRepo := memory.NewSalesOrderItemRepository()
 	custRepo := memory.NewCustomerRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 
 	ctx := context.Background()
@@ -168,7 +169,7 @@ func TestConfirmSalesOrder_EmptyItems(t *testing.T) {
 	orderRepo := memory.NewSalesOrderRepository()
 	orderItemRepo := memory.NewSalesOrderItemRepository()
 	custRepo := memory.NewCustomerRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 
 	ctx := context.Background()
@@ -191,7 +192,7 @@ func TestConfirmSalesOrder_InvalidItemQuantity(t *testing.T) {
 	orderRepo := memory.NewSalesOrderRepository()
 	orderItemRepo := memory.NewSalesOrderItemRepository()
 	custRepo := memory.NewCustomerRepository()
-	pub := &MockPublisher{}
+	pub := &sharedtesting.MockPublisher{}
 	svc := service.NewSalesOrderService(orderRepo, orderItemRepo, custRepo, pub)
 
 	ctx := context.Background()

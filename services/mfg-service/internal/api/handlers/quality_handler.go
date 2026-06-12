@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 
 	"github.com/erp-system/m-service/internal/business/service"
@@ -9,10 +10,14 @@ import (
 
 type QualityHandler struct {
 	svc *service.QualityService
+	response *utils.ResponseHelper
 }
 
-func NewQualityHandler(svc *service.QualityService) *QualityHandler {
-	return &QualityHandler{svc: svc}
+func NewQualityHandler(svc *service.QualityService, response *utils.ResponseHelper) *QualityHandler {
+	return &QualityHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *QualityHandler) RecordQualityInspection(c *gin.Context) {
@@ -24,13 +29,13 @@ func (h *QualityHandler) RecordQualityInspection(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	qi, err := h.svc.RecordQualityInspection(c.Request.Context(), workOrderID, req.InspectorID, req.Result, req.Remarks)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -40,7 +45,7 @@ func (h *QualityHandler) RecordQualityInspection(c *gin.Context) {
 func (h *QualityHandler) ListQualityInspections(c *gin.Context) {
 	list, err := h.svc.ListQualityInspections(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -50,7 +55,7 @@ func (h *QualityHandler) GetQualityInspectionDetails(c *gin.Context) {
 	id := c.Param("id")
 	qi, err := h.svc.GetQualityInspection(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "quality inspection not found"})
+		h.response.NotFound(c, "quality inspection not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": qi})
@@ -64,13 +69,13 @@ func (h *QualityHandler) UpdateQualityInspection(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	qi, err := h.svc.UpdateQualityInspection(c.Request.Context(), id, req.Result, req.Remarks)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 
@@ -81,7 +86,7 @@ func (h *QualityHandler) GetNonConformances(c *gin.Context) {
 	inspectionID := c.Param("id")
 	list, err := h.svc.ListNonConformancesByInspectionID(c.Request.Context(), inspectionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})

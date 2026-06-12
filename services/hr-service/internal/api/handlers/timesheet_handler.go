@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"erp-system/shared/utils"
 	"net/http"
 	"time"
 
@@ -10,16 +11,20 @@ import (
 
 type TimesheetHandler struct {
 	svc *service.TimeAttendanceService
+	response *utils.ResponseHelper
 }
 
-func NewTimesheetHandler(svc *service.TimeAttendanceService) *TimesheetHandler {
-	return &TimesheetHandler{svc: svc}
+func NewTimesheetHandler(svc *service.TimeAttendanceService, response *utils.ResponseHelper) *TimesheetHandler {
+	return &TimesheetHandler{
+		svc: svc,
+		response: response,
+	}
 }
 
 func (h *TimesheetHandler) GetTimesheets(c *gin.Context) {
 	list, err := h.svc.ListTimesheets(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list})
@@ -35,13 +40,13 @@ func (h *TimesheetHandler) CreateTimesheet(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	te, err := h.svc.CreateTimesheet(c.Request.Context(), req.EmployeeID, req.EntryDate, req.ClockIn, req.ClockOut, req.Notes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -52,7 +57,7 @@ func (h *TimesheetHandler) GetTimesheet(c *gin.Context) {
 	id := c.Param("id")
 	te, err := h.svc.GetTimesheet(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "timesheet not found"})
+		h.response.NotFound(c, "timesheet not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": te})
@@ -67,13 +72,13 @@ func (h *TimesheetHandler) UpdateTimesheet(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	te, err := h.svc.UpdateTimesheet(c.Request.Context(), id, req.ClockIn, req.ClockOut, req.Notes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -84,7 +89,7 @@ func (h *TimesheetHandler) SubmitTimesheet(c *gin.Context) {
 	id := c.Param("id")
 	te, err := h.svc.SubmitTimesheet(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": te})
@@ -97,13 +102,13 @@ func (h *TimesheetHandler) ApproveTimesheet(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.response.BadRequest(c, err.Error())
 		return
 	}
 
 	te, err := h.svc.ApproveTimesheet(c.Request.Context(), id, req.ApprovedBy)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.response.InternalErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": te})
