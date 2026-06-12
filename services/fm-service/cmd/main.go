@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"erp-system/shared/utils"
 	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils"
 	"log"
 	"net/http"
 	"time"
@@ -55,6 +55,11 @@ func main() {
 	customerCreditRepo := sql.NewSQLCustomerCreditRepo(db)
 	bankStatementRepo := sql.NewSQLBankStatementRepo(db)
 
+	legalEntityRepo := sql.NewSQLLegalEntityRepo(db)
+	assetRepo := sql.NewSQLCapitalAssetRepo(db)
+	lineRepo := sql.NewSQLDepreciationScheduleLineRepo(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepo(db)
+
 	// Suppress unused variables to avoid compile errors
 	_ = currencyRateRepo
 	_ = fiscalYearRepo
@@ -94,6 +99,18 @@ func main() {
 		outboxRepo,
 		tm,
 	)
+	legalEntitySvc := service.NewLegalEntityService(
+		legalEntityRepo,
+		tm,
+	)
+	capitalAssetSvc := service.NewCapitalAssetService(
+		assetRepo,
+		lineRepo,
+		accountRepo,
+		entryRepo,
+		outboxRepo,
+		tm,
+	)
 
 	// Context for background processes
 	ctx, cancel := context.WithCancel(context.Background())
@@ -113,6 +130,7 @@ func main() {
 		accountsReceivableSvc,
 		cashManagementSvc,
 		budgetingSvc,
+		inboxRepo,
 	)
 	go kafkaConsumer.Start(ctx)
 	defer kafkaConsumer.Close()
@@ -124,12 +142,14 @@ func main() {
 	invHandler := handlers.NewInvoiceHandler(accountsReceivableSvc, responseHelper)
 	payHandler := handlers.NewPaymentHandler(cashManagementSvc, responseHelper)
 	billHandler := handlers.NewVendorBillHandler(accountsPayableSvc, responseHelper)
+	leHandler := handlers.NewLegalEntityHandler(legalEntitySvc, responseHelper)
+	assetHandler := handlers.NewAssetHandler(capitalAssetSvc, responseHelper)
 
 	// Initialize Gin router
 	router := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler, invHandler, payHandler, billHandler)
+	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler, invHandler, payHandler, billHandler, leHandler, assetHandler)
 
 	// Start server
 	log.Printf("Financial Management Service starting on port %s", cfg.Server.Port)

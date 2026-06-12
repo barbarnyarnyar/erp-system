@@ -102,4 +102,3 @@ func (h *AccountHandler) GetAccountBalance(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"balance": balance})
 }
-

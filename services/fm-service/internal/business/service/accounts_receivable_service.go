@@ -217,4 +217,3 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		return s.outbox.Create(txCtx, outboxRec)
 	})
 }
-

@@ -15,6 +15,8 @@ func SetupRoutes(
 	invHandler *handlers.InvoiceHandler,
 	payHandler *handlers.PaymentHandler,
 	billHandler *handlers.VendorBillHandler,
+	leHandler *handlers.LegalEntityHandler,
+	assetHandler *handlers.AssetHandler,
 ) {
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -68,7 +70,6 @@ func SetupRoutes(
 			payments.GET("/:id", payHandler.GetPayment)
 		}
 
-
 		// Bank Statements routes
 		bankStatements := v1.Group("/bank-statements")
 		{
@@ -89,6 +90,24 @@ func SetupRoutes(
 			reports.GET("/balance-sheet", repHandler.GetBalanceSheet)
 			reports.GET("/income-statement", repHandler.GetIncomeStatement)
 			reports.GET("/cash-flow", repHandler.GetCashFlow)
+		}
+
+		// Legal Entity routes
+		legalEntities := v1.Group("/legal-entities")
+		{
+			legalEntities.GET("", leHandler.GetLegalEntities)
+			legalEntities.POST("", leHandler.CreateLegalEntity)
+			legalEntities.GET("/:id", leHandler.GetLegalEntity)
+		}
+
+		// Asset routes
+		assets := v1.Group("/assets")
+		{
+			assets.GET("", assetHandler.GetAssets)
+			assets.POST("/capitalize", assetHandler.CapitalizeAsset)
+			assets.GET("/:id", assetHandler.GetAsset)
+			assets.POST("/:id/depreciation-schedule", assetHandler.GenerateDepreciationSchedule)
+			assets.POST("/depreciate", assetHandler.PostMonthlyDepreciation)
 		}
 	}
 }

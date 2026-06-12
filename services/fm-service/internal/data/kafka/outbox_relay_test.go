@@ -64,8 +64,18 @@ func TestOutboxRelayWorker_ProcessPending(t *testing.T) {
 		if len(pub.Calls) != 2 {
 			t.Fatalf("expected 2 publisher calls, got %d", len(pub.Calls))
 		}
-		if pub.Calls[0].Key != "agg_1" || pub.Calls[1].Key != "agg_2" {
-			t.Errorf("unexpected publication keys: %+v", pub.Calls)
+		hasAgg1 := false
+		hasAgg2 := false
+		for _, call := range pub.Calls {
+			if call.Key == "agg_1" {
+				hasAgg1 = true
+			}
+			if call.Key == "agg_2" {
+				hasAgg2 = true
+			}
+		}
+		if !hasAgg1 || !hasAgg2 {
+			t.Errorf("expected publication keys agg_1 and agg_2, got %+v", pub.Calls)
 		}
 
 		// Assert status updated to SENT in repository

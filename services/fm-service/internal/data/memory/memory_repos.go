@@ -578,8 +578,6 @@ func (r *MemoryApVendorBillRepo) List(ctx context.Context) ([]domain.ApVendorBil
 	return list, nil
 }
 
-
-
 // MemoryTaxRateRepo implements domain.TaxRateRepository
 type MemoryTaxRateRepo struct {
 	mu   sync.RWMutex
@@ -899,8 +897,6 @@ func (r *MemoryBankStatementRepo) List(ctx context.Context) ([]domain.BankStatem
 	return list, nil
 }
 
-
-
 // MemoryTransactionalOutboxRepo implements domain.TransactionalOutboxRepository in-memory
 type MemoryTransactionalOutboxRepo struct {
 	mu        sync.RWMutex
@@ -1013,3 +1009,309 @@ func (m *MemoryTransactionManager) WithinTransaction(ctx context.Context, fn fun
 	return nil
 }
 
+// MemoryLegalEntityRepo implements domain.LegalEntityRepository
+type MemoryLegalEntityRepo struct {
+	mu        sync.RWMutex
+	entities  map[string]domain.LegalEntity
+	snapshots []map[string]domain.LegalEntity
+}
+
+func NewMemoryLegalEntityRepo() *MemoryLegalEntityRepo {
+	return &MemoryLegalEntityRepo{
+		entities: make(map[string]domain.LegalEntity),
+	}
+}
+
+func (r *MemoryLegalEntityRepo) TakeSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snap := make(map[string]domain.LegalEntity, len(r.entities))
+	for k, v := range r.entities {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+}
+
+func (r *MemoryLegalEntityRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.entities = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryLegalEntityRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryLegalEntityRepo) Create(ctx context.Context, le *domain.LegalEntity) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.entities[le.ID] = *le
+	return nil
+}
+
+func (r *MemoryLegalEntityRepo) GetByID(ctx context.Context, id string) (*domain.LegalEntity, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	le, ok := r.entities[id]
+	if !ok {
+		return nil, errors.New("legal entity not found")
+	}
+	return &le, nil
+}
+
+func (r *MemoryLegalEntityRepo) GetByCode(ctx context.Context, code string) (*domain.LegalEntity, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, le := range r.entities {
+		if le.CompanyCode == code {
+			return &le, nil
+		}
+	}
+	return nil, errors.New("legal entity not found")
+}
+
+func (r *MemoryLegalEntityRepo) List(ctx context.Context) ([]domain.LegalEntity, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.LegalEntity, 0, len(r.entities))
+	for _, le := range r.entities {
+		list = append(list, le)
+	}
+	return list, nil
+}
+
+// MemoryCapitalAssetRepo implements domain.CapitalAssetRepository
+type MemoryCapitalAssetRepo struct {
+	mu        sync.RWMutex
+	assets    map[string]domain.CapitalAsset
+	snapshots []map[string]domain.CapitalAsset
+}
+
+func NewMemoryCapitalAssetRepo() *MemoryCapitalAssetRepo {
+	return &MemoryCapitalAssetRepo{
+		assets: make(map[string]domain.CapitalAsset),
+	}
+}
+
+func (r *MemoryCapitalAssetRepo) TakeSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snap := make(map[string]domain.CapitalAsset, len(r.assets))
+	for k, v := range r.assets {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+}
+
+func (r *MemoryCapitalAssetRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.assets = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryCapitalAssetRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryCapitalAssetRepo) Create(ctx context.Context, asset *domain.CapitalAsset) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.assets[asset.ID] = *asset
+	return nil
+}
+
+func (r *MemoryCapitalAssetRepo) GetByID(ctx context.Context, id string) (*domain.CapitalAsset, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	asset, ok := r.assets[id]
+	if !ok {
+		return nil, errors.New("capital asset not found")
+	}
+	return &asset, nil
+}
+
+func (r *MemoryCapitalAssetRepo) Update(ctx context.Context, asset *domain.CapitalAsset) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.assets[asset.ID] = *asset
+	return nil
+}
+
+func (r *MemoryCapitalAssetRepo) List(ctx context.Context) ([]domain.CapitalAsset, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.CapitalAsset, 0, len(r.assets))
+	for _, asset := range r.assets {
+		list = append(list, asset)
+	}
+	return list, nil
+}
+
+// MemoryDepreciationScheduleLineRepo implements domain.DepreciationScheduleLineRepository
+type MemoryDepreciationScheduleLineRepo struct {
+	mu        sync.RWMutex
+	lines     map[string]domain.DepreciationScheduleLine
+	snapshots []map[string]domain.DepreciationScheduleLine
+}
+
+func NewMemoryDepreciationScheduleLineRepo() *MemoryDepreciationScheduleLineRepo {
+	return &MemoryDepreciationScheduleLineRepo{
+		lines: make(map[string]domain.DepreciationScheduleLine),
+	}
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) TakeSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snap := make(map[string]domain.DepreciationScheduleLine, len(r.lines))
+	for k, v := range r.lines {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.lines = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) CreateMany(ctx context.Context, lines []domain.DepreciationScheduleLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, l := range lines {
+		r.lines[l.ID] = l
+	}
+	return nil
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) GetByAssetID(ctx context.Context, assetID string) ([]domain.DepreciationScheduleLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.DepreciationScheduleLine
+	for _, l := range r.lines {
+		if l.FixedAssetID == assetID {
+			list = append(list, l)
+		}
+	}
+	return list, nil
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) GetUnpostedByPeriod(ctx context.Context, fiscalYear, periodNumber int) ([]domain.DepreciationScheduleLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.DepreciationScheduleLine
+	for _, l := range r.lines {
+		if !l.IsPosted && l.FiscalYear == fiscalYear && l.PeriodNumber == periodNumber {
+			list = append(list, l)
+		}
+	}
+	return list, nil
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) Update(ctx context.Context, line *domain.DepreciationScheduleLine) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lines[line.ID] = *line
+	return nil
+}
+
+func (r *MemoryDepreciationScheduleLineRepo) List(ctx context.Context) ([]domain.DepreciationScheduleLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.DepreciationScheduleLine, 0, len(r.lines))
+	for _, l := range r.lines {
+		list = append(list, l)
+	}
+	return list, nil
+}
+
+// MemoryKafkaEventInboxRepo implements domain.KafkaEventInboxRepository
+type MemoryKafkaEventInboxRepo struct {
+	mu        sync.RWMutex
+	records   map[string]domain.KafkaEventInbox
+	snapshots []map[string]domain.KafkaEventInbox
+}
+
+func NewMemoryKafkaEventInboxRepo() *MemoryKafkaEventInboxRepo {
+	return &MemoryKafkaEventInboxRepo{
+		records: make(map[string]domain.KafkaEventInbox),
+	}
+}
+
+func (r *MemoryKafkaEventInboxRepo) TakeSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snap := make(map[string]domain.KafkaEventInbox, len(r.records))
+	for k, v := range r.records {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+}
+
+func (r *MemoryKafkaEventInboxRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.records = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryKafkaEventInboxRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryKafkaEventInboxRepo) Create(ctx context.Context, record *domain.KafkaEventInbox) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.records[record.EventID] = *record
+	return nil
+}
+
+func (r *MemoryKafkaEventInboxRepo) GetByID(ctx context.Context, eventID string) (*domain.KafkaEventInbox, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	rec, ok := r.records[eventID]
+	if !ok {
+		return nil, errors.New("event not found in inbox")
+	}
+	return &rec, nil
+}

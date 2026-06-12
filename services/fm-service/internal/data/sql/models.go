@@ -8,14 +8,12 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-
-
 // Payment GORM struct
 type Payment struct {
-	ID            string          `gorm:"primaryKey"`
-	InvoiceID     *string         `gorm:"index"`
-	BillID        *string         `gorm:"index"`
-	BankAccountID *string         `gorm:"index"`
+	ID            string  `gorm:"primaryKey"`
+	InvoiceID     *string `gorm:"index"`
+	BillID        *string `gorm:"index"`
+	BankAccountID *string `gorm:"index"`
 	PaymentNumber string
 	PaymentDate   time.Time
 	Amount        decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -24,9 +22,9 @@ type Payment struct {
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 
-	Invoice     *ArInvoice     `gorm:"foreignKey:InvoiceID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	VendorBill  *ApVendorBill  `gorm:"foreignKey:BillID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	BankAccount *BankAccount `gorm:"foreignKey:BankAccountID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Invoice     *ArInvoice    `gorm:"foreignKey:InvoiceID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	VendorBill  *ApVendorBill `gorm:"foreignKey:BillID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	BankAccount *BankAccount  `gorm:"foreignKey:BankAccountID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
 func FromDomainPayment(d *domain.Payment) *Payment {
@@ -69,9 +67,9 @@ func ToDomainPayment(dbModel *Payment) *domain.Payment {
 
 // Budget GORM struct
 type Budget struct {
-	ID              string          `gorm:"primaryKey"`
-	AccountID       string          `gorm:"index"`
-	CostCenterID    *string         `gorm:"index"`
+	ID              string  `gorm:"primaryKey"`
+	AccountID       string  `gorm:"index"`
+	CostCenterID    *string `gorm:"index"`
 	FiscalYear      int
 	Period          int
 	AllocatedAmount decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -117,12 +115,10 @@ func ToDomainBudget(dbModel *Budget) *domain.Budget {
 	}
 }
 
-
-
 // TaxRate GORM struct
 type TaxRate struct {
-	ID       string          `gorm:"primaryKey"`
-	Code     string          `gorm:"uniqueIndex"`
+	ID       string `gorm:"primaryKey"`
+	Code     string `gorm:"uniqueIndex"`
 	Name     string
 	Rate     decimal.Decimal `gorm:"type:numeric(18,4)"`
 	IsActive bool
@@ -156,7 +152,7 @@ func ToDomainTaxRate(dbModel *TaxRate) *domain.TaxRate {
 
 // CurrencyRate GORM struct
 type CurrencyRate struct {
-	ID            string          `gorm:"primaryKey"`
+	ID            string `gorm:"primaryKey"`
 	FromCurrency  string
 	ToCurrency    string
 	Rate          decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -191,8 +187,8 @@ func ToDomainCurrencyRate(dbModel *CurrencyRate) *domain.CurrencyRate {
 
 // FiscalYear GORM struct
 type FiscalYear struct {
-	ID        string    `gorm:"primaryKey"`
-	Year      int       `gorm:"uniqueIndex"`
+	ID        string `gorm:"primaryKey"`
+	Year      int    `gorm:"uniqueIndex"`
 	StartDate time.Time
 	EndDate   time.Time
 	IsClosed  bool
@@ -264,9 +260,9 @@ func ToDomainCostCenter(dbModel *CostCenter) *domain.CostCenter {
 
 // BankAccount GORM struct
 type BankAccount struct {
-	ID            string          `gorm:"primaryKey"`
-	LegalEntityID string          `gorm:"index"`
-	AccountNumber string          `gorm:"uniqueIndex"`
+	ID            string `gorm:"primaryKey"`
+	LegalEntityID string `gorm:"index"`
+	AccountNumber string `gorm:"uniqueIndex"`
 	Currency      string
 	LiquidBalance decimal.Decimal `gorm:"type:numeric(18,4)"`
 	CreatedAt     time.Time
@@ -345,8 +341,8 @@ func ToDomainCustomerCredit(dbModel *CustomerCredit) *domain.CustomerCredit {
 
 // BankStatement GORM struct
 type BankStatement struct {
-	ID            string          `gorm:"primaryKey"`
-	BankAccountID string          `gorm:"index"`
+	ID            string `gorm:"primaryKey"`
+	BankAccountID string `gorm:"index"`
 	StatementDate time.Time
 	EndingBalance decimal.Decimal `gorm:"type:numeric(18,4)"`
 	IsReconciled  bool
@@ -382,8 +378,8 @@ func ToDomainBankStatement(dbModel *BankStatement) *domain.BankStatement {
 
 // BankStatementLine GORM struct
 type BankStatementLine struct {
-	ID              string          `gorm:"primaryKey"`
-	StatementID     string          `gorm:"index"`
+	ID              string `gorm:"primaryKey"`
+	StatementID     string `gorm:"index"`
 	TransactionDate time.Time
 	Description     string
 	Amount          decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -420,13 +416,11 @@ func ToDomainBankStatementLine(dbModel *BankStatementLine) *domain.BankStatement
 	}
 }
 
-
-
 // ChartOfAccounts GORM struct
 type ChartOfAccounts struct {
-	ID            string             `gorm:"primaryKey"`
-	LegalEntityID string             `gorm:"uniqueIndex:idx_entity_account"`
-	AccountCode   string             `gorm:"uniqueIndex:idx_entity_account"`
+	ID            string `gorm:"primaryKey"`
+	LegalEntityID string `gorm:"uniqueIndex:idx_entity_account"`
+	AccountCode   string `gorm:"uniqueIndex:idx_entity_account"`
 	AccountName   string
 	Type          domain.AccountType `gorm:"type:varchar(50)"`
 	IsActive      bool
@@ -470,8 +464,8 @@ func ToDomainChartOfAccounts(dbModel *ChartOfAccounts) *domain.ChartOfAccounts {
 
 // LegalEntity GORM struct
 type LegalEntity struct {
-	ID                    string    `gorm:"primaryKey"`
-	CompanyCode           string    `gorm:"uniqueIndex"`
+	ID                    string `gorm:"primaryKey"`
+	CompanyCode           string `gorm:"uniqueIndex"`
 	CompanyName           string
 	FunctionalCurrency    string
 	TaxRegistrationNumber string
@@ -511,8 +505,8 @@ func ToDomainLegalEntity(dbModel *LegalEntity) *domain.LegalEntity {
 
 // UniversalJournalEntry GORM struct
 type UniversalJournalEntry struct {
-	ID               string             `gorm:"primaryKey"`
-	LegalEntityID    string             `gorm:"index"`
+	ID               string `gorm:"primaryKey"`
+	LegalEntityID    string `gorm:"index"`
 	SourceModule     string
 	SourceDocumentID string
 	PostingDate      time.Time
@@ -609,8 +603,8 @@ func ToDomainUniversalJournalLine(dbModel *UniversalJournalLine) *domain.Univers
 
 // DepreciationScheduleLine GORM struct
 type DepreciationScheduleLine struct {
-	ID                 string          `gorm:"primaryKey"`
-	FixedAssetID       string          `gorm:"index"`
+	ID                 string `gorm:"primaryKey"`
+	FixedAssetID       string `gorm:"index"`
 	FiscalYear         int
 	PeriodNumber       int
 	DepreciationAmount decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -655,12 +649,12 @@ func ToDomainDepreciationScheduleLine(dbModel *DepreciationScheduleLine) *domain
 
 // CapitalAsset GORM struct
 type CapitalAsset struct {
-	ID                      string            `gorm:"primaryKey"`
-	LegalEntityID           string            `gorm:"index"`
+	ID                      string `gorm:"primaryKey"`
+	LegalEntityID           string `gorm:"index"`
 	AssetTag                string
-	EamEquipmentID          *string           `gorm:"index"`
-	AcquisitionCost         decimal.Decimal   `gorm:"type:numeric(18,4)"`
-	AccumulatedDepreciation decimal.Decimal   `gorm:"type:numeric(18,4)"`
+	EamEquipmentID          *string         `gorm:"index"`
+	AcquisitionCost         decimal.Decimal `gorm:"type:numeric(18,4)"`
+	AccumulatedDepreciation decimal.Decimal `gorm:"type:numeric(18,4)"`
 	UsefulLifeMonths        int
 	CapitalizationDate      time.Time
 	Status                  domain.AssetState `gorm:"type:varchar(50)"`
@@ -710,7 +704,7 @@ func ToDomainCapitalAsset(dbModel *CapitalAsset) *domain.CapitalAsset {
 
 // KafkaEventInbox GORM struct
 type KafkaEventInbox struct {
-	EventID          string                       `gorm:"primaryKey"`
+	EventID          string `gorm:"primaryKey"`
 	EventType        string
 	ProcessedAt      time.Time
 	ProcessingStatus domain.EventProcessingStatus `gorm:"type:varchar(50)"`
@@ -750,7 +744,7 @@ func ToDomainKafkaEventInbox(dbModel *KafkaEventInbox) *domain.KafkaEventInbox {
 
 // TransactionalOutbox GORM struct
 type TransactionalOutbox struct {
-	ID          string              `gorm:"primaryKey"`
+	ID          string `gorm:"primaryKey"`
 	EventType   string
 	AggregateID string
 	Payload     []byte              `gorm:"type:jsonb"` // Marshalled json of interface{}
@@ -793,13 +787,13 @@ func ToDomainTransactionalOutbox(dbModel *TransactionalOutbox) *domain.Transacti
 
 // ApVendorBill GORM struct
 type ApVendorBill struct {
-	ID              string               `gorm:"primaryKey"`
-	LegalEntityID   string               `gorm:"index"`
+	ID              string `gorm:"primaryKey"`
+	LegalEntityID   string `gorm:"index"`
 	BillNumber      string
 	VendorID        string
 	PurchaseOrderID string
-	TotalAmount     decimal.Decimal      `gorm:"type:numeric(18,4)"`
-	TaxAmount       decimal.Decimal      `gorm:"type:numeric(18,4)"`
+	TotalAmount     decimal.Decimal `gorm:"type:numeric(18,4)"`
+	TaxAmount       decimal.Decimal `gorm:"type:numeric(18,4)"`
 	DueDate         time.Time
 	Status          domain.PaymentStatus `gorm:"type:varchar(50)"`
 	CreatedAt       time.Time
@@ -848,17 +842,17 @@ func ToDomainApVendorBill(dbModel *ApVendorBill) *domain.ApVendorBill {
 
 // ArInvoice GORM struct
 type ArInvoice struct {
-	ID            string               `gorm:"primaryKey"`
-	LegalEntityID string               `gorm:"index"`
+	ID            string `gorm:"primaryKey"`
+	LegalEntityID string `gorm:"index"`
 	InvoiceNumber string
 	CustomerID    string
 	SalesOrderID  string
-	TotalAmount   decimal.Decimal      `gorm:"type:numeric(18,4)"`
-	TaxAmount     decimal.Decimal      `gorm:"type:numeric(18,4)"`
-	DueDate         time.Time
-	Status          domain.PaymentStatus `gorm:"type:varchar(50)"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	TotalAmount   decimal.Decimal `gorm:"type:numeric(18,4)"`
+	TaxAmount     decimal.Decimal `gorm:"type:numeric(18,4)"`
+	DueDate       time.Time
+	Status        domain.PaymentStatus `gorm:"type:varchar(50)"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 
 	LegalEntity LegalEntity `gorm:"foreignKey:LegalEntityID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }

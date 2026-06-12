@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"erp-system/shared/utils"
 	"github.com/erp-system/fm-service/internal/api/handlers"
 	"github.com/erp-system/fm-service/internal/api/routes"
 	"github.com/erp-system/fm-service/internal/business/domain"
@@ -17,7 +18,6 @@ import (
 	"github.com/erp-system/fm-service/internal/data/memory"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
-	"erp-system/shared/utils"
 )
 
 func init() {
@@ -26,14 +26,18 @@ func init() {
 }
 
 type testEnv struct {
-	router     *gin.Engine
-	accounts   *memory.MemoryChartOfAccountsRepo
-	entries    *memory.MemoryUniversalJournalEntryRepo
-	invoices   *memory.MemoryArInvoiceRepo
-	payments   *memory.MemoryPaymentRepo
-	statements *memory.MemoryBankStatementRepo
-	bills      *memory.MemoryApVendorBillRepo
-	outbox     *memory.MemoryTransactionalOutboxRepo
+	router        *gin.Engine
+	accounts      *memory.MemoryChartOfAccountsRepo
+	entries       *memory.MemoryUniversalJournalEntryRepo
+	invoices      *memory.MemoryArInvoiceRepo
+	payments      *memory.MemoryPaymentRepo
+	statements    *memory.MemoryBankStatementRepo
+	bills         *memory.MemoryApVendorBillRepo
+	outbox        *memory.MemoryTransactionalOutboxRepo
+	legalEntities *memory.MemoryLegalEntityRepo
+	assets        *memory.MemoryCapitalAssetRepo
+	scheduleLines *memory.MemoryDepreciationScheduleLineRepo
+	inbox         *memory.MemoryKafkaEventInboxRepo
 }
 
 func setupTestEnv() *testEnv {
@@ -44,6 +48,10 @@ func setupTestEnv() *testEnv {
 	statements := memory.NewMemoryBankStatementRepo()
 	bills := memory.NewMemoryApVendorBillRepo()
 	outbox := memory.NewMemoryTransactionalOutboxRepo()
+	legalEntities := memory.NewMemoryLegalEntityRepo()
+	assets := memory.NewMemoryCapitalAssetRepo()
+	scheduleLines := memory.NewMemoryDepreciationScheduleLineRepo()
+	inbox := memory.NewMemoryKafkaEventInboxRepo()
 
 	tmGL := memory.NewMemoryTransactionManager(accounts, entries, outbox)
 	glSvc := service.NewGeneralLedgerService(accounts, entries, outbox, tmGL)
@@ -57,6 +65,12 @@ func setupTestEnv() *testEnv {
 	tmCM := memory.NewMemoryTransactionManager(payments, invoices, outbox)
 	cmSvc := service.NewCashManagementService(payments, invoices, statements, outbox, tmCM)
 
+	tmLE := memory.NewMemoryTransactionManager(legalEntities)
+	leSvc := service.NewLegalEntityService(legalEntities, tmLE)
+
+	tmAsset := memory.NewMemoryTransactionManager(assets, scheduleLines, accounts, entries, outbox)
+	assetSvc := service.NewCapitalAssetService(assets, scheduleLines, accounts, entries, outbox, tmAsset)
+
 	response := utils.NewResponseHelper("fm-service")
 
 	accHandler := handlers.NewAccountHandler(glSvc, response)
@@ -65,19 +79,25 @@ func setupTestEnv() *testEnv {
 	invHandler := handlers.NewInvoiceHandler(arSvc, response)
 	payHandler := handlers.NewPaymentHandler(cmSvc, response)
 	billHandler := handlers.NewVendorBillHandler(apSvc, response)
+	leHandler := handlers.NewLegalEntityHandler(leSvc, response)
+	assetHandler := handlers.NewAssetHandler(assetSvc, response)
 
 	router := gin.New()
-	routes.SetupRoutes(router, &config.Config{}, accHandler, txHandler, repHandler, invHandler, payHandler, billHandler)
+	routes.SetupRoutes(router, &config.Config{}, accHandler, txHandler, repHandler, invHandler, payHandler, billHandler, leHandler, assetHandler)
 
 	return &testEnv{
-		router:     router,
-		accounts:   accounts,
-		entries:    entries,
-		invoices:   invoices,
-		payments:   payments,
-		statements: statements,
-		bills:      bills,
-		outbox:     outbox,
+		router:        router,
+		accounts:      accounts,
+		entries:       entries,
+		invoices:      invoices,
+		payments:      payments,
+		statements:    statements,
+		bills:         bills,
+		outbox:        outbox,
+		legalEntities: legalEntities,
+		assets:        assets,
+		scheduleLines: scheduleLines,
+		inbox:         inbox,
 	}
 }
 
@@ -508,8 +528,8 @@ func TestPaymentEndpoints(t *testing.T) {
 	// 4. Record Payment error (non-existent invoice ID inside business logic)
 	body, _ = json.Marshal(map[string]interface{}{
 		"invoice_id":     "non-existent-inv",
-		"amount":          "100.00",
-		"payment_method":  "WIRE",
+		"amount":         "100.00",
+		"payment_method": "WIRE",
 	})
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodPost, "/api/v1/payments", bytes.NewBuffer(body))
@@ -684,5 +704,207 @@ func TestReportEndpoints(t *testing.T) {
 	env.router.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestLegalEntityEndpoints(t *testing.T) {
+	env := setupTestEnv()
+
+	// 1. Create Legal Entity success
+	body, _ := json.Marshal(map[string]interface{}{
+		"company_code":            "CORP_DE",
+		"company_name":            "Corp DE",
+		"functional_currency":     "EUR",
+		"tax_registration_number": "DE123456789",
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/legal-entities", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
+	}
+
+	// Parse response ID
+	var resp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	leID := resp.Data.ID
+
+	// 2. Get Legal Entity by ID
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodGet, "/api/v1/legal-entities/"+leID, nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// Get Legal Entity 404
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodGet, "/api/v1/legal-entities/non-existent", nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+
+	// 3. Get all Legal Entities
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodGet, "/api/v1/legal-entities", nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// 4. Create Legal Entity validation failure (missing company code)
+	bodyBad, _ := json.Marshal(map[string]interface{}{
+		"company_name": "Corp DE",
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/legal-entities", bytes.NewBuffer(bodyBad))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusCreated {
+		t.Error("expected creation failure for missing code")
+	}
+
+	// Create Legal Entity bad JSON
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/legal-entities", bytes.NewBuffer([]byte("{bad-json")))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusCreated {
+		t.Error("expected creation failure for bad JSON")
+	}
+}
+
+func TestAssetEndpoints(t *testing.T) {
+	env := setupTestEnv()
+
+	// 1. Capitalize Asset success
+	body, _ := json.Marshal(map[string]interface{}{
+		"legal_entity_id":    "legal_123",
+		"asset_tag":          "EQ-001",
+		"acquisition_cost":   "1200",
+		"useful_life_months": 12,
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/assets/capitalize", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d (body: %s)", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	assetID := resp.Data.ID
+
+	// 2. Generate schedule
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/"+assetID+"/depreciation-schedule", nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// 3. Post monthly depreciation
+	body, _ = json.Marshal(map[string]interface{}{
+		"legal_entity_id": "legal_123",
+		"fiscal_year":     time.Now().Year(),
+		"period_number":   int(time.Now().Month()),
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/depreciate", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+	}
+
+	// 4. Get Asset by ID
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodGet, "/api/v1/assets/"+assetID, nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// Get Asset 404
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodGet, "/api/v1/assets/non-existent", nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+
+	// 5. Get all Assets
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodGet, "/api/v1/assets", nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// 6. Capitalize Asset bad JSON
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/capitalize", bytes.NewBuffer([]byte("{bad-json")))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusCreated {
+		t.Error("expected capitalization failure for bad JSON")
+	}
+
+	// 7. Capitalize Asset invalid cost format
+	bodyInvalidCost, _ := json.Marshal(map[string]interface{}{
+		"legal_entity_id":    "legal_123",
+		"asset_tag":          "EQ-002",
+		"acquisition_cost":   "invalid-decimal",
+		"useful_life_months": 12,
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/capitalize", bytes.NewBuffer(bodyInvalidCost))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusCreated {
+		t.Error("expected capitalization failure for invalid cost format")
+	}
+
+	// 8. Capitalize Asset service failure
+	bodyServiceFail, _ := json.Marshal(map[string]interface{}{
+		"legal_entity_id":    "", // Empty legal entity ID triggers service validation error
+		"asset_tag":          "EQ-003",
+		"acquisition_cost":   "1200",
+		"useful_life_months": 12,
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/capitalize", bytes.NewBuffer(bodyServiceFail))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusCreated {
+		t.Error("expected capitalization failure for empty legal entity ID")
+	}
+
+	// 9. Generate schedule service failure
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/non-existent/depreciation-schedule", nil)
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusOK {
+		t.Error("expected schedule generation failure for non-existent asset")
+	}
+
+	// 10. Post monthly depreciation bad JSON
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/assets/depreciate", bytes.NewBuffer([]byte("{bad-json")))
+	req.Header.Set("Content-Type", "application/json")
+	env.router.ServeHTTP(w, req)
+	if w.Code == http.StatusOK {
+		t.Error("expected depreciation posting failure for bad JSON")
 	}
 }

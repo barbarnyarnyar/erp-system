@@ -85,4 +85,3 @@ func (h *VendorBillHandler) GetVendorBillLines(c *gin.Context) {
 		"data": []string{},
 	})
 }
-

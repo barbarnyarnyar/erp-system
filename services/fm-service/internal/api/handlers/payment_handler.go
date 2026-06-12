@@ -10,13 +10,13 @@ import (
 )
 
 type PaymentHandler struct {
-	svc *service.CashManagementService
+	svc      *service.CashManagementService
 	response *utils.ResponseHelper
 }
 
 func NewPaymentHandler(svc *service.CashManagementService, response *utils.ResponseHelper) *PaymentHandler {
 	return &PaymentHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

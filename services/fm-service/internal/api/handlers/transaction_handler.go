@@ -149,4 +149,3 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "journal entry deleted successfully"})
 }
-

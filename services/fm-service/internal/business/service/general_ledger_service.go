@@ -570,4 +570,3 @@ func (s *GeneralLedgerService) GetCashFlow(ctx context.Context) (map[string]inte
 		"net_cash_flow":      netCashFlow,
 	}, nil
 }
-

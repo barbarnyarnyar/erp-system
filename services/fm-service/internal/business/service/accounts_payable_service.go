@@ -91,4 +91,3 @@ func (s *AccountsPayableService) ListVendorBills(ctx context.Context) ([]domain.
 func (s *AccountsPayableService) GetVendorBill(ctx context.Context, id string) (*domain.ApVendorBill, error) {
 	return s.bills.GetByID(ctx, id)
 }
-

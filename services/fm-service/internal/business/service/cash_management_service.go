@@ -200,4 +200,3 @@ func (s *CashManagementService) GetBankStatement(ctx context.Context, id string)
 	}
 	return s.statements.GetByID(ctx, id)
 }
-

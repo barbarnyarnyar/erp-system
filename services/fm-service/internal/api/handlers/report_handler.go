@@ -9,13 +9,13 @@ import (
 )
 
 type ReportHandler struct {
-	svc *service.GeneralLedgerService
+	svc      *service.GeneralLedgerService
 	response *utils.ResponseHelper
 }
 
 func NewReportHandler(svc *service.GeneralLedgerService, response *utils.ResponseHelper) *ReportHandler {
 	return &ReportHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

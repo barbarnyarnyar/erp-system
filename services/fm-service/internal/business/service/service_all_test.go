@@ -640,3 +640,114 @@ func TestGeneralLedgerService_UpdateJournalEntry_ValidationsAndErrors(t *testing
 		t.Error("expected error for updating non-existent journal entry, got nil")
 	}
 }
+
+func TestLegalEntityService_All(t *testing.T) {
+	repo := memory.NewMemoryLegalEntityRepo()
+	tm := memory.NewMemoryTransactionManager(repo)
+	svc := service.NewLegalEntityService(repo, tm)
+	ctx := context.Background()
+
+	// 1. Validation error: empty code
+	_, err := svc.CreateLegalEntity(ctx, "", "Corp DE", "EUR", "DE123456789")
+	if err == nil {
+		t.Error("expected error for empty company code, got nil")
+	}
+
+	// 2. Validation error: invalid currency code
+	_, err = svc.CreateLegalEntity(ctx, "CORP_DE", "Corp DE", "EURO", "DE123456789")
+	if err == nil {
+		t.Error("expected error for invalid currency length, got nil")
+	}
+
+	// 3. Success path
+	le, err := svc.CreateLegalEntity(ctx, "CORP_DE", "Corp DE", "EUR", "DE123456789")
+	if err != nil {
+		t.Fatalf("failed to create legal entity: %v", err)
+	}
+	if le.CompanyCode != "CORP_DE" {
+		t.Errorf("expected code CORP_DE, got %s", le.CompanyCode)
+	}
+
+	// 4. GetByID
+	fetched, err := svc.GetLegalEntity(ctx, le.ID)
+	if err != nil || fetched.CompanyName != "Corp DE" {
+		t.Errorf("failed to fetch legal entity by ID: %v", err)
+	}
+
+	// 5. GetByCode
+	fetchedCode, err := svc.GetLegalEntityByCode(ctx, "CORP_DE")
+	if err != nil || fetchedCode.ID != le.ID {
+		t.Errorf("failed to fetch legal entity by code: %v", err)
+	}
+
+	// 6. List
+	list, err := svc.ListLegalEntities(ctx)
+	if err != nil || len(list) != 1 {
+		t.Errorf("unexpected list result: %v", err)
+	}
+}
+
+func TestCapitalAssetService_All(t *testing.T) {
+	assetRepo := memory.NewMemoryCapitalAssetRepo()
+	lineRepo := memory.NewMemoryDepreciationScheduleLineRepo()
+	accounts := memory.NewMemoryChartOfAccountsRepo()
+	entries := memory.NewMemoryUniversalJournalEntryRepo()
+	outbox := memory.NewMemoryTransactionalOutboxRepo()
+	tm := memory.NewMemoryTransactionManager(assetRepo, lineRepo, accounts, entries, outbox)
+
+	svc := service.NewCapitalAssetService(assetRepo, lineRepo, accounts, entries, outbox, tm)
+	ctx := context.Background()
+
+	// 1. Capitalization validations
+	_, err := svc.CapitalizeAsset(ctx, "", "EQ-001", decimal.NewFromInt(1200), 12, nil)
+	if err == nil {
+		t.Error("expected error for empty legal entity ID")
+	}
+	_, err = svc.CapitalizeAsset(ctx, "legal_123", "EQ-001", decimal.Zero, 12, nil)
+	if err == nil {
+		t.Error("expected error for zero acquisition cost")
+	}
+
+	// 2. Capitalize success
+	asset, err := svc.CapitalizeAsset(ctx, "legal_123", "EQ-001", decimal.NewFromInt(1200), 12, nil)
+	if err != nil {
+		t.Fatalf("unexpected error capitalizing asset: %v", err)
+	}
+	if asset.Status != domain.AssetStateACTIVE {
+		t.Errorf("expected asset to be active, got %s", asset.Status)
+	}
+
+	// 3. Generate Schedule
+	lines, err := svc.GenerateDepreciationSchedule(ctx, asset.ID)
+	if err != nil || len(lines) != 12 {
+		t.Fatalf("failed to generate depreciation schedule: %v (len: %d)", err, len(lines))
+	}
+	expectedDepAmt := decimal.NewFromInt(100)
+	if !lines[0].DepreciationAmount.Equal(expectedDepAmt) {
+		t.Errorf("expected monthly depreciation of 100, got %s", lines[0].DepreciationAmount)
+	}
+
+	// 4. Post Monthly Depreciation
+	err = svc.PostMonthlyStraightLineDepreciation(ctx, "legal_123", lines[0].FiscalYear, lines[0].PeriodNumber)
+	if err != nil {
+		t.Fatalf("failed to post monthly depreciation: %v", err)
+	}
+
+	// Verify asset accumulated depreciation is updated
+	updatedAsset, _ := svc.GetAsset(ctx, asset.ID)
+	if !updatedAsset.AccumulatedDepreciation.Equal(expectedDepAmt) {
+		t.Errorf("expected accumulated depreciation of 100, got %s", updatedAsset.AccumulatedDepreciation)
+	}
+
+	// Verify the schedule line is marked as posted
+	lines, _ = lineRepo.GetByAssetID(ctx, asset.ID)
+	var postedCount int
+	for _, l := range lines {
+		if l.IsPosted {
+			postedCount++
+		}
+	}
+	if postedCount != 1 {
+		t.Errorf("expected exactly 1 posted line, got %d", postedCount)
+	}
+}

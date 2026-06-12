@@ -127,3 +127,33 @@ type TransactionalOutboxRepository interface {
 	UpdateStatus(ctx context.Context, id string, status OutboxStatus) error
 }
 
+// LegalEntityRepository defines operations for legal entities
+type LegalEntityRepository interface {
+	Create(ctx context.Context, le *LegalEntity) error
+	GetByID(ctx context.Context, id string) (*LegalEntity, error)
+	GetByCode(ctx context.Context, code string) (*LegalEntity, error)
+	List(ctx context.Context) ([]LegalEntity, error)
+}
+
+// CapitalAssetRepository defines operations for capital assets
+type CapitalAssetRepository interface {
+	Create(ctx context.Context, asset *CapitalAsset) error
+	GetByID(ctx context.Context, id string) (*CapitalAsset, error)
+	Update(ctx context.Context, asset *CapitalAsset) error
+	List(ctx context.Context) ([]CapitalAsset, error)
+}
+
+// DepreciationScheduleLineRepository defines operations for depreciation schedule lines
+type DepreciationScheduleLineRepository interface {
+	CreateMany(ctx context.Context, lines []DepreciationScheduleLine) error
+	GetByAssetID(ctx context.Context, assetID string) ([]DepreciationScheduleLine, error)
+	GetUnpostedByPeriod(ctx context.Context, fiscalYear, periodNumber int) ([]DepreciationScheduleLine, error)
+	Update(ctx context.Context, line *DepreciationScheduleLine) error
+	List(ctx context.Context) ([]DepreciationScheduleLine, error)
+}
+
+// KafkaEventInboxRepository defines operations for the Kafka event inbox
+type KafkaEventInboxRepository interface {
+	Create(ctx context.Context, record *KafkaEventInbox) error
+	GetByID(ctx context.Context, eventID string) (*KafkaEventInbox, error)
+}

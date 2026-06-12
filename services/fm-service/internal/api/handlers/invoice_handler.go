@@ -124,4 +124,3 @@ func (h *InvoiceHandler) GetInvoiceLines(c *gin.Context) {
 		"data": []string{},
 	})
 }
-

@@ -724,8 +724,6 @@ func (r *SQLBankStatementRepo) List(ctx context.Context) ([]domain.BankStatement
 	return res, nil
 }
 
-
-
 // SQLTransactionalOutboxRepo implements domain.TransactionalOutboxRepository
 type SQLTransactionalOutboxRepo struct {
 	db *gorm.DB
@@ -762,3 +760,181 @@ func (r *SQLTransactionalOutboxRepo) UpdateStatus(ctx context.Context, id string
 	return nil
 }
 
+// SQLLegalEntityRepo implements domain.LegalEntityRepository
+type SQLLegalEntityRepo struct {
+	db *gorm.DB
+}
+
+func NewSQLLegalEntityRepo(db *gorm.DB) *SQLLegalEntityRepo {
+	return &SQLLegalEntityRepo{db: db}
+}
+
+func (r *SQLLegalEntityRepo) Create(ctx context.Context, le *domain.LegalEntity) error {
+	dbModel := FromDomainLegalEntity(le)
+	if err := GetDB(ctx, r.db).Create(dbModel).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLLegalEntityRepo) GetByID(ctx context.Context, id string) (*domain.LegalEntity, error) {
+	var dbModel LegalEntity
+	if err := GetDB(ctx, r.db).First(&dbModel, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return ToDomainLegalEntity(&dbModel), nil
+}
+
+func (r *SQLLegalEntityRepo) GetByCode(ctx context.Context, code string) (*domain.LegalEntity, error) {
+	var dbModel LegalEntity
+	if err := GetDB(ctx, r.db).First(&dbModel, "company_code = ?", code).Error; err != nil {
+		return nil, err
+	}
+	return ToDomainLegalEntity(&dbModel), nil
+}
+
+func (r *SQLLegalEntityRepo) List(ctx context.Context) ([]domain.LegalEntity, error) {
+	var dbModels []LegalEntity
+	if err := GetDB(ctx, r.db).Find(&dbModels).Error; err != nil {
+		return nil, err
+	}
+	res := make([]domain.LegalEntity, len(dbModels))
+	for i, m := range dbModels {
+		res[i] = *ToDomainLegalEntity(&m)
+	}
+	return res, nil
+}
+
+// SQLCapitalAssetRepo implements domain.CapitalAssetRepository
+type SQLCapitalAssetRepo struct {
+	db *gorm.DB
+}
+
+func NewSQLCapitalAssetRepo(db *gorm.DB) *SQLCapitalAssetRepo {
+	return &SQLCapitalAssetRepo{db: db}
+}
+
+func (r *SQLCapitalAssetRepo) Create(ctx context.Context, asset *domain.CapitalAsset) error {
+	dbModel := FromDomainCapitalAsset(asset)
+	if err := GetDB(ctx, r.db).Create(dbModel).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLCapitalAssetRepo) GetByID(ctx context.Context, id string) (*domain.CapitalAsset, error) {
+	var dbModel CapitalAsset
+	if err := GetDB(ctx, r.db).First(&dbModel, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return ToDomainCapitalAsset(&dbModel), nil
+}
+
+func (r *SQLCapitalAssetRepo) Update(ctx context.Context, asset *domain.CapitalAsset) error {
+	dbModel := FromDomainCapitalAsset(asset)
+	if err := GetDB(ctx, r.db).Save(dbModel).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLCapitalAssetRepo) List(ctx context.Context) ([]domain.CapitalAsset, error) {
+	var dbModels []CapitalAsset
+	if err := GetDB(ctx, r.db).Find(&dbModels).Error; err != nil {
+		return nil, err
+	}
+	res := make([]domain.CapitalAsset, len(dbModels))
+	for i, m := range dbModels {
+		res[i] = *ToDomainCapitalAsset(&m)
+	}
+	return res, nil
+}
+
+// SQLDepreciationScheduleLineRepo implements domain.DepreciationScheduleLineRepository
+type SQLDepreciationScheduleLineRepo struct {
+	db *gorm.DB
+}
+
+func NewSQLDepreciationScheduleLineRepo(db *gorm.DB) *SQLDepreciationScheduleLineRepo {
+	return &SQLDepreciationScheduleLineRepo{db: db}
+}
+
+func (r *SQLDepreciationScheduleLineRepo) CreateMany(ctx context.Context, lines []domain.DepreciationScheduleLine) error {
+	dbModels := make([]*DepreciationScheduleLine, len(lines))
+	for i, l := range lines {
+		dbModels[i] = FromDomainDepreciationScheduleLine(&l)
+	}
+	if err := GetDB(ctx, r.db).Create(&dbModels).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLDepreciationScheduleLineRepo) GetByAssetID(ctx context.Context, assetID string) ([]domain.DepreciationScheduleLine, error) {
+	var dbModels []DepreciationScheduleLine
+	if err := GetDB(ctx, r.db).Where("fixed_asset_id = ?", assetID).Find(&dbModels).Error; err != nil {
+		return nil, err
+	}
+	res := make([]domain.DepreciationScheduleLine, len(dbModels))
+	for i, m := range dbModels {
+		res[i] = *ToDomainDepreciationScheduleLine(&m)
+	}
+	return res, nil
+}
+
+func (r *SQLDepreciationScheduleLineRepo) GetUnpostedByPeriod(ctx context.Context, fiscalYear, periodNumber int) ([]domain.DepreciationScheduleLine, error) {
+	var dbModels []DepreciationScheduleLine
+	if err := GetDB(ctx, r.db).Where("is_posted = ? AND fiscal_year = ? AND period_number = ?", false, fiscalYear, periodNumber).Find(&dbModels).Error; err != nil {
+		return nil, err
+	}
+	res := make([]domain.DepreciationScheduleLine, len(dbModels))
+	for i, m := range dbModels {
+		res[i] = *ToDomainDepreciationScheduleLine(&m)
+	}
+	return res, nil
+}
+
+func (r *SQLDepreciationScheduleLineRepo) Update(ctx context.Context, line *domain.DepreciationScheduleLine) error {
+	dbModel := FromDomainDepreciationScheduleLine(line)
+	if err := GetDB(ctx, r.db).Save(dbModel).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLDepreciationScheduleLineRepo) List(ctx context.Context) ([]domain.DepreciationScheduleLine, error) {
+	var dbModels []DepreciationScheduleLine
+	if err := GetDB(ctx, r.db).Find(&dbModels).Error; err != nil {
+		return nil, err
+	}
+	res := make([]domain.DepreciationScheduleLine, len(dbModels))
+	for i, m := range dbModels {
+		res[i] = *ToDomainDepreciationScheduleLine(&m)
+	}
+	return res, nil
+}
+
+// SQLKafkaEventInboxRepo implements domain.KafkaEventInboxRepository
+type SQLKafkaEventInboxRepo struct {
+	db *gorm.DB
+}
+
+func NewSQLKafkaEventInboxRepo(db *gorm.DB) *SQLKafkaEventInboxRepo {
+	return &SQLKafkaEventInboxRepo{db: db}
+}
+
+func (r *SQLKafkaEventInboxRepo) Create(ctx context.Context, record *domain.KafkaEventInbox) error {
+	dbModel := FromDomainKafkaEventInbox(record)
+	if err := GetDB(ctx, r.db).Create(dbModel).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLKafkaEventInboxRepo) GetByID(ctx context.Context, eventID string) (*domain.KafkaEventInbox, error) {
+	var dbModel KafkaEventInbox
+	if err := GetDB(ctx, r.db).First(&dbModel, "event_id = ?", eventID).Error; err != nil {
+		return nil, err
+	}
+	return ToDomainKafkaEventInbox(&dbModel), nil
+}

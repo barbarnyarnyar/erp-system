@@ -64,7 +64,7 @@ func (w *OutboxRelayWorker) processPending(ctx context.Context) {
 		err = w.publisher.Publish(ctx, rec.EventType, rec.AggregateID, rec.Payload)
 		if err != nil {
 			log.Printf("[OutboxRelay] Failed to publish event %s (id: %s) to Kafka: %v", rec.EventType, rec.ID, err)
-			
+
 			// If status is not already FAILED, update it to FAILED
 			if rec.Status != domain.OutboxStatusFAILED {
 				if updateErr := w.repo.UpdateStatus(ctx, rec.ID, domain.OutboxStatusFAILED); updateErr != nil {
