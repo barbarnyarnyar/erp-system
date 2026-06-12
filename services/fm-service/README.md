@@ -65,6 +65,11 @@ make docker-run
 ### Health Check
 - `GET /health` - Service health status
 
+### Legal Entities
+- `GET /api/v1/legal-entities` - List legal entities
+- `POST /api/v1/legal-entities` - Create legal entity
+- `GET /api/v1/legal-entities/:id` - Get legal entity
+
 ### Accounts
 - `GET /api/v1/accounts` - List all accounts
 - `POST /api/v1/accounts` - Create new account
@@ -73,12 +78,39 @@ make docker-run
 - `DELETE /api/v1/accounts/:id` - Delete account
 - `GET /api/v1/accounts/:id/balance` - Get account balance
 
-### Transactions
-- `GET /api/v1/transactions` - List all transactions
-- `POST /api/v1/transactions` - Create new transaction
-- `GET /api/v1/transactions/:id` - Get specific transaction
-- `POST /api/v1/transactions/:id/post` - Post transaction
-- `POST /api/v1/transactions/:id/reverse` - Reverse transaction
+### Journal Entries
+- `GET /api/v1/journal-entries` - List journal entries
+- `POST /api/v1/journal-entries` - Create journal entry
+- `GET /api/v1/journal-entries/:id` - Get journal entry with lines
+- `PUT /api/v1/journal-entries/:id` - Update journal entry
+- `DELETE /api/v1/journal-entries/:id` - Delete journal entry
+
+### Invoices (AR)
+- `GET /api/v1/invoices` - List invoices
+- `POST /api/v1/invoices` - Create invoice
+- `GET /api/v1/invoices/:id` - Get invoice details
+- `PUT /api/v1/invoices/:id` - Update invoice
+- `DELETE /api/v1/invoices/:id` - Delete invoice
+- `POST /api/v1/invoices/:id/send` - Send invoice
+- `GET /api/v1/invoices/:id/lines` - Get invoice lines (flat model compatibility)
+
+### Vendor Bills (AP)
+- `GET /api/v1/vendor-bills` - List vendor bills
+- `POST /api/v1/vendor-bills` - Create vendor bill
+- `GET /api/v1/vendor-bills/:id/lines` - Get vendor bill lines
+
+### Payments & Banking
+- `GET /api/v1/payments` - List payments
+- `POST /api/v1/payments` - Record payment
+- `GET /api/v1/payments/:id` - Get payment details
+- `GET /api/v1/bank-statements/:id/lines` - Get bank statement lines
+
+### Fixed Assets
+- `GET /api/v1/assets` - List assets
+- `POST /api/v1/assets/capitalize` - Capitalize fixed asset
+- `GET /api/v1/assets/:id` - Get asset details
+- `POST /api/v1/assets/:id/depreciation-schedule` - Generate depreciation schedule
+- `POST /api/v1/assets/depreciate` - Post monthly depreciation
 
 ### Reports
 - `GET /api/v1/reports/balance-sheet` - Balance Sheet report

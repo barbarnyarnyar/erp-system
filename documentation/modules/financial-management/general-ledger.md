@@ -2,25 +2,19 @@
 
 Central repository for financial accounts and journal entries with double-entry balance validation and real-time balance tracking.
 
-## Implementation Status
-
-The GL is fully functional for single-currency accounting. All data is in-memory — no PostgreSQL connection.
-
 ## Chart of Accounts Structure
 
-### Account Model
+### Account Model (ChartOfAccounts)
 ```go
-type Account struct {
-    ID            string          `json:"id"`
-    AccountNumber string          `json:"account_number"`
-    Name          string          `json:"name"`
-    Type          string          `json:"type"`     // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
-    ParentID      *string         `json:"parent_id"`
-    Balance       decimal.Decimal `json:"balance"`
-    Currency      string          `json:"currency"` // stored per account, no conversion logic
-    IsActive      bool            `json:"is_active"`
-    CreatedAt     time.Time       `json:"created_at"`
-    UpdatedAt     time.Time       `json:"updated_at"`
+type ChartOfAccounts struct {
+	ID            string      `json:"id"`
+	LegalEntityID string      `json:"legal_entity_id"`
+	AccountCode   string      `json:"account_code"` // Unique combination with legal_entity_id
+	AccountName   string      `json:"account_name"`
+	Type          AccountType `json:"type"` // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+	IsActive      bool        `json:"is_active"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 }
 ```
 
@@ -34,63 +28,53 @@ type Account struct {
 | REVENUE | Credit | Decrease | Increase |
 | EXPENSE | Debit | Increase | Decrease |
 
-### Hierarchy
-Accounts support a parent-child structure via `ParentID`. The code does NOT enforce hierarchy rules (e.g., no check preventing posting to parent accounts).
+### Constraints
+Chart of accounts enforces multi-tenant segmentation. There is a composite unique constraint on `(legal_entity_id, account_code)`. Duplicate account codes under the same legal entity are rejected at the database level.
 
-### Standard Account Number Ranges (Convention)
-
-| Range | Type | Example |
-|-------|------|---------|
-| 1000-1999 | ASSET | 1100 - Cash, 1200 - Accounts Receivable, 1400 - Fixed Assets |
-| 2000-2999 | LIABILITY | 2100 - Accounts Payable, 2200 - Accrued Expenses |
-| 3000-3999 | EQUITY | 3100 - Share Capital, 3200 - Retained Earnings |
-| 4000-4999 | REVENUE | 4100 - Product Sales, 4200 - Service Revenue |
-| 5000-9999 | EXPENSE | 5100 - COGS, 6100 - Operating Expenses |
-
-These are naming conventions only — the code does not enforce any range-to-type mapping.
+---
 
 ## Journal Entry System
 
-### Journal Entry Model
+### Journal Entry Models
+
 ```go
-type JournalEntry struct {
-    ID          string    `json:"id"`
-    Reference   string    `json:"reference"`
-    Date        time.Time `json:"date"`
-    Description string    `json:"description"`
-    Status      string    `json:"status"`     // POSTED (upon creation) or REVERSED
-    CreatedBy   string    `json:"created_by"`
-    ReversedBy  *string   `json:"reversed_by"` // ID of reversing entry
-    CreatedAt   time.Time `json:"created_at"`
-    UpdatedAt   time.Time `json:"updated_at"`
+type UniversalJournalEntry struct {
+	ID               string      `json:"id"`
+	LegalEntityID    string      `json:"legal_entity_id"`    // Strict multi-tenant partition shield
+	SourceModule     string      `json:"source_module"`      // "SCM", "CRM", "HR", "PRJ", "FM"
+	SourceDocumentID string      `json:"source_document_id"` // Primitive reference to external systems
+	PostingDate      time.Time   `json:"posting_date"`
+	FinancialPeriod  string      `json:"financial_period"` // Format: "YYYY-MM"
+	Status           LedgerState `json:"status"` // DRAFT, POSTED, REVERSED
+	CreatedAt        time.Time   `json:"created_at"`
+	UpdatedAt        time.Time   `json:"updated_at"`
 }
 
-type JournalEntryLine struct {
-    ID           string          `json:"id"`
-    EntryID      string          `json:"entry_id"`
-    AccountID    string          `json:"account_id"`
-    DebitAmount  decimal.Decimal `json:"debit_amount"`
-    CreditAmount decimal.Decimal `json:"credit_amount"`
-    Description  string          `json:"description"`
+type UniversalJournalLine struct {
+	ID                    string          `json:"id"`
+	JournalEntryID        string          `json:"journal_entry_id"`
+	AccountID             string          `json:"account_id"`
+	AmountFunctional      decimal.Decimal `json:"amount_functional"`      // Functional currency value
+	AmountTransactional   decimal.Decimal `json:"amount_transactional"`   // Original currency value before conversion
+	CurrencyTransactional string          `json:"currency_transactional"` // ISO 4217 code of origin transaction
+	TrackingDimensions    interface{}     `json:"tracking_dimensions"`
 }
 ```
 
 ### Entry Creation Rules
-1. Minimum 2 lines per entry
-2. Total debits must equal total credits (validated with `decimal.Decimal.Equal`)
-3. All account IDs must exist in the repository
-4. Status is always set to `"POSTED"` — no draft state
-5. Account balances are updated atomically during creation:
-   - For debit-increase accounts (ASSET/EXPENSE): `Balance += debits - credits`
-   - For credit-increase accounts (LIABILITY/EQUITY/REVENUE): `Balance -= debits + credits`
-6. `fin.account.balance.changed` event published per line
+1. Minimum 2 lines per entry.
+2. The sum of `amount_functional` across all lines must equal zero (validated with `decimal.Decimal`).
+3. All account IDs must exist.
+4. Status defaults to `"POSTED"`.
+5. Account balances are calculated dynamically as the sum of all posted journal lines referencing that account.
+6. An outbox event `fm.account.balance.changed` is published per line.
 
 ### Entry Reversal
-1. Validates entry is not already REVERSED
-2. Creates new entry with swapped debit/credit amounts
-3. Reference prefixed with `"REV-"`
-4. Original entry status set to REVERSED
-5. `ReversedBy` field links to reversing entry ID
+1. Validates that the entry is not already `REVERSED`.
+2. Creates a new entry with swapped functional and transactional amount signs.
+3. Original entry status is set to `REVERSED`.
+
+---
 
 ## Account Management
 
@@ -100,74 +84,46 @@ POST /api/v1/accounts
 Content-Type: application/json
 
 {
-  "account_number": "1100",
-  "name": "Cash - Operating",
-  "type": "ASSET",
-  "parent_id": "",
-  "currency": "USD"
+  "legal_entity_id": "le_1234567890",
+  "account_code": "1100",
+  "account_name": "Cash - Operating",
+  "type": "ASSET"
 }
 ```
 
-Response: `{"data": {"id": "acc_1234567890", "account_number": "1100", ...}}`
+Response: 
+```json
+{
+  "data": {
+    "id": "acc_1234567890",
+    "legal_entity_id": "le_1234567890",
+    "account_code": "1100",
+    "account_name": "Cash - Operating",
+    "type": "ASSET",
+    "is_active": true,
+    "created_at": "2026-06-13T02:00:00Z",
+    "updated_at": "2026-06-13T02:00:00Z"
+  }
+}
+```
 
 ### Validation Rules
-- `account_number` is required (string)
-- `name` is required
-- `type` is required (free-form string — no enum validation)
-- Duplicate account number is NOT validated (no uniqueness check in service)
-- `currency` is stored but never used in conversions
+- `legal_entity_id` is required and must match an existing Legal Entity.
+- `account_code` is required and must be unique under the given legal entity.
+- `account_name` is required.
+- `type` is required and must be one of: `ASSET`, `LIABILITY`, `EQUITY`, `REVENUE`, `EXPENSE`.
 
-## Trial Balance
+---
 
-```http
-GET /api/v1/reports/trial-balance
-```
+## Financial Reports
 
-Returns:
-```json
-{
-  "balances": {
-    "Cash - Operating": {"debit": "50000.00"},
-    "Accounts Payable": {"credit": "15000.00"}
-  },
-  "total_debits": "50000.00",
-  "total_credits": "15000.00"
-}
-```
+All reports gather live aggregations from the ledger lines.
 
-Logic: Account types ASSET and EXPENSE → debit side. All others → credit side. Inactive accounts excluded.
+### Balance Sheet
+Groups accounts by type (ASSET/LIABILITY/EQUITY). REVENUE and EXPENSE accounts are excluded.
 
-## Balance Sheet
+### Income Statement
+Groups accounts by type (REVENUE/EXPENSE) and calculates `net_income = total_revenue - total_expense`.
 
-```http
-GET /api/v1/reports/balance-sheet
-```
-
-Returns:
-```json
-{
-  "assets": {"Cash - Operating": "50000.00"},
-  "total_assets": "50000.00",
-  "liabilities": {"Accounts Payable": "15000.00"},
-  "total_liabilities": "15000.00",
-  "equity": {"Retained Earnings": "35000.00"},
-  "total_equity": "35000.00"
-}
-```
-
-Logic: Groups accounts by type (ASSET/LIABILITY/EQUITY). REVENUE and EXPENSE accounts are excluded.
-
-## Known Limitations
-
-| Gap | Detail |
-|-----|--------|
-| No account code validation | Type (ASSET/etc.) is a free string — no enum enforcement |
-| No account code uniqueness | Duplicate account numbers not rejected |
-| No posting rules | No check for leaf-vs-parent account posting |
-| No draft/approval workflow | All entries POSTED immediately |
-| Currency is decorative | Stored per account but no conversion, no rate table usage |
-| Income statement is stub | Returns hardcoded message — no revenue/expense aggregation |
-| Cash flow is stub | Returns hardcoded message — no logic |
-| No period closing | No fiscal year close, no retained earnings transfer |
-| In-memory only | All data lost on service restart |
-| No pagination | List endpoints return all records |
+### Cash Flow
+Aggregates inflows and outflows from ASSET accounts having "cash" or "bank" (case-insensitive) in their name.

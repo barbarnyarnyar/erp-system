@@ -42,79 +42,91 @@ No consumed events.
 
 ## [Financial Management](financial-management/)
 
-General ledger, accounts receivable, accounts payable, cash management, budgeting, and financial reports. Port **8001**.
+General ledger, accounts receivable, accounts payable, cash management, budgeting, fixed assets, and financial reports. Port **8001**.
 
-### Domain Models (17 types)
+### Domain Models
 
 | Model | Key Fields | Event Triggers |
 |-------|-----------|----------------|
-| `Account` | ID, Code, Name, Type (Asset/Liability/Equity/Revenue/Expense), NormalSide (Debit/Credit), Level, ParentID, Balance, AllowPosting | `fin.account.created`, `fin.account.balance.changed` |
-| `JournalEntry` | ID, Description, Lines[], Status (Draft/Posted/Reversed), SourceModule | `fin.transaction.created` |
-| `JournalEntryLine` | AccountID, DebitAmount, CreditAmount, Description | — |
-| `Invoice` | ID, CustomerID, Total, Status, DueDate, Lines[] | `fin.invoice.created`, `fin.invoice.paid` |
-| `InvoiceLine` | ProductID, Quantity, UnitPrice, Amount | — |
-| `Payment` | ID, InvoiceID, Amount, Method, Reference | `fin.payment.received`, `fin.payment.processed` |
-| `VendorBill` | ID, VendorID, Amount, Status, Lines[] | — |
-| `Budget` | ID, Name, FiscalYear, TotalAmount, SpentAmount, Status | `fin.budget.created`, `fin.budget.updated`, `fin.budget.exceeded`, `fin.budget.approved`, `fin.budget.allocated` |
-| `FiscalYear` | ID, Name, StartDate, EndDate, IsClosed | — |
-| `CostCenter` | ID, Code, Name, DepartmentID | — |
-| `TaxRate` | ID, Name, Rate, Type | — |
-| `CurrencyRate` | ID, FromCurrency, ToCurrency, Rate, EffectiveDate | — |
-| `BankAccount`, `BankStatement`, `BankStatementLine` | — | — |
-| `CustomerCredit` | CustomerID, CreditLimit, CurrentBalance | — |
+| `LegalEntity` | ID, CompanyCode, CompanyName, FunctionalCurrency, TaxRegistrationNumber | — |
+| `ChartOfAccounts` | ID, LegalEntityID, AccountCode, AccountName, Type (ASSET/LIABILITY/EQUITY/REVENUE/EXPENSE), IsActive | `fm.account.created`, `fm.account.updated`, `fm.account.balance.changed` |
+| `UniversalJournalEntry` | ID, LegalEntityID, SourceModule, SourceDocumentID, PostingDate, FinancialPeriod, Status (DRAFT/POSTED/REVERSED) | — |
+| `UniversalJournalLine` | ID, JournalEntryID, AccountID, AmountFunctional, AmountTransactional, CurrencyTransactional | `fm.account.balance.changed` (via outbox event) |
+| `ArInvoice` | ID, LegalEntityID, InvoiceNumber, CustomerID, SalesOrderID, TotalAmount, TaxAmount, DueDate, Status | `fm.invoice.created`, `fm.invoice.updated`, `fm.invoice.sent`, `fm.invoice.paid` |
+| `ApVendorBill` | ID, LegalEntityID, BillNumber, VendorID, PurchaseOrderID, TotalAmount, TaxAmount, DueDate, Status | `fm.vendor.paid` |
+| `CapitalAsset` | ID, LegalEntityID, AssetTag, EamEquipmentID, AcquisitionCost, AccumulatedDepreciation, UsefulLifeMonths, CapitalizationDate, Status | — |
+| `DepreciationScheduleLine` | ID, FixedAssetID, FiscalYear, PeriodNumber, DepreciationAmount, IsPosted | — |
+| `BankAccount` | ID, LegalEntityID, AccountNumber, Currency, LiquidBalance | — |
+| `Payment` | ID, InvoiceID, BillID, BankAccountID, PaymentNumber, PaymentDate, Amount, PaymentMethod, Status | `fm.payment.received`, `fm.payment.processed` |
+| `BankStatement` | ID, BankAccountID, StatementDate, EndingBalance, IsReconciled | — |
+| `BankStatementLine` | ID, StatementID, TransactionDate, Description, Amount, IsMatched | — |
+| `Budget` | ID, AccountID, CostCenterID, FiscalYear, Period, AllocatedAmount, SpentAmount | `fm.budget.created`, `fm.budget.updated`, `fm.budget.exceeded`, `fm.budget.approved` |
 
 ### Business Services (6)
 
 | Service | Key Methods | Business Logic |
 |---------|-------------|---------------|
-| `GeneralLedgerService` | `CreateAccount`, `GetAccountBalance`, `CreateJournalEntry`, `PostEntry`, `ReverseEntry`, `GetTrialBalance`, `GetBalanceSheet` | Double-entry balance validation (debits must equal credits), hierarchical account tree, GL posting, trial balance computation, balance sheet by account-type classification |
-| `AccountsReceivableService` | `CreateInvoice`, `GetInvoice`, `SendInvoice` | Customer invoice lifecycle |
-| `AccountsPayableService` | `CreateVendorBill`, `GetVendorBill` | Vendor bill management |
-| `CashManagementService` | `RecordPayment`, `GetPayments` | Payment recording against invoices |
-| `BudgetingService` | `CreateBudget`, `MonitorBudget`, `GetBudgetVariance` | Budget vs. actual variance reporting |
-| `TaxService` | `CreateTaxRate`, `ListTaxRates`, `GetTaxRate` | Tax rate CRUD — **not wired in code** |
+| `GeneralLedgerService` | `CreateAccount`, `GetAccountBalance`, `CreateJournalEntry`, `ReverseJournalEntry`, `GetBalanceSheet`, `GetIncomeStatement`, `GetCashFlow` | Multi-tenant chart of accounts, balanced universal double-entry validation, reports from live database lines. |
+| `AccountsReceivableService` | `CreateInvoice`, `GetInvoice`, `SendInvoice` | Customer invoice lifecycle, flat schemas. |
+| `AccountsPayableService` | `CreateVendorBill`, `GetVendorBill` | Vendor bill lifecycle. |
+| `CashManagementService` | `RecordPayment`, `GetPayments`, `GetBankStatement` | Record payment against AR/AP, bank statement line tracking. |
+| `BudgetingService` | `CreateBudget`, `GetBudgetVariance` | Period budgeting and actual vs budget variance comparison. |
+| `CapitalAssetService` | `CapitalizeAsset`, `GenerateDepreciationSchedule`, `PostMonthlyStraightLineDepreciation` | Straight-line depreciation scheduling and GL posting. |
 
-### API Endpoints (25 routes)
+### API Endpoints (33 routes)
 
 | Method | Path | Handler | Description |
 |--------|------|---------|-------------|
 | GET | `/health` | inline | Health check |
+| GET | `/api/v1/legal-entities` | `leHandler.GetLegalEntities` | List legal entities |
+| POST | `/api/v1/legal-entities` | `leHandler.CreateLegalEntity` | Create legal entity |
+| GET | `/api/v1/legal-entities/:id` | `leHandler.GetLegalEntity` | Get legal entity by ID |
 | GET | `/api/v1/accounts` | `accHandler.GetAccounts` | List all accounts |
-| POST | `/api/v1/accounts` | `accHandler.CreateAccount` | Create account (validates code uniqueness, level calc) |
+| POST | `/api/v1/accounts` | `accHandler.CreateAccount` | Create account |
 | GET | `/api/v1/accounts/:id` | `accHandler.GetAccount` | Get account by ID |
 | PUT | `/api/v1/accounts/:id` | `accHandler.UpdateAccount` | Update account properties |
 | DELETE | `/api/v1/accounts/:id` | `accHandler.DeleteAccount` | Delete account |
 | GET | `/api/v1/accounts/:id/balance` | `accHandler.GetAccountBalance` | Get account balance |
 | GET | `/api/v1/journal-entries` | `txHandler.GetTransactions` | List journal entries |
 | POST | `/api/v1/journal-entries` | `txHandler.CreateTransaction` | Create journal entry |
-| GET | `/api/v1/journal-entries/:id` | `txHandler.GetTransaction` | Get journal entry |
+| GET | `/api/v1/journal-entries/:id` | `txHandler.GetTransaction` | Get journal entry with lines |
 | PUT | `/api/v1/journal-entries/:id` | `txHandler.UpdateTransaction` | Update journal entry |
 | DELETE | `/api/v1/journal-entries/:id` | `txHandler.DeleteTransaction` | Delete journal entry |
 | GET | `/api/v1/invoices` | `invHandler.GetInvoices` | List invoices |
 | POST | `/api/v1/invoices` | `invHandler.CreateInvoice` | Create invoice |
-| GET | `/api/v1/invoices/:id` | `invHandler.GetInvoice` | Get invoice |
+| GET | `/api/v1/invoices/:id` | `invHandler.GetInvoice` | Get invoice details |
 | PUT | `/api/v1/invoices/:id` | `invHandler.UpdateInvoice` | Update invoice |
 | DELETE | `/api/v1/invoices/:id` | `invHandler.DeleteInvoice` | Delete invoice |
 | POST | `/api/v1/invoices/:id/send` | `invHandler.SendInvoice` | Send invoice to customer |
+| GET | `/api/v1/invoices/:id/lines` | `invHandler.GetInvoiceLines` | Get empty lines list for compatibility |
+| GET | `/api/v1/vendor-bills` | `billHandler.GetVendorBills` | List vendor bills |
+| POST | `/api/v1/vendor-bills` | `billHandler.CreateVendorBill` | Create vendor bill |
+| GET | `/api/v1/vendor-bills/:id/lines` | `billHandler.GetVendorBillLines` | Get empty lines list for compatibility |
 | GET | `/api/v1/payments` | `payHandler.GetPayments` | List payments |
 | POST | `/api/v1/payments` | `payHandler.RecordPayment` | Record payment |
-| GET | `/api/v1/payments/:id` | `payHandler.GetPayment` | Get payment |
-| GET | `/api/v1/reports/balance-sheet` | `repHandler.GetBalanceSheet` | Balance sheet report (GL-driven) |
-| GET | `/api/v1/reports/income-statement` | `repHandler.GetIncomeStatement` | Income statement |
+| GET | `/api/v1/payments/:id` | `payHandler.GetPayment` | Get payment details |
+| GET | `/api/v1/bank-statements/:id/lines` | `payHandler.GetBankStatementLines` | Get bank statement lines |
+| GET | `/api/v1/assets` | `assetHandler.GetAssets` | List capitalized assets |
+| POST | `/api/v1/assets/capitalize` | `assetHandler.CapitalizeAsset` | Capitalize asset |
+| GET | `/api/v1/assets/:id` | `assetHandler.GetAsset` | Get asset details |
+| POST | `/api/v1/assets/:id/depreciation-schedule` | `assetHandler.GenerateDepreciationSchedule` | Generate straight-line depreciation schedule |
+| POST | `/api/v1/assets/depreciate` | `assetHandler.PostMonthlyDepreciation` | Post monthly depreciation to GL |
+| GET | `/api/v1/reports/balance-sheet` | `repHandler.GetBalanceSheet` | Balance sheet report (GL live ledger-driven) |
+| GET | `/api/v1/reports/income-statement` | `repHandler.GetIncomeStatement` | Income statement report |
 | GET | `/api/v1/reports/cash-flow` | `repHandler.GetCashFlow` | Cash flow report |
 
-### Kafka Events Published (16 topics, per CDD)
+### Kafka Events Published (18 topics)
 
-`fin.invoice.created`, `fin.invoice.updated`, `fin.invoice.sent`, `fin.invoice.paid`, `fin.invoice.overdue`, `fin.payment.received`, `fin.payment.processed`, `fin.payment.failed`, `fin.vendor.payment.due`, `fin.budget.created`, `fin.budget.updated`, `fin.budget.exceeded`, `fin.budget.approved`, `fin.account.created`, `fin.account.updated`, `fin.account.balance.changed`
+`fm.invoice.created`, `fm.invoice.updated`, `fm.invoice.sent`, `fm.invoice.paid`, `fm.invoice.overdue`, `fm.payment.received`, `fm.payment.processed`, `fm.payment.failed`, `fm.vendor.payment.due`, `fm.vendor.paid`, `fm.customer.credit_status.updated`, `fm.account.created`, `fm.account.updated`, `fm.account.balance.changed`, `fm.budget.created`, `fm.budget.updated`, `fm.budget.exceeded`, `fm.budget.approved`
 
-### Kafka Events Consumed (13 topics, per CDD)
+### Kafka Events Consumed (17 topics)
 
-Consumed by `EventConsumer` in `internal/business/service/event_consumer.go`:
-- **HR → FM**: `hr.employee.created` (track new employee), `hr.payroll.processed` (create salary journal entry), `hr.expense.submitted` (create expense journal entry)
-- **SCM → FM**: `scm.purchase.order.created` (create inventory-in-transit entry), `scm.invoice.received` (create AP entry), `scm.inventory.valued` (update inventory GL balance)
-- **CRM → FM**: `crm.sale.completed` (create revenue entry), `crm.customer.created` (track new customer)
-- **MFG → FM**: `mfg.production.completed` (WIP→finished goods entry), `mfg.material.consumed` (raw material issue entry)
-- **PM → FM**: `prj.project.created` (track new project), `prj.time.logged` (create unbilled receivable entry), `prj.expense.incurred` (capitalize project cost)
+Consumed transactionally via Inbox deduplication checks:
+- **HR → FM**: `hr.payroll.processed` (create salary journal entry), `hr.employee.created` (track employee), `hr.expense.submitted` (create expense entry)
+- **SCM → FM**: `scm.receipt.staged` (staged receipt), `scm.order.shipped` (record COGS), `scm.purchase.order.created` (reference PO), `scm.invoice.received` (create AP entry), `scm.inventory.valued` (update inventory GL balance)
+- **CRM → FM**: `crm.order.confirmed` (create receivable invoice), `crm.customer.created` (track new customer)
+- **MFG → FM**: `mfg.yield.produced` (material yield), `mfg.production.completed` (WIP→finished goods entry), `mfg.material.consumed` (raw material issue entry)
+- **PM → FM**: `prj.milestone.achieved` (billing milestone), `prj.project.created` (track project), `prj.time.logged` (create unbilled receivable entry), `prj.expense.incurred` (capitalize project cost)
 
 ---
 

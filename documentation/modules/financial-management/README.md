@@ -1,19 +1,21 @@
 # Financial Management Module
 
-General ledger, accounts receivable, accounts payable, cash management, budgeting, and financial reports. Port **8001**.
+General ledger, accounts receivable, accounts payable, cash management, budgeting, fixed assets, and financial reports. Port **8001**.
 
 ## Module Overview
 
 ```mermaid
 graph TB
     subgraph "Financial Management Core"
+        LE[Legal Entities]
         GL[General Ledger<br/>Chart of Accounts]
         JE[Journal Entries<br/>Double-Entry Bookkeeping]
         AP[Accounts Payable<br/>Vendor Bills]
         AR[Accounts Receivable<br/>Customer Invoices]
         CM[Cash Management<br/>Payment Recording]
+        FA[Fixed Assets<br/>Depreciation Schedule]
         BUD[Budgeting<br/>Planning & Variance]
-        REP[Reports<br/>Balance Sheet & Trial Balance]
+        REP[Reports<br/>Balance Sheet & Reports]
     end
 
     subgraph "Integration Points"
@@ -24,12 +26,14 @@ graph TB
         PM_INT[PM Integration<br/>Project Billing]
     end
 
+    LE --> GL
     GL --> JE
     JE --> GL
     JE --> AR
     JE --> AP
     CM --> AR
     CM --> AP
+    FA --> JE
     GL --> REP
     HR_INT --> JE
     SCM_INT --> JE
@@ -41,226 +45,185 @@ graph TB
 ## Documentation Structure
 
 ### Core Features
-- [General Ledger](general-ledger.md) — Chart of accounts, journal entries, trial balance, balance sheet
+- [Overview](overview.md) — Module features, architecture, and integration overview
+- [General Ledger](general-ledger.md) — Chart of accounts, journal entries, balance behaviors
 - [API Reference](api-reference.md) — Complete REST API documentation with examples
 
-### Planned Sub-docs (not yet written)
-- `accounts-payable.md` — Vendor bill management
-- `accounts-receivable.md` — Customer invoice management
-- `budgeting.md` — Budget planning and variance analysis
-- `financial-reporting.md` — Balance sheet, income statement, cash flow
-- `integration-patterns.md` — Cross-module event flows
+---
 
-## Domain Models (17 types)
+## Domain Models
 
 | Model | Key Fields | Description |
 |-------|-----------|-------------|
-| `Account` | ID, AccountNumber, Name, Type (ASSET/LIABILITY/EQUITY/REVENUE/EXPENSE), ParentID, Balance, Currency, IsActive | Chart of accounts entry |
-| `JournalEntry` | ID, Reference, Date, Description, Status (POSTED/REVERSED), CreatedBy, ReversedBy | Double-entry transaction |
-| `JournalEntryLine` | ID, EntryID, AccountID, DebitAmount, CreditAmount, Description | Line in a journal entry |
-| `Invoice` | ID, CustomerID, IssueDate, DueDate, TotalAmount, Status, Lines[] | Customer invoice |
-| `InvoiceLine` | Description, Quantity, UnitPrice, LineTotal | Line item on invoice |
-| `Payment` | ID, InvoiceID, BillID, BankAccountID, Amount, PaymentMethod | Payment record |
-| `VendorBill` | ID, VendorID, BillDate, DueDate, TotalAmount, Status, Lines[] | Vendor bill |
-| `VendorBillLine` | Description, Quantity, UnitPrice, LineTotal | Line item on vendor bill |
-| `Budget` | ID, Name, FiscalYear, TotalAmount, SpentAmount, Status | Budget plan |
-| `FiscalYear` | ID, Name, StartDate, EndDate, IsClosed | Accounting period |
-| `CostCenter` | ID, Code, Name, DepartmentID | Cost allocation unit |
-| `TaxRate` | ID, Name, Rate, Type | Tax configuration |
-| `CurrencyRate` | ID, FromCurrency, ToCurrency, Rate, EffectiveDate | Exchange rate (not used in logic) |
-| `BankAccount` | ID, AccountNumber, BankName, Balance | Bank account |
-| `BankStatement` | ID, BankAccountID, Period, StartingBalance, EndingBalance | Bank statement |
-| `BankStatementLine` | ID, StatementID, Date, Description, Amount | Bank transaction |
-| `CustomerCredit` | CustomerID, CreditLimit, CurrentBalance | Customer credit limit |
+| `LegalEntity` | ID, CompanyCode, CompanyName, FunctionalCurrency, TaxRegistrationNumber | Multi-tenant tenant boundary |
+| `ChartOfAccounts` | ID, LegalEntityID, AccountCode, AccountName, Type (ASSET/LIABILITY/EQUITY/REVENUE/EXPENSE), IsActive | Chart of accounts entry |
+| `UniversalJournalEntry` | ID, LegalEntityID, SourceModule, SourceDocumentID, PostingDate, FinancialPeriod, Status (DRAFT/POSTED/REVERSED) | Double-entry journal header |
+| `UniversalJournalLine` | ID, JournalEntryID, AccountID, AmountFunctional, AmountTransactional, CurrencyTransactional | Ledger transaction line |
+| `ArInvoice` | ID, LegalEntityID, InvoiceNumber, CustomerID, SalesOrderID, TotalAmount, TaxAmount, DueDate, Status | Customer invoice (flat schema) |
+| `ApVendorBill` | ID, LegalEntityID, BillNumber, VendorID, PurchaseOrderID, TotalAmount, TaxAmount, DueDate, Status | Vendor bill (flat schema) |
+| `CapitalAsset` | ID, LegalEntityID, AssetTag, EamEquipmentID, AcquisitionCost, AccumulatedDepreciation, UsefulLifeMonths, CapitalizationDate, Status | Capitalized fixed asset |
+| `DepreciationScheduleLine` | ID, FixedAssetID, FiscalYear, PeriodNumber, DepreciationAmount, IsPosted | Scheduled straight-line depreciation entry |
+| `BankAccount` | ID, LegalEntityID, AccountNumber, Currency, LiquidBalance | Bank account record |
+| `Payment` | ID, InvoiceID, BillID, BankAccountID, PaymentNumber, PaymentDate, Amount, PaymentMethod, Status | Payment record against AR/AP |
+| `BankStatement` | ID, BankAccountID, StatementDate, EndingBalance, IsReconciled | Bank statement header |
+| `BankStatementLine` | ID, StatementID, TransactionDate, Description, Amount, IsMatched | Individual bank transaction line |
+| `Budget` | ID, AccountID, CostCenterID, FiscalYear, Period, AllocatedAmount, SpentAmount | Budget allocation per period |
+| `TaxRate` | ID, Code, Name, Rate, IsActive | Tax rate configuration |
+| `CurrencyRate` | ID, FromCurrency, ToCurrency, Rate, EffectiveDate | Exchange rates table |
+| `CustomerCredit` | ID, CustomerID, CreditLimit, CurrentBalance, IsOnHold | Customer credit limit details |
+| `TransactionalOutbox` | ID, EventType, AggregateID, Payload, Status | Outbox record for reliable publishing |
+| `KafkaEventInbox` | EventID, EventType, ProcessedAt, ProcessingStatus, Payload | Inbox record for event idempotency |
 
-## Business Services (6)
+---
+
+## Business Services
 
 ### GeneralLedgerService
-
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `CreateAccount` | Create account (req: number, name, type) | Publishes `fin.account.created` |
-| `ListAccounts` | List all accounts | — |
-| `GetAccount` | Get by ID | — |
-| `GetAccountByNumber` | Get by account number | — |
-| `UpdateAccount` | Update name, type, parent, active status | Publishes `fin.account.updated` |
-| `DeleteAccount` | Delete account | — |
-| `GetAccountBalance` | Get current balance | — |
-| `ListJournalEntries` | List all entries | — |
-| `CreateJournalEntry` | Create entry (min 2 lines, debits=credits validation, auto-balance update) | Publishes `fin.account.balance.changed` per line |
-| `GetJournalEntry` | Get entry with lines | — |
-| `UpdateJournalEntry` | Update ref, desc, lines | — |
-| `DeleteJournalEntry` | Delete entry | — |
-| `ReverseJournalEntry` | Create reversal with swapped debits/credits | Publishes events for reversal |
-| `GetTrialBalance` | Group by debit-type vs credit-type | — |
-| `GetBalanceSheet` | Group by ASSET/LIABILITY/EQUITY | — |
+- `CreateAccount`: Creates a new account (validates legal entity and code uniqueness).
+- `ListAccounts`: Lists all accounts.
+- `GetAccount`: Retrieves account by ID.
+- `UpdateAccount`: Updates account name, type, and active status.
+- `DeleteAccount`: Deletes account.
+- `GetAccountBalance`: Retrieves dynamic balance from ledger lines.
+- `CreateJournalEntry`: Creates and posts balanced double-entry journals.
+- `ListJournalEntries`: Lists journal entries.
+- `GetJournalEntry`: Retrieves entry and its ledger lines.
+- `UpdateJournalEntry`: Updates draft journal entries.
+- `DeleteJournalEntry`: Deletes draft journal entries.
+- `GetBalanceSheet`: Live balance sheet calculation.
+- `GetIncomeStatement`: Live income statement calculation.
+- `GetCashFlow`: Live cash flow calculation.
 
 ### AccountsReceivableService
-
-| Method | Description |
-|--------|-------------|
-| `CreateInvoice` | Create invoice with auto-calculated line totals |
-| `ListInvoices` | List all invoices |
-| `GetInvoice` | Get invoice with lines |
-| `UpdateInvoice` | Update invoice fields |
-| `DeleteInvoice` | Delete invoice |
-| `SendInvoice` | Toggle sent status |
+- `CreateInvoice`: Creates a flat customer invoice.
+- `ListInvoices`: Lists customer invoices.
+- `GetInvoice`: Retrieves invoice details.
+- `UpdateInvoice`: Updates invoice status/attributes.
+- `DeleteInvoice`: Deletes invoice.
+- `SendInvoice`: Sends invoice (triggers `fm.invoice.sent` event).
 
 ### AccountsPayableService
-
-| Method | Description |
-|--------|-------------|
-| `CreateVendorBill` | Create vendor bill |
-| `ListVendorBills` | List all bills |
-| `GetVendorBill` | Get bill with lines |
-
-> **Note**: No routes are wired for vendor bills.
+- `CreateVendorBill`: Creates a flat vendor bill.
+- `ListVendorBills`: Lists vendor bills.
+- `GetVendorBill`: Retrieves vendor bill details.
 
 ### CashManagementService
-
-| Method | Description |
-|--------|-------------|
-| `RecordPayment` | Record payment against invoice or bill |
-| `ListPayments` | List all payments |
-| `GetPayment` | Get payment by ID |
+- `RecordPayment`: Records payment against invoices or vendor bills.
+- `ListPayments`: Lists recorded payments.
+- `GetPayment`: Retrieves payment details.
+- `GetBankStatement`: Retrieves bank statements and lines.
 
 ### BudgetingService
+- `CreateBudget`: Allocates budget.
+- `ListBudgets`: Lists budgets.
+- `GetBudget`: Retrieves budget details.
+- `GetBudgetVariance`: Performs Actual vs Budget comparison.
 
-| Method | Description |
-|--------|-------------|
-| `CreateBudget` | Create budget plan |
-| `ListBudgets` | List all budgets |
-| `GetBudget` | Get budget by ID |
-| `UpdateBudget` | Update budget |
-| `DeleteBudget` | Delete budget |
-| `GetBudgetVariance` | Actual vs budget variance calculation |
+### CapitalAssetService
+- `CapitalizeAsset`: Capitalizes fixed assets.
+- `GenerateDepreciationSchedule`: Creates month-by-month straight-line schedules.
+- `PostMonthlyStraightLineDepreciation`: Posts scheduled depreciation journal lines.
 
-### TaxService (defined in CDD, not wired)
+---
 
-| Method | Description |
-|--------|-------------|
-| `CreateTaxRate` | Create a tax rate |
-| `ListTaxRates` | List all tax rates |
-| `GetTaxRate` | Get tax rate by ID |
-
-> **Status**: CDD-defined. Code exists in `internal/business/domain/tax_service.go` but NOT wired in `cmd/main.go`.
-
-## API Endpoints (25 routes)
+## API Endpoints (33 routes)
 
 ### Health
-```http
-GET /health
-```
+- `GET /health` — Health check
 
-### Account Management
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/accounts` | List all accounts |
-| POST | `/api/v1/accounts` | Create account |
-| GET | `/api/v1/accounts/:id` | Get account |
-| PUT | `/api/v1/accounts/:id` | Update account |
-| DELETE | `/api/v1/accounts/:id` | Delete account |
-| GET | `/api/v1/accounts/:id/balance` | Get account balance |
+### Legal Entities
+- `GET /api/v1/legal-entities` — List legal entities
+- `POST /api/v1/legal-entities` — Create legal entity
+- `GET /api/v1/legal-entities/:id` — Get legal entity
+
+### Accounts
+- `GET /api/v1/accounts` — List accounts
+- `POST /api/v1/accounts` — Create account
+- `GET /api/v1/accounts/:id` — Get account details
+- `PUT /api/v1/accounts/:id` — Update account
+- `DELETE /api/v1/accounts/:id` — Delete account
+- `GET /api/v1/accounts/:id/balance` — Get account balance
 
 ### Journal Entries
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/journal-entries` | List all entries |
-| POST | `/api/v1/journal-entries` | Create entry |
-| GET | `/api/v1/journal-entries/:id` | Get entry with lines |
-| PUT | `/api/v1/journal-entries/:id` | Update entry |
-| DELETE | `/api/v1/journal-entries/:id` | Delete entry |
+- `GET /api/v1/journal-entries` — List journal entries
+- `POST /api/v1/journal-entries` — Create journal entry
+- `GET /api/v1/journal-entries/:id` — Get journal entry with lines
+- `PUT /api/v1/journal-entries/:id` — Update journal entry
+- `DELETE /api/v1/journal-entries/:id` — Delete journal entry
 
-### Invoices
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/invoices` | List all invoices |
-| POST | `/api/v1/invoices` | Create invoice |
-| GET | `/api/v1/invoices/:id` | Get invoice with lines |
-| PUT | `/api/v1/invoices/:id` | Update invoice |
-| DELETE | `/api/v1/invoices/:id` | Delete invoice |
-| POST | `/api/v1/invoices/:id/send` | Send invoice |
+### Invoices (AR)
+- `GET /api/v1/invoices` — List invoices
+- `POST /api/v1/invoices` — Create invoice
+- `GET /api/v1/invoices/:id` — Get invoice details
+- `PUT /api/v1/invoices/:id` — Update invoice
+- `DELETE /api/v1/invoices/:id` — Delete invoice
+- `POST /api/v1/invoices/:id/send` — Send invoice
+- `GET /api/v1/invoices/:id/lines` — Get invoice lines (flat model compatibility)
 
-### Payments
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/payments` | List all payments |
-| POST | `/api/v1/payments` | Record payment |
-| GET | `/api/v1/payments/:id` | Get payment |
+### Vendor Bills (AP)
+- `GET /api/v1/vendor-bills` — List vendor bills
+- `POST /api/v1/vendor-bills` — Create vendor bill
+- `GET /api/v1/vendor-bills/:id/lines` — Get vendor bill lines
+
+### Payments & Banking
+- `GET /api/v1/payments` — List payments
+- `POST /api/v1/payments` — Record payment
+- `GET /api/v1/payments/:id` — Get payment details
+- `GET /api/v1/bank-statements/:id/lines` — Get bank statement lines
+
+### Fixed Assets
+- `GET /api/v1/assets` — List assets
+- `POST /api/v1/assets/capitalize` — Capitalize fixed asset
+- `GET /api/v1/assets/:id` — Get asset details
+- `POST /api/v1/assets/:id/depreciation-schedule` — Generate depreciation schedule
+- `POST /api/v1/assets/depreciate` — Post monthly depreciation
 
 ### Reports
-| Method | Path | Description | Status |
-|--------|------|-------------|--------|
-| GET | `/api/v1/reports/balance-sheet` | Balance sheet by account type | Real |
-| GET | `/api/v1/reports/income-statement` | Income statement | Stub |
-| GET | `/api/v1/reports/cash-flow` | Cash flow report | Stub |
+- `GET /api/v1/reports/balance-sheet` — Balance Sheet report
+- `GET /api/v1/reports/income-statement` — Income Statement report
+- `GET /api/v1/reports/cash-flow` — Cash Flow report
+
+---
 
 ## Kafka Integration
 
-### Events Published (16 topics, per CDD)
+### Events Published
+Topics are prefixed with `fm.*`:
+- `fm.invoice.created` | Triggers when invoice is created
+- `fm.invoice.updated` | Triggers when invoice is updated
+- `fm.invoice.sent` | Triggers when invoice is marked sent
+- `fm.invoice.paid` | Triggers when payment fully satisfies invoice amount
+- `fm.invoice.overdue` | Triggers when invoice passes due date without payment
+- `fm.payment.received` | Triggers on recorded incoming payment
+- `fm.payment.processed` | Triggers on payment success
+- `fm.payment.failed` | Triggers on payment failure
+- `fm.vendor.payment.due` | Triggers on vendor bill due date
+- `fm.vendor.paid` | Triggers on payment recorded against vendor bill
+- `fm.customer.credit_status.updated` | Triggers when credit limit or current balance is altered
+- `fm.account.created` | Triggers when chart of accounts entry is created
+- `fm.account.updated` | Triggers when chart of accounts entry is updated
+- `fm.account.balance.changed` | Triggers when a universal journal line changes balance
+- `fm.budget.created` | Triggers when a budget is created
+- `fm.budget.updated` | Triggers when a budget is updated
+- `fm.budget.exceeded` | Triggers when spending exceeds allocated budget amount
+- `fm.budget.approved` | Triggers when a budget is approved
 
-| Topic | Trigger |
-|-------|---------|
-| `fin.account.created` | CreateAccount |
-| `fin.account.updated` | UpdateAccount |
-| `fin.account.balance.changed` | CreateJournalEntry (per line) |
-| `fin.invoice.created` | CreateInvoice |
-| `fin.invoice.updated` | UpdateInvoice |
-| `fin.invoice.sent` | SendInvoice |
-| `fin.invoice.paid` | Payment against invoice |
-| `fin.invoice.overdue` | — |
-| `fin.payment.received` | RecordPayment |
-| `fin.payment.processed` | RecordPayment |
-| `fin.payment.failed` | — |
-| `fin.vendor.payment.due` | — |
-| `fin.budget.created` | CreateBudget |
-| `fin.budget.updated` | UpdateBudget |
-| `fin.budget.exceeded` | Budget overspent |
-| `fin.budget.approved` | Budget approval (consumed by PM) |
-
-### Events Consumed (13 topics, per CDD)
-
-All consumed by `EventConsumer`:
-
-| Topic | Publisher | Business Logic |
-|-------|-----------|----------------|
-| `hr.employee.created` | HR | Track new employee |
-| `hr.payroll.processed` | HR | Create salary journal entry |
-| `hr.expense.submitted` | HR | Create expense journal entry |
-| `scm.purchase.order.created` | SCM | Create inventory-in-transit journal entry |
-| `scm.invoice.received` | SCM | Create AP journal entry |
-| `scm.inventory.valued` | SCM | Update inventory GL balance |
-| `crm.sale.completed` | CRM | Create revenue journal entry |
-| `crm.customer.created` | CRM | Track new customer |
-| `mfg.production.completed` | MFG | WIP → finished goods journal entry |
-| `mfg.material.consumed` | MFG | Raw material issue journal entry |
-| `prj.project.created` | PM | Track new project |
-| `prj.time.logged` | PM | Create unbilled receivable entry |
-| `prj.expense.incurred` | PM | Capitalize project cost |
-
-## Known Limitations
-
-| Gap | Detail |
-|-----|--------|
-| No database | All data in-memory, lost on restart |
-| Income statement is stub | Returns hardcoded message, no aggregation |
-| Cash flow is stub | Returns hardcoded message, no logic |
-| Vendor bills not wired | Domain + service exist but no REST endpoints |
-| Currency is decorative | Stored per account, no conversion logic |
-| No draft/approval | All journal entries POSTED immediately |
-| Account type is free text | No enum validation for ASSET/LIABILITY/etc. |
-| No account code uniqueness | Duplicate numbers not rejected |
-| No pagination | List endpoints return all records |
-| No three-way matching | Invoice/PO/receipt matching not implemented |
-| No bank reconciliation | Models exist but no logic |
-| No period closing | Fiscal year close not implemented |
-| No retained earnings transfer | Revenue/Expense not closed to retained earnings |
-| Fire-and-forget events | `_ = publisher.Publish(...)` ignores errors |
-
-## Related Modules
-
-- [Human Resources](../human-resources/) — Payroll expense processing via Kafka
-- [Supply Chain Management](../supply-chain-management/) — Purchase order integration
-- [Customer Relations](../customer-relationship-management/) — Revenue recognition
-- [Manufacturing](../manufacturing/) — Production cost accounting
-- [Project Management](../project-management/) — Project billing and cost allocation
+### Events Consumed
+All events processed transactionally and deduplicated:
+- `hr.payroll.processed` | Generates GL salary entries
+- `hr.employee.created` | Stores new employee metadata
+- `hr.expense.submitted` | Generates GL expense entry
+- `scm.receipt.staged` | Records staged inventory receipt
+- `scm.order.shipped` | Records SCM order shipment COGS
+- `scm.purchase.order.created` | Creates purchase order reference
+- `scm.invoice.received` | Generates vendor bill (AP) entries
+- `scm.inventory.valued` | Adjusts inventory GL balances
+- `crm.order.confirmed` | Generates receivable/invoice records
+- `crm.customer.created` | Stores new customer metadata
+- `mfg.yield.produced` | Generates manufacturing yield GL entries
+- `mfg.production.completed` | Moves manufacturing WIP to finished goods
+- `mfg.material.consumed` | Records manufacturing raw material issues
+- `prj.milestone.achieved` | Records project billing milestones
+- `prj.project.created` | Stores project metadata
+- `prj.time.logged` | Creates unbilled receivable entries
+- `prj.expense.incurred` | Capitalizes project cost entries
