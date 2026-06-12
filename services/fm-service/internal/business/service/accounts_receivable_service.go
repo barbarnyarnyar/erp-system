@@ -11,130 +11,172 @@ import (
 )
 
 type AccountsReceivableService struct {
-	invoices  domain.InvoiceRepository
-	publisher domain.EventPublisher
+	invoices domain.ArInvoiceRepository
+	outbox   domain.TransactionalOutboxRepository
+	tm       domain.TransactionManager
 }
 
-func NewAccountsReceivableService(invoices domain.InvoiceRepository, publisher domain.EventPublisher) *AccountsReceivableService {
+func NewAccountsReceivableService(
+	invoices domain.ArInvoiceRepository,
+	outbox domain.TransactionalOutboxRepository,
+	tm domain.TransactionManager,
+) *AccountsReceivableService {
 	return &AccountsReceivableService{
-		invoices:  invoices,
-		publisher: publisher,
+		invoices: invoices,
+		outbox:   outbox,
+		tm:       tm,
 	}
 }
 
-func (s *AccountsReceivableService) ListInvoices(ctx context.Context) ([]domain.Invoice, error) {
+func (s *AccountsReceivableService) ListInvoices(ctx context.Context) ([]domain.ArInvoice, error) {
 	return s.invoices.List(ctx)
 }
 
-func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, customerID string, issueDate, dueDate time.Time, lines []domain.InvoiceLine) (*domain.Invoice, error) {
+func (s *AccountsReceivableService) CreateInvoice(ctx context.Context, legalEntityID, customerID, salesOrderID string, totalAmount, taxAmount decimal.Decimal, dueDate time.Time) (*domain.ArInvoice, error) {
 	id := utils.NewID("inv")
 	invNum := fmt.Sprintf("INV-%d", time.Now().Unix())
 
-	total := decimal.Zero
-	for _, l := range lines {
-		total = total.Add(l.LineTotal)
-	}
-
-	inv := &domain.Invoice{
+	inv := &domain.ArInvoice{
 		ID:            id,
-		CustomerID:    customerID,
+		LegalEntityID: legalEntityID,
 		InvoiceNumber: invNum,
-		IssueDate:     issueDate,
+		CustomerID:    customerID,
+		SalesOrderID:  salesOrderID,
+		TotalAmount:   totalAmount,
+		TaxAmount:     taxAmount,
 		DueDate:       dueDate,
-		TotalAmount:   total,
-		Status:        "SENT",
+		Status:        domain.PaymentStatusOPEN,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 
-	err := s.invoices.Create(ctx, inv, lines)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.invoices.Create(txCtx, inv)
+		if err != nil {
+			return err
+		}
+
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmInvoiceCreated),
+			AggregateID: inv.ID,
+			Payload: domain.InvoiceEventPayload{
+				ID:            inv.ID,
+				CustomerID:    inv.CustomerID,
+				InvoiceNumber: inv.InvoiceNumber,
+				TotalAmount:   inv.TotalAmount,
+				Status:        string(inv.Status),
+				Timestamp:     time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceCreated, inv.ID, domain.InvoiceEventPayload{
-		ID:            inv.ID,
-		CustomerID:    inv.CustomerID,
-		InvoiceNumber: inv.InvoiceNumber,
-		TotalAmount:   inv.TotalAmount,
-		Status:        inv.Status,
-		Timestamp:     time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceCreated, err)
 	}
 
 	return inv, nil
 }
 
-func (s *AccountsReceivableService) GetInvoice(ctx context.Context, id string) (*domain.Invoice, []domain.InvoiceLine, error) {
+func (s *AccountsReceivableService) GetInvoice(ctx context.Context, id string) (*domain.ArInvoice, error) {
 	return s.invoices.GetByID(ctx, id)
 }
 
-func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string, fields map[string]interface{}) (*domain.Invoice, error) {
-	inv, _, err := s.invoices.GetByID(ctx, id)
+func (s *AccountsReceivableService) UpdateInvoice(ctx context.Context, id string, fields map[string]interface{}) (*domain.ArInvoice, error) {
+	var inv *domain.ArInvoice
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		var err error
+		inv, err = s.invoices.GetByID(txCtx, id)
+		if err != nil {
+			return err
+		}
+
+		if statusStr, ok := fields["status"].(string); ok {
+			inv.Status = domain.PaymentStatus(statusStr)
+		}
+		inv.UpdatedAt = time.Now()
+
+		err = s.invoices.Update(txCtx, inv)
+		if err != nil {
+			return err
+		}
+
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmInvoiceUpdated),
+			AggregateID: inv.ID,
+			Payload: domain.InvoiceEventPayload{
+				ID:            inv.ID,
+				CustomerID:    inv.CustomerID,
+				InvoiceNumber: inv.InvoiceNumber,
+				TotalAmount:   inv.TotalAmount,
+				Status:        string(inv.Status),
+				Timestamp:     time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	if status, ok := fields["status"].(string); ok {
-		inv.Status = status
-	}
-	inv.UpdatedAt = time.Now()
-
-	err = s.invoices.Update(ctx, inv)
-	if err != nil {
-		return nil, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceUpdated, inv.ID, domain.InvoiceEventPayload{
-		ID:            inv.ID,
-		CustomerID:    inv.CustomerID,
-		InvoiceNumber: inv.InvoiceNumber,
-		TotalAmount:   inv.TotalAmount,
-		Status:        inv.Status,
-		Timestamp:     time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceUpdated, err)
 	}
 
 	return inv, nil
 }
 
 func (s *AccountsReceivableService) DeleteInvoice(ctx context.Context, id string) error {
-	return s.invoices.Delete(ctx, id)
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		return s.invoices.Delete(txCtx, id)
+	})
 }
 
 func (s *AccountsReceivableService) SendInvoice(ctx context.Context, id string) (bool, error) {
-	inv, _, err := s.invoices.GetByID(ctx, id)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		inv, err := s.invoices.GetByID(txCtx, id)
+		if err != nil {
+			return err
+		}
+
+		inv.Status = domain.PaymentStatusOPEN
+		err = s.invoices.Update(txCtx, inv)
+		if err != nil {
+			return err
+		}
+
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmInvoiceSent),
+			AggregateID: inv.ID,
+			Payload: domain.InvoiceEventPayload{
+				ID:            inv.ID,
+				CustomerID:    inv.CustomerID,
+				InvoiceNumber: inv.InvoiceNumber,
+				TotalAmount:   inv.TotalAmount,
+				Status:        string(inv.Status),
+				Timestamp:     time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return false, err
-	}
-
-	inv.Status = "SENT"
-	err = s.invoices.Update(ctx, inv)
-	if err != nil {
-		return false, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceSent, inv.ID, domain.InvoiceEventPayload{
-		ID:            inv.ID,
-		CustomerID:    inv.CustomerID,
-		InvoiceNumber: inv.InvoiceNumber,
-		TotalAmount:   inv.TotalAmount,
-		Status:        inv.Status,
-		Timestamp:     time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceSent, err)
 	}
 
 	return true, nil
 }
 
 func (s *AccountsReceivableService) CheckCustomerCredit(ctx context.Context, customerID string, orderValue decimal.Decimal) (bool, error) {
-	// For mock purposes: allow all credit unless order value is abnormally high (e.g. > $100,000)
 	limit := decimal.NewFromInt(100000)
 	if orderValue.GreaterThan(limit) {
 		return false, nil
@@ -143,27 +185,36 @@ func (s *AccountsReceivableService) CheckCustomerCredit(ctx context.Context, cus
 }
 
 func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id string) error {
-	inv, _, err := s.invoices.GetByID(ctx, id)
-	if err != nil {
-		return err
-	}
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		inv, err := s.invoices.GetByID(txCtx, id)
+		if err != nil {
+			return err
+		}
 
-	inv.Status = "OVERDUE"
-	inv.UpdatedAt = time.Now()
-	err = s.invoices.Update(ctx, inv)
-	if err != nil {
-		return err
-	}
+		inv.Status = domain.PaymentStatusOPEN // or define an overdue status if in domain. But in CDD PaymentStatus is OPEN, PARTIAL, PAID.
+		inv.UpdatedAt = time.Now()
+		err = s.invoices.Update(txCtx, inv)
+		if err != nil {
+			return err
+		}
 
-	if err := s.publisher.Publish(ctx, domain.TopicFmInvoiceOverdue, inv.ID, domain.InvoiceEventPayload{
-		ID:            inv.ID,
-		CustomerID:    inv.CustomerID,
-		InvoiceNumber: inv.InvoiceNumber,
-		TotalAmount:   inv.TotalAmount,
-		Status:        inv.Status,
-		Timestamp:     time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmInvoiceOverdue, err)
-	}
-	return nil
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmInvoiceOverdue),
+			AggregateID: inv.ID,
+			Payload: domain.InvoiceEventPayload{
+				ID:            inv.ID,
+				CustomerID:    inv.CustomerID,
+				InvoiceNumber: inv.InvoiceNumber,
+				TotalAmount:   inv.TotalAmount,
+				Status:        string(inv.Status),
+				Timestamp:     time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
 }
+

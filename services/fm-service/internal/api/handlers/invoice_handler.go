@@ -5,20 +5,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/erp-system/fm-service/internal/business/domain"
 	"github.com/erp-system/fm-service/internal/business/service"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
 
 type InvoiceHandler struct {
-	svc *service.AccountsReceivableService
+	svc      *service.AccountsReceivableService
 	response *utils.ResponseHelper
 }
 
 func NewInvoiceHandler(svc *service.AccountsReceivableService, response *utils.ResponseHelper) *InvoiceHandler {
 	return &InvoiceHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }
@@ -34,14 +33,12 @@ func (h *InvoiceHandler) GetInvoices(c *gin.Context) {
 
 func (h *InvoiceHandler) CreateInvoice(c *gin.Context) {
 	var req struct {
-		CustomerID string    `json:"customer_id"`
-		IssueDate  time.Time `json:"issue_date"`
-		DueDate    time.Time `json:"due_date"`
-		Lines      []struct {
-			Description string `json:"description"`
-			Quantity    int    `json:"quantity"`
-			UnitPrice   string `json:"unit_price"`
-		} `json:"lines"`
+		LegalEntityID string    `json:"legal_entity_id"`
+		CustomerID    string    `json:"customer_id"`
+		SalesOrderID  string    `json:"sales_order_id"`
+		TotalAmount   string    `json:"total_amount"`
+		TaxAmount     string    `json:"tax_amount"`
+		DueDate       time.Time `json:"due_date"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,21 +46,16 @@ func (h *InvoiceHandler) CreateInvoice(c *gin.Context) {
 		return
 	}
 
-	domainLines := make([]domain.InvoiceLine, len(req.Lines))
-	for i, l := range req.Lines {
-		priceDec, err := decimal.NewFromString(l.UnitPrice)
-		if err != nil {
-			priceDec = decimal.Zero
-		}
-		domainLines[i] = domain.InvoiceLine{
-			Description: l.Description,
-			Quantity:    l.Quantity,
-			UnitPrice:   priceDec,
-			LineTotal:   priceDec.Mul(decimal.NewFromInt(int64(l.Quantity))),
-		}
+	totalDec, err := decimal.NewFromString(req.TotalAmount)
+	if err != nil {
+		totalDec = decimal.Zero
+	}
+	taxDec, err := decimal.NewFromString(req.TaxAmount)
+	if err != nil {
+		taxDec = decimal.Zero
 	}
 
-	invoice, err := h.svc.CreateInvoice(c.Request.Context(), req.CustomerID, req.IssueDate, req.DueDate, domainLines)
+	invoice, err := h.svc.CreateInvoice(c.Request.Context(), req.LegalEntityID, req.CustomerID, req.SalesOrderID, totalDec, taxDec, req.DueDate)
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -74,14 +66,13 @@ func (h *InvoiceHandler) CreateInvoice(c *gin.Context) {
 
 func (h *InvoiceHandler) GetInvoice(c *gin.Context) {
 	id := c.Param("id")
-	invoice, lines, err := h.svc.GetInvoice(c.Request.Context(), id)
+	invoice, err := h.svc.GetInvoice(c.Request.Context(), id)
 	if err != nil {
 		h.response.NotFound(c, "invoice not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"data":  invoice,
-		"lines": lines,
+		"data": invoice,
 	})
 }
 
@@ -124,12 +115,13 @@ func (h *InvoiceHandler) SendInvoice(c *gin.Context) {
 
 func (h *InvoiceHandler) GetInvoiceLines(c *gin.Context) {
 	id := c.Param("id")
-	_, lines, err := h.svc.GetInvoice(c.Request.Context(), id)
+	_, err := h.svc.GetInvoice(c.Request.Context(), id)
 	if err != nil {
 		h.response.NotFound(c, "invoice not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"data": lines,
+		"data": []string{},
 	})
 }
+

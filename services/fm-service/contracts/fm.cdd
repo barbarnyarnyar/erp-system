@@ -26,6 +26,7 @@ entity LegalEntity {
 }
 
 @table("fm_chart_of_accounts")
+@unique_composite(legal_entity_id, account_code)
 entity ChartOfAccounts {
     id: uuid @primary;
     legal_entity_id: uuid @reference(LegalEntity.id);
@@ -187,7 +188,7 @@ entity CurrencyRate {
 @table("fm_customer_credits")
 entity CustomerCredit {
     id: uuid @primary;
-    customer_id: uuid;
+    customer_id: uuid @unique;
     credit_limit: decimal @digits(18, 4);
     current_balance: decimal @digits(18, 4);
     is_on_hold: boolean;

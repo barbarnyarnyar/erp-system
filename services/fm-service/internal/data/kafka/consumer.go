@@ -27,13 +27,15 @@ const (
 	TopicHrExpenseSubmittedDeadLetter      = domain.TopicHrExpenseSubmitted + ".dead-letter"
 	TopicScmPurchaseOrderCreatedDeadLetter = domain.TopicScmPurchaseOrderCreated + ".dead-letter"
 	TopicScmInventoryValuedDeadLetter      = domain.TopicScmInventoryValued + ".dead-letter"
-	TopicCrmOrderConfirmedDeadLetter  = domain.TopicCrmOrderConfirmed + ".dead-letter"
+	TopicCrmOrderConfirmedDeadLetter       = domain.TopicCrmOrderConfirmed + ".dead-letter"
 	TopicCrmCustomerCreatedDeadLetter      = domain.TopicCrmCustomerCreated + ".dead-letter"
 	TopicMfgProductionCompletedDeadLetter  = domain.TopicMfgProductionCompleted + ".dead-letter"
 	TopicMfgMaterialConsumedDeadLetter     = domain.TopicMfgMaterialConsumed + ".dead-letter"
 	TopicPrjProjectCreatedDeadLetter       = domain.TopicPrjProjectCreated + ".dead-letter"
 	TopicPrjTimeLoggedDeadLetter           = domain.TopicPrjTimeLogged + ".dead-letter"
 	TopicPrjExpenseIncurredDeadLetter      = domain.TopicPrjExpenseIncurred + ".dead-letter"
+
+	defaultLegalEntityID = "00000000-0000-0000-0000-000000000000"
 )
 
 // KafkaConsumer listens to external microservice events and updates the financial records
@@ -136,12 +138,12 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 	}
 }
 
-func (c *KafkaConsumer) getOrCreateAccount(ctx context.Context, accNum, name, accType, parentID, currency string) (*domain.Account, error) {
-	acc, err := c.gl.GetAccountByNumber(ctx, accNum)
+func (c *KafkaConsumer) getOrCreateAccount(ctx context.Context, accNum, name, accType string) (*domain.ChartOfAccounts, error) {
+	acc, err := c.gl.GetAccountByCode(ctx, defaultLegalEntityID, accNum)
 	if err == nil {
 		return acc, nil
 	}
-	return c.gl.CreateAccount(ctx, accNum, name, accType, parentID, currency)
+	return c.gl.CreateAccount(ctx, defaultLegalEntityID, accNum, name, accType)
 }
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
@@ -154,7 +156,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		// Create payroll liability account for this specific employee
 		accNum := "2120-" + ev.EmployeeID[:8]
 		accName := "Payroll Liability - " + ev.FirstName + " " + ev.LastName
-		_, err := c.getOrCreateAccount(ctx, accNum, accName, "LIABILITY", "", "USD")
+		_, err := c.getOrCreateAccount(ctx, accNum, accName, "LIABILITY")
 		return err
 
 	case domain.TopicHrPayrollProcessed:
@@ -163,30 +165,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Salaries Expense, Credit Payroll Liability Control
-		salariesExpenseAcc, err := c.getOrCreateAccount(ctx, "6010-001", "Salaries Expense", "EXPENSE", "", "USD")
+		salariesExpenseAcc, err := c.getOrCreateAccount(ctx, "6010-001", "Salaries Expense", "EXPENSE")
 		if err != nil {
 			return err
 		}
-		payrollLiabilityAcc, err := c.getOrCreateAccount(ctx, "2120-001", "Payroll Liabilities Control", "LIABILITY", "", "USD")
+		payrollLiabilityAcc, err := c.getOrCreateAccount(ctx, "2120-001", "Payroll Liabilities Control", "LIABILITY")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    salariesExpenseAcc.ID,
-				DebitAmount:  ev.TotalGross,
-				CreditAmount: decimal.Zero,
-				Description:  "Payroll Gross Salaries",
+				AccountID:             salariesExpenseAcc.ID,
+				AmountFunctional:      ev.TotalGross,
+				AmountTransactional:   ev.TotalGross,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    payrollLiabilityAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.TotalGross,
-				Description:  "Payroll Liabilities Credit",
+				AccountID:             payrollLiabilityAcc.ID,
+				AmountFunctional:      ev.TotalGross.Neg(),
+				AmountTransactional:   ev.TotalGross.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "PAY-"+ev.PayrollID, "Record payroll processed entries", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "HR", "PAY-"+ev.PayrollID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicHrExpenseSubmitted:
@@ -195,30 +197,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Travel & Expense, Credit Accounts Payable - Reimbursement
-		expenseAcc, err := c.getOrCreateAccount(ctx, "6020-001", "Travel & Entertainment Expense", "EXPENSE", "", "USD")
+		expenseAcc, err := c.getOrCreateAccount(ctx, "6020-001", "Travel & Entertainment Expense", "EXPENSE")
 		if err != nil {
 			return err
 		}
-		payableAcc, err := c.getOrCreateAccount(ctx, "2110-001", "Accounts Payable - Reimbursement", "LIABILITY", "", "USD")
+		payableAcc, err := c.getOrCreateAccount(ctx, "2110-001", "Accounts Payable - Reimbursement", "LIABILITY")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    expenseAcc.ID,
-				DebitAmount:  ev.Amount,
-				CreditAmount: decimal.Zero,
-				Description:  ev.Description,
+				AccountID:             expenseAcc.ID,
+				AmountFunctional:      ev.Amount,
+				AmountTransactional:   ev.Amount,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    payableAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.Amount,
-				Description:  "Employee Reimbursement Liability: " + ev.EmployeeID,
+				AccountID:             payableAcc.ID,
+				AmountFunctional:      ev.Amount.Neg(),
+				AmountTransactional:   ev.Amount.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "EXP-"+ev.ExpenseID, "Process employee expense reimbursement", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "HR", "EXP-"+ev.ExpenseID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicScmPurchaseOrderCreated:
@@ -227,30 +229,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Inventory in Transit, Credit Accrued Accounts Payable
-		invAssetAcc, err := c.getOrCreateAccount(ctx, "1210-001", "Inventory in Transit/Accrued", "ASSET", "", "USD")
+		invAssetAcc, err := c.getOrCreateAccount(ctx, "1210-001", "Inventory in Transit/Accrued", "ASSET")
 		if err != nil {
 			return err
 		}
-		accruedPayableAcc, err := c.getOrCreateAccount(ctx, "2110-002", "Accrued Accounts Payable", "LIABILITY", "", "USD")
+		accruedPayableAcc, err := c.getOrCreateAccount(ctx, "2110-002", "Accrued Accounts Payable", "LIABILITY")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    invAssetAcc.ID,
-				DebitAmount:  ev.TotalAmount,
-				CreditAmount: decimal.Zero,
-				Description:  "Accrued PO Inventory: " + ev.PONumber,
+				AccountID:             invAssetAcc.ID,
+				AmountFunctional:      ev.TotalAmount,
+				AmountTransactional:   ev.TotalAmount,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    accruedPayableAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.TotalAmount,
-				Description:  "Accrued PO AP Liability: " + ev.PONumber,
+				AccountID:             accruedPayableAcc.ID,
+				AmountFunctional:      ev.TotalAmount.Neg(),
+				AmountTransactional:   ev.TotalAmount.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "PO-LIAB-"+ev.PurchaseOrderID, "Create AP liability for PO "+ev.PONumber, lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "SCM", "PO-LIAB-"+ev.PurchaseOrderID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicScmInvoiceReceived:
@@ -258,16 +260,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		lines := []domain.VendorBillLine{
-			{
-				ID:          "vbl_" + ev.InvoiceNo,
-				Description: "SCM Vendor Invoice " + ev.InvoiceNo,
-				Quantity:    1,
-				UnitPrice:   ev.TotalAmount,
-				LineTotal:   ev.TotalAmount,
-			},
-		}
-		_, err := c.ap.CreateVendorBill(ctx, ev.VendorID, ev.InvoiceNo, ev.POID, ev.Timestamp, ev.DueDate, ev.TotalAmount, lines)
+		_, err := c.ap.CreateVendorBill(ctx, defaultLegalEntityID, ev.VendorID, ev.InvoiceNo, ev.POID, ev.DueDate, ev.TotalAmount, decimal.Zero)
 		return err
 
 	case domain.TopicScmInventoryValued:
@@ -276,30 +269,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Raw Materials Inventory, Credit Cost of Goods Sold - Adjustments
-		invAssetAcc, err := c.getOrCreateAccount(ctx, "1200-001", "Raw Materials Inventory", "ASSET", "", "USD")
+		invAssetAcc, err := c.getOrCreateAccount(ctx, "1200-001", "Raw Materials Inventory", "ASSET")
 		if err != nil {
 			return err
 		}
-		invAdjAcc, err := c.getOrCreateAccount(ctx, "5010-001", "Cost of Goods Sold - Inventory Adjustments", "EXPENSE", "", "USD")
+		invAdjAcc, err := c.getOrCreateAccount(ctx, "5010-001", "Cost of Goods Sold - Inventory Adjustments", "EXPENSE")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    invAssetAcc.ID,
-				DebitAmount:  ev.TotalValue,
-				CreditAmount: decimal.Zero,
-				Description:  "Inventory Valuation adjustment",
+				AccountID:             invAssetAcc.ID,
+				AmountFunctional:      ev.TotalValue,
+				AmountTransactional:   ev.TotalValue,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    invAdjAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.TotalValue,
-				Description:  "Inventory Valuation contra-account",
+				AccountID:             invAdjAcc.ID,
+				AmountFunctional:      ev.TotalValue.Neg(),
+				AmountTransactional:   ev.TotalValue.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "INV-VAL-"+ev.LocationID, "Update inventory accounts valuation", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "SCM", "INV-VAL-"+ev.LocationID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicCrmOrderConfirmed:
@@ -308,15 +301,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Generate customer invoice
-		lines := []domain.InvoiceLine{
-			{
-				Description: "CRM Completed Sale: " + ev.SalesOrderID,
-				Quantity:    1,
-				UnitPrice:   ev.TotalAmount,
-				LineTotal:   ev.TotalAmount,
-			},
-		}
-		_, err := c.ar.CreateInvoice(ctx, ev.CustomerID, ev.Timestamp, ev.Timestamp.AddDate(0, 1, 0), lines)
+		_, err := c.ar.CreateInvoice(ctx, defaultLegalEntityID, ev.CustomerID, ev.SalesOrderID, ev.TotalAmount, decimal.Zero, ev.Timestamp.AddDate(0, 1, 0))
 		return err
 
 	case domain.TopicCrmCustomerCreated:
@@ -327,7 +312,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		// Create customer AR account
 		accNum := "1100-" + ev.CustomerID[:8]
 		accName := "AR - Customer " + ev.CustomerName
-		_, err := c.getOrCreateAccount(ctx, accNum, accName, "ASSET", "", "USD")
+		_, err := c.getOrCreateAccount(ctx, accNum, accName, "ASSET")
 		return err
 
 	case domain.TopicMfgProductionCompleted:
@@ -336,30 +321,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Finished Goods, Credit WIP
-		fgAcc, err := c.getOrCreateAccount(ctx, "1220-001", "Finished Goods Inventory", "ASSET", "", "USD")
+		fgAcc, err := c.getOrCreateAccount(ctx, "1220-001", "Finished Goods Inventory", "ASSET")
 		if err != nil {
 			return err
 		}
-		wipAcc, err := c.getOrCreateAccount(ctx, "1230-001", "Work in Progress", "ASSET", "", "USD")
+		wipAcc, err := c.getOrCreateAccount(ctx, "1230-001", "Work in Progress", "ASSET")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    fgAcc.ID,
-				DebitAmount:  ev.TotalValuation,
-				CreditAmount: decimal.Zero,
-				Description:  "MFG Production Completed: " + ev.ProductionOrderID,
+				AccountID:             fgAcc.ID,
+				AmountFunctional:      ev.TotalValuation,
+				AmountTransactional:   ev.TotalValuation,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    wipAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.TotalValuation,
-				Description:  "Transfer WIP to Finished Goods",
+				AccountID:             wipAcc.ID,
+				AmountFunctional:      ev.TotalValuation.Neg(),
+				AmountTransactional:   ev.TotalValuation.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "MFG-COMP-"+ev.ProductionOrderID, "MFG Update Finished Goods and WIP", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "MFG", "MFG-COMP-"+ev.ProductionOrderID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicMfgMaterialConsumed:
@@ -368,30 +353,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit WIP, Credit Raw Materials Inventory
-		wipAcc, err := c.getOrCreateAccount(ctx, "1230-001", "Work in Progress", "ASSET", "", "USD")
+		wipAcc, err := c.getOrCreateAccount(ctx, "1230-001", "Work in Progress", "ASSET")
 		if err != nil {
 			return err
 		}
-		rmAcc, err := c.getOrCreateAccount(ctx, "1200-001", "Raw Materials Inventory", "ASSET", "", "USD")
+		rmAcc, err := c.getOrCreateAccount(ctx, "1200-001", "Raw Materials Inventory", "ASSET")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    wipAcc.ID,
-				DebitAmount:  ev.TotalCost,
-				CreditAmount: decimal.Zero,
-				Description:  "Material consumption cost: " + ev.ProductID,
+				AccountID:             wipAcc.ID,
+				AmountFunctional:      ev.TotalCost,
+				AmountTransactional:   ev.TotalCost,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    rmAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.TotalCost,
-				Description:  "Deduct Raw Material for MFG PO: " + ev.ProductionOrderID,
+				AccountID:             rmAcc.ID,
+				AmountFunctional:      ev.TotalCost.Neg(),
+				AmountTransactional:   ev.TotalCost.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "MFG-CONS-"+ev.ProductionOrderID, "MFG Material Consumption", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "MFG", "MFG-CONS-"+ev.ProductionOrderID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicPrjProjectCreated:
@@ -402,7 +387,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		// Create project expense account
 		accNum := "6030-" + ev.ProjectID[:8]
 		accName := "Project Expense - " + ev.ProjectName
-		_, err := c.getOrCreateAccount(ctx, accNum, accName, "EXPENSE", "", "USD")
+		_, err := c.getOrCreateAccount(ctx, accNum, accName, "EXPENSE")
 		return err
 
 	case domain.TopicPrjTimeLogged:
@@ -411,31 +396,31 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Unbilled Receivables, Credit Project Revenue
-		unbilledAcc, err := c.getOrCreateAccount(ctx, "1110-001", "Unbilled Receivables", "ASSET", "", "USD")
+		unbilledAcc, err := c.getOrCreateAccount(ctx, "1110-001", "Unbilled Receivables", "ASSET")
 		if err != nil {
 			return err
 		}
-		revAcc, err := c.getOrCreateAccount(ctx, "4010-001", "Project Revenue", "REVENUE", "", "USD")
+		revAcc, err := c.getOrCreateAccount(ctx, "4010-001", "Project Revenue", "REVENUE")
 		if err != nil {
 			return err
 		}
 
 		val := ev.HoursLogged.Mul(ev.BillableRate)
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    unbilledAcc.ID,
-				DebitAmount:  val,
-				CreditAmount: decimal.Zero,
-				Description:  "Unbilled revenue for Project: " + ev.ProjectID,
+				AccountID:             unbilledAcc.ID,
+				AmountFunctional:      val,
+				AmountTransactional:   val,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    revAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: val,
-				Description:  "Recognize project revenue",
+				AccountID:             revAcc.ID,
+				AmountFunctional:      val.Neg(),
+				AmountTransactional:   val.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "PRJ-TIME-"+ev.TimeLogID, "Record project billable time entries", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "PRJ", "PRJ-TIME-"+ev.TimeLogID, ev.Timestamp, lines)
 		return err
 
 	case domain.TopicPrjExpenseIncurred:
@@ -444,30 +429,30 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		// Debit Project Expenses Control, Credit Accounts Payable - Control
-		expenseAcc, err := c.getOrCreateAccount(ctx, "6030-001", "Project Expenses Control", "EXPENSE", "", "USD")
+		expenseAcc, err := c.getOrCreateAccount(ctx, "6030-001", "Project Expenses Control", "EXPENSE")
 		if err != nil {
 			return err
 		}
-		payableAcc, err := c.getOrCreateAccount(ctx, "2110-001", "Accounts Payable - Control", "LIABILITY", "", "USD")
+		payableAcc, err := c.getOrCreateAccount(ctx, "2110-001", "Accounts Payable - Control", "LIABILITY")
 		if err != nil {
 			return err
 		}
 
-		lines := []domain.JournalEntryLine{
+		lines := []domain.UniversalJournalLine{
 			{
-				AccountID:    expenseAcc.ID,
-				DebitAmount:  ev.Amount,
-				CreditAmount: decimal.Zero,
-				Description:  ev.Description + " (Project: " + ev.ProjectID + ")",
+				AccountID:             expenseAcc.ID,
+				AmountFunctional:      ev.Amount,
+				AmountTransactional:   ev.Amount,
+				CurrencyTransactional: "USD",
 			},
 			{
-				AccountID:    payableAcc.ID,
-				DebitAmount:  decimal.Zero,
-				CreditAmount: ev.Amount,
-				Description:  "Project Expense AP Liability: " + ev.ExpenseID,
+				AccountID:             payableAcc.ID,
+				AmountFunctional:      ev.Amount.Neg(),
+				AmountTransactional:   ev.Amount.Neg(),
+				CurrencyTransactional: "USD",
 			},
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, "PRJ-EXP-"+ev.ExpenseID, "Record project expenses incurred", lines)
+		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "PRJ", "PRJ-EXP-"+ev.ExpenseID, ev.Timestamp, lines)
 		return err
 	}
 
@@ -478,3 +463,4 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 func (c *KafkaConsumer) Close() error {
 	return c.reader.Close()
 }
+

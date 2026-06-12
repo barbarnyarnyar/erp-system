@@ -3,6 +3,7 @@ package handlers
 import (
 	"erp-system/shared/utils"
 	"net/http"
+	"time"
 
 	"github.com/erp-system/fm-service/internal/business/domain"
 	"github.com/erp-system/fm-service/internal/business/service"
@@ -11,13 +12,13 @@ import (
 )
 
 type TransactionHandler struct {
-	svc *service.GeneralLedgerService
+	svc      *service.GeneralLedgerService
 	response *utils.ResponseHelper
 }
 
 func NewTransactionHandler(svc *service.GeneralLedgerService, response *utils.ResponseHelper) *TransactionHandler {
 	return &TransactionHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }
@@ -33,13 +34,15 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 
 func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	var req struct {
-		Reference   string `json:"reference"`
-		Description string `json:"description"`
-		Lines       []struct {
-			AccountID    string `json:"account_id"`
-			DebitAmount  string `json:"debit_amount"`
-			CreditAmount string `json:"credit_amount"`
-			Description  string `json:"description"`
+		LegalEntityID    string    `json:"legal_entity_id"`
+		SourceModule     string    `json:"source_module"`
+		SourceDocumentID string    `json:"source_document_id"`
+		PostingDate      time.Time `json:"posting_date"`
+		Lines            []struct {
+			AccountID             string `json:"account_id"`
+			AmountFunctional      string `json:"amount_functional"`
+			AmountTransactional   string `json:"amount_transactional"`
+			CurrencyTransactional string `json:"currency_transactional"`
 		} `json:"lines"`
 	}
 
@@ -48,27 +51,26 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Helper function inside handler to parse decimal inputs safely
-	domainLines := make([]domain.JournalEntryLine, len(req.Lines))
+	domainLines := make([]domain.UniversalJournalLine, len(req.Lines))
 	for i, l := range req.Lines {
-		debitDec, err := decimal.NewFromString(l.DebitAmount)
+		amtFunc, err := decimal.NewFromString(l.AmountFunctional)
 		if err != nil {
-			debitDec = decimal.Zero
+			amtFunc = decimal.Zero
 		}
-		creditDec, err := decimal.NewFromString(l.CreditAmount)
+		amtTrans, err := decimal.NewFromString(l.AmountTransactional)
 		if err != nil {
-			creditDec = decimal.Zero
+			amtTrans = decimal.Zero
 		}
 
-		domainLines[i] = domain.JournalEntryLine{
-			AccountID:    l.AccountID,
-			DebitAmount:  debitDec,
-			CreditAmount: creditDec,
-			Description:  l.Description,
+		domainLines[i] = domain.UniversalJournalLine{
+			AccountID:             l.AccountID,
+			AmountFunctional:      amtFunc,
+			AmountTransactional:   amtTrans,
+			CurrencyTransactional: l.CurrencyTransactional,
 		}
 	}
 
-	entry, err := h.svc.CreateJournalEntry(c.Request.Context(), req.Reference, req.Description, domainLines)
+	entry, err := h.svc.CreateJournalEntry(c.Request.Context(), req.LegalEntityID, req.SourceModule, req.SourceDocumentID, req.PostingDate, domainLines)
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -93,13 +95,15 @@ func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
-		Reference   string `json:"reference"`
-		Description string `json:"description"`
-		Lines       []struct {
-			AccountID    string `json:"account_id"`
-			DebitAmount  string `json:"debit_amount"`
-			CreditAmount string `json:"credit_amount"`
-			Description  string `json:"description"`
+		LegalEntityID    string    `json:"legal_entity_id"`
+		SourceModule     string    `json:"source_module"`
+		SourceDocumentID string    `json:"source_document_id"`
+		PostingDate      time.Time `json:"posting_date"`
+		Lines            []struct {
+			AccountID             string `json:"account_id"`
+			AmountFunctional      string `json:"amount_functional"`
+			AmountTransactional   string `json:"amount_transactional"`
+			CurrencyTransactional string `json:"currency_transactional"`
 		} `json:"lines"`
 	}
 
@@ -108,26 +112,26 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 		return
 	}
 
-	domainLines := make([]domain.JournalEntryLine, len(req.Lines))
+	domainLines := make([]domain.UniversalJournalLine, len(req.Lines))
 	for i, l := range req.Lines {
-		debitDec, err := decimal.NewFromString(l.DebitAmount)
+		amtFunc, err := decimal.NewFromString(l.AmountFunctional)
 		if err != nil {
-			debitDec = decimal.Zero
+			amtFunc = decimal.Zero
 		}
-		creditDec, err := decimal.NewFromString(l.CreditAmount)
+		amtTrans, err := decimal.NewFromString(l.AmountTransactional)
 		if err != nil {
-			creditDec = decimal.Zero
+			amtTrans = decimal.Zero
 		}
 
-		domainLines[i] = domain.JournalEntryLine{
-			AccountID:    l.AccountID,
-			DebitAmount:  debitDec,
-			CreditAmount: creditDec,
-			Description:  l.Description,
+		domainLines[i] = domain.UniversalJournalLine{
+			AccountID:             l.AccountID,
+			AmountFunctional:      amtFunc,
+			AmountTransactional:   amtTrans,
+			CurrencyTransactional: l.CurrencyTransactional,
 		}
 	}
 
-	entry, err := h.svc.UpdateJournalEntry(c.Request.Context(), id, req.Reference, req.Description, domainLines)
+	entry, err := h.svc.UpdateJournalEntry(c.Request.Context(), id, req.LegalEntityID, req.SourceModule, req.SourceDocumentID, req.PostingDate, domainLines)
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -145,3 +149,4 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "journal entry deleted successfully"})
 }
+

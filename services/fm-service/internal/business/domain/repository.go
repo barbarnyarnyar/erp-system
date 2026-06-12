@@ -4,32 +4,33 @@ import (
 	"context"
 )
 
-// AccountRepository defines operations for GL accounts
-type AccountRepository interface {
-	Create(ctx context.Context, account *Account) error
-	GetByID(ctx context.Context, id string) (*Account, error)
-	GetByNumber(ctx context.Context, accountNumber string) (*Account, error)
-	Update(ctx context.Context, account *Account) error
+// ChartOfAccountsRepository defines operations for chart of accounts
+type ChartOfAccountsRepository interface {
+	Create(ctx context.Context, coa *ChartOfAccounts) error
+	GetByID(ctx context.Context, id string) (*ChartOfAccounts, error)
+	GetByCode(ctx context.Context, legalEntityID, accountCode string) (*ChartOfAccounts, error)
+	Update(ctx context.Context, coa *ChartOfAccounts) error
 	Delete(ctx context.Context, id string) error
-	List(ctx context.Context) ([]Account, error)
+	List(ctx context.Context) ([]ChartOfAccounts, error)
 }
 
-// JournalEntryRepository defines operations for journal entries
-type JournalEntryRepository interface {
-	Create(ctx context.Context, entry *JournalEntry, lines []JournalEntryLine) error
-	GetByID(ctx context.Context, id string) (*JournalEntry, []JournalEntryLine, error)
-	Update(ctx context.Context, entry *JournalEntry, lines []JournalEntryLine) error
+// UniversalJournalEntryRepository defines operations for universal journal entries
+type UniversalJournalEntryRepository interface {
+	Create(ctx context.Context, entry *UniversalJournalEntry, lines []UniversalJournalLine) error
+	GetByID(ctx context.Context, id string) (*UniversalJournalEntry, []UniversalJournalLine, error)
+	Update(ctx context.Context, entry *UniversalJournalEntry, lines []UniversalJournalLine) error
 	Delete(ctx context.Context, id string) error
-	List(ctx context.Context) ([]JournalEntry, error)
+	List(ctx context.Context) ([]UniversalJournalEntry, error)
 }
 
-// InvoiceRepository defines operations for customer invoices
-type InvoiceRepository interface {
-	Create(ctx context.Context, invoice *Invoice, lines []InvoiceLine) error
-	GetByID(ctx context.Context, id string) (*Invoice, []InvoiceLine, error)
-	Update(ctx context.Context, invoice *Invoice) error
+// ArInvoiceRepository defines operations for customer invoices (Accounts Receivable)
+type ArInvoiceRepository interface {
+	Create(ctx context.Context, invoice *ArInvoice) error
+	GetByID(ctx context.Context, id string) (*ArInvoice, error)
+	GetByNumber(ctx context.Context, invoiceNumber string) (*ArInvoice, error)
+	Update(ctx context.Context, invoice *ArInvoice) error
 	Delete(ctx context.Context, id string) error
-	List(ctx context.Context) ([]Invoice, error)
+	List(ctx context.Context) ([]ArInvoice, error)
 }
 
 // PaymentRepository defines operations for payments
@@ -49,13 +50,14 @@ type BudgetRepository interface {
 	GetByAccountAndPeriod(ctx context.Context, accountID string, fiscalYear int, period int) (*Budget, error)
 }
 
-// VendorBillRepository defines operations for vendor bills (Accounts Payable)
-type VendorBillRepository interface {
-	Create(ctx context.Context, bill *VendorBill, lines []VendorBillLine) error
-	GetByID(ctx context.Context, id string) (*VendorBill, []VendorBillLine, error)
-	Update(ctx context.Context, bill *VendorBill) error
+// ApVendorBillRepository defines operations for vendor bills (Accounts Payable)
+type ApVendorBillRepository interface {
+	Create(ctx context.Context, bill *ApVendorBill) error
+	GetByID(ctx context.Context, id string) (*ApVendorBill, error)
+	GetByNumber(ctx context.Context, billNumber string) (*ApVendorBill, error)
+	Update(ctx context.Context, bill *ApVendorBill) error
 	Delete(ctx context.Context, id string) error
-	List(ctx context.Context) ([]VendorBill, error)
+	List(ctx context.Context) ([]ApVendorBill, error)
 }
 
 // TaxRateRepository defines operations for tax rates
@@ -113,10 +115,15 @@ type BankStatementRepository interface {
 	List(ctx context.Context) ([]BankStatement, error)
 }
 
-// TransactionRepository defines operations for transactions
-type TransactionRepository interface {
-	Create(ctx context.Context, tx *Transaction, lines []TransactionLine) error
-	GetByID(ctx context.Context, id string) (*Transaction, []TransactionLine, error)
-	Update(ctx context.Context, tx *Transaction, lines []TransactionLine) error
-	List(ctx context.Context) ([]Transaction, error)
+// TransactionManager defines an interface for running operations within a database transaction
+type TransactionManager interface {
+	WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+// TransactionalOutboxRepository defines operations for the transactional outbox
+type TransactionalOutboxRepository interface {
+	Create(ctx context.Context, record *TransactionalOutbox) error
+	GetPending(ctx context.Context, limit int) ([]TransactionalOutbox, error)
+	UpdateStatus(ctx context.Context, id string, status OutboxStatus) error
+}
+

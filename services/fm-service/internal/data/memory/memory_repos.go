@@ -8,204 +8,306 @@ import (
 	"github.com/erp-system/fm-service/internal/business/domain"
 )
 
-// MemoryAccountRepo implements domain.AccountRepository in-memory
-type MemoryAccountRepo struct {
-	mu       sync.RWMutex
-	accounts map[string]domain.Account
+// Snapshotable defines the interface for repositories that support transactional snapshots.
+type Snapshotable interface {
+	TakeSnapshot()
+	RollbackSnapshot()
+	CommitSnapshot()
 }
 
-func NewMemoryAccountRepo() *MemoryAccountRepo {
-	return &MemoryAccountRepo{
-		accounts: make(map[string]domain.Account),
+// MemoryChartOfAccountsRepo implements domain.ChartOfAccountsRepository in-memory
+type MemoryChartOfAccountsRepo struct {
+	mu        sync.RWMutex
+	accounts  map[string]domain.ChartOfAccounts
+	snapshots []map[string]domain.ChartOfAccounts
+}
+
+func NewMemoryChartOfAccountsRepo() *MemoryChartOfAccountsRepo {
+	return &MemoryChartOfAccountsRepo{
+		accounts: make(map[string]domain.ChartOfAccounts),
 	}
 }
 
-func (r *MemoryAccountRepo) Create(ctx context.Context, account *domain.Account) error {
+func (r *MemoryChartOfAccountsRepo) TakeSnapshot() {
+	r.mu.Lock()
+	snap := make(map[string]domain.ChartOfAccounts, len(r.accounts))
+	for k, v := range r.accounts {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+	r.mu.Unlock()
+}
+
+func (r *MemoryChartOfAccountsRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.accounts = r.snapshots[len(r.snapshots)-1]
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryChartOfAccountsRepo) CommitSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryChartOfAccountsRepo) Create(ctx context.Context, coa *domain.ChartOfAccounts) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	if _, ok := r.accounts[account.ID]; ok {
-		return errors.New("account already exists")
+	if _, ok := r.accounts[coa.ID]; ok {
+		return errors.New("chart of accounts already exists")
 	}
-	r.accounts[account.ID] = *account
+	r.accounts[coa.ID] = *coa
 	return nil
 }
 
-func (r *MemoryAccountRepo) GetByID(ctx context.Context, id string) (*domain.Account, error) {
+func (r *MemoryChartOfAccountsRepo) GetByID(ctx context.Context, id string) (*domain.ChartOfAccounts, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	acc, ok := r.accounts[id]
+	coa, ok := r.accounts[id]
 	if !ok {
-		return nil, errors.New("account not found")
+		return nil, errors.New("chart of accounts not found")
 	}
-	return &acc, nil
+	return &coa, nil
 }
 
-func (r *MemoryAccountRepo) GetByNumber(ctx context.Context, accountNumber string) (*domain.Account, error) {
+func (r *MemoryChartOfAccountsRepo) GetByCode(ctx context.Context, legalEntityID, accountCode string) (*domain.ChartOfAccounts, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	for _, acc := range r.accounts {
-		if acc.AccountNumber == accountNumber {
-			return &acc, nil
+	for _, coa := range r.accounts {
+		if coa.LegalEntityID == legalEntityID && coa.AccountCode == accountCode {
+			return &coa, nil
 		}
 	}
-	return nil, errors.New("account not found")
+	return nil, errors.New("chart of accounts not found")
 }
 
-func (r *MemoryAccountRepo) Update(ctx context.Context, account *domain.Account) error {
+func (r *MemoryChartOfAccountsRepo) Update(ctx context.Context, coa *domain.ChartOfAccounts) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	if _, ok := r.accounts[account.ID]; !ok {
-		return errors.New("account not found")
+	if _, ok := r.accounts[coa.ID]; !ok {
+		return errors.New("chart of accounts not found")
 	}
-	r.accounts[account.ID] = *account
+	r.accounts[coa.ID] = *coa
 	return nil
 }
 
-func (r *MemoryAccountRepo) Delete(ctx context.Context, id string) error {
+func (r *MemoryChartOfAccountsRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	if _, ok := r.accounts[id]; !ok {
-		return errors.New("account not found")
+		return errors.New("chart of accounts not found")
 	}
 	delete(r.accounts, id)
 	return nil
 }
 
-func (r *MemoryAccountRepo) List(ctx context.Context) ([]domain.Account, error) {
+func (r *MemoryChartOfAccountsRepo) List(ctx context.Context) ([]domain.ChartOfAccounts, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	list := make([]domain.Account, 0, len(r.accounts))
-	for _, acc := range r.accounts {
-		list = append(list, acc)
+	list := make([]domain.ChartOfAccounts, 0, len(r.accounts))
+	for _, coa := range r.accounts {
+		list = append(list, coa)
 	}
 	return list, nil
 }
 
-// MemoryJournalEntryRepo implements domain.JournalEntryRepository in-memory
-type MemoryJournalEntryRepo struct {
-	mu      sync.RWMutex
-	entries map[string]domain.JournalEntry
-	lines   map[string][]domain.JournalEntryLine
+type universalJournalEntryRepoSnapshot struct {
+	entries map[string]domain.UniversalJournalEntry
+	lines   map[string][]domain.UniversalJournalLine
 }
 
-func NewMemoryJournalEntryRepo() *MemoryJournalEntryRepo {
-	return &MemoryJournalEntryRepo{
-		entries: make(map[string]domain.JournalEntry),
-		lines:   make(map[string][]domain.JournalEntryLine),
+// MemoryUniversalJournalEntryRepo implements domain.UniversalJournalEntryRepository in-memory
+type MemoryUniversalJournalEntryRepo struct {
+	mu        sync.RWMutex
+	entries   map[string]domain.UniversalJournalEntry
+	lines     map[string][]domain.UniversalJournalLine
+	snapshots []universalJournalEntryRepoSnapshot
+}
+
+func NewMemoryUniversalJournalEntryRepo() *MemoryUniversalJournalEntryRepo {
+	return &MemoryUniversalJournalEntryRepo{
+		entries: make(map[string]domain.UniversalJournalEntry),
+		lines:   make(map[string][]domain.UniversalJournalLine),
 	}
 }
 
-func (r *MemoryJournalEntryRepo) Create(ctx context.Context, entry *domain.JournalEntry, lines []domain.JournalEntryLine) error {
+func (r *MemoryUniversalJournalEntryRepo) TakeSnapshot() {
+	r.mu.Lock()
+	snapEntries := make(map[string]domain.UniversalJournalEntry, len(r.entries))
+	for k, v := range r.entries {
+		snapEntries[k] = v
+	}
+	snapLines := make(map[string][]domain.UniversalJournalLine, len(r.lines))
+	for k, v := range r.lines {
+		if v != nil {
+			clonedLines := make([]domain.UniversalJournalLine, len(v))
+			copy(clonedLines, v)
+			snapLines[k] = clonedLines
+		} else {
+			snapLines[k] = nil
+		}
+	}
+	r.snapshots = append(r.snapshots, universalJournalEntryRepoSnapshot{
+		entries: snapEntries,
+		lines:   snapLines,
+	})
+	r.mu.Unlock()
+}
+
+func (r *MemoryUniversalJournalEntryRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		snap := r.snapshots[len(r.snapshots)-1]
+		r.entries = snap.entries
+		r.lines = snap.lines
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryUniversalJournalEntryRepo) CommitSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryUniversalJournalEntryRepo) Create(ctx context.Context, entry *domain.UniversalJournalEntry, lines []domain.UniversalJournalLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	r.entries[entry.ID] = *entry
 	r.lines[entry.ID] = lines
 	return nil
 }
 
-func (r *MemoryJournalEntryRepo) GetByID(ctx context.Context, id string) (*domain.JournalEntry, []domain.JournalEntryLine, error) {
+func (r *MemoryUniversalJournalEntryRepo) GetByID(ctx context.Context, id string) (*domain.UniversalJournalEntry, []domain.UniversalJournalLine, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	entry, ok := r.entries[id]
 	if !ok {
-		return nil, nil, errors.New("journal entry not found")
+		return nil, nil, errors.New("universal journal entry not found")
 	}
 	return &entry, r.lines[id], nil
 }
 
-func (r *MemoryJournalEntryRepo) Update(ctx context.Context, entry *domain.JournalEntry, lines []domain.JournalEntryLine) error {
+func (r *MemoryUniversalJournalEntryRepo) Update(ctx context.Context, entry *domain.UniversalJournalEntry, lines []domain.UniversalJournalLine) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	r.entries[entry.ID] = *entry
 	r.lines[entry.ID] = lines
 	return nil
 }
 
-func (r *MemoryJournalEntryRepo) Delete(ctx context.Context, id string) error {
+func (r *MemoryUniversalJournalEntryRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	delete(r.entries, id)
 	delete(r.lines, id)
 	return nil
 }
 
-func (r *MemoryJournalEntryRepo) List(ctx context.Context) ([]domain.JournalEntry, error) {
+func (r *MemoryUniversalJournalEntryRepo) List(ctx context.Context) ([]domain.UniversalJournalEntry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	list := make([]domain.JournalEntry, 0, len(r.entries))
+	list := make([]domain.UniversalJournalEntry, 0, len(r.entries))
 	for _, entry := range r.entries {
 		list = append(list, entry)
 	}
 	return list, nil
 }
 
-// MemoryInvoiceRepo implements domain.InvoiceRepository
-type MemoryInvoiceRepo struct {
-	mu       sync.RWMutex
-	invoices map[string]domain.Invoice
-	lines    map[string][]domain.InvoiceLine
+// MemoryArInvoiceRepo implements domain.ArInvoiceRepository
+type MemoryArInvoiceRepo struct {
+	mu        sync.RWMutex
+	invoices  map[string]domain.ArInvoice
+	snapshots []map[string]domain.ArInvoice
 }
 
-func NewMemoryInvoiceRepo() *MemoryInvoiceRepo {
-	return &MemoryInvoiceRepo{
-		invoices: make(map[string]domain.Invoice),
-		lines:    make(map[string][]domain.InvoiceLine),
+func NewMemoryArInvoiceRepo() *MemoryArInvoiceRepo {
+	return &MemoryArInvoiceRepo{
+		invoices: make(map[string]domain.ArInvoice),
 	}
 }
 
-func (r *MemoryInvoiceRepo) Create(ctx context.Context, invoice *domain.Invoice, lines []domain.InvoiceLine) error {
+func (r *MemoryArInvoiceRepo) TakeSnapshot() {
+	r.mu.Lock()
+	snapInvoices := make(map[string]domain.ArInvoice, len(r.invoices))
+	for k, v := range r.invoices {
+		snapInvoices[k] = v
+	}
+	r.snapshots = append(r.snapshots, snapInvoices)
+	r.mu.Unlock()
+}
+
+func (r *MemoryArInvoiceRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.invoices = r.snapshots[len(r.snapshots)-1]
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryArInvoiceRepo) CommitSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryArInvoiceRepo) Create(ctx context.Context, invoice *domain.ArInvoice) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	r.invoices[invoice.ID] = *invoice
-	r.lines[invoice.ID] = lines
 	return nil
 }
 
-func (r *MemoryInvoiceRepo) GetByID(ctx context.Context, id string) (*domain.Invoice, []domain.InvoiceLine, error) {
+func (r *MemoryArInvoiceRepo) GetByID(ctx context.Context, id string) (*domain.ArInvoice, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	inv, ok := r.invoices[id]
 	if !ok {
-		return nil, nil, errors.New("invoice not found")
+		return nil, errors.New("ar invoice not found")
 	}
-	return &inv, r.lines[id], nil
+	return &inv, nil
 }
 
-func (r *MemoryInvoiceRepo) Update(ctx context.Context, invoice *domain.Invoice) error {
+func (r *MemoryArInvoiceRepo) GetByNumber(ctx context.Context, invoiceNumber string) (*domain.ArInvoice, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, inv := range r.invoices {
+		if inv.InvoiceNumber == invoiceNumber {
+			return &inv, nil
+		}
+	}
+	return nil, errors.New("ar invoice not found")
+}
+
+func (r *MemoryArInvoiceRepo) Update(ctx context.Context, invoice *domain.ArInvoice) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	r.invoices[invoice.ID] = *invoice
 	return nil
 }
 
-func (r *MemoryInvoiceRepo) Delete(ctx context.Context, id string) error {
+func (r *MemoryArInvoiceRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	delete(r.invoices, id)
-	delete(r.lines, id)
 	return nil
 }
 
-func (r *MemoryInvoiceRepo) List(ctx context.Context) ([]domain.Invoice, error) {
+func (r *MemoryArInvoiceRepo) List(ctx context.Context) ([]domain.ArInvoice, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	list := make([]domain.Invoice, 0, len(r.invoices))
+	list := make([]domain.ArInvoice, 0, len(r.invoices))
 	for _, inv := range r.invoices {
 		list = append(list, inv)
 	}
@@ -214,14 +316,44 @@ func (r *MemoryInvoiceRepo) List(ctx context.Context) ([]domain.Invoice, error) 
 
 // MemoryPaymentRepo implements domain.PaymentRepository
 type MemoryPaymentRepo struct {
-	mu       sync.RWMutex
-	payments map[string]domain.Payment
+	mu        sync.RWMutex
+	payments  map[string]domain.Payment
+	snapshots []map[string]domain.Payment
 }
 
 func NewMemoryPaymentRepo() *MemoryPaymentRepo {
 	return &MemoryPaymentRepo{
 		payments: make(map[string]domain.Payment),
 	}
+}
+
+func (r *MemoryPaymentRepo) TakeSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snap := make(map[string]domain.Payment, len(r.payments))
+	for k, v := range r.payments {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+}
+
+func (r *MemoryPaymentRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.payments = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryPaymentRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
 }
 
 func (r *MemoryPaymentRepo) Create(ctx context.Context, payment *domain.Payment) error {
@@ -256,14 +388,44 @@ func (r *MemoryPaymentRepo) List(ctx context.Context) ([]domain.Payment, error) 
 
 // MemoryBudgetRepo implements domain.BudgetRepository
 type MemoryBudgetRepo struct {
-	mu      sync.RWMutex
-	budgets map[string]domain.Budget
+	mu        sync.RWMutex
+	budgets   map[string]domain.Budget
+	snapshots []map[string]domain.Budget
 }
 
 func NewMemoryBudgetRepo() *MemoryBudgetRepo {
 	return &MemoryBudgetRepo{
 		budgets: make(map[string]domain.Budget),
 	}
+}
+
+func (r *MemoryBudgetRepo) TakeSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snap := make(map[string]domain.Budget, len(r.budgets))
+	for k, v := range r.budgets {
+		snap[k] = v
+	}
+	r.snapshots = append(r.snapshots, snap)
+}
+
+func (r *MemoryBudgetRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.budgets = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryBudgetRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
 }
 
 func (r *MemoryBudgetRepo) Create(ctx context.Context, budget *domain.Budget) error {
@@ -324,67 +486,99 @@ func (r *MemoryBudgetRepo) GetByAccountAndPeriod(ctx context.Context, accountID 
 	return nil, errors.New("budget not found")
 }
 
-// MemoryVendorBillRepo implements domain.VendorBillRepository in-memory
-type MemoryVendorBillRepo struct {
-	mu    sync.RWMutex
-	bills map[string]domain.VendorBill
-	lines map[string][]domain.VendorBillLine
+// MemoryApVendorBillRepo implements domain.ApVendorBillRepository in-memory
+type MemoryApVendorBillRepo struct {
+	mu        sync.RWMutex
+	bills     map[string]domain.ApVendorBill
+	snapshots []map[string]domain.ApVendorBill
 }
 
-func NewMemoryVendorBillRepo() *MemoryVendorBillRepo {
-	return &MemoryVendorBillRepo{
-		bills: make(map[string]domain.VendorBill),
-		lines: make(map[string][]domain.VendorBillLine),
+func NewMemoryApVendorBillRepo() *MemoryApVendorBillRepo {
+	return &MemoryApVendorBillRepo{
+		bills: make(map[string]domain.ApVendorBill),
 	}
 }
 
-func (r *MemoryVendorBillRepo) Create(ctx context.Context, bill *domain.VendorBill, lines []domain.VendorBillLine) error {
+func (r *MemoryApVendorBillRepo) TakeSnapshot() {
+	r.mu.Lock()
+	snapBills := make(map[string]domain.ApVendorBill, len(r.bills))
+	for k, v := range r.bills {
+		snapBills[k] = v
+	}
+	r.snapshots = append(r.snapshots, snapBills)
+	r.mu.Unlock()
+}
+
+func (r *MemoryApVendorBillRepo) RollbackSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.bills = r.snapshots[len(r.snapshots)-1]
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryApVendorBillRepo) CommitSnapshot() {
+	r.mu.Lock()
+	if len(r.snapshots) > 0 {
+		r.snapshots = r.snapshots[:len(r.snapshots)-1]
+	}
+	r.mu.Unlock()
+}
+
+func (r *MemoryApVendorBillRepo) Create(ctx context.Context, bill *domain.ApVendorBill) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	r.bills[bill.ID] = *bill
-	r.lines[bill.ID] = lines
 	return nil
 }
 
-func (r *MemoryVendorBillRepo) GetByID(ctx context.Context, id string) (*domain.VendorBill, []domain.VendorBillLine, error) {
+func (r *MemoryApVendorBillRepo) GetByID(ctx context.Context, id string) (*domain.ApVendorBill, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	bill, ok := r.bills[id]
 	if !ok {
-		return nil, nil, errors.New("vendor bill not found")
+		return nil, errors.New("ap vendor bill not found")
 	}
-	return &bill, r.lines[id], nil
+	return &bill, nil
 }
 
-func (r *MemoryVendorBillRepo) Update(ctx context.Context, bill *domain.VendorBill) error {
+func (r *MemoryApVendorBillRepo) GetByNumber(ctx context.Context, billNumber string) (*domain.ApVendorBill, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, bill := range r.bills {
+		if bill.BillNumber == billNumber {
+			return &bill, nil
+		}
+	}
+	return nil, errors.New("ap vendor bill not found")
+}
+
+func (r *MemoryApVendorBillRepo) Update(ctx context.Context, bill *domain.ApVendorBill) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	r.bills[bill.ID] = *bill
 	return nil
 }
 
-func (r *MemoryVendorBillRepo) Delete(ctx context.Context, id string) error {
+func (r *MemoryApVendorBillRepo) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	delete(r.bills, id)
-	delete(r.lines, id)
 	return nil
 }
 
-func (r *MemoryVendorBillRepo) List(ctx context.Context) ([]domain.VendorBill, error) {
+func (r *MemoryApVendorBillRepo) List(ctx context.Context) ([]domain.ApVendorBill, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	list := make([]domain.VendorBill, 0, len(r.bills))
+	list := make([]domain.ApVendorBill, 0, len(r.bills))
 	for _, bill := range r.bills {
 		list = append(list, bill)
 	}
 	return list, nil
 }
+
+
 
 // MemoryTaxRateRepo implements domain.TaxRateRepository
 type MemoryTaxRateRepo struct {
@@ -705,52 +899,117 @@ func (r *MemoryBankStatementRepo) List(ctx context.Context) ([]domain.BankStatem
 	return list, nil
 }
 
-// MemoryTransactionRepo implements domain.TransactionRepository in-memory
-type MemoryTransactionRepo struct {
-	mu    sync.RWMutex
-	data  map[string]domain.Transaction
-	lines map[string][]domain.TransactionLine
+
+
+// MemoryTransactionalOutboxRepo implements domain.TransactionalOutboxRepository in-memory
+type MemoryTransactionalOutboxRepo struct {
+	mu        sync.RWMutex
+	records   map[string]domain.TransactionalOutbox
+	snapshots []map[string]domain.TransactionalOutbox
 }
 
-func NewMemoryTransactionRepo() *MemoryTransactionRepo {
-	return &MemoryTransactionRepo{
-		data:  make(map[string]domain.Transaction),
-		lines: make(map[string][]domain.TransactionLine),
+func NewMemoryTransactionalOutboxRepo() *MemoryTransactionalOutboxRepo {
+	return &MemoryTransactionalOutboxRepo{
+		records: make(map[string]domain.TransactionalOutbox),
 	}
 }
 
-func (r *MemoryTransactionRepo) Create(ctx context.Context, tx *domain.Transaction, lines []domain.TransactionLine) error {
+func (r *MemoryTransactionalOutboxRepo) TakeSnapshot() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.data[tx.ID] = *tx
-	r.lines[tx.ID] = lines
-	return nil
-}
-
-func (r *MemoryTransactionRepo) GetByID(ctx context.Context, id string) (*domain.Transaction, []domain.TransactionLine, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	tx, ok := r.data[id]
-	if !ok {
-		return nil, nil, errors.New("transaction not found")
+	snap := make(map[string]domain.TransactionalOutbox, len(r.records))
+	for k, v := range r.records {
+		snap[k] = v
 	}
-	return &tx, r.lines[id], nil
+	r.snapshots = append(r.snapshots, snap)
 }
 
-func (r *MemoryTransactionRepo) Update(ctx context.Context, tx *domain.Transaction, lines []domain.TransactionLine) error {
+func (r *MemoryTransactionalOutboxRepo) RollbackSnapshot() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.data[tx.ID] = *tx
-	r.lines[tx.ID] = lines
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.records = r.snapshots[len(r.snapshots)-1]
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryTransactionalOutboxRepo) CommitSnapshot() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.snapshots) == 0 {
+		return
+	}
+	r.snapshots = r.snapshots[:len(r.snapshots)-1]
+}
+
+func (r *MemoryTransactionalOutboxRepo) Create(ctx context.Context, record *domain.TransactionalOutbox) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.records[record.ID] = *record
 	return nil
 }
 
-func (r *MemoryTransactionRepo) List(ctx context.Context) ([]domain.Transaction, error) {
+func (r *MemoryTransactionalOutboxRepo) GetPending(ctx context.Context, limit int) ([]domain.TransactionalOutbox, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	list := make([]domain.Transaction, 0, len(r.data))
-	for _, tx := range r.data {
-		list = append(list, tx)
+	var list []domain.TransactionalOutbox
+	for _, rec := range r.records {
+		if rec.Status == domain.OutboxStatusPENDING || rec.Status == domain.OutboxStatusFAILED {
+			list = append(list, rec)
+			if len(list) >= limit {
+				break
+			}
+		}
 	}
 	return list, nil
 }
+
+func (r *MemoryTransactionalOutboxRepo) UpdateStatus(ctx context.Context, id string, status domain.OutboxStatus) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	rec, ok := r.records[id]
+	if !ok {
+		return errors.New("outbox record not found")
+	}
+	rec.Status = status
+	r.records[id] = rec
+	return nil
+}
+
+// MemoryTransactionManager implements domain.TransactionManager in-memory
+type MemoryTransactionManager struct {
+	repos []Snapshotable
+}
+
+func NewMemoryTransactionManager(repos ...interface{}) domain.TransactionManager {
+	var snapRepos []Snapshotable
+	for _, repo := range repos {
+		if snap, ok := repo.(Snapshotable); ok {
+			snapRepos = append(snapRepos, snap)
+		}
+	}
+	return &MemoryTransactionManager{
+		repos: snapRepos,
+	}
+}
+
+func (m *MemoryTransactionManager) WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	for _, repo := range m.repos {
+		repo.TakeSnapshot()
+	}
+
+	err := fn(ctx)
+	if err != nil {
+		for _, repo := range m.repos {
+			repo.RollbackSnapshot()
+		}
+		return err
+	}
+
+	for _, repo := range m.repos {
+		repo.CommitSnapshot()
+	}
+	return nil
+}
+

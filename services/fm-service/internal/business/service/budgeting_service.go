@@ -11,17 +11,51 @@ import (
 )
 
 type BudgetingService struct {
-	budgets   domain.BudgetRepository
-	accounts  domain.AccountRepository
-	publisher domain.EventPublisher
+	budgets  domain.BudgetRepository
+	accounts domain.ChartOfAccountsRepository
+	entries  domain.UniversalJournalEntryRepository
+	outbox   domain.TransactionalOutboxRepository
+	tm       domain.TransactionManager
 }
 
-func NewBudgetingService(budgets domain.BudgetRepository, accounts domain.AccountRepository, publisher domain.EventPublisher) *BudgetingService {
+func NewBudgetingService(
+	budgets domain.BudgetRepository,
+	accounts domain.ChartOfAccountsRepository,
+	entries domain.UniversalJournalEntryRepository,
+	outbox domain.TransactionalOutboxRepository,
+	tm domain.TransactionManager,
+) *BudgetingService {
 	return &BudgetingService{
-		budgets:   budgets,
-		accounts:  accounts,
-		publisher: publisher,
+		budgets:  budgets,
+		accounts: accounts,
+		entries:  entries,
+		outbox:   outbox,
+		tm:       tm,
 	}
+}
+
+func (s *BudgetingService) calculateAccountBalance(ctx context.Context, accountID string) (decimal.Decimal, error) {
+	entries, err := s.entries.List(ctx)
+	if err != nil {
+		return decimal.Zero, err
+	}
+
+	balance := decimal.Zero
+	for _, entry := range entries {
+		if entry.Status != domain.LedgerStatePOSTED && entry.Status != domain.LedgerStateREVERSED {
+			continue
+		}
+		_, lines, err := s.entries.GetByID(ctx, entry.ID)
+		if err != nil {
+			return decimal.Zero, err
+		}
+		for _, line := range lines {
+			if line.AccountID == accountID {
+				balance = balance.Add(line.AmountFunctional)
+			}
+		}
+	}
+	return balance, nil
 }
 
 func (s *BudgetingService) ListBudgets(ctx context.Context) ([]domain.Budget, error) {
@@ -49,22 +83,34 @@ func (s *BudgetingService) CreateBudget(ctx context.Context, accountID, costCent
 		budget.CostCenterID = &costCenterID
 	}
 
-	err := s.budgets.Create(ctx, budget)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.budgets.Create(txCtx, budget)
+		if err != nil {
+			return err
+		}
+
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmBudgetCreated),
+			AggregateID: budget.ID,
+			Payload: domain.BudgetEventPayload{
+				AccountID:       budget.AccountID,
+				CostCenterID:    budget.CostCenterID,
+				FiscalYear:      budget.FiscalYear,
+				Period:          budget.Period,
+				AllocatedAmount: budget.AllocatedAmount,
+				SpentAmount:     budget.SpentAmount,
+				Timestamp:       time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmBudgetCreated, budget.ID, domain.BudgetEventPayload{
-		AccountID:       budget.AccountID,
-		CostCenterID:    budget.CostCenterID,
-		FiscalYear:      budget.FiscalYear,
-		Period:          budget.Period,
-		AllocatedAmount: budget.AllocatedAmount,
-		SpentAmount:     budget.SpentAmount,
-		Timestamp:       time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmBudgetCreated, err)
 	}
 
 	return budget, nil
@@ -76,7 +122,6 @@ func (s *BudgetingService) GetBudgetVsActualReport(ctx context.Context, accountI
 		return nil, err
 	}
 
-	// Sum all budgets for this account and year
 	buds, err := s.budgets.List(ctx)
 	if err != nil {
 		return nil, err
@@ -89,12 +134,18 @@ func (s *BudgetingService) GetBudgetVsActualReport(ctx context.Context, accountI
 		}
 	}
 
-	actualSpent := acc.Balance // Simplified in memory representation
+	actualSpent, err := s.calculateAccountBalance(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if acc.Type == domain.AccountTypeLIABILITY || acc.Type == domain.AccountTypeEQUITY || acc.Type == domain.AccountTypeREVENUE {
+		actualSpent = actualSpent.Neg()
+	}
 	variance := totalBudget.Sub(actualSpent)
 
 	return map[string]interface{}{
-		"account_number": acc.AccountNumber,
-		"account_name":   acc.Name,
+		"account_number": acc.AccountCode,
+		"account_name":   acc.AccountName,
 		"fiscal_year":    fiscalYear,
 		"budget_amount":  totalBudget,
 		"actual_spent":   actualSpent,
@@ -103,45 +154,66 @@ func (s *BudgetingService) GetBudgetVsActualReport(ctx context.Context, accountI
 }
 
 func (s *BudgetingService) CheckAndTrackBudgetExpense(ctx context.Context, accountID string, amount decimal.Decimal, year, period int) error {
-	bud, err := s.budgets.GetByAccountAndPeriod(ctx, accountID, year, period)
-	if err != nil {
-		// No budget set for this account/period, ignore
-		return nil
-	}
-
-	newSpent := bud.SpentAmount.Add(amount)
-	bud.SpentAmount = newSpent
-	bud.UpdatedAt = time.Now()
-
-	_ = s.budgets.Update(ctx, bud)
-
-	// Publish budget updated event
-	if err := s.publisher.Publish(ctx, domain.TopicFmBudgetUpdated, bud.ID, domain.BudgetEventPayload{
-		AccountID:       bud.AccountID,
-		CostCenterID:    bud.CostCenterID,
-		FiscalYear:      bud.FiscalYear,
-		Period:          bud.Period,
-		AllocatedAmount: bud.AllocatedAmount,
-		SpentAmount:     bud.SpentAmount,
-		Timestamp:       time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmBudgetUpdated, err)
-	}
-
-	if newSpent.GreaterThan(bud.AllocatedAmount) {
-		// Publish budget exceeded event
-		if err := s.publisher.Publish(ctx, domain.TopicFmBudgetExceeded, bud.ID, domain.BudgetEventPayload{
-			AccountID:       bud.AccountID,
-			CostCenterID:    bud.CostCenterID,
-			FiscalYear:      bud.FiscalYear,
-			Period:          bud.Period,
-			AllocatedAmount: bud.AllocatedAmount,
-			SpentAmount:     bud.SpentAmount,
-			Timestamp:       time.Now(),
-		}); err != nil {
-			utils.LogPublishErr("fm-service", domain.TopicFmBudgetExceeded, err)
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		bud, err := s.budgets.GetByAccountAndPeriod(txCtx, accountID, year, period)
+		if err != nil {
+			return nil
 		}
-	}
 
-	return nil
+		newSpent := bud.SpentAmount.Add(amount)
+		bud.SpentAmount = newSpent
+		bud.UpdatedAt = time.Now()
+
+		err = s.budgets.Update(txCtx, bud)
+		if err != nil {
+			return err
+		}
+
+		// Write budget updated to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmBudgetUpdated),
+			AggregateID: bud.ID,
+			Payload: domain.BudgetEventPayload{
+				AccountID:       bud.AccountID,
+				CostCenterID:    bud.CostCenterID,
+				FiscalYear:      bud.FiscalYear,
+				Period:          bud.Period,
+				AllocatedAmount: bud.AllocatedAmount,
+				SpentAmount:     bud.SpentAmount,
+				Timestamp:       time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		if err := s.outbox.Create(txCtx, outboxRec); err != nil {
+			return err
+		}
+
+		if newSpent.GreaterThan(bud.AllocatedAmount) {
+			// Write budget exceeded to outbox
+			outboxRecExceeded := &domain.TransactionalOutbox{
+				ID:          utils.NewID("outbox"),
+				EventType:   string(domain.TopicFmBudgetExceeded),
+				AggregateID: bud.ID,
+				Payload: domain.BudgetEventPayload{
+					AccountID:       bud.AccountID,
+					CostCenterID:    bud.CostCenterID,
+					FiscalYear:      bud.FiscalYear,
+					Period:          bud.Period,
+					AllocatedAmount: bud.AllocatedAmount,
+					SpentAmount:     bud.SpentAmount,
+					Timestamp:       time.Now(),
+				},
+				Status:    domain.OutboxStatusPENDING,
+				CreatedAt: time.Now(),
+			}
+			if err := s.outbox.Create(txCtx, outboxRecExceeded); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
+

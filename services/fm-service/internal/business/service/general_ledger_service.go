@@ -13,26 +13,57 @@ import (
 )
 
 type GeneralLedgerService struct {
-	accounts  domain.AccountRepository
-	entries   domain.JournalEntryRepository
-	publisher domain.EventPublisher
+	accounts domain.ChartOfAccountsRepository
+	entries  domain.UniversalJournalEntryRepository
+	outbox   domain.TransactionalOutboxRepository
+	tm       domain.TransactionManager
 }
 
-func NewGeneralLedgerService(accounts domain.AccountRepository, entries domain.JournalEntryRepository, publisher domain.EventPublisher) *GeneralLedgerService {
+func NewGeneralLedgerService(
+	accounts domain.ChartOfAccountsRepository,
+	entries domain.UniversalJournalEntryRepository,
+	outbox domain.TransactionalOutboxRepository,
+	tm domain.TransactionManager,
+) *GeneralLedgerService {
 	return &GeneralLedgerService{
-		accounts:  accounts,
-		entries:   entries,
-		publisher: publisher,
+		accounts: accounts,
+		entries:  entries,
+		outbox:   outbox,
+		tm:       tm,
 	}
 }
 
-func (s *GeneralLedgerService) ListAccounts(ctx context.Context) ([]domain.Account, error) {
+func (s *GeneralLedgerService) calculateAccountBalance(ctx context.Context, accountID string) (decimal.Decimal, error) {
+	entries, err := s.entries.List(ctx)
+	if err != nil {
+		return decimal.Zero, err
+	}
+
+	balance := decimal.Zero
+	for _, entry := range entries {
+		if entry.Status != domain.LedgerStatePOSTED && entry.Status != domain.LedgerStateREVERSED {
+			continue
+		}
+		_, lines, err := s.entries.GetByID(ctx, entry.ID)
+		if err != nil {
+			return decimal.Zero, err
+		}
+		for _, line := range lines {
+			if line.AccountID == accountID {
+				balance = balance.Add(line.AmountFunctional)
+			}
+		}
+	}
+	return balance, nil
+}
+
+func (s *GeneralLedgerService) ListAccounts(ctx context.Context) ([]domain.ChartOfAccounts, error) {
 	return s.accounts.List(ctx)
 }
 
-func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, accType, parentID, currency string) (*domain.Account, error) {
-	if accNum == "" || name == "" || accType == "" {
-		return nil, errors.New("account number, name, and type are required")
+func (s *GeneralLedgerService) CreateAccount(ctx context.Context, legalEntityID, accountCode, name, accType string) (*domain.ChartOfAccounts, error) {
+	if legalEntityID == "" || accountCode == "" || name == "" || accType == "" {
+		return nil, errors.New("legal entity ID, account code, name, and type are required")
 	}
 
 	typeEnum := domain.AccountType(accType)
@@ -41,52 +72,58 @@ func (s *GeneralLedgerService) CreateAccount(ctx context.Context, accNum, name, 
 	}
 
 	id := utils.NewID("acc")
-	acc := &domain.Account{
+	acc := &domain.ChartOfAccounts{
 		ID:            id,
-		AccountNumber: accNum,
-		Name:          name,
+		LegalEntityID: legalEntityID,
+		AccountCode:   accountCode,
+		AccountName:   name,
 		Type:          typeEnum,
-		Balance:       decimal.Zero,
-		Currency:      currency,
 		IsActive:      true,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 
-	if parentID != "" {
-		acc.ParentID = &parentID
-	}
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.accounts.Create(txCtx, acc)
+		if err != nil {
+			return err
+		}
 
-	err := s.accounts.Create(ctx, acc)
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmAccountCreated),
+			AggregateID: acc.ID,
+			Payload: domain.AccountEventPayload{
+				ID:            acc.ID,
+				AccountNumber: acc.AccountCode,
+				Name:          acc.AccountName,
+				Type:          string(acc.Type),
+				Balance:       decimal.Zero,
+				Timestamp:     time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmAccountCreated, acc.ID, domain.AccountEventPayload{
-		ID:            acc.ID,
-		AccountNumber: acc.AccountNumber,
-		Name:          acc.Name,
-		Type:          string(acc.Type),
-		Balance:       acc.Balance,
-		Currency:      acc.Currency,
-		Timestamp:     time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmAccountCreated, err)
 	}
 
 	return acc, nil
 }
 
-func (s *GeneralLedgerService) GetAccount(ctx context.Context, id string) (*domain.Account, error) {
+func (s *GeneralLedgerService) GetAccount(ctx context.Context, id string) (*domain.ChartOfAccounts, error) {
 	return s.accounts.GetByID(ctx, id)
 }
 
-func (s *GeneralLedgerService) GetAccountByNumber(ctx context.Context, accNum string) (*domain.Account, error) {
-	return s.accounts.GetByNumber(ctx, accNum)
+func (s *GeneralLedgerService) GetAccountByCode(ctx context.Context, legalEntityID, accountCode string) (*domain.ChartOfAccounts, error) {
+	return s.accounts.GetByCode(ctx, legalEntityID, accountCode)
 }
 
-func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accType, parentID string, isActive bool) (*domain.Account, error) {
+func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accType string, isActive bool) (*domain.ChartOfAccounts, error) {
 	typeEnum := domain.AccountType(accType)
 	if !typeEnum.IsValid() {
 		return nil, fmt.Errorf("invalid account type: %s", accType)
@@ -97,40 +134,47 @@ func (s *GeneralLedgerService) UpdateAccount(ctx context.Context, id, name, accT
 		return nil, err
 	}
 
-	acc.Name = name
+	acc.AccountName = name
 	acc.Type = typeEnum
 	acc.IsActive = isActive
 	acc.UpdatedAt = time.Now()
 
-	if parentID != "" {
-		acc.ParentID = &parentID
-	} else {
-		acc.ParentID = nil
-	}
+	err = s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err = s.accounts.Update(txCtx, acc)
+		if err != nil {
+			return err
+		}
 
-	err = s.accounts.Update(ctx, acc)
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmAccountUpdated),
+			AggregateID: acc.ID,
+			Payload: domain.AccountEventPayload{
+				ID:            acc.ID,
+				AccountNumber: acc.AccountCode,
+				Name:          acc.AccountName,
+				Type:          string(acc.Type),
+				Balance:       decimal.Zero,
+				Timestamp:     time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmAccountUpdated, acc.ID, domain.AccountEventPayload{
-		ID:            acc.ID,
-		AccountNumber: acc.AccountNumber,
-		Name:          acc.Name,
-		Type:          string(acc.Type),
-		Balance:       acc.Balance,
-		Currency:      acc.Currency,
-		Timestamp:     time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmAccountUpdated, err)
 	}
 
 	return acc, nil
 }
 
 func (s *GeneralLedgerService) DeleteAccount(ctx context.Context, id string) error {
-	return s.accounts.Delete(ctx, id)
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		return s.accounts.Delete(txCtx, id)
+	})
 }
 
 func (s *GeneralLedgerService) GetAccountBalance(ctx context.Context, id string) (decimal.Decimal, error) {
@@ -138,146 +182,135 @@ func (s *GeneralLedgerService) GetAccountBalance(ctx context.Context, id string)
 	if err != nil {
 		return decimal.Zero, err
 	}
-	return acc.Balance, nil
+
+	balance, err := s.calculateAccountBalance(ctx, acc.ID)
+	if err != nil {
+		return decimal.Zero, err
+	}
+
+	if acc.Type == domain.AccountTypeLIABILITY || acc.Type == domain.AccountTypeEQUITY || acc.Type == domain.AccountTypeREVENUE {
+		balance = balance.Neg()
+	}
+	return balance, nil
 }
 
-func (s *GeneralLedgerService) ListJournalEntries(ctx context.Context) ([]domain.JournalEntry, error) {
+func (s *GeneralLedgerService) ListJournalEntries(ctx context.Context) ([]domain.UniversalJournalEntry, error) {
 	return s.entries.List(ctx)
 }
 
-func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, ref, desc string, lines []domain.JournalEntryLine) (*domain.JournalEntry, error) {
+func (s *GeneralLedgerService) CreateJournalEntry(ctx context.Context, legalEntityID, sourceModule, sourceDocID string, postingDate time.Time, lines []domain.UniversalJournalLine) (*domain.UniversalJournalEntry, error) {
 	if len(lines) < 2 {
 		return nil, errors.New("a journal entry must have at least 2 lines")
 	}
 
-	totalDebits := decimal.Zero
-	totalCredits := decimal.Zero
+	sum := decimal.Zero
 	for _, l := range lines {
-		totalDebits = totalDebits.Add(l.DebitAmount)
-		totalCredits = totalCredits.Add(l.CreditAmount)
+		sum = sum.Add(l.AmountFunctional)
 	}
-
-	if !totalDebits.Equal(totalCredits) {
-		return nil, fmt.Errorf("journal entry is unbalanced: debits=%s, credits=%s", totalDebits, totalCredits)
+	if !sum.Equal(decimal.Zero) {
+		return nil, fmt.Errorf("journal entry is unbalanced: functional sum=%s", sum)
 	}
 
 	id := utils.NewID("je")
-	now := time.Now()
-	entry := &domain.JournalEntry{
-		ID:          id,
-		Reference:   ref,
-		Date:        now,
-		Description: desc,
-		Status:      string(domain.JournalEntryStatusPosted),
-		CreatedBy:   "system",
-		PostedBy:    "system",
-		PostedAt:    &now,
-		CreatedAt:   now,
+	entry := &domain.UniversalJournalEntry{
+		ID:               id,
+		LegalEntityID:    legalEntityID,
+		SourceModule:     sourceModule,
+		SourceDocumentID: sourceDocID,
+		PostingDate:      postingDate,
+		FinancialPeriod:  postingDate.Format("2006-01"),
+		Status:           domain.LedgerStatePOSTED,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 
-	// Snapshot account states for rollback on failure
-	snapshots := make(map[string]domain.Account)
-	rollback := func() {
-		for _, oldAcc := range snapshots {
-			_ = s.accounts.Update(ctx, &oldAcc)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		for i := range lines {
+			lines[i].ID = utils.NewID("jel")
+			lines[i].JournalEntryID = id
 		}
-	}
 
-	for i, l := range lines {
-		lines[i].ID = utils.NewID("jel")
-		lines[i].EntryID = id
-
-		acc, err := s.accounts.GetByID(ctx, l.AccountID)
+		err := s.entries.Create(txCtx, entry, lines)
 		if err != nil {
-			rollback()
-			return nil, fmt.Errorf("account not found: %s", l.AccountID)
+			return err
 		}
 
-		// Snapshot original state
-		snapshots[acc.ID] = *acc
-
-		isDebitIncreaseType := acc.Type == "ASSET" || acc.Type == "EXPENSE"
-		if isDebitIncreaseType {
-			acc.Balance = acc.Balance.Add(l.DebitAmount).Sub(l.CreditAmount)
-		} else {
-			acc.Balance = acc.Balance.Sub(l.DebitAmount).Add(l.CreditAmount)
+		for _, l := range lines {
+			acc, err := s.accounts.GetByID(txCtx, l.AccountID)
+			if err != nil {
+				return fmt.Errorf("account not found: %s", l.AccountID)
+			}
+			outboxRec := &domain.TransactionalOutbox{
+				ID:          utils.NewID("outbox"),
+				EventType:   string(domain.TopicFmAccountBalanceChanged),
+				AggregateID: acc.ID,
+				Payload: domain.AccountEventPayload{
+					ID:            acc.ID,
+					AccountNumber: acc.AccountCode,
+					Name:          acc.AccountName,
+					Type:          string(acc.Type),
+					Timestamp:     time.Now(),
+				},
+				Status:    domain.OutboxStatusPENDING,
+				CreatedAt: time.Now(),
+			}
+			if err := s.outbox.Create(txCtx, outboxRec); err != nil {
+				return err
+			}
 		}
+		return nil
+	})
 
-		err = s.accounts.Update(ctx, acc)
-		if err != nil {
-			rollback()
-			return nil, fmt.Errorf("failed to update balance for account %s: %w", acc.ID, err)
-		}
-	}
-
-	err := s.entries.Create(ctx, entry, lines)
 	if err != nil {
-		rollback()
 		return nil, err
 	}
 
-	// Publish events only after successful commit
-	for _, l := range lines {
-		acc, err := s.accounts.GetByID(ctx, l.AccountID)
-		if err == nil {
-			if err := s.publisher.Publish(ctx, domain.TopicFmAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
-				ID:            acc.ID,
-				AccountNumber: acc.AccountNumber,
-				Name:          acc.Name,
-				Type:          string(acc.Type),
-				Balance:       acc.Balance,
-				Currency:      acc.Currency,
-				Timestamp:     time.Now(),
-			}); err != nil {
-				utils.LogPublishErr("fm-service", domain.TopicFmAccountBalanceChanged, err)
-			}
-		}
-	}
 	return entry, nil
 }
 
-func (s *GeneralLedgerService) GetJournalEntry(ctx context.Context, id string) (*domain.JournalEntry, []domain.JournalEntryLine, error) {
+func (s *GeneralLedgerService) GetJournalEntry(ctx context.Context, id string) (*domain.UniversalJournalEntry, []domain.UniversalJournalLine, error) {
 	return s.entries.GetByID(ctx, id)
 }
 
-func (s *GeneralLedgerService) ReverseJournalEntry(ctx context.Context, id string) (*domain.JournalEntry, error) {
-	entry, lines, err := s.entries.GetByID(ctx, id)
+func (s *GeneralLedgerService) ReverseJournalEntry(ctx context.Context, id string) (*domain.UniversalJournalEntry, error) {
+	var revEntry *domain.UniversalJournalEntry
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		entry, lines, err := s.entries.GetByID(txCtx, id)
+		if err != nil {
+			return err
+		}
+
+		if entry.Status == domain.LedgerStateREVERSED {
+			return errors.New("journal entry is already reversed")
+		}
+
+		revLines := make([]domain.UniversalJournalLine, len(lines))
+		for i, l := range lines {
+			revLines[i] = domain.UniversalJournalLine{
+				AccountID:             l.AccountID,
+				AmountFunctional:      l.AmountFunctional.Neg(),
+				AmountTransactional:   l.AmountTransactional.Neg(),
+				CurrencyTransactional: l.CurrencyTransactional,
+				TrackingDimensions:    l.TrackingDimensions,
+			}
+		}
+
+		revEntry, err = s.CreateJournalEntry(txCtx, entry.LegalEntityID, entry.SourceModule, entry.SourceDocumentID, time.Now(), revLines)
+		if err != nil {
+			return fmt.Errorf("failed to create reversing entry: %w", err)
+		}
+
+		entry.Status = domain.LedgerStateREVERSED
+		err = s.entries.Update(txCtx, entry, lines)
+		if err != nil {
+			return fmt.Errorf("failed to update original entry status: %w", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	if entry.Status == "REVERSED" {
-		return nil, errors.New("journal entry is already reversed")
-	}
-
-	// Create reverse lines
-	revLines := make([]domain.JournalEntryLine, len(lines))
-	for i, l := range lines {
-		revLines[i] = domain.JournalEntryLine{
-			AccountID:    l.AccountID,
-			DebitAmount:  l.CreditAmount, // swap debits and credits
-			CreditAmount: l.DebitAmount,
-			Description:  "Reversal of " + entry.Reference + ": " + l.Description,
-			CostCenterID: l.CostCenterID,
-		}
-	}
-
-	revRef := fmt.Sprintf("REV-%s", entry.Reference)
-	revDesc := fmt.Sprintf("Reversal of Journal Entry %s: %s", entry.Reference, entry.Description)
-
-	// Create reversing journal entry (which will handle adjusting the GL account balances)
-	revEntry, err := s.CreateJournalEntry(ctx, revRef, revDesc, revLines)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create reversing entry: %w", err)
-	}
-
-	// Update original entry
-	entry.Status = "REVERSED"
-	entry.ReversedBy = &revEntry.ID
-
-	err = s.entries.Update(ctx, entry, lines)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update original entry status: %w", err)
 	}
 
 	return revEntry, nil
@@ -296,19 +329,25 @@ func (s *GeneralLedgerService) GetTrialBalance(ctx context.Context) (map[string]
 		if !a.IsActive {
 			continue
 		}
-		isDebitType := a.Type == "ASSET" || a.Type == "EXPENSE"
+		rawBal, err := s.calculateAccountBalance(ctx, a.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		isDebitType := a.Type == domain.AccountTypeASSET || a.Type == domain.AccountTypeEXPENSE
 		if isDebitType {
-			totalDebits = totalDebits.Add(a.Balance)
-			if _, ok := balances[a.Name]; !ok {
-				balances[a.Name] = make(map[string]decimal.Decimal)
+			totalDebits = totalDebits.Add(rawBal)
+			if _, ok := balances[a.AccountName]; !ok {
+				balances[a.AccountName] = make(map[string]decimal.Decimal)
 			}
-			balances[a.Name]["debit"] = a.Balance
+			balances[a.AccountName]["debit"] = rawBal
 		} else {
-			totalCredits = totalCredits.Add(a.Balance)
-			if _, ok := balances[a.Name]; !ok {
-				balances[a.Name] = make(map[string]decimal.Decimal)
+			reportedBal := rawBal.Neg()
+			totalCredits = totalCredits.Add(reportedBal)
+			if _, ok := balances[a.AccountName]; !ok {
+				balances[a.AccountName] = make(map[string]decimal.Decimal)
 			}
-			balances[a.Name]["credit"] = a.Balance
+			balances[a.AccountName]["credit"] = reportedBal
 		}
 	}
 
@@ -335,16 +374,23 @@ func (s *GeneralLedgerService) GetBalanceSheet(ctx context.Context) (map[string]
 		if !a.IsActive {
 			continue
 		}
+		rawBal, err := s.calculateAccountBalance(ctx, a.ID)
+		if err != nil {
+			return nil, err
+		}
+
 		switch a.Type {
-		case "ASSET":
-			assets[a.Name] = a.Balance
-			totalAssets = totalAssets.Add(a.Balance)
-		case "LIABILITY":
-			liabilities[a.Name] = a.Balance
-			totalLiabilities = totalLiabilities.Add(a.Balance)
-		case "EQUITY":
-			equity[a.Name] = a.Balance
-			totalEquity = totalEquity.Add(a.Balance)
+		case domain.AccountTypeASSET:
+			assets[a.AccountName] = rawBal
+			totalAssets = totalAssets.Add(rawBal)
+		case domain.AccountTypeLIABILITY:
+			reportedBal := rawBal.Neg()
+			liabilities[a.AccountName] = reportedBal
+			totalLiabilities = totalLiabilities.Add(reportedBal)
+		case domain.AccountTypeEQUITY:
+			reportedBal := rawBal.Neg()
+			equity[a.AccountName] = reportedBal
+			totalEquity = totalEquity.Add(reportedBal)
 		}
 	}
 
@@ -358,130 +404,86 @@ func (s *GeneralLedgerService) GetBalanceSheet(ctx context.Context) (map[string]
 	}, nil
 }
 
-func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string, ref, desc string, lines []domain.JournalEntryLine) (*domain.JournalEntry, error) {
+func (s *GeneralLedgerService) UpdateJournalEntry(ctx context.Context, id string, legalEntityID, sourceModule, sourceDocID string, postingDate time.Time, lines []domain.UniversalJournalLine) (*domain.UniversalJournalEntry, error) {
 	if len(lines) < 2 {
 		return nil, errors.New("a journal entry must have at least 2 lines")
 	}
 
-	totalDebits := decimal.Zero
-	totalCredits := decimal.Zero
+	sum := decimal.Zero
 	for _, l := range lines {
-		totalDebits = totalDebits.Add(l.DebitAmount)
-		totalCredits = totalCredits.Add(l.CreditAmount)
+		sum = sum.Add(l.AmountFunctional)
+	}
+	if !sum.Equal(decimal.Zero) {
+		return nil, fmt.Errorf("journal entry is unbalanced: functional sum=%s", sum)
 	}
 
-	if !totalDebits.Equal(totalCredits) {
-		return nil, fmt.Errorf("journal entry is unbalanced: debits=%s, credits=%s", totalDebits, totalCredits)
-	}
-
-	entry, oldLines, err := s.entries.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if entry.Status != string(domain.JournalEntryStatusPending) {
-		return nil, domain.ErrJournalEntryNotMutable
-	}
-
-	// Snapshot account states for rollback on failure
-	snapshots := make(map[string]domain.Account)
-
-	getAndSnapshotAccount := func(accountID string) (*domain.Account, error) {
-		acc, err := s.accounts.GetByID(ctx, accountID)
+	var entry *domain.UniversalJournalEntry
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		var err error
+		entry, _, err = s.entries.GetByID(txCtx, id)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if _, ok := snapshots[acc.ID]; !ok {
-			snapshots[acc.ID] = *acc
-		}
-		return acc, nil
-	}
 
-	rollback := func() {
-		for _, oldAcc := range snapshots {
-			_ = s.accounts.Update(ctx, &oldAcc)
+		if entry.Status != domain.LedgerStateDRAFT {
+			return domain.ErrJournalEntryNotMutable
 		}
-	}
 
-	// Reverse old lines
-	for _, l := range oldLines {
-		acc, err := getAndSnapshotAccount(l.AccountID)
+		for i := range lines {
+			lines[i].ID = utils.NewID("jel")
+			lines[i].JournalEntryID = id
+		}
+
+		entry.LegalEntityID = legalEntityID
+		entry.SourceModule = sourceModule
+		entry.SourceDocumentID = sourceDocID
+		entry.PostingDate = postingDate
+		entry.FinancialPeriod = postingDate.Format("2006-01")
+		entry.UpdatedAt = time.Now()
+
+		err = s.entries.Update(txCtx, entry, lines)
 		if err != nil {
-			rollback()
-			return nil, fmt.Errorf("failed to get account %s: %w", l.AccountID, err)
+			return err
 		}
 
-		isDebitIncreaseType := acc.Type == "ASSET" || acc.Type == "EXPENSE"
-		if isDebitIncreaseType {
-			acc.Balance = acc.Balance.Sub(l.DebitAmount).Add(l.CreditAmount)
-		} else {
-			acc.Balance = acc.Balance.Add(l.DebitAmount).Sub(l.CreditAmount)
-		}
-
-		err = s.accounts.Update(ctx, acc)
-		if err != nil {
-			rollback()
-			return nil, fmt.Errorf("failed to update balance for account %s: %w", acc.ID, err)
-		}
-	}
-
-	// Apply new lines
-	for i, l := range lines {
-		lines[i].ID = utils.NewID("jel")
-		lines[i].EntryID = id
-
-		acc, err := getAndSnapshotAccount(l.AccountID)
-		if err != nil {
-			rollback()
-			return nil, fmt.Errorf("account not found: %s", l.AccountID)
-		}
-
-		isDebitIncreaseType := acc.Type == "ASSET" || acc.Type == "EXPENSE"
-		if isDebitIncreaseType {
-			acc.Balance = acc.Balance.Add(l.DebitAmount).Sub(l.CreditAmount)
-		} else {
-			acc.Balance = acc.Balance.Sub(l.DebitAmount).Add(l.CreditAmount)
-		}
-
-		err = s.accounts.Update(ctx, acc)
-		if err != nil {
-			rollback()
-			return nil, fmt.Errorf("failed to update balance for account %s: %w", acc.ID, err)
-		}
-	}
-
-	entry.Reference = ref
-	entry.Description = desc
-
-	err = s.entries.Update(ctx, entry, lines)
-	if err != nil {
-		rollback()
-		return nil, err
-	}
-
-	// Publish events only after successful commit
-	for accountID := range snapshots {
-		acc, err := s.accounts.GetByID(ctx, accountID)
-		if err == nil {
-			if err := s.publisher.Publish(ctx, domain.TopicFmAccountBalanceChanged, acc.ID, domain.AccountEventPayload{
-				ID:            acc.ID,
-				AccountNumber: acc.AccountNumber,
-				Name:          acc.Name,
-				Type:          string(acc.Type),
-				Balance:       acc.Balance,
-				Currency:      acc.Currency,
-				Timestamp:     time.Now(),
-			}); err != nil {
-				utils.LogPublishErr("fm-service", domain.TopicFmAccountBalanceChanged, err)
+		for _, l := range lines {
+			acc, err := s.accounts.GetByID(txCtx, l.AccountID)
+			if err != nil {
+				return fmt.Errorf("account not found: %s", l.AccountID)
+			}
+			outboxRec := &domain.TransactionalOutbox{
+				ID:          utils.NewID("outbox"),
+				EventType:   string(domain.TopicFmAccountBalanceChanged),
+				AggregateID: acc.ID,
+				Payload: domain.AccountEventPayload{
+					ID:            acc.ID,
+					AccountNumber: acc.AccountCode,
+					Name:          acc.AccountName,
+					Type:          string(acc.Type),
+					Timestamp:     time.Now(),
+				},
+				Status:    domain.OutboxStatusPENDING,
+				CreatedAt: time.Now(),
+			}
+			if err := s.outbox.Create(txCtx, outboxRec); err != nil {
+				return err
 			}
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	return entry, nil
 }
 
 func (s *GeneralLedgerService) DeleteJournalEntry(ctx context.Context, id string) error {
-	return s.entries.Delete(ctx, id)
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		return s.entries.Delete(txCtx, id)
+	})
 }
 
 func (s *GeneralLedgerService) GetIncomeStatement(ctx context.Context) (map[string]interface{}, error) {
@@ -499,13 +501,19 @@ func (s *GeneralLedgerService) GetIncomeStatement(ctx context.Context) (map[stri
 		if !a.IsActive {
 			continue
 		}
+		rawBal, err := s.calculateAccountBalance(ctx, a.ID)
+		if err != nil {
+			return nil, err
+		}
+
 		switch a.Type {
-		case "REVENUE":
-			revenues[a.Name] = a.Balance
-			totalRevenue = totalRevenue.Add(a.Balance)
-		case "EXPENSE":
-			expenses[a.Name] = a.Balance
-			totalExpense = totalExpense.Add(a.Balance)
+		case domain.AccountTypeREVENUE:
+			reportedBal := rawBal.Neg()
+			revenues[a.AccountName] = reportedBal
+			totalRevenue = totalRevenue.Add(reportedBal)
+		case domain.AccountTypeEXPENSE:
+			expenses[a.AccountName] = rawBal
+			totalExpense = totalExpense.Add(rawBal)
 		}
 	}
 
@@ -535,14 +543,19 @@ func (s *GeneralLedgerService) GetCashFlow(ctx context.Context) (map[string]inte
 		if !a.IsActive {
 			continue
 		}
-		nameLower := strings.ToLower(a.Name)
-		if a.Type == "ASSET" && (strings.Contains(nameLower, "cash") || strings.Contains(nameLower, "bank")) {
-			if a.Balance.IsPositive() {
-				inflows[a.Name] = a.Balance
-				totalInflow = totalInflow.Add(a.Balance)
-			} else if a.Balance.IsNegative() {
-				outflows[a.Name] = a.Balance.Abs()
-				totalOutflow = totalOutflow.Add(a.Balance.Abs())
+		nameLower := strings.ToLower(a.AccountName)
+		if a.Type == domain.AccountTypeASSET && (strings.Contains(nameLower, "cash") || strings.Contains(nameLower, "bank")) {
+			rawBal, err := s.calculateAccountBalance(ctx, a.ID)
+			if err != nil {
+				return nil, err
+			}
+			if rawBal.IsPositive() {
+				inflows[a.AccountName] = rawBal
+				totalInflow = totalInflow.Add(rawBal)
+			} else if rawBal.IsNegative() {
+				absBal := rawBal.Abs()
+				outflows[a.AccountName] = absBal
+				totalOutflow = totalOutflow.Add(absBal)
 			}
 		}
 	}
@@ -557,3 +570,4 @@ func (s *GeneralLedgerService) GetCashFlow(ctx context.Context) (map[string]inte
 		"net_cash_flow":      netCashFlow,
 	}, nil
 }
+

@@ -9,13 +9,13 @@ import (
 )
 
 type AccountHandler struct {
-	svc *service.GeneralLedgerService
+	svc      *service.GeneralLedgerService
 	response *utils.ResponseHelper
 }
 
 func NewAccountHandler(svc *service.GeneralLedgerService, response *utils.ResponseHelper) *AccountHandler {
 	return &AccountHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }
@@ -31,11 +31,10 @@ func (h *AccountHandler) GetAccounts(c *gin.Context) {
 
 func (h *AccountHandler) CreateAccount(c *gin.Context) {
 	var req struct {
-		AccountNumber string `json:"account_number"`
-		Name          string `json:"name"`
+		LegalEntityID string `json:"legal_entity_id"`
+		AccountCode   string `json:"account_code"`
+		AccountName   string `json:"account_name"`
 		Type          string `json:"type"`
-		ParentID      string `json:"parent_id"`
-		Currency      string `json:"currency"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,7 +42,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 		return
 	}
 
-	acc, err := h.svc.CreateAccount(c.Request.Context(), req.AccountNumber, req.Name, req.Type, req.ParentID, req.Currency)
+	acc, err := h.svc.CreateAccount(c.Request.Context(), req.LegalEntityID, req.AccountCode, req.AccountName, req.Type)
 	if err != nil {
 		h.response.InternalErr(c, err)
 		return
@@ -65,10 +64,9 @@ func (h *AccountHandler) GetAccount(c *gin.Context) {
 func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
-		Name     string `json:"name"`
-		Type     string `json:"type"`
-		ParentID string `json:"parent_id"`
-		IsActive bool   `json:"is_active"`
+		AccountName string `json:"account_name"`
+		Type        string `json:"type"`
+		IsActive    bool   `json:"is_active"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -76,7 +74,7 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 		return
 	}
 
-	acc, err := h.svc.UpdateAccount(c.Request.Context(), id, req.Name, req.Type, req.ParentID, req.IsActive)
+	acc, err := h.svc.UpdateAccount(c.Request.Context(), id, req.AccountName, req.Type, req.IsActive)
 	if err != nil {
 		h.response.InternalErr(c, err)
 		return
@@ -104,3 +102,4 @@ func (h *AccountHandler) GetAccountBalance(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"balance": balance})
 }
+

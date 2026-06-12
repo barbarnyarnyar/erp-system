@@ -1,18 +1,19 @@
 package main
 
 import (
-	"erp-system/shared/utils"
 	"context"
+	"erp-system/shared/utils"
 	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/erp-system/fm-service/internal/api/handlers"
 	"github.com/erp-system/fm-service/internal/api/routes"
 	"github.com/erp-system/fm-service/internal/business/service"
 	"github.com/erp-system/fm-service/internal/config"
 	kafkaData "github.com/erp-system/fm-service/internal/data/kafka"
-	"github.com/erp-system/fm-service/internal/data/memory"
+	"github.com/erp-system/fm-service/internal/data/sql"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,68 +26,84 @@ func main() {
 	utils.InitLogger("fm-service")
 	responseHelper := utils.NewResponseHelper("fm-service")
 
-
 	// Initialize Kafka Publisher
 	kafkaPublisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
 	defer kafkaPublisher.Close()
 
-	// Initialize in-memory repositories
-	accountRepo := memory.NewMemoryAccountRepo()
-	entryRepo := memory.NewMemoryJournalEntryRepo()
-	invoiceRepo := memory.NewMemoryInvoiceRepo()
-	paymentRepo := memory.NewMemoryPaymentRepo()
-	budgetRepo := memory.NewMemoryBudgetRepo()
-	vendorBillRepo := memory.NewMemoryVendorBillRepo()
+	// Initialize GORM Database
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 
-	// Register new memory repository instances (or SQL if DB connection is active, but here we inject memory)
-	currencyRateRepo := memory.NewMemoryCurrencyRateRepo()
-	fiscalYearRepo := memory.NewMemoryFiscalYearRepo()
-	costCenterRepo := memory.NewMemoryCostCenterRepo()
-	bankAccountRepo := memory.NewMemoryBankAccountRepo()
-	customerCreditRepo := memory.NewMemoryCustomerCreditRepo()
-	bankStatementRepo := memory.NewMemoryBankStatementRepo()
-	transactionRepo := memory.NewMemoryTransactionRepo()
+	// Initialize GORM Transaction Manager
+	tm := sql.NewGORMTransactionManager(db)
 
-	// Suppress unused variables since they might not be added to service constructors yet
+	// Initialize SQL repositories
+	accountRepo := sql.NewSQLChartOfAccountsRepo(db)
+	entryRepo := sql.NewSQLUniversalJournalEntryRepo(db)
+	invoiceRepo := sql.NewSQLArInvoiceRepo(db)
+	paymentRepo := sql.NewSQLPaymentRepo(db)
+	budgetRepo := sql.NewSQLBudgetRepo(db)
+	vendorBillRepo := sql.NewSQLApVendorBillRepo(db)
+	outboxRepo := sql.NewSQLTransactionalOutboxRepo(db)
+
+	currencyRateRepo := sql.NewSQLCurrencyRateRepo(db)
+	fiscalYearRepo := sql.NewSQLFiscalYearRepo(db)
+	costCenterRepo := sql.NewSQLCostCenterRepo(db)
+	bankAccountRepo := sql.NewSQLBankAccountRepo(db)
+	customerCreditRepo := sql.NewSQLCustomerCreditRepo(db)
+	bankStatementRepo := sql.NewSQLBankStatementRepo(db)
+
+	// Suppress unused variables to avoid compile errors
 	_ = currencyRateRepo
 	_ = fiscalYearRepo
 	_ = costCenterRepo
 	_ = bankAccountRepo
 	_ = customerCreditRepo
 	_ = bankStatementRepo
-	_ = transactionRepo
-
 
 	// Initialize application services
 	generalLedgerSvc := service.NewGeneralLedgerService(
 		accountRepo,
 		entryRepo,
-		kafkaPublisher,
+		outboxRepo,
+		tm,
 	)
 	accountsReceivableSvc := service.NewAccountsReceivableService(
 		invoiceRepo,
-		kafkaPublisher,
+		outboxRepo,
+		tm,
 	)
 	cashManagementSvc := service.NewCashManagementService(
 		paymentRepo,
 		invoiceRepo,
 		bankStatementRepo,
-		kafkaPublisher,
+		outboxRepo,
+		tm,
 	)
 	accountsPayableSvc := service.NewAccountsPayableService(
 		vendorBillRepo,
-		kafkaPublisher,
+		outboxRepo,
+		tm,
 	)
 	budgetingSvc := service.NewBudgetingService(
 		budgetRepo,
 		accountRepo,
-		kafkaPublisher,
+		entryRepo,
+		outboxRepo,
+		tm,
 	)
 
-	// Initialize and start Kafka Consumer in the background
+	// Context for background processes
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Initialize and start Outbox Relay Worker in the background
+	outboxWorker := kafkaData.NewOutboxRelayWorker(outboxRepo, kafkaPublisher, 5*time.Second, 100)
+	go outboxWorker.Start(ctx)
+
+	// Initialize and start Kafka Consumer in the background
 	kafkaConsumer := kafkaData.NewKafkaConsumer(
 		cfg.Kafka.Brokers,
 		cfg.Kafka.GroupID,

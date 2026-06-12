@@ -1,7 +1,6 @@
 package service_test
 
 import (
-	sharedtesting "erp-system/shared/testing"
 	"context"
 	"errors"
 	"testing"
@@ -13,22 +12,23 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func newPostedEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, accountRepo *memory.MemoryAccountRepo) string {
+func newPostedEntry(t *testing.T, entryRepo *memory.MemoryUniversalJournalEntryRepo, accountRepo *memory.MemoryChartOfAccountsRepo) string {
 	t.Helper()
 	ctx := context.Background()
-	acc := &domain.Account{
-		ID: "acc_a", AccountNumber: "1000", Name: "Cash", Type: domain.AccountTypeASSET,
-		Balance: decimal.Zero, Currency: "USD", IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	acc := &domain.ChartOfAccounts{
+		ID: "acc_a", AccountCode: "1000", AccountName: "Cash", Type: domain.AccountTypeASSET,
+		IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}
 	_ = accountRepo.Create(ctx, acc)
 	now := time.Now()
-	entry := &domain.JournalEntry{
-		ID: "je_p", Reference: "REF-P", Date: now, Description: "Posted", Status: string(domain.JournalEntryStatusPosted),
-		CreatedBy: "system", PostedBy: "system", PostedAt: &now, CreatedAt: now,
+	entry := &domain.UniversalJournalEntry{
+		ID: "je_p", LegalEntityID: "legal_123", SourceModule: "FM", SourceDocumentID: "doc_p",
+		PostingDate: now, FinancialPeriod: now.Format("2006-01"), Status: domain.LedgerStatePOSTED,
+		CreatedAt: now, UpdatedAt: now,
 	}
-	lines := []domain.JournalEntryLine{
-		{ID: "l1", EntryID: "je_p", AccountID: "acc_a", DebitAmount: decimal.NewFromInt(100), CreditAmount: decimal.Zero},
-		{ID: "l2", EntryID: "je_p", AccountID: "acc_a", DebitAmount: decimal.Zero, CreditAmount: decimal.NewFromInt(100)},
+	lines := []domain.UniversalJournalLine{
+		{ID: "l1", JournalEntryID: "je_p", AccountID: "acc_a", AmountFunctional: decimal.NewFromInt(100), AmountTransactional: decimal.NewFromInt(100), CurrencyTransactional: "USD"},
+		{ID: "l2", JournalEntryID: "je_p", AccountID: "acc_a", AmountFunctional: decimal.NewFromInt(-100), AmountTransactional: decimal.NewFromInt(-100), CurrencyTransactional: "USD"},
 	}
 	if err := entryRepo.Create(ctx, entry, lines); err != nil {
 		t.Fatalf("seed entry: %v", err)
@@ -36,22 +36,23 @@ func newPostedEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, acco
 	return entry.ID
 }
 
-func newPendingEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, accountRepo *memory.MemoryAccountRepo) string {
+func newDraftEntry(t *testing.T, entryRepo *memory.MemoryUniversalJournalEntryRepo, accountRepo *memory.MemoryChartOfAccountsRepo) string {
 	t.Helper()
 	ctx := context.Background()
-	acc := &domain.Account{
-		ID: "acc_b", AccountNumber: "2000", Name: "Bank", Type: domain.AccountTypeASSET,
-		Balance: decimal.Zero, Currency: "USD", IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	acc := &domain.ChartOfAccounts{
+		ID: "acc_b", AccountCode: "2000", AccountName: "Bank", Type: domain.AccountTypeASSET,
+		IsActive: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}
 	_ = accountRepo.Create(ctx, acc)
 	now := time.Now()
-	entry := &domain.JournalEntry{
-		ID: "je_d", Reference: "REF-D", Date: now, Description: "Draft", Status: string(domain.JournalEntryStatusPending),
-		CreatedBy: "user1", CreatedAt: now,
+	entry := &domain.UniversalJournalEntry{
+		ID: "je_d", LegalEntityID: "legal_123", SourceModule: "FM", SourceDocumentID: "doc_d",
+		PostingDate: now, FinancialPeriod: now.Format("2006-01"), Status: domain.LedgerStateDRAFT,
+		CreatedAt: now, UpdatedAt: now,
 	}
-	lines := []domain.JournalEntryLine{
-		{ID: "l3", EntryID: "je_d", AccountID: "acc_b", DebitAmount: decimal.NewFromInt(50), CreditAmount: decimal.Zero},
-		{ID: "l4", EntryID: "je_d", AccountID: "acc_b", DebitAmount: decimal.Zero, CreditAmount: decimal.NewFromInt(50)},
+	lines := []domain.UniversalJournalLine{
+		{ID: "l3", JournalEntryID: "je_d", AccountID: "acc_b", AmountFunctional: decimal.NewFromInt(50), AmountTransactional: decimal.NewFromInt(50), CurrencyTransactional: "USD"},
+		{ID: "l4", JournalEntryID: "je_d", AccountID: "acc_b", AmountFunctional: decimal.NewFromInt(-50), AmountTransactional: decimal.NewFromInt(-50), CurrencyTransactional: "USD"},
 	}
 	if err := entryRepo.Create(ctx, entry, lines); err != nil {
 		t.Fatalf("seed entry: %v", err)
@@ -59,91 +60,89 @@ func newPendingEntry(t *testing.T, entryRepo *memory.MemoryJournalEntryRepo, acc
 	return entry.ID
 }
 
-func TestJournalEntry_Create_SetsPostedByAndPostedAt(t *testing.T) {
-	accounts := memory.NewMemoryAccountRepo()
-	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &sharedtesting.MockPublisher{}
-	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
+func TestJournalEntry_Create_SetsPostedStatus(t *testing.T) {
+	accounts := memory.NewMemoryChartOfAccountsRepo()
+	entries := memory.NewMemoryUniversalJournalEntryRepo()
+	outbox := memory.NewMemoryTransactionalOutboxRepo()
+	tm := memory.NewMemoryTransactionManager(accounts, entries, outbox)
+	svc := service.NewGeneralLedgerService(accounts, entries, outbox, tm)
 
-	accA, _ := svc.CreateAccount(context.Background(), "1000", "Cash", "ASSET", "", "USD")
-	accB, _ := svc.CreateAccount(context.Background(), "2000", "Revenue", "REVENUE", "", "USD")
+	accA, _ := svc.CreateAccount(context.Background(), "legal_123", "1000", "Cash", "ASSET")
+	accB, _ := svc.CreateAccount(context.Background(), "legal_123", "2000", "Revenue", "REVENUE")
 
-	lines := []domain.JournalEntryLine{
-		{AccountID: accA.ID, DebitAmount: decimal.NewFromInt(100), CreditAmount: decimal.Zero},
-		{AccountID: accB.ID, DebitAmount: decimal.Zero, CreditAmount: decimal.NewFromInt(100)},
+	lines := []domain.UniversalJournalLine{
+		{AccountID: accA.ID, AmountFunctional: decimal.NewFromInt(100), AmountTransactional: decimal.NewFromInt(100), CurrencyTransactional: "USD"},
+		{AccountID: accB.ID, AmountFunctional: decimal.NewFromInt(-100), AmountTransactional: decimal.NewFromInt(-100), CurrencyTransactional: "USD"},
 	}
 
-	entry, err := svc.CreateJournalEntry(context.Background(), "JE-001", "Sale", lines)
+	entry, err := svc.CreateJournalEntry(context.Background(), "legal_123", "FM", "JE-001", time.Now(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if entry.PostedBy != "system" {
-		t.Errorf("PostedBy = %q, want %q", entry.PostedBy, "system")
-	}
-	if entry.PostedAt == nil {
-		t.Errorf("PostedAt should be set")
-	}
-	if entry.Status != string(domain.JournalEntryStatusPosted) {
-		t.Errorf("Status = %q, want %q", entry.Status, domain.JournalEntryStatusPosted)
+	if entry.Status != domain.LedgerStatePOSTED {
+		t.Errorf("Status = %q, want %q", entry.Status, domain.LedgerStatePOSTED)
 	}
 }
 
 func TestJournalEntry_Update_BlocksPosted(t *testing.T) {
-	accounts := memory.NewMemoryAccountRepo()
-	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &sharedtesting.MockPublisher{}
-	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
+	accounts := memory.NewMemoryChartOfAccountsRepo()
+	entries := memory.NewMemoryUniversalJournalEntryRepo()
+	outbox := memory.NewMemoryTransactionalOutboxRepo()
+	tm := memory.NewMemoryTransactionManager(accounts, entries, outbox)
+	svc := service.NewGeneralLedgerService(accounts, entries, outbox, tm)
 
 	id := newPostedEntry(t, entries, accounts)
 
-	lines := []domain.JournalEntryLine{
-		{AccountID: "acc_a", DebitAmount: decimal.NewFromInt(200), CreditAmount: decimal.Zero},
-		{AccountID: "acc_a", DebitAmount: decimal.Zero, CreditAmount: decimal.NewFromInt(200)},
+	lines := []domain.UniversalJournalLine{
+		{AccountID: "acc_a", AmountFunctional: decimal.NewFromInt(200), AmountTransactional: decimal.NewFromInt(200), CurrencyTransactional: "USD"},
+		{AccountID: "acc_a", AmountFunctional: decimal.NewFromInt(-200), AmountTransactional: decimal.NewFromInt(-200), CurrencyTransactional: "USD"},
 	}
-	_, err := svc.UpdateJournalEntry(context.Background(), id, "REF-P-2", "Edited", lines)
+	_, err := svc.UpdateJournalEntry(context.Background(), id, "legal_123", "FM", "doc_p_2", time.Now(), lines)
 	if !errors.Is(err, domain.ErrJournalEntryNotMutable) {
 		t.Errorf("err = %v, want ErrJournalEntryNotMutable", err)
 	}
 }
 
 func TestJournalEntry_Update_BlocksReversed(t *testing.T) {
-	accounts := memory.NewMemoryAccountRepo()
-	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &sharedtesting.MockPublisher{}
-	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
+	accounts := memory.NewMemoryChartOfAccountsRepo()
+	entries := memory.NewMemoryUniversalJournalEntryRepo()
+	outbox := memory.NewMemoryTransactionalOutboxRepo()
+	tm := memory.NewMemoryTransactionManager(accounts, entries, outbox)
+	svc := service.NewGeneralLedgerService(accounts, entries, outbox, tm)
 
 	id := newPostedEntry(t, entries, accounts)
-	entry, _, _ := entries.GetByID(context.Background(), id)
-	entry.Status = string(domain.JournalEntryStatusReversed)
-	_ = entries.Update(context.Background(), entry, nil)
+	entry, lines, _ := entries.GetByID(context.Background(), id)
+	entry.Status = domain.LedgerStateREVERSED
+	_ = entries.Update(context.Background(), entry, lines)
 
-	lines := []domain.JournalEntryLine{
-		{AccountID: "acc_a", DebitAmount: decimal.NewFromInt(200), CreditAmount: decimal.Zero},
-		{AccountID: "acc_a", DebitAmount: decimal.Zero, CreditAmount: decimal.NewFromInt(200)},
+	lines2 := []domain.UniversalJournalLine{
+		{AccountID: "acc_a", AmountFunctional: decimal.NewFromInt(200), AmountTransactional: decimal.NewFromInt(200), CurrencyTransactional: "USD"},
+		{AccountID: "acc_a", AmountFunctional: decimal.NewFromInt(-200), AmountTransactional: decimal.NewFromInt(-200), CurrencyTransactional: "USD"},
 	}
-	_, err := svc.UpdateJournalEntry(context.Background(), id, "REF-R-2", "Edited", lines)
+	_, err := svc.UpdateJournalEntry(context.Background(), id, "legal_123", "FM", "doc_r_2", time.Now(), lines2)
 	if !errors.Is(err, domain.ErrJournalEntryNotMutable) {
 		t.Errorf("err = %v, want ErrJournalEntryNotMutable", err)
 	}
 }
 
-func TestJournalEntry_Update_AllowsPending(t *testing.T) {
-	accounts := memory.NewMemoryAccountRepo()
-	entries := memory.NewMemoryJournalEntryRepo()
-	publisher := &sharedtesting.MockPublisher{}
-	svc := service.NewGeneralLedgerService(accounts, entries, publisher)
+func TestJournalEntry_Update_AllowsDraft(t *testing.T) {
+	accounts := memory.NewMemoryChartOfAccountsRepo()
+	entries := memory.NewMemoryUniversalJournalEntryRepo()
+	outbox := memory.NewMemoryTransactionalOutboxRepo()
+	tm := memory.NewMemoryTransactionManager(accounts, entries, outbox)
+	svc := service.NewGeneralLedgerService(accounts, entries, outbox, tm)
 
-	id := newPendingEntry(t, entries, accounts)
+	id := newDraftEntry(t, entries, accounts)
 
-	lines := []domain.JournalEntryLine{
-		{AccountID: "acc_b", DebitAmount: decimal.NewFromInt(75), CreditAmount: decimal.Zero},
-		{AccountID: "acc_b", DebitAmount: decimal.Zero, CreditAmount: decimal.NewFromInt(75)},
+	lines := []domain.UniversalJournalLine{
+		{AccountID: "acc_b", AmountFunctional: decimal.NewFromInt(75), AmountTransactional: decimal.NewFromInt(75), CurrencyTransactional: "USD"},
+		{AccountID: "acc_b", AmountFunctional: decimal.NewFromInt(-75), AmountTransactional: decimal.NewFromInt(-75), CurrencyTransactional: "USD"},
 	}
-	updated, err := svc.UpdateJournalEntry(context.Background(), id, "REF-D-2", "Draft edited", lines)
+	updated, err := svc.UpdateJournalEntry(context.Background(), id, "legal_123", "FM", "doc_d_2", time.Now(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if updated.Reference != "REF-D-2" {
-		t.Errorf("Reference = %q, want REF-D-2", updated.Reference)
+	if updated.SourceDocumentID != "doc_d_2" {
+		t.Errorf("SourceDocumentID = %q, want doc_d_2", updated.SourceDocumentID)
 	}
 }

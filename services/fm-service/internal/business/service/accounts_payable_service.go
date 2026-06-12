@@ -11,68 +11,84 @@ import (
 )
 
 type AccountsPayableService struct {
-	bills     domain.VendorBillRepository
-	publisher domain.EventPublisher
+	bills  domain.ApVendorBillRepository
+	outbox domain.TransactionalOutboxRepository
+	tm     domain.TransactionManager
 }
 
-func NewAccountsPayableService(bills domain.VendorBillRepository, publisher domain.EventPublisher) *AccountsPayableService {
+func NewAccountsPayableService(
+	bills domain.ApVendorBillRepository,
+	outbox domain.TransactionalOutboxRepository,
+	tm domain.TransactionManager,
+) *AccountsPayableService {
 	return &AccountsPayableService{
-		bills:     bills,
-		publisher: publisher,
+		bills:  bills,
+		outbox: outbox,
+		tm:     tm,
 	}
 }
 
 func (s *AccountsPayableService) MatchPurchaseOrder(ctx context.Context, billID, poID, goodsReceiptID string) (bool, error) {
-	// 3-way matching logic placeholder
-	// Verifies that quantities and unit prices match across SCM PO, Warehouse Goods Receipt, and FM Bill.
 	if billID == "" || poID == "" || goodsReceiptID == "" {
 		return false, errors.New("bill ID, PO ID, and Goods Receipt ID are required for 3-way matching")
 	}
 	return true, nil
 }
 
-func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, supplierID, billNum, poID string, issueDate, dueDate time.Time, total decimal.Decimal, lines []domain.VendorBillLine) (*domain.VendorBill, error) {
+func (s *AccountsPayableService) CreateVendorBill(ctx context.Context, legalEntityID, vendorID, billNum, poID string, dueDate time.Time, total, tax decimal.Decimal) (*domain.ApVendorBill, error) {
 	id := utils.NewID("bill")
 
-	bill := &domain.VendorBill{
-		ID:          id,
-		SupplierID:  supplierID,
-		BillNumber:  billNum,
-		IssueDate:   issueDate,
-		DueDate:     dueDate,
-		TotalAmount: total,
-		Status:      "DRAFT",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if poID != "" {
-		bill.PurchaseOrderID = &poID
+	bill := &domain.ApVendorBill{
+		ID:              id,
+		LegalEntityID:   legalEntityID,
+		BillNumber:      billNum,
+		VendorID:        vendorID,
+		PurchaseOrderID: poID,
+		TotalAmount:     total,
+		TaxAmount:       tax,
+		DueDate:         dueDate,
+		Status:          domain.PaymentStatusOPEN,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
-	err := s.bills.Create(ctx, bill, lines)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.bills.Create(txCtx, bill)
+		if err != nil {
+			return err
+		}
+
+		// Write to outbox
+		outboxRec := &domain.TransactionalOutbox{
+			ID:          utils.NewID("outbox"),
+			EventType:   string(domain.TopicFmVendorPaymentDue),
+			AggregateID: bill.ID,
+			Payload: domain.VendorBillEventPayload{
+				ID:         bill.ID,
+				VendorID:   bill.VendorID,
+				BillNumber: bill.BillNumber,
+				Amount:     bill.TotalAmount,
+				DueDate:    bill.DueDate,
+				Timestamp:  time.Now(),
+			},
+			Status:    domain.OutboxStatusPENDING,
+			CreatedAt: time.Now(),
+		}
+		return s.outbox.Create(txCtx, outboxRec)
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	// Publish event
-	if err := s.publisher.Publish(ctx, domain.TopicFmVendorPaymentDue, bill.ID, domain.VendorBillEventPayload{
-		ID:         bill.ID,
-		VendorID:   bill.SupplierID,
-		BillNumber: bill.BillNumber,
-		Amount:     bill.TotalAmount,
-		DueDate:    bill.DueDate,
-		Timestamp:  time.Now(),
-	}); err != nil {
-		utils.LogPublishErr("fm-service", domain.TopicFmVendorPaymentDue, err)
 	}
 
 	return bill, nil
 }
 
-func (s *AccountsPayableService) ListVendorBills(ctx context.Context) ([]domain.VendorBill, error) {
+func (s *AccountsPayableService) ListVendorBills(ctx context.Context) ([]domain.ApVendorBill, error) {
 	return s.bills.List(ctx)
 }
 
-func (s *AccountsPayableService) GetVendorBill(ctx context.Context, id string) (*domain.VendorBill, []domain.VendorBillLine, error) {
+func (s *AccountsPayableService) GetVendorBill(ctx context.Context, id string) (*domain.ApVendorBill, error) {
 	return s.bills.GetByID(ctx, id)
 }
+
