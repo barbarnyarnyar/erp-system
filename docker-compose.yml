@@ -61,6 +61,9 @@ services:
       - M_SERVICE_URL=http://mfg-service:8004
       - CRM_SERVICE_URL=http://crm-service:8002
       - PM_SERVICE_URL=http://prj-service:8005
+      - EAM_SERVICE_URL=http://eam-service:8007
+      - PLM_SERVICE_URL=http://plm-service:8008
+      - QMS_SERVICE_URL=http://qms-service:8009
     depends_on:
       - auth-service
     restart: unless-stopped
@@ -140,6 +143,39 @@ services:
       - "8006:8006"
     environment:
       - PORT=8006
+      - KAFKA_BROKERS=kafka:9092
+    restart: unless-stopped
+
+  eam-service:
+    build:
+      context: .
+      dockerfile: services/eam-service/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      - PORT=8007
+      - KAFKA_BROKERS=kafka:9092
+    restart: unless-stopped
+
+  plm-service:
+    build:
+      context: .
+      dockerfile: services/plm-service/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - PORT=8008
+      - KAFKA_BROKERS=kafka:9092
+    restart: unless-stopped
+
+  qms-service:
+    build:
+      context: .
+      dockerfile: services/qms-service/Dockerfile
+    ports:
+      - "8009:8009"
+    environment:
+      - PORT=8009
       - KAFKA_BROKERS=kafka:9092
     restart: unless-stopped
 

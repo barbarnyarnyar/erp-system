@@ -19,6 +19,9 @@ type ServiceConfig struct {
 	MService    string
 	CRMService  string
 	PMService   string
+	EAMService  string
+	PLMService  string
+	QMSService  string
 }
 
 func Load() (*Config, error) {
@@ -33,6 +36,9 @@ func Load() (*Config, error) {
 			MService:    getEnv("M_SERVICE_URL", "http://m-service:8004"),
 			CRMService:  getEnv("CRM_SERVICE_URL", "http://crm-service:8002"),
 			PMService:   getEnv("PM_SERVICE_URL", "http://pm-service:8006"),
+			EAMService:  getEnv("EAM_SERVICE_URL", "http://eam-service:8007"),
+			PLMService:  getEnv("PLM_SERVICE_URL", "http://plm-service:8008"),
+			QMSService:  getEnv("QMS_SERVICE_URL", "http://qms-service:8009"),
 		},
 	}, nil
 }

@@ -290,7 +290,7 @@ func GenerateGoModels(service *parser.Service, outputDir string) error {
 
 func mapCDDTypeToGo(cddType string) string {
 	switch strings.ToLower(cddType) {
-	case "uuid", "string":
+	case "uuid", "string", "text":
 		return "string"
 	case "decimal":
 		return "decimal.Decimal"
@@ -298,7 +298,7 @@ func mapCDDTypeToGo(cddType string) string {
 		return "bool"
 	case "timestamp", "date":
 		return "time.Time"
-	case "integer":
+	case "integer", "int":
 		return "int"
 	default:
 		return "interface{}"

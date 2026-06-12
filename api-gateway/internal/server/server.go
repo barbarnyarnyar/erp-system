@@ -56,6 +56,9 @@ func (s *Server) setupRoutes() {
 		"m":    s.config.Services.MService,
 		"crm":  s.config.Services.CRMService,
 		"pm":   s.config.Services.PMService,
+		"eam":  s.config.Services.EAMService,
+		"plm":  s.config.Services.PLMService,
+		"qms":  s.config.Services.QMSService,
 	})
 
 	// API Gateway health check
@@ -175,6 +178,30 @@ func (s *Server) setupRoutes() {
 			scmGroup.Any("/*path", proxyHandler.ProxyToService("scm"))
 		}
 
+		// Enterprise Asset Management (EAM) routes
+		eamGroup := protected.Group("/eam")
+		eamGroup.Use(authMiddleware.RequirePermission("eam", "*", "read"))
+		{
+			eamGroup.Any("", proxyHandler.ProxyToService("eam"))
+			eamGroup.Any("/*path", proxyHandler.ProxyToService("eam"))
+		}
+
+		// Product Lifecycle Management (PLM) routes
+		plmGroup := protected.Group("/plm")
+		plmGroup.Use(authMiddleware.RequirePermission("plm", "*", "read"))
+		{
+			plmGroup.Any("", proxyHandler.ProxyToService("plm"))
+			plmGroup.Any("/*path", proxyHandler.ProxyToService("plm"))
+		}
+
+		// Quality Management System (QMS) routes
+		qmsGroup := protected.Group("/qms")
+		qmsGroup.Use(authMiddleware.RequirePermission("qms", "*", "read"))
+		{
+			qmsGroup.Any("", proxyHandler.ProxyToService("qms"))
+			qmsGroup.Any("/*path", proxyHandler.ProxyToService("qms"))
+		}
+
 		// Manufacturing routes
 		mGroup := protected.Group("/manufacturing")
 		mGroup.Use(authMiddleware.RequirePermission("m", "*", "read"))
@@ -218,6 +245,9 @@ func (s *Server) getServicesStatus(c *gin.Context) {
 		"m":    s.config.Services.MService,
 		"crm":  s.config.Services.CRMService,
 		"pm":   s.config.Services.PMService,
+		"eam":  s.config.Services.EAMService,
+		"plm":  s.config.Services.PLMService,
+		"qms":  s.config.Services.QMSService,
 	}
 
 	status := make(map[string]interface{})

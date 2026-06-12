@@ -32,6 +32,9 @@ run: ## Start all services
 	@echo "  Manufacturing: http://localhost:8004"
 	@echo "  CRM:          http://localhost:8002"
 	@echo "  Projects:     http://localhost:8005"
+	@echo "  EAM:          http://localhost:8007"
+	@echo "  PLM:          http://localhost:8008"
+	@echo "  QMS:          http://localhost:8009"
 
 stop: ## Stop all services
 	@echo "🛑 Stopping ERP Microservices..."
@@ -67,6 +70,15 @@ health: ## Check health of all services
 	@echo ""
 	@echo "Projects Service:"
 	@curl -s http://localhost:8005/health || echo "❌ Not responding"
+	@echo ""
+	@echo "EAM Service:"
+	@curl -s http://localhost:8007/health || echo "❌ Not responding"
+	@echo ""
+	@echo "PLM Service:"
+	@curl -s http://localhost:8008/health || echo "❌ Not responding"
+	@echo ""
+	@echo "QMS Service:"
+	@curl -s http://localhost:8009/health || echo "❌ Not responding"
 
 test: ## Test Hello World APIs
 	@echo "🧪 Testing microservices via API Gateway..."

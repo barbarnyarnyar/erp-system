@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("✅ Parsed service: %s (%d entities)\n", service.Name, len(service.Entities))
+	fmt.Printf("✅ Parsed service: %s (%d entities, %d producer events, %d consumer events)\n", service.Name, len(service.Entities), len(service.ProducerEvents), len(service.ConsumerEvents))
 
 	if *goOut != "" {
 		// Ensure output directory exists

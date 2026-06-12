@@ -96,16 +96,16 @@ func ParseCDD(filePath string) (*Service, error) {
 	var currentComponent *Component
 
 	// Regex patterns
-	serviceRegex := regexp.MustCompile(`^service\s+(\w+)\s*\{`)
+	namespaceRegex := regexp.MustCompile(`^namespace\s+([\w\.]+);`)
 	entityRegex := regexp.MustCompile(`^entity\s+(\w+)\s*\{`)
-	eventPayloadRegex := regexp.MustCompile(`^event_payload\s+(\w+)\s*\{`)
+	eventPayloadRegex := regexp.MustCompile(`^(?:struct|event_payload)\s+(\w+)\s*\{`)
 	enumRegex := regexp.MustCompile(`^enum\s+(\w+)\s*\{`)
-	componentRegex := regexp.MustCompile(`^component\s+(\w+)\s*\{`)
-	fieldRegex := regexp.MustCompile(`^(\w+)\s+(\w+)(.*)`)
+	componentRegex := regexp.MustCompile(`^(?:component|interface)\s+(\w+)\s*\{`)
+	fieldRegex := regexp.MustCompile(`^(\w+)\s*:\s*([\w<>]+)(.*)`)
 
 	scanner := bufio.NewScanner(file)
 	lineNum := 0
-	inService := false
+	inService := true // Always true in the new format since there's no outer service block
 	inEntity := false
 	inEventPayload := false
 	inEnum := false
@@ -130,56 +130,56 @@ func ParseCDD(filePath string) (*Service, error) {
 			line = strings.TrimSpace(line[:idx])
 		}
 
+		// Parse namespace
+		if matches := namespaceRegex.FindStringSubmatch(line); len(matches) > 1 {
+			service.Name = matches[1]
+			continue
+		}
+
 		// Track braces for nesting
 		braceLevel += strings.Count(line, "{")
 		if strings.Contains(line, "}") {
 			braceLevel -= strings.Count(line, "}")
-			if braceLevel == 0 {
-				inService = false
-			} else if braceLevel == 1 {
-				if inEntity {
-					service.Entities = append(service.Entities, *currentEntity)
-					currentEntity = nil
-					inEntity = false
+			if strings.Count(line, "{") == 0 {
+				if braceLevel == 0 {
+					if inEntity {
+						service.Entities = append(service.Entities, *currentEntity)
+						currentEntity = nil
+						inEntity = false
+					}
+					if inEventPayload {
+						service.EventPayloads = append(service.EventPayloads, *currentEventPayload)
+						currentEventPayload = nil
+						inEventPayload = false
+					}
+					if inEnum {
+						service.Enums = append(service.Enums, *currentEnum)
+						currentEnum = nil
+						inEnum = false
+					}
+					if inComponent {
+						service.Components = append(service.Components, *currentComponent)
+						currentComponent = nil
+						inComponent = false
+					}
+					inProducerEvents = false
+					inConsumerEvents = false
+				} else if braceLevel == 1 {
+					// We exited producer_events or consumer_events, but are still inside events Emitters
+					inProducerEvents = false
+					inConsumerEvents = false
 				}
-				if inEventPayload {
-					service.EventPayloads = append(service.EventPayloads, *currentEventPayload)
-					currentEventPayload = nil
-					inEventPayload = false
-				}
-				if inEnum {
-					service.Enums = append(service.Enums, *currentEnum)
-					currentEnum = nil
-					inEnum = false
-				}
-				if inComponent {
-					service.Components = append(service.Components, *currentComponent)
-					currentComponent = nil
-					inComponent = false
-				}
-				inProducerEvents = false
-				inConsumerEvents = false
-			}
-			continue
-		}
-
-		// Parse service block
-		if !inService {
-			matches := serviceRegex.FindStringSubmatch(line)
-			if len(matches) > 1 {
-				service.Name = matches[1]
-				inService = true
 				continue
 			}
 		}
 
 		// Parse entity, event_payload, enum, component, or events blocks
 		if inService && !inEntity && !inEventPayload && !inEnum && !inComponent && !inProducerEvents && !inConsumerEvents {
-			if line == "producer_events {" {
+			if strings.HasPrefix(line, "producer_events") && strings.Contains(line, "{") {
 				inProducerEvents = true
 				continue
 			}
-			if line == "consumer_events {" {
+			if strings.HasPrefix(line, "consumer_events") && strings.Contains(line, "{") {
 				inConsumerEvents = true
 				continue
 			}
@@ -196,7 +196,7 @@ func ParseCDD(filePath string) (*Service, error) {
 				continue
 			}
 
-			// Parse event_payload block
+			// Parse event_payload/struct block
 			matches = eventPayloadRegex.FindStringSubmatch(line)
 			if len(matches) > 1 {
 				currentEventPayload = &EventPayload{
@@ -218,7 +218,7 @@ func ParseCDD(filePath string) (*Service, error) {
 				continue
 			}
 
-			// Parse component block
+			// Parse component/interface block
 			matches = componentRegex.FindStringSubmatch(line)
 			if len(matches) > 1 {
 				currentComponent = &Component{
