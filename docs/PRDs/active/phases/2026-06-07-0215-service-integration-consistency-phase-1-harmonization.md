@@ -48,15 +48,15 @@ This phase focuses on harmonizing the implementation across microservices by ali
 
 ### Task 1: Create SQL Repository Implementations for FM Service
 
-- [ ] Create `services/fm-service/internal/data/sql/sql_repos.go`.
-- [ ] Implement `domain.CurrencyRateRepository`.
-- [ ] Implement `domain.FiscalYearRepository`.
-- [ ] Implement `domain.CostCenterRepository`.
-- [ ] Implement `domain.BankAccountRepository`.
-- [ ] Implement `domain.CustomerCreditRepository`.
-- [ ] Implement `domain.BankStatementRepository`.
-- [ ] Implement `domain.TransactionRepository`.
-- [ ] Update `services/fm-service/cmd/main.go` to inject these SQL repositories when a database connection is active (or replace memory versions as appropriate based on existing logic).
+- [x] Create `services/fm-service/internal/data/sql/sql_repos.go`.
+- [x] Implement `domain.CurrencyRateRepository`.
+- [x] Implement `domain.FiscalYearRepository`.
+- [x] Implement `domain.CostCenterRepository`.
+- [x] Implement `domain.BankAccountRepository`.
+- [x] Implement `domain.CustomerCreditRepository`.
+- [x] Implement `domain.BankStatementRepository`.
+- [x] Implement `domain.TransactionRepository`.
+- [x] Update `services/fm-service/cmd/main.go` to inject these SQL repositories when a database connection is active (or replace memory versions as appropriate based on existing logic).
 
 **Acceptance Criteria:**
 
@@ -70,9 +70,9 @@ This phase focuses on harmonizing the implementation across microservices by ali
 
 ### Task 2: API Gateway and Routing Alignments
 
-- [ ] Add standalone HTTP endpoints for FM inner line entities (`InvoiceLine`, `VendorBillLine`, `BankStatementLine`) in `fm-service` router. Note: Create basic placeholder/passthrough handlers in `services/fm-service/internal/api/handlers` if they don't exist.
-- [ ] Add standalone HTTP endpoints for SCM lines (`PurchaseOrderLine`, `ReceiptLine`, `ShipmentLine`) in `scm-service` router (`services/scm-service/internal/api/routes/routes.go`).
-- [ ] Map newly exposed paths (e.g., `/api/fm/invoice-lines`, `/api/scm/po-lines`) inside the dynamic router `api-gateway/internal/server/server.go` with JWT and RBAC checks.
+- [x] Add standalone HTTP endpoints for FM inner line entities (`InvoiceLine`, `VendorBillLine`, `BankStatementLine`) in `fm-service` router. Note: Create basic placeholder/passthrough handlers in `services/fm-service/internal/api/handlers` if they don't exist.
+- [x] Add standalone HTTP endpoints for SCM lines (`PurchaseOrderLine`, `ReceiptLine`, `ShipmentLine`) in `scm-service` router (`services/scm-service/internal/api/routes/routes.go`).
+- [x] Map newly exposed paths (e.g., `/api/fm/invoice-lines`, `/api/scm/po-lines`) inside the dynamic router `api-gateway/internal/server/server.go` with JWT and RBAC checks.
 
 **Acceptance Criteria:**
 
@@ -90,8 +90,8 @@ This phase focuses on harmonizing the implementation across microservices by ali
 
 ### Task 3: Manufacturing Extraction Alignment
 
-- [ ] Align `services/mfg-service/contracts/mfg.cdd` by explicitly defining `MaintenanceService` as a distinct interface.
-- [ ] Move methods such as `CreateMaintenanceOrder`, `CompleteMaintenanceOrder`, `LogMachineStatus`, `CreateEquipment`, `ScheduleMaintenance`, `ListMaintenanceSchedules`, `GetMaintenanceSchedule`, `UpdateMaintenanceSchedule` into `interface MaintenanceService { ... }` in the `.cdd` file.
+- [x] Align `services/mfg-service/contracts/mfg.cdd` by explicitly defining `MaintenanceService` as a distinct interface.
+- [x] Move methods such as `CreateMaintenanceOrder`, `CompleteMaintenanceOrder`, `LogMachineStatus`, `CreateEquipment`, `ScheduleMaintenance`, `ListMaintenanceSchedules`, `GetMaintenanceSchedule`, `UpdateMaintenanceSchedule` into `interface MaintenanceService { ... }` in the `.cdd` file.
 
 **Acceptance Criteria:**
 
@@ -132,11 +132,11 @@ cd api-gateway && go build ./... && go test ./...
 
 ## Definition of Done
 
-- [ ] All implementation tasks completed
-- [ ] Acceptance criteria verified
-- [ ] Automated checks passing
-- [ ] Manual verification completed
-- [ ] No unresolved blockers remain
+- [x] All implementation tasks completed
+- [x] Acceptance criteria verified
+- [x] Automated checks passing
+- [x] Manual verification completed
+- [x] No unresolved blockers remain
 
 ---
 

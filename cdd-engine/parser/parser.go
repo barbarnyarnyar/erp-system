@@ -210,6 +210,27 @@ func ParseCDD(filePath string) (*Service, error) {
 			// Parse enum block
 			matches = enumRegex.FindStringSubmatch(line)
 			if len(matches) > 1 {
+				// Check if it's a single line enum definition: enum Name { VAL1, VAL2, ... }
+				if strings.Contains(line, "}") {
+					startIdx := strings.Index(line, "{")
+					endIdx := strings.LastIndex(line, "}")
+					if startIdx != -1 && endIdx != -1 && endIdx > startIdx {
+						valuesStr := line[startIdx+1 : endIdx]
+						var values []string
+						for _, v := range strings.Split(valuesStr, ",") {
+							trimmed := strings.TrimSpace(v)
+							if trimmed != "" {
+								values = append(values, trimmed)
+							}
+						}
+						service.Enums = append(service.Enums, Enum{
+							Name:   matches[1],
+							Values: values,
+						})
+					}
+					continue
+				}
+
 				currentEnum = &Enum{
 					Name:   matches[1],
 					Values: []string{},

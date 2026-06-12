@@ -4,24 +4,19 @@ import (
 	"context"
 	"testing"
 
+	sharedtesting "erp-system/shared/testing"
 	"github.com/erp-system/plm-service/internal/business/domain"
 	"github.com/erp-system/plm-service/internal/business/service"
 	"github.com/erp-system/plm-service/internal/data/memory"
 	"github.com/shopspring/decimal"
 )
 
-type MockPublisher struct{}
-
-func (m *MockPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
-	return nil
-}
-
 func TestPlmService(t *testing.T) {
 	matRepo := memory.NewMemoryMaterialMasterRepo()
 	hdrRepo := memory.NewMemoryBomHeaderRepo()
 	lineRepo := memory.NewMemoryBomLineRepo()
 	ecoRepo := memory.NewMemoryEngineeringChangeOrderRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	matSvc := service.NewMaterialService(matRepo, publisher)
 	bomSvc := service.NewBomService(hdrRepo, lineRepo, matRepo, publisher)

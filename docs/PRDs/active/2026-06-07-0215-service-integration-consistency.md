@@ -151,19 +151,19 @@ To prevent a "distributed monolith," the microservices must maintain high **cohe
 
 ### Phase 1: Harmonization (Target: 1 Week)
 * **Contract and Schema Alignments:**
-  - [ ] **Subtask 1.1:** Write DB migration files (`.sql`) for missing FM tables: `currency_rates`, `fiscal_years`, `cost_centers`, `bank_accounts`, `customer_credits`, `bank_statements`, `bank_statement_lines`.
-  - [ ] **Subtask 1.2:** Declare repository interfaces in `services/fm-service/internal/business/domain/repository.go` for the 7 new entities.
-  - [ ] **Subtask 1.3:** Create in-memory mock implementations in `services/fm-service/internal/data/memory/` and SQL-backed repository structs in `services/fm-service/internal/data/sql/` implementing the interfaces.
-  - [ ] **Subtask 1.4:** Register/wire the new repository instances into `GeneralLedgerService` and other dependent services inside `services/fm-service/cmd/server/main.go`.
+  - [x] **Subtask 1.1:** Write DB migration files (`.sql`) for missing FM tables: `currency_rates`, `fiscal_years`, `cost_centers`, `bank_accounts`, `customer_credits`, `bank_statements`, `bank_statement_lines`.
+  - [x] **Subtask 1.2:** Declare repository interfaces in `services/fm-service/internal/business/domain/repository.go` for the 7 new entities.
+  - [x] **Subtask 1.3:** Create in-memory mock implementations in `services/fm-service/internal/data/memory/` and SQL-backed repository structs in `services/fm-service/internal/data/sql/` implementing the interfaces.
+  - [x] **Subtask 1.4:** Register/wire the new repository instances into `GeneralLedgerService` and other dependent services inside `services/fm-service/cmd/server/main.go`.
 * **API Gateway and Routing Alignments:**
-  - [ ] **Subtask 2.1:** Add standalone HTTP endpoints for FM inner line entities (`InvoiceLine`, `VendorBillLine`, `BankStatementLine`) in `fm-service` router.
-  - [ ] **Subtask 2.2:** Add standalone HTTP endpoints for SCM lines (`PurchaseOrderLine`, `ReceiptLine`, `ShipmentLine`) in `scm-service` router.
-  - [ ] **Subtask 2.3:** Map newly exposed paths (e.g., `/api/fm/invoice-lines`, `/api/scm/po-lines`) inside the dynamic router `/api-gateway/internal/server/server.go` with JWT and RBAC checks.
+  - [x] **Subtask 2.1:** Add standalone HTTP endpoints for FM inner line entities (`InvoiceLine`, `VendorBillLine`, `BankStatementLine`) in `fm-service` router.
+  - [x] **Subtask 2.2:** Add standalone HTTP endpoints for SCM lines (`PurchaseOrderLine`, `ReceiptLine`, `ShipmentLine`) in `scm-service` router.
+  - [x] **Subtask 2.3:** Map newly exposed paths (e.g., `/api/fm/invoice-lines`, `/api/scm/po-lines`) inside the dynamic router `/api-gateway/internal/server/server.go` with JWT and RBAC checks.
 * **Manufacturing Extraction:**
-  - [ ] **Subtask 3.1:** Define `MaintenanceService` domain struct and interfaces in `services/m-service/internal/business/domain/`.
-  - [ ] **Subtask 3.2:** Move the 7 maintenance-related methods (e.g., `CreateMaintenanceOrder`, `CompleteMaintenanceOrder`) from `ProductionService` to the new `MaintenanceService` class/struct.
-  - [ ] **Subtask 3.3:** Align `services/m-service/contracts/m.cdd` by splitting `MaintenanceService` as a distinct component.
-  - [ ] **Subtask 3.4:** Re-wire `services/m-service/cmd/main.go` to inject separate `ProductionService` and `MaintenanceService` instances.
+  - [x] **Subtask 3.1:** Define `MaintenanceService` domain struct and interfaces in `services/m-service/internal/business/domain/`.
+  - [x] **Subtask 3.2:** Move the 7 maintenance-related methods (e.g., `CreateMaintenanceOrder`, `CompleteMaintenanceOrder`) from `ProductionService` to the new `MaintenanceService` class/struct.
+  - [x] **Subtask 3.3:** Align `services/m-service/contracts/m.cdd` by splitting `MaintenanceService` as a distinct component.
+  - [x] **Subtask 3.4:** Re-wire `services/m-service/cmd/main.go` to inject separate `ProductionService` and `MaintenanceService` instances.
 
 ### Phase 2: Event Integration (Target: 2 Weeks)
 * **CRM Event Handlers:**
@@ -191,8 +191,8 @@ To prevent a "distributed monolith," the microservices must maintain high **cohe
 
 ### Phase 3: Validation & ADR Publication (Target: 0.5 Week)
 * **Testing and Verification:**
-  - [ ] **Subtask 10.1:** Execute full uncached Go test suites (`go test -count=1 ./...`) across all 7 microservices.
-  - [ ] **Subtask 10.2:** Run the API Gateway routing verification suite to ensure proper path mapping.
-  - [ ] **Subtask 10.3:** Validate Docker-compose build and clean boot up of all 7 services.
+  - [x] **Subtask 10.1:** Execute full uncached Go test suites (`go test -count=1 ./...`) across all 7 microservices.
+  - [x] **Subtask 10.2:** Run the API Gateway routing verification suite to ensure proper path mapping.
+  - [x] **Subtask 10.3:** Validate Docker-compose build and clean boot up of all 7 services.
 * **Standards Enforcement:**
-  - [ ] **Subtask 11.1:** Write and publish `ADR-002-Entity-Decoupling-Patterns` inside `docs/architecture/` outlining decoupling patterns.
+  - [x] **Subtask 11.1:** Write and publish `ADR-002-Entity-Decoupling-Patterns` inside `docs/architecture/` outlining decoupling patterns.

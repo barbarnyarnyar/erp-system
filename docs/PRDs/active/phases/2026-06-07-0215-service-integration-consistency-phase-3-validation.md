@@ -49,9 +49,9 @@ This phase focuses on validating the system's consistency improvements and docum
 
 ### Task 1: Testing and Verification
 
-- [ ] Execute full uncached Go test suites across all 9 microservices using `go test -count=1 ./...`.
-- [ ] Run the API Gateway routing verification suite to ensure proper path mapping.
-- [ ] Validate Docker-compose build and clean boot up of all 9 services. Note: If the environment runs out of memory, verify start-up script or logs.
+- [x] Execute full uncached Go test suites across all 9 microservices using `go test -count=1 ./...`.
+- [x] Run the API Gateway routing verification suite to ensure proper path mapping.
+- [x] Validate Docker-compose build and clean boot up of all 9 services. Note: If the environment runs out of memory, verify start-up script or logs.
 
 **Acceptance Criteria:**
 
@@ -67,7 +67,7 @@ This phase focuses on validating the system's consistency improvements and docum
 
 ### Task 2: Standards Enforcement
 
-- [ ] Write and publish `ADR-002-Entity-Decoupling-Patterns` inside `docs/architecture/` outlining decoupling patterns. Use the "Decoupling Rules" from section 5 of the main PRD (e.g., No Shared Databases, Asynchronous replication, Eventual Invariant Validation).
+- [x] Write and publish `ADR-002-Entity-Decoupling-Patterns` inside `docs/architecture/` outlining decoupling patterns. Use the "Decoupling Rules" from section 5 of the main PRD (e.g., No Shared Databases, Asynchronous replication, Eventual Invariant Validation).
 
 **Acceptance Criteria:**
 
@@ -106,11 +106,11 @@ make test
 
 ## Definition of Done
 
-- [ ] All implementation tasks completed
-- [ ] Acceptance criteria verified
-- [ ] Automated checks passing
-- [ ] Manual verification completed
-- [ ] No unresolved blockers remain
+- [x] All implementation tasks completed
+- [x] Acceptance criteria verified
+- [x] Automated checks passing
+- [x] Manual verification completed
+- [x] No unresolved blockers remain
 
 ---
 

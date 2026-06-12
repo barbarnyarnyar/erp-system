@@ -266,16 +266,16 @@ For each service touched in D2-D8:
 
 ## Acceptance Criteria (DoD for the whole PRD)
 
-- [ ] `shared/kafka`, `shared/utils/idgen`, `shared/testing` submodules created with unit tests (≥80% coverage of helpers).
-- [ ] Zero `func NewKafkaPublisher` declarations remain in any service.
-- [ ] Zero `type MockPublisher` declarations remain outside `shared/testing/`.
-- [ ] Zero `time.Now().UnixNano()` ID-generation calls remain in service business code.
-- [ ] Zero `log.Printf("ERROR: failed to publish event...")` call sites remain in service business code.
-- [ ] Zero `c.JSON(http.StatusBadRequest/NotFound/InternalServerError, gin.H{"error":...})` remain in service handlers.
-- [ ] All 7 services have `utils.InitLogger` and `utils.NewResponseHelper` invoked in their `cmd/main.go`.
-- [ ] All 7 services: `go build ./...`, `go test ./...`, `go vet ./...` pass.
-- [ ] Master PRD DoD 2.22 (already done) and 2.15 (in progress) are unaffected; this PRD is additive and orthogonal.
-- [ ] A short `docs/architecture/adr-001-shared-utils-adoption.md` (or similar) is created explaining the pattern + how to use it for new services.
+- [x] `shared/kafka`, `shared/utils/idgen`, `shared/testing` submodules created with unit tests (≥80% coverage of helpers).
+- [x] Zero `func NewKafkaPublisher` declarations remain in any service.
+- [x] Zero `type MockPublisher` declarations remain outside `shared/testing/`.
+- [x] Zero `time.Now().UnixNano()` ID-generation calls remain in service business code.
+- [x] Zero `log.Printf("ERROR: failed to publish event...")` call sites remain in service business code.
+- [x] Zero `c.JSON(http.StatusBadRequest/NotFound/InternalServerError, gin.H{"error":...})` remain in service handlers.
+- [x] All 7 services have `utils.InitLogger` and `utils.NewResponseHelper` invoked in their `cmd/main.go`.
+- [x] All 7 services: `go build ./...`, `go test ./...`, `go vet ./...` pass.
+- [x] Master PRD DoD 2.22 (already done) and 2.15 (in progress) are unaffected; this PRD is additive and orthogonal.
+- [x] A short `docs/architecture/adr-001-shared-utils-adoption.md` (or similar) is created explaining the pattern + how to use it for new services.
 
 ## Open Questions (to resolve before D2)
 

@@ -4,23 +4,18 @@ import (
 	"context"
 	"testing"
 
+	sharedtesting "erp-system/shared/testing"
 	"github.com/erp-system/eam-service/internal/business/domain"
 	"github.com/erp-system/eam-service/internal/business/service"
 	"github.com/erp-system/eam-service/internal/data/memory"
 )
-
-type MockPublisher struct{}
-
-func (m *MockPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
-	return nil
-}
 
 func TestEamService(t *testing.T) {
 	facRepo := memory.NewMemoryFacilityRepo()
 	eqRepo := memory.NewMemoryEquipmentRepo()
 	woRepo := memory.NewMemoryMaintenanceWorkOrderRepo()
 	schRepo := memory.NewMemoryPreventativeScheduleRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	eqSvc := service.NewEquipmentService(facRepo, eqRepo, publisher)
 	maintSvc := service.NewMaintenanceService(woRepo, eqRepo, schRepo, publisher)

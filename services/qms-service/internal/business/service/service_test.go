@@ -4,17 +4,12 @@ import (
 	"context"
 	"testing"
 
+	sharedtesting "erp-system/shared/testing"
 	"github.com/erp-system/qms-service/internal/business/domain"
 	"github.com/erp-system/qms-service/internal/business/service"
 	"github.com/erp-system/qms-service/internal/data/memory"
 	"github.com/shopspring/decimal"
 )
-
-type MockPublisher struct{}
-
-func (m *MockPublisher) Publish(ctx context.Context, topic string, key string, payload interface{}) error {
-	return nil
-}
 
 func TestQmsService(t *testing.T) {
 	planRepo := memory.NewMemoryInspectionPlanRepo()
@@ -22,7 +17,7 @@ func TestQmsService(t *testing.T) {
 	qiRepo := memory.NewMemoryQualityInspectionRepo()
 	resRepo := memory.NewMemoryInspectionResultLineRepo()
 	ncRepo := memory.NewMemoryNonConformanceLogRepo()
-	publisher := &MockPublisher{}
+	publisher := &sharedtesting.MockPublisher{}
 
 	planSvc := service.NewInspectionPlanService(planRepo, metricRepo)
 	ncSvc := service.NewNonConformanceService(ncRepo, planRepo, qiRepo, publisher)

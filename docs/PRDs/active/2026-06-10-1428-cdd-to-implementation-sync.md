@@ -1,7 +1,10 @@
-# CDD to Implementation Sync
+# CDD to Implementation Sync (Superseded Descope Plan)
+
+> [!WARNING]
+> **SUPERSEDED**: This PRD has been superseded by [PRD-2026-06-12-0921: Scaling ERP Architecture to 10 Microservices](file:///Users/sithuhlaing/Projects/erp-system/docs/PRDs/active/2026-06-12-0921-modules-expansion.md). The descope plan to 3 lifeline services was rejected in favor of expanding to the full 10 microservices topology (9 business modules + Auth).
 
 **PRD ID**: PRD-2026-06-10-1428
-**Status**: Draft
+**Status**: Superseded by [PRD-2026-06-12-0921](file:///Users/sithuhlaing/Projects/erp-system/docs/PRDs/active/2026-06-12-0921-modules-expansion.md)
 **Complexity**: High
 **Created**: June 10, 2026
 **Author**: google-labs-jules[bot]

@@ -189,13 +189,13 @@ entity Transaction {
 
 ## 4. Definition of Done
 
-- [ ] **2.1 resolved**: All 17+ event payload types defined in CDD with field specifications
-- [ ] **2.2 resolved**: Validation constraint syntax implemented (`@required`, `@min`, `@max`, `@pattern`, `@enum`)
-- [ ] **2.3 resolved**: All 7+ raw string enum fields replaced with typed enum definitions
-- [ ] **2.4 resolved**: Legacy entities (Transaction/TransactionLine) marked deprecated with migration path
-- [ ] **2.5 resolved**: All optional fields annotated with `@optional`
-- [ ] **2.6 resolved**: Code generator updated to produce Go validation code from CDD constraints
-- [ ] **2.7 resolved**: All changes verified by `make test` passing
+- [x] **2.1 resolved**: All 17+ event payload types defined in CDD with field specifications
+- [x] **2.2 resolved**: Validation constraint syntax implemented (`@required`, `@min`, `@max`, `@pattern`, `@enum`)
+- [x] **2.3 resolved**: All 7+ raw string enum fields replaced with typed enum definitions
+- [x] **2.4 resolved**: Legacy entities (Transaction/TransactionLine) marked deprecated with migration path
+- [x] **2.5 resolved**: All optional fields annotated with `@optional`
+- [x] **2.6 resolved**: Code generator updated to produce Go validation code from CDD constraints
+- [x] **2.7 resolved**: All changes verified by `make test` passing
 
 ## 5. Priority-Ordered Execution Plan
 
