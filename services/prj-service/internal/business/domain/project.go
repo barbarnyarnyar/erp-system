@@ -6,14 +6,16 @@ import (
 )
 
 type Project struct {
-	ID          string     `json:"id"`
-	PortfolioID *string    `json:"portfolio_id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	StartDate   time.Time  `json:"start_date"`
-	EndDate     *time.Time `json:"end_date"`
-	Status      string     `json:"status"` // e.g., PLANNING, ACTIVE, COMPLETED, ON_HOLD, CANCELLED
-	BudgetID    *string    `json:"budget_id"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID            string        `json:"id"`
+	LegalEntityID string        `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+	CustomerID    string        `json:"customer_id"`     // Primitive Ref -> CRM.Customer (Loose Cross-Domain Link)
+	ProjectCode   string        `json:"project_code"`    // Unique per tenant (e.g., "PRJ-2026-009")
+	Name          string        `json:"name"`
+	Status        ProjectStatus `json:"status"`
+	BillingMethod BillingMethod `json:"billing_method"`
+	StartDate     time.Time     `json:"start_date"`
+	EndDate       *time.Time    `json:"end_date,omitempty"`
+	Version       int           `json:"version"` // Optimistic Concurrency Control (OCC) Shield
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
 }

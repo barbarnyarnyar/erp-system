@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/erp-system/m-service/internal/business/domain"
@@ -11,9 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type contextKey string
-
-const txKey contextKey = "gorm_tx"
+const txKey = "gorm_tx"
 
 func GetDB(ctx context.Context, defaultDB *gorm.DB) *gorm.DB {
 	if tx, ok := ctx.Value(txKey).(*gorm.DB); ok {
@@ -104,6 +103,7 @@ type WorkOrderExecutionService interface {
 	InstantiateWorkOrder(ctx context.Context, legalEntityID, materialID, bomHeaderID string, qtyTarget decimal.Decimal, start, end time.Time) (*domain.WorkOrder, error)
 	TransitionWorkOrderState(ctx context.Context, workOrderID string, currentState, targetState domain.WorkOrderState) (*domain.WorkOrder, error)
 	RerouteWorkOrderStation(ctx context.Context, workOrderID, currentStationID, targetStationID string, isRework bool) error
+	FreezeObsoleteWorkOrders(ctx context.Context, materialID string, newBomHeaderID string) error
 }
 
 type WorkOrderExecutionServiceImpl struct {
@@ -261,6 +261,37 @@ func (s *WorkOrderExecutionServiceImpl) RerouteWorkOrderStation(ctx context.Cont
 		}
 
 		return s.stateRepo.Create(txCtx, newState)
+	})
+}
+
+func (s *WorkOrderExecutionServiceImpl) FreezeObsoleteWorkOrders(ctx context.Context, materialID string, newBomHeaderID string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		txCtx := context.WithValue(ctx, txKey, tx)
+
+		wos, err := s.woRepo.List(txCtx)
+		if err != nil {
+			return err
+		}
+
+		for _, wo := range wos {
+			if wo.MaterialID == materialID && wo.BomHeaderID != newBomHeaderID &&
+				(wo.Status == domain.WorkOrderStateSTAGED ||
+					wo.Status == domain.WorkOrderStateRELEASED ||
+					wo.Status == domain.WorkOrderStateIN_PROGRESS) {
+
+				log.Printf("[Obsolete BOM Shield] Freezing Work Order %s (Material %s, Old BOM %s) due to release of new BOM %s",
+					wo.ID, materialID, wo.BomHeaderID, newBomHeaderID)
+
+				wo.Status = domain.WorkOrderStateON_HOLD
+				wo.UpdatedAt = time.Now()
+
+				if err := s.woRepo.Update(txCtx, &wo); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
 	})
 }
 

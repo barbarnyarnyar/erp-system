@@ -564,131 +564,66 @@ Customer accounts, lead management, opportunity pipeline, sales orders, quotes, 
 
 ## [Manufacturing](manufacturing/)
 
-Bill of materials, routings, work orders, production planning, MRP, quality control, work centers, and equipment maintenance. Port **8005** (docker-compose: 8004).
+A highly optimized, multi-tenant Shop Floor Execution core. Port **8004** (docker-compose: 8004).
 
-### Domain Models (14 types)
+### Domain Models (8 types)
 
-| Model | Key Fields |
-|-------|-----------|
-| `BillOfMaterials` | ID, ProductID, Name, Version, Status, Components[] |
-| `BOMComponent` | ID, BOMID, ComponentProductID, Quantity, ScrapPercentage |
-| `RoutingOperation` | ID, BOMID, SequenceNo, WorkCenterID, SetupTime, RunTime |
-| `WorkOrder` | ID, ProductionOrderID, OperationID, Status, StartTime, EndTime |
-| `ProductionOrder` | ID, ProductID, Quantity, DueDate, Status, Priority |
-| `WorkCenter` | ID, Name, Code, Capacity, Efficiency, Status |
-| `LaborReport` | ID, WorkOrderID, EmployeeID, HoursWorked, Date |
-| `MachineLog` | ID, WorkCenterID, StartTime, EndTime, Status |
-| `QualityInspection` | ID, WorkOrderID, InspectedBy, Result, Defects[] |
-| `NonConformance` | ID, QualityInspectionID, Description, Severity, Status |
-| `Equipment` | ID, WorkCenterID, Name, Model, Status |
-| `MaintenanceOrder` | ID, EquipmentID, ScheduleDate, Type, Status |
-| `CostingRecord` | ID, ProductionOrderID, MaterialCost, LaborCost, OverheadCost |
+| Model | Key Fields | Description |
+|-------|------------|-------------|
+| `WorkCenter` | ID, LegalEntityID, WorkCenterCode, Name | Core shop floor work area |
+| `RoutingStation` | ID, WorkCenterID, RoutingCode, SetupTime, RunTime | Step inside a work center |
+| `WorkOrder` | ID, LegalEntityID, WorkOrderNumber, MaterialID, BomHeaderID, QuantityTarget, Status | Production execution task |
+| `WorkOrderRoutingState` | ID, WorkOrderID, CurrentStationID, Status, SequenceNumber | State machine tracker |
+| `MaterialConsumptionLog` | ID, LegalEntityID, WorkOrderID, StationID, MaterialID, QuantityConsumed | Physical material usage |
+| `ProductionYieldLog` | ID, LegalEntityID, WorkOrderID, StationID, QuantityGood, QuantityScrap | Scrap vs good production count |
+| `TransactionalOutbox` | ID, EventType, AggregateID, Payload, Status, CreatedAt | Outbox event delivery |
+| `KafkaEventInbox` | EventID, EventType, ProcessedAt, ProcessingStatus, Payload | Idempotent event receiver |
 
 ### Business Services (5)
 
 | Service | Key Responsibilities |
 |---------|---------------------|
-| `BOMService` | BOM CRUD with component hierarchy, routing operations, work center management |
-| `ProductionService` | Production orders, work orders (start/complete/cancel), labor reporting, quality inspections, maintenance scheduling, MRP execution, costing |
-| `QualityService` | Record/list/get/update quality inspections — **wired in code** |
-| `MaintenanceService` | Log machine status, create equipment, schedule/complete maintenance — **code exists but routes may be partial** |
-| `CostingService` | Get costing record, run MRP — **not wired** |
+| `FloorConfigurationService` | Work center setups, station assignments |
+| `WorkOrderExecutionService` | Work order creation, state transitions, rerouting |
+| `ShopFloorTelemetryService` | Material consumption, scrap/good yield logs |
+| `OutboxRelayWorker` | Dispatch outbox events to Kafka |
+| `ReliableMessagingService` | Idempotent transaction receiver |
 
-### API Endpoints (30 routes)
+### API Endpoints (11 routes)
 
-**Bill of Materials:**
+**Work Centers & Routing:**
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/boms` | List BOMs |
-| POST | `/api/v1/boms` | Create BOM |
-| GET | `/api/v1/boms/:id` | Get BOM |
-| PUT | `/api/v1/boms/:id` | Update BOM |
-| DELETE | `/api/v1/boms/:id` | Delete BOM |
-
-**Routings:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/routings` | List routings |
-| POST | `/api/v1/routings` | Create routing |
-| GET | `/api/v1/routings/:id` | Get routing |
-| PUT | `/api/v1/routings/:id` | Update routing |
-| DELETE | `/api/v1/routings/:id` | Delete routing |
+| POST | `/api/v1/mfg/work-centers` | Establish work center |
+| POST | `/api/v1/mfg/work-centers/:id/stations` | Append station to work center |
 
 **Work Orders:**
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/work-orders` | List work orders |
-| POST | `/api/v1/work-orders` | Create work order |
-| GET | `/api/v1/work-orders/:id` | Get work order |
-| PUT | `/api/v1/work-orders/:id` | Update work order |
-| DELETE | `/api/v1/work-orders/:id` | Delete work order |
-| POST | `/api/v1/work-orders/:id/start` | Start work order |
-| POST | `/api/v1/work-orders/:id/complete` | Complete work order |
-| POST | `/api/v1/work-orders/:id/labor` | Report labor |
-| POST | `/api/v1/work-orders/:id/inspect` | Perform inspection |
+| POST | `/api/v1/mfg/work-orders` | Instantiate work order |
+| PUT | `/api/v1/mfg/work-orders/:id/state` | Transition work order state |
+| PUT | `/api/v1/mfg/work-orders/:id/reroute` | Reroute work order station |
+| GET | `/api/v1/mfg/work-orders/:id` | Fetch work order detail |
+| GET | `/api/v1/mfg/work-orders` | List work orders |
 
-**Production Plans:**
+**Telemetry & Logs:**
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/production-plans` | List production plans |
-| POST | `/api/v1/production-plans` | Create production plan |
-| GET | `/api/v1/production-plans/:id` | Get plan |
-| PUT | `/api/v1/production-plans/:id` | Update plan |
-| DELETE | `/api/v1/production-plans/:id` | Delete plan |
+| POST | `/api/v1/mfg/telemetry/consumption` | Record material consumption |
+| POST | `/api/v1/mfg/telemetry/yield` | Commit production yield |
+| GET | `/api/v1/mfg/work-orders/:id/state` | Get routing state timeline |
 
-**MRP:**
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/mrp/run` | Run MRP (stub) |
+### Kafka Events Published (3 topics)
 
-**Quality:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/quality-inspections` | List inspections |
-| POST | `/api/v1/quality-inspections` | Create inspection |
-| GET | `/api/v1/quality-inspections/:id` | Get inspection |
-| PUT | `/api/v1/quality-inspections/:id` | Update inspection |
-| DELETE | `/api/v1/quality-inspections/:id` | Delete inspection |
+`mfg.production.started`, `mfg.material.consumed`, `mfg.yield.produced`
 
-**Work Centers:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/work-centers` | List work centers |
-| POST | `/api/v1/work-centers` | Create work center |
-| GET | `/api/v1/work-centers/:id` | Get work center |
-| PUT | `/api/v1/work-centers/:id` | Update work center |
-| DELETE | `/api/v1/work-centers/:id` | Delete work center |
-| POST | `/api/v1/work-centers/:id/machine-log` | Record machine log |
-
-**Maintenance:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/maintenance-schedules` | List schedules |
-| POST | `/api/v1/maintenance-schedules` | Create schedule |
-| GET | `/api/v1/maintenance-schedules/:id` | Get schedule |
-| PUT | `/api/v1/maintenance-schedules/:id` | Update schedule |
-| DELETE | `/api/v1/maintenance-schedules/:id` | Delete schedule |
-
-### Kafka Events Published (19 topics)
-
-**Production:** `mfg.production.scheduled`, `mfg.production.started`, `mfg.production.completed`, `mfg.production.delayed`
-**Work Orders:** `mfg.work.order.created`, `mfg.work.order.started`, `mfg.work.order.completed`, `mfg.work.order.cancelled`
-**Material:** `mfg.material.consumed`, `mfg.material.wasted`, `mfg.material.required`
-**Quality:** `mfg.quality.inspection.passed`, `mfg.quality.inspection.failed`, `mfg.quality.non.conformance.detected`
-**Maintenance:** `mfg.maintenance.scheduled`, `mfg.maintenance.completed`
-**Equipment:** `mfg.equipment.down`, `mfg.equipment.up`
-**Other:** `mfg.custom.production.completed`
-
-### Kafka Events Consumed (6 topics, per CDD)
+### Kafka Events Consumed (3 topics)
 
 | Topic | Publisher | Logic |
 |-------|-----------|-------|
-| `scm.material.received` | SCM | Logged only |
-| `scm.inventory.updated` | SCM | Logged only |
-| `crm.sales.order.created` | CRM | Auto-schedule production order |
-| `fin.cost.budget.allocated` | FM | Adjust production schedules |
-| `hr.employee.scheduled` | HR | Logged only |
-| `prj.custom.order.created` | PM | Schedule custom production |
+| `plm.bom.released` | PLM | Logged only |
+| `qms.inspection.passed/failed` | QMS | Logged only |
+| `eam.offline` | EAM | Logged only |
 
 ## [Product Lifecycle Management](product-lifecycle-management/)
 
@@ -723,126 +658,62 @@ Material specifications, Bill of Materials (BOM), Engineering Change Orders (ECO
 
 ## [Project Management](project-management/)
 
-Portfolios, projects, tasks, resource allocation, time/expense tracking, documents, issues, change requests, and cross-service integration. Port **8006** (docker-compose: 8005).
+Projects, Work Breakdown Structure (WBS), and timesheet validation. Port **8005** (docker-compose: 8005).
 
-### Domain Models (12 types)
+### Domain Models (5 types)
 
-| Model | Key Fields |
-|-------|-----------|
-| `Project` | ID, PortfolioID, Name, Description, StartDate, EndDate, Budget, Status |
-| `Portfolio` | ID, Name, Description, Budget, Status |
-| `Task` | ID, ProjectID, ParentTaskID, Name, Description, Status, AssignedTo, StartDate, DueDate, Progress |
-| `TaskDependency` | ID, TaskID, DependsOnTaskID, DependencyType |
-| `ResourceAllocation` | ID, ProjectID, EmployeeID, Role, AllocationPercentage, StartDate, EndDate |
-| `ProjectTimeEntry` | ID, ProjectID, EmployeeID, Date, Hours, Description, Status |
-| `ProjectExpense` | ID, ProjectID, Category, Amount, Description, Status |
-| `ProjectDocument` | ID, ProjectID, Name, Type, FileURL, UploadedBy |
-| `ProjectIssue` | ID, ProjectID, Title, Description, Priority, Status, AssignedTo |
-| `ChangeRequest` | ID, ProjectID, Title, Description, Impact, Status |
-| `ProjectActivity` | ID, ProjectID, ActivityType, Description, PerformedBy |
+| Model | Key Fields | Description |
+|-------|------------|-------------|
+| `Project` | ID, LegalEntityID, CustomerID, ProjectCode, Name, Status, BillingMethod, StartDate, EndDate, Version | Core project tracking metadata |
+| `WbsNode` | ID, ProjectID, ParentNodeID, WbsDepthLevel, NodeCode, Title, NodeType, EstimatedHours, BudgetRevenueFunctional, IsCompleted, Version | Work breakdown structure elements |
+| `TimeLog` | ID, LegalEntityID, WbsNodeID, EmployeeID, WorkDate, HoursSpent, InternalCostRate, BillingRate, IsBillable, IsApproved, ApprovedByHrID | Timesheet logs |
+| `TransactionalOutbox` | ID, EventType, AggregateID, Payload, Status, CreatedAt | Outbox event delivery |
+| `KafkaEventInbox` | EventID, EventType, ProcessedAt, ProcessingStatus, Payload | Idempotent event receiver |
 
-### Business Services (6)
+### Business Services (5)
 
 | Service | Key Responsibilities |
 |---------|---------------------|
-| `ProjectPlanningService` | Portfolio & project CRUD, status management |
-| `TaskManagementService` | Task CRUD, WBS hierarchy, dependency management, assignment, progress tracking |
-| `ResourceManagementService` | Resource allocation by role/skill/timeframe |
-| `TimeExpenseService` | Time entry, expense tracking, approval workflow |
-| `CollaborationService` | Documents, issues, change requests |
-| `PortfolioAnalyticsService` | Portfolio summary, project health |
+| `ProjectTrackingService` | Project initialization and status transitions |
+| `WbsStructureService` | WBS node creation, completion, and tree fetch |
+| `TimeTrackingService` | Time logs, bulk submission, and timesheet approvals |
+| `OutboxRelayWorker` | Dispatch outbox events to Kafka |
+| `ReliableMessagingService` | Idempotent transaction receiver |
 
-### API Endpoints (23 routes)
-
-**Portfolios:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/projects/portfolios` | List portfolios |
-| POST | `/api/v1/projects/portfolios` | Create portfolio |
-| GET | `/api/v1/projects/portfolios/:id` | Get portfolio |
-| PUT | `/api/v1/projects/portfolios/:id` | Update portfolio |
-| DELETE | `/api/v1/projects/portfolios/:id` | Delete portfolio |
-| GET | `/api/v1/projects/portfolios/:id/summary` | Portfolio summary |
+### API Endpoints (9 routes)
 
 **Projects:**
 | Method | Path | Description |
 |--------|------|-------------|
+| POST | `/api/v1/projects` | Initialize project |
+| PUT | `/api/v1/projects/:id/status` | Transition project status |
 | GET | `/api/v1/projects` | List projects |
-| POST | `/api/v1/projects` | Create project |
-| GET | `/api/v1/projects/:id` | Get project |
-| PUT | `/api/v1/projects/:id` | Update project |
+| GET | `/api/v1/projects/:id` | Get project detail |
 
-**Tasks:**
+**WBS Structure:**
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/projects/:id/tasks` | List project tasks |
-| POST | `/api/v1/projects/:id/tasks` | Create task |
-| PUT | `/api/v1/projects/tasks/:task_id/progress` | Update progress |
-| PUT | `/api/v1/projects/tasks/:task_id/assign` | Assign task |
-| POST | `/api/v1/projects/tasks/:task_id/dependencies` | Add dependency |
+| POST | `/api/v1/projects/:id/wbs` | Append WBS node |
+| PUT | `/api/v1/wbs/:node_id/complete` | Declare WBS node completion |
+| GET | `/api/v1/projects/:id/wbs` | Fetch project WBS tree |
 
-**Resource Allocations:**
+**Time Tracking:**
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/projects/:id/allocations` | List allocations |
-| POST | `/api/v1/projects/:id/allocations` | Create allocation |
+| POST | `/api/v1/time-logs/bulk` | Log bulk operational hours |
+| POST | `/api/v1/time-logs/approve` | Process timesheet approvals |
 
-**Time & Expenses:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/projects/:id/time` | List time entries |
-| POST | `/api/v1/projects/:id/time` | Create time entry |
-| PUT | `/api/v1/projects/time/:time_id/approve` | Approve time entry |
-| GET | `/api/v1/projects/:id/expenses` | List expenses |
-| POST | `/api/v1/projects/:id/expenses` | Create expense |
-| PUT | `/api/v1/projects/expenses/:expense_id/approve` | Approve expense |
+### Kafka Events Published (2 topics)
 
-**Documents:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/projects/:id/documents` | List documents |
-| POST | `/api/v1/projects/:id/documents` | Upload document |
+`prj.time.logged`, `prj.milestone.achieved`
 
-**Issues:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/projects/:id/issues` | List issues |
-| POST | `/api/v1/projects/:id/issues` | Create issue |
-| PUT | `/api/v1/projects/issues/:issue_id/resolve` | Resolve issue |
+### Kafka Events Consumed (3 topics)
 
-**Change Requests:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/projects/:id/change-requests` | List CRs |
-| POST | `/api/v1/projects/:id/change-requests` | Create CR |
-| PUT | `/api/v1/projects/change-requests/:request_id/approve` | Approve CR |
-
-**Cross-Service Integration:**
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/projects/:id/request-material` | Request material (→ SCM via Kafka) |
-| POST | `/api/v1/projects/:id/request-custom-order` | Request custom order (→ MFG via Kafka) |
-
-### Kafka Events Published (25 topics)
-
-**Project:** `prj.project.created`, `prj.project.updated`, `prj.project.started`, `prj.project.completed`, `prj.project.cancelled`, `prj.project.delayed`
-**Task:** `prj.task.created`, `prj.task.assigned`, `prj.task.started`, `prj.task.completed`, `prj.task.overdue`
-**Resource:** `prj.resource.allocated`, `prj.resource.released`, `prj.resource.overallocated`
-**Time/Expense:** `prj.time.logged`, `prj.time.approved`, `prj.time.rejected`, `prj.expense.submitted`, `prj.expense.approved`, `prj.expense.rejected`, `prj.expense.incurred`
-**Milestones:** `prj.milestone.achieved`, `prj.milestone.delayed`
-**Integration:** `prj.custom.order.created`, `prj.material.requested`
-
-### Kafka Events Consumed (8 topics, per CDD)
-
-| Topic | Publisher | Consumer Logic |
-|-------|-----------|----------------|
-| `hr.employee.available` | HR | Logged only |
-| `hr.employee.skills.updated` | HR | Logged only |
-| `fin.budget.approved` | FM | Release project funding upon budget approval |
-| `fin.payment.received` | FM | Logged only |
-| `crm.sales.order.received` | CRM | Auto-create project + kickoff task |
-| `scm.material.delivered` | SCM | Logged only |
-| `mfg.custom.production.completed` | MFG | Logged only |
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `hr.employee.created` | HR | Logged only |
+| `hr.employee.terminated` | HR | Logged only |
+| `crm.sales.order.confirmed` | CRM | Auto-create project stub |
 
 ---
 

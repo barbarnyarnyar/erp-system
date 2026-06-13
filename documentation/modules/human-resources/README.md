@@ -1,247 +1,117 @@
-# Human Resources Module
+# Human Resources Module (Reconciled V1.0)
 
-Employee lifecycle, payroll, time tracking, leave management, recruitment, performance reviews, training, and employee documents. Port **8002** (docker-compose: 8003).
+Workforce Identity, Core Payroll processing, and Expense Claim management. Implemented in Go using Gin, GORM (PostgreSQL), and Apache Kafka. Exposes port **8003**.
 
 ## Module Overview
 
 ```mermaid
 graph TB
-    subgraph "HR Core"
-        EMP[Employee Management<br/>Records & Organization]
-        PAY[Payroll Processing<br/>Salary & Deductions]
-        TIME[Time & Attendance<br/>Timesheet Tracking]
-        LEAVE[Leave Management<br/>Requests & Balance]
-        REC[Recruitment<br/>Jobs & Applications]
-        PERF[Performance Reviews<br/>Evaluations]
-        TRN[Training Programs<br/>Enrollment & Completion]
-        DOC[Documents<br/>Employee Files]
+    subgraph "HR Core (CDD Compliant)"
+        EMP[Employee Master<br/>Identity & Management]
+        DEPT[Department<br/>Organization Structure]
+        PAY[Payroll Run<br/>Salary Runs & Approvals]
+        EXP[Expense Claims<br/>Claims & Line Items]
+    end
+
+    subgraph "Transactional Outbox & Inbox"
+        OBX[Transactional Outbox]
+        IBX[Kafka Event Inbox]
     end
 
     subgraph "Integration Points"
-        FM_INT[Finance Integration<br/>Payroll Expenses]
-        PM_INT[Project Integration<br/>Employee Data]
-        SCM_INT[SCM Integration<br/>Training Needs]
+        FM_INT[Finance Microservice<br/>General Ledger & Disbursals]
+        PM_INT[Project Microservice<br/>Time Logging Integration]
     end
 
+    EMP --> DEPT
     EMP --> PAY
-    TIME --> PAY
-    LEAVE --> PAY
-    EMP --> PERF
-    EMP --> TRN
-    PAY --> FM_INT
-    EMP --> PM_INT
-    TRN --> DOC
-    SCM_INT --> TRN
+    EMP --> EXP
+    PAY -->|hr.payroll.processed| OBX
+    EXP -->|hr.expense.approved| OBX
+    EMP -->|hr.employee.created| OBX
+    IBX -->|prj.time.logged| EMP
+    IBX -->|fm.vendor.paid| EXP
+    OBX -->|Outbox Relay| FM_INT
+    PM_INT -->|Publish| IBX
 ```
 
-## Documentation Structure
+---
 
-### Core Features
-- `employee-management.md` — Employee records, departments, positions
-- `payroll-processing.md` — Salary calculation and deductions
-- `time-attendance.md` — Timesheet submission and approval
-- `leave-management.md` — Leave requests and balance tracking
-- `recruitment.md` — Job postings and applications
-- `performance-management.md` — Reviews and evaluations
-- `training.md` — Programs and enrollment
-- `employee-documents.md` — Document management
+## Domain Models (7 entities, per hr.cdd)
 
-### Integration and APIs
-- `api-reference.md` — REST API documentation
-- `integration-patterns.md` — Cross-module event flows
-- `event-architecture.md` — Kafka event catalog
+| Model | Table Name | Key Fields | Purpose |
+| :--- | :--- | :--- | :--- |
+| `Department` | `hr_departments` | ID, LegalEntityID, DepartmentCode, Name, IsActive | Represents physical organization departments. |
+| `EmployeeMaster` | `hr_employees` | ID, LegalEntityID, DepartmentID, ManagerHrID, OrgDepthLevel, EmployeeNumber, FirstName, LastName, Email, Status, Type, BaseSalary, Version | Represents employees and organization structure (adjacency list). |
+| `PayrollRun` | `hr_payroll_runs` | ID, LegalEntityID, FiscalYear, PeriodNumber, Status, TotalGrossPay, TotalDeductions, TotalNetPay, Version | Tracks periodic payroll calculations. |
+| `ExpenseClaim` | `hr_expense_claims` | ID, LegalEntityID, EmployeeID, ClaimNumber, Purpose, TotalAmount, Status, CostCenterTag, Version | Tracks employee business expense reimbursements. |
+| `ExpenseClaimLine` | `hr_expense_claim_lines` | ID, ExpenseClaimID, Description, LineAmount | Itemized expense lines under an expense claim. |
+| `TransactionalOutbox` | `hr_transactional_outbox` | ID, EventType, AggregateID, Payload, Status | Guarantees reliable publishing of produced events. |
+| `KafkaEventInbox` | `hr_kafka_event_inbox` | EventID, EventType, ProcessedAt, ProcessingStatus, Payload | Guarantees exactly-once processing of consumed events. |
 
-### Implementation
-- `database-schema.md` — Data models
+---
 
-## Domain Models (18 types)
+## Business Services (5)
 
-| Model | Key Fields |
-|-------|-----------|
-| `Employee` | ID, EmployeeID, FirstName, LastName, Email, Phone, HireDate, TermDate, DepartmentID, PositionID, ManagerID, Status (ACTIVE/TERMINATED/LEAVE), Salary |
-| `Department` | ID, Name, Code, ManagerID, ParentDepartmentID |
-| `Position` | ID, Title, JobGrade, MinSalary, MaxSalary |
-| `PayrollRecord` | ID, EmployeeID, PeriodStart, PeriodEnd, GrossPay, NetPay, Status, Deductions[] |
-| `PayrollDeduction` | Type, Amount, Description |
-| `AttendanceEntry` | ID, EmployeeID, Date, ClockIn, ClockOut, HoursWorked, Type |
-| `LeaveRequest` | ID, EmployeeID, Type, StartDate, EndDate, Status, Reason |
-| `LeaveBalance` | ID, EmployeeID, LeaveType, TotalEntitled, Used, Remaining |
-| `ExpenseClaim` | ID, EmployeeID, TotalAmount, Status, Lines[] |
-| `ExpenseClaimLine` | Date, Category, Amount, Description |
-| `JobPosting` | ID, Title, DepartmentID, Description, Requirements, Status |
-| `JobApplication` | ID, JobPostingID, ApplicantName, Email, Status, ResumeURL |
-| `PerformanceReview` | ID, EmployeeID, ReviewerID, Period, Rating, Comments, Status |
-| `TrainingProgram` | ID, Name, Description, Duration, MaxParticipants |
-| `TrainingEnrollment` | ID, TrainingProgramID, EmployeeID, Status, CompletionDate |
-| `EmployeeDocument` | ID, EmployeeID, Type, Name, FileURL |
+| Service | Key Methods | Description |
+| :--- | :--- | :--- |
+| `EmployeeService` | `HireEmployee`, `TerminateEmployee`, `AdjustCompensation`, `FetchManagementChain` | Manages employee hiring, termination, salary adjustments, and organizational hierarchies. |
+| `PayrollService` | `InitiatePeriodRun`, `ExecuteCalculations`, `CloseAndApprovePayroll` | Initializes periodic payroll runs, computes gross/net salaries, and finalizes runs. |
+| `ExpenseService` | `SubmitClaim`, `VerifyAndApproveClaim`, `ClearClaimForPayment` | Handles claim filings, approval routing, and payments. |
+| `OutboxRelayWorker` | `GetUnsentMessages`, `LogProcessingAttempt`, `UpdateOutboxStatus` | Processes and updates transactional outbox events to prevent publishing failures. |
+| `ReliableMessagingService` | `IsEventProcessed`, `ExecuteIdempotentTransaction` | Ensures consumed Kafka events are executed exactly-once under database transaction locks. |
 
-## Business Services (9)
+---
 
-| Service | Key Methods |
-|---------|-------------|
-| `EmployeeManagementService` | Create/Get/Update/Delete employee, SubmitExpenseClaim |
-| `PayrollService` | ProcessPayroll, GetPayrollRecords, GetEmployeePayroll |
-| `TimeAttendanceService` | Create/Get/Update timesheet, SubmitTimesheet, ApproveTimesheet |
-| `LeaveManagementService` | Create/Get/Update request, Approve/Reject leave, Update status |
-| `RecruitmentService` | Create/Get/Update/Delete job posting, Create/Get/Update application |
-| `PerformanceService` | Create/Get/Update performance review |
-| `TrainingService` | Create/Get/Update training program, Enroll, Complete enrollment |
-| `EmployeeDocumentService` | Upload/Get/Delete employee document |
-| `ReportService` | Headcount report, Payroll report, Attendance report |
+## API Endpoints (22 routes)
 
-## API Endpoints (35 routes)
+### 1. Department Routes
+* `POST /api/v1/departments` — Create a department
+* `GET /api/v1/departments` — List all departments
+* `GET /api/v1/departments/:id` — Fetch department details
+* `PUT /api/v1/departments/:id` — Update department info
 
-### Employees
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/employees` | List employees |
-| POST | `/api/v1/employees` | Create employee |
-| GET | `/api/v1/employees/:id` | Get employee |
-| PUT | `/api/v1/employees/:id` | Update employee |
-| DELETE | `/api/v1/employees/:id` | Delete employee |
-| POST | `/api/v1/employees/:id/expenses` | Submit expense claim |
+### 2. Employee Routes
+* `POST /api/v1/employees` — Hire a new employee (emits `hr.employee.created`)
+* `GET /api/v1/employees` — List all employees
+* `GET /api/v1/employees/:id` — Fetch employee details
+* `PUT /api/v1/employees/:id` — Update employee profile details
+* `DELETE /api/v1/employees/:id` — Terminate employee (emits `hr.employee.terminated`)
+* `PUT /api/v1/employees/:id/compensation` — Adjust compensation/base salary
+* `GET /api/v1/employees/:id/management-chain` — Fetch organization management tree
 
-### Payroll
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/payroll` | List payroll records |
-| POST | `/api/v1/payroll` | Process payroll |
-| GET | `/api/v1/payroll/:id` | Get payroll record |
-| PUT | `/api/v1/payroll/:id` | Update payroll |
-| GET | `/api/v1/payroll/employee/:id` | Get employee payroll |
+### 3. Payroll Routes
+* `POST /api/v1/payroll/initiate` — Create a draft payroll period run
+* `POST /api/v1/payroll/calculate/:id` — Calculate gross, deductions, and net payouts for active employees
+* `POST /api/v1/payroll/approve/:id` — Close and approve the payroll run (emits `hr.payroll.processed`)
+* `GET /api/v1/payroll/runs` — List all payroll runs
+* `GET /api/v1/payroll/runs/:id` — Fetch details of a specific payroll run
 
-### Timesheet
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/timesheet` | List timesheet entries |
-| POST | `/api/v1/timesheet` | Create timesheet |
-| GET | `/api/v1/timesheet/:id` | Get timesheet |
-| PUT | `/api/v1/timesheet/:id` | Update timesheet |
-| POST | `/api/v1/timesheet/:id/submit` | Submit for approval |
-| POST | `/api/v1/timesheet/:id/approve` | Approve timesheet |
+### 4. Expense Claim Routes
+* `POST /api/v1/expenses` — Submit an expense claim with itemized lines
+* `GET /api/v1/expenses` — List all expense claims
+* `GET /api/v1/expenses/:id` — Fetch claim details
+* `GET /api/v1/expenses/:id/lines` — List line items under a claim
+* `POST /api/v1/expenses/:id/approve` — Approve an expense claim (emits `hr.expense.approved`)
+* `POST /api/v1/expenses/:id/pay` — Clear an approved claim for payment (sets status to PAID)
 
-### Leave
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/leave-requests` | List requests |
-| POST | `/api/v1/leave-requests` | Create request |
-| GET | `/api/v1/leave-requests/:id` | Get request |
-| PUT | `/api/v1/leave-requests/:id` | Update request |
-| POST | `/api/v1/leave-requests/:id/approve` | Approve |
-| POST | `/api/v1/leave-requests/:id/reject` | Reject |
-| PUT | `/api/v1/leave-requests/:id/status` | Update status |
-
-### Recruitment
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/recruitment/jobs` | List job postings |
-| POST | `/api/v1/recruitment/jobs` | Create posting |
-| GET | `/api/v1/recruitment/jobs/:id` | Get posting |
-| PUT | `/api/v1/recruitment/jobs/:id` | Update posting |
-| DELETE | `/api/v1/recruitment/jobs/:id` | Delete posting |
-| GET | `/api/v1/recruitment/applications` | List applications |
-| POST | `/api/v1/recruitment/applications` | Create application |
-| GET | `/api/v1/recruitment/applications/:id` | Get application |
-| PUT | `/api/v1/recruitment/applications/:id` | Update application |
-
-### Performance Reviews
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/performance/reviews` | List reviews |
-| POST | `/api/v1/performance/reviews` | Create review |
-| GET | `/api/v1/performance/reviews/:id` | Get review |
-| PUT | `/api/v1/performance/reviews/:id` | Update review |
-
-### Training
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/training/programs` | List programs |
-| POST | `/api/v1/training/programs` | Create program |
-| GET | `/api/v1/training/programs/:id` | Get program |
-| PUT | `/api/v1/training/programs/:id` | Update program |
-| POST | `/api/v1/training/programs/:id/enroll` | Enroll employee |
-| POST | `/api/v1/training/enrollments/:enrollmentId/complete` | Mark completion |
-
-### Documents
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/employees/:id/documents` | List employee documents |
-| POST | `/api/v1/employees/:id/documents` | Upload document |
-| DELETE | `/api/v1/employees/:id/documents/:docId` | Delete document |
-
-### Reports
-| Method | Path | Description | Status |
-|--------|------|-------------|--------|
-| GET | `/api/v1/reports/headcount` | Headcount summary | Simple count |
-| GET | `/api/v1/reports/payroll` | Payroll summary | Simple aggregation |
-| GET | `/api/v1/reports/attendance` | Attendance summary | Simple aggregation |
+---
 
 ## Kafka Integration
 
-### Events Published (22 topics, per CDD)
+### Events Published (4 topics, per hr.cdd)
+* `hr.employee.created` — Fired on hiring completion. Used by Finance (FM) to provision payroll accounts.
+* `hr.employee.terminated` — Fired on employee termination.
+* `hr.payroll.processed` — Fired on payroll approval. Used by FM to record General Ledger salary journal entries.
+* `hr.expense.approved` — Fired on claim approval. Used by FM to record accounts payable/expense entries.
 
-**Employee:** `hr.employee.created`, `hr.employee.updated`, `hr.employee.terminated`, `hr.employee.promoted`, `hr.employee.available`, `hr.employee.scheduled`, `hr.employee.skills.updated`
+### Events Consumed (2 topics, per hr.cdd)
+* `prj.time.logged` — Logged for contractor billing tracking.
+* `fm.vendor.paid` — Automatically transitions the matching `ExpenseClaim` (referenced via `target_document_id`) to `PAID` state idempotently.
 
-**Payroll:** `hr.payroll.processed` (→ FM creates salary journal entry), `hr.payroll.failed`, `hr.salary.changed`
+---
 
-**Time:** `hr.timesheet.submitted`, `hr.timesheet.approved`, `hr.overtime.recorded`
-
-**Leave:** `hr.leave.requested`, `hr.leave.approved`, `hr.leave.rejected`
-
-**Expense:** `hr.expense.submitted` (→ FM creates expense entry)
-
-**Training:** `hr.training.completed`, `hr.certification.earned`, `hr.skill.acquired`
-
-**Performance:** `hr.performance.review.completed`, `hr.goal.achieved`, `hr.performance.improvement.needed`
-
-### Events Consumed (5 topics, per CDD)
-
-| Topic | Publisher | Logic |
-|-------|-----------|-------|
-| `prj.project.created` | PM | Logged only |
-| `prj.task.assigned` | PM | Logged only |
-| `fin.budget.allocated` | FM | Adjust hiring plans based on budget |
-| `mfg.production.scheduled` | MFG | Logged only |
-| `scm.training.required` | SCM | Auto-create training program |
-
-## Seed Data
-
-No seed data is created on startup for HR.
-
-## Implementation Status vs Documentation
-
-| Feature Claimed | Actual Status |
-|----------------|--------------|
-| Employee CRUD | Fully implemented |
-| Payroll processing | Basic — creates records, no tax computation logic |
-| Timesheet approval workflow | Implemented — submit/approve cycle |
-| Leave management | Implemented — create/approve/reject |
-| Recruitment | Implemented — jobs + applications CRUD |
-| Performance reviews | Implemented — CRUD only |
-| Training programs | Implemented — CRUD + enroll/complete |
-| Employee documents | Implemented — upload/list/delete |
-| Headcount/payroll/attendance reports | Implemented — basic aggregation |
-| Tax calculations | Not implemented |
-| Benefits administration | Not implemented (only benefits model exists) |
-| Time clock integration | Not implemented |
-| 360-degree feedback | Not implemented |
-| Org chart visualization | Not implemented |
-
-## Known Limitations
-
-| Gap | Detail |
-|-----|--------|
-| No tax computation | Payroll records store amounts but no tax calculation logic |
-| No benefits management | Benefits model exists, no code beyond that |
-| No actual clock-in/out | Timesheet entries are manually created |
-| No payroll-finance auto-posting | `hr.payroll.processed` event published but no auto journal entry |
-| Reports are basic counts | No drill-down or filtering |
-| In-memory only | All data lost on restart |
-| No pagination | List endpoints return all records |
-| Fire-and-forget events | `_ = publisher.Publish(...)` ignores errors |
-
-## Related Modules
-
-- [Financial Management](../financial-management/) — Payroll expense processing via Kafka
-- [Project Management](../project-management/) — Employee/project allocation
-- [Supply Chain Management](../supply-chain-management/) — Training requirement triggers
+## Implementation Details & Security
+* **Persistence**: Runs on persistent PostgreSQL database. Utilizes GORM's `AutoMigrate` at startup to build schema tables.
+* **Transactional Reliability**: Outbox publishing is locked inside the database transaction boundary. If database write fails, the event is not written, ensuring zero data desync.
+* **Idempotent Ingestion**: Event inbox tracking prevents duplicates. Events with identical `event_id` are ignored if they have already been successfully processed.

@@ -2,70 +2,13 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/erp-system/pm-service/internal/business/domain"
 )
-
-// ==========================================
-// Portfolio Memory Repository
-// ==========================================
-
-type PortfolioRepository struct {
-	mu         sync.RWMutex
-	portfolios map[string]domain.Portfolio
-}
-
-func NewPortfolioRepository() *PortfolioRepository {
-	return &PortfolioRepository{
-		portfolios: make(map[string]domain.Portfolio),
-	}
-}
-
-func (r *PortfolioRepository) Create(ctx context.Context, portfolio *domain.Portfolio) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.portfolios[portfolio.ID] = *portfolio
-	return nil
-}
-
-func (r *PortfolioRepository) GetByID(ctx context.Context, id string) (*domain.Portfolio, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	p, ok := r.portfolios[id]
-	if !ok {
-		return nil, fmt.Errorf("portfolio not found: %s", id)
-	}
-	return &p, nil
-}
-
-func (r *PortfolioRepository) List(ctx context.Context) ([]domain.Portfolio, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	list := make([]domain.Portfolio, 0, len(r.portfolios))
-	for _, p := range r.portfolios {
-		list = append(list, p)
-	}
-	return list, nil
-}
-
-func (r *PortfolioRepository) Update(ctx context.Context, portfolio *domain.Portfolio) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.portfolios[portfolio.ID]; !ok {
-		return fmt.Errorf("portfolio not found: %s", portfolio.ID)
-	}
-	r.portfolios[portfolio.ID] = *portfolio
-	return nil
-}
-
-func (r *PortfolioRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.portfolios, id)
-	return nil
-}
 
 // ==========================================
 // Project Memory Repository
@@ -76,7 +19,7 @@ type ProjectRepository struct {
 	projects map[string]domain.Project
 }
 
-func NewProjectRepository() *ProjectRepository {
+func NewProjectRepository() domain.ProjectRepository {
 	return &ProjectRepository{
 		projects: make(map[string]domain.Project),
 	}
@@ -112,9 +55,14 @@ func (r *ProjectRepository) List(ctx context.Context) ([]domain.Project, error) 
 func (r *ProjectRepository) Update(ctx context.Context, project *domain.Project) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.projects[project.ID]; !ok {
+	existing, ok := r.projects[project.ID]
+	if !ok {
 		return fmt.Errorf("project not found: %s", project.ID)
 	}
+	if existing.Version != project.Version {
+		return errors.New("optimistic concurrency lock failure")
+	}
+	project.Version++
 	r.projects[project.ID] = *project
 	return nil
 }
@@ -127,520 +75,244 @@ func (r *ProjectRepository) Delete(ctx context.Context, id string) error {
 }
 
 // ==========================================
-// Task Memory Repository
+// WbsNode Memory Repository
 // ==========================================
 
-type TaskRepository struct {
+type WbsNodeRepository struct {
 	mu    sync.RWMutex
-	tasks map[string]domain.Task
+	nodes map[string]domain.WbsNode
 }
 
-func NewTaskRepository() *TaskRepository {
-	return &TaskRepository{
-		tasks: make(map[string]domain.Task),
+func NewWbsNodeRepository() domain.WbsNodeRepository {
+	return &WbsNodeRepository{
+		nodes: make(map[string]domain.WbsNode),
 	}
 }
 
-func (r *TaskRepository) Create(ctx context.Context, task *domain.Task) error {
+func (r *WbsNodeRepository) Create(ctx context.Context, node *domain.WbsNode) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.tasks[task.ID] = *task
+	r.nodes[node.ID] = *node
 	return nil
 }
 
-func (r *TaskRepository) GetByID(ctx context.Context, id string) (*domain.Task, error) {
+func (r *WbsNodeRepository) GetByID(ctx context.Context, id string) (*domain.WbsNode, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	t, ok := r.tasks[id]
+	node, ok := r.nodes[id]
 	if !ok {
-		return nil, fmt.Errorf("task not found: %s", id)
+		return nil, fmt.Errorf("wbs node not found: %s", id)
 	}
-	return &t, nil
+	return &node, nil
 }
 
-func (r *TaskRepository) ListByProject(ctx context.Context, projectID string) ([]domain.Task, error) {
+func (r *WbsNodeRepository) ListByProjectID(ctx context.Context, projectID string) ([]domain.WbsNode, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.Task
-	for _, t := range r.tasks {
-		if t.ProjectID == projectID {
-			list = append(list, t)
+	var list []domain.WbsNode
+	for _, node := range r.nodes {
+		if node.ProjectID == projectID {
+			list = append(list, node)
 		}
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].NodeCode < list[j].NodeCode
+	})
 	return list, nil
 }
 
-func (r *TaskRepository) Update(ctx context.Context, task *domain.Task) error {
+func (r *WbsNodeRepository) Update(ctx context.Context, node *domain.WbsNode) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.tasks[task.ID]; !ok {
-		return fmt.Errorf("task not found: %s", task.ID)
+	existing, ok := r.nodes[node.ID]
+	if !ok {
+		return fmt.Errorf("wbs node not found: %s", node.ID)
 	}
-	r.tasks[task.ID] = *task
+	if existing.Version != node.Version {
+		return errors.New("optimistic concurrency lock failure")
+	}
+	node.Version++
+	r.nodes[node.ID] = *node
 	return nil
 }
 
-func (r *TaskRepository) Delete(ctx context.Context, id string) error {
+func (r *WbsNodeRepository) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.tasks, id)
+	delete(r.nodes, id)
 	return nil
 }
 
 // ==========================================
-// TaskDependency Memory Repository
+// TimeLog Memory Repository
 // ==========================================
 
-type TaskDependencyRepository struct {
+type TimeLogRepository struct {
 	mu   sync.RWMutex
-	deps map[string]domain.TaskDependency
+	logs map[string]domain.TimeLog
 }
 
-func NewTaskDependencyRepository() *TaskDependencyRepository {
-	return &TaskDependencyRepository{
-		deps: make(map[string]domain.TaskDependency),
+func NewTimeLogRepository() domain.TimeLogRepository {
+	return &TimeLogRepository{
+		logs: make(map[string]domain.TimeLog),
 	}
 }
 
-func (r *TaskDependencyRepository) Create(ctx context.Context, dep *domain.TaskDependency) error {
+func (r *TimeLogRepository) Create(ctx context.Context, log *domain.TimeLog) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.deps[dep.ID] = *dep
+	r.logs[log.ID] = *log
 	return nil
 }
 
-func (r *TaskDependencyRepository) ListByTask(ctx context.Context, taskID string) ([]domain.TaskDependency, error) {
+func (r *TimeLogRepository) GetByID(ctx context.Context, id string) (*domain.TimeLog, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.TaskDependency
-	for _, d := range r.deps {
-		if d.TaskID == taskID {
-			list = append(list, d)
-		}
-	}
-	return list, nil
-}
-
-func (r *TaskDependencyRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.deps, id)
-	return nil
-}
-
-// ==========================================
-// ResourceAllocation Memory Repository
-// ==========================================
-
-type ResourceAllocationRepository struct {
-	mu     sync.RWMutex
-	allocs map[string]domain.ResourceAllocation
-}
-
-func NewResourceAllocationRepository() *ResourceAllocationRepository {
-	return &ResourceAllocationRepository{
-		allocs: make(map[string]domain.ResourceAllocation),
-	}
-}
-
-func (r *ResourceAllocationRepository) Create(ctx context.Context, alloc *domain.ResourceAllocation) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.allocs[alloc.ID] = *alloc
-	return nil
-}
-
-func (r *ResourceAllocationRepository) GetByID(ctx context.Context, id string) (*domain.ResourceAllocation, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	a, ok := r.allocs[id]
+	log, ok := r.logs[id]
 	if !ok {
-		return nil, fmt.Errorf("allocation not found: %s", id)
+		return nil, fmt.Errorf("time log not found: %s", id)
 	}
-	return &a, nil
+	return &log, nil
 }
 
-func (r *ResourceAllocationRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ResourceAllocation, error) {
+func (r *TimeLogRepository) List(ctx context.Context) ([]domain.TimeLog, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.ResourceAllocation
-	for _, a := range r.allocs {
-		if a.ProjectID == projectID {
-			list = append(list, a)
-		}
+	list := make([]domain.TimeLog, 0, len(r.logs))
+	for _, l := range r.logs {
+		list = append(list, l)
 	}
 	return list, nil
 }
 
-func (r *ResourceAllocationRepository) Update(ctx context.Context, alloc *domain.ResourceAllocation) error {
+func (r *TimeLogRepository) Update(ctx context.Context, log *domain.TimeLog) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.allocs[alloc.ID]; !ok {
-		return fmt.Errorf("allocation not found: %s", alloc.ID)
+	if _, ok := r.logs[log.ID]; !ok {
+		return fmt.Errorf("time log not found: %s", log.ID)
 	}
-	r.allocs[alloc.ID] = *alloc
+	r.logs[log.ID] = *log
 	return nil
 }
 
-func (r *ResourceAllocationRepository) Delete(ctx context.Context, id string) error {
+func (r *TimeLogRepository) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.allocs, id)
+	delete(r.logs, id)
 	return nil
 }
 
-// ==========================================
-// ProjectTimeEntry Memory Repository
-// ==========================================
-
-type ProjectTimeEntryRepository struct {
-	mu      sync.RWMutex
-	entries map[string]domain.ProjectTimeEntry
-}
-
-func NewProjectTimeEntryRepository() *ProjectTimeEntryRepository {
-	return &ProjectTimeEntryRepository{
-		entries: make(map[string]domain.ProjectTimeEntry),
-	}
-}
-
-func (r *ProjectTimeEntryRepository) Create(ctx context.Context, entry *domain.ProjectTimeEntry) error {
+func (r *TimeLogRepository) ApproveTimeLogs(ctx context.Context, ids []string, approverHrID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.entries[entry.ID] = *entry
-	return nil
-}
-
-func (r *ProjectTimeEntryRepository) GetByID(ctx context.Context, id string) (*domain.ProjectTimeEntry, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	e, ok := r.entries[id]
-	if !ok {
-		return nil, fmt.Errorf("project time entry not found: %s", id)
-	}
-	return &e, nil
-}
-
-func (r *ProjectTimeEntryRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ProjectTimeEntry, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	var list []domain.ProjectTimeEntry
-	for _, e := range r.entries {
-		if e.ProjectID == projectID {
-			list = append(list, e)
+	for _, id := range ids {
+		if log, ok := r.logs[id]; ok {
+			log.IsApproved = true
+			log.ApprovedByHrID = &approverHrID
+			r.logs[id] = log
 		}
 	}
-	return list, nil
-}
-
-func (r *ProjectTimeEntryRepository) Update(ctx context.Context, entry *domain.ProjectTimeEntry) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.entries[entry.ID]; !ok {
-		return fmt.Errorf("project time entry not found: %s", entry.ID)
-	}
-	r.entries[entry.ID] = *entry
-	return nil
-}
-
-func (r *ProjectTimeEntryRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.entries, id)
 	return nil
 }
 
 // ==========================================
-// ProjectExpense Memory Repository
+// TransactionalOutbox Memory Repository
 // ==========================================
 
-type ProjectExpenseRepository struct {
-	mu       sync.RWMutex
-	expenses map[string]domain.ProjectExpense
-}
-
-func NewProjectExpenseRepository() *ProjectExpenseRepository {
-	return &ProjectExpenseRepository{
-		expenses: make(map[string]domain.ProjectExpense),
-	}
-}
-
-func (r *ProjectExpenseRepository) Create(ctx context.Context, expense *domain.ProjectExpense) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.expenses[expense.ID] = *expense
-	return nil
-}
-
-func (r *ProjectExpenseRepository) GetByID(ctx context.Context, id string) (*domain.ProjectExpense, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	e, ok := r.expenses[id]
-	if !ok {
-		return nil, fmt.Errorf("expense not found: %s", id)
-	}
-	return &e, nil
-}
-
-func (r *ProjectExpenseRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ProjectExpense, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	var list []domain.ProjectExpense
-	for _, e := range r.expenses {
-		if e.ProjectID == projectID {
-			list = append(list, e)
-		}
-	}
-	return list, nil
-}
-
-func (r *ProjectExpenseRepository) Update(ctx context.Context, expense *domain.ProjectExpense) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.expenses[expense.ID]; !ok {
-		return fmt.Errorf("expense not found: %s", expense.ID)
-	}
-	r.expenses[expense.ID] = *expense
-	return nil
-}
-
-func (r *ProjectExpenseRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.expenses, id)
-	return nil
-}
-
-// ==========================================
-// ProjectDocument Memory Repository
-// ==========================================
-
-type ProjectDocumentRepository struct {
+type TransactionalOutboxRepository struct {
 	mu   sync.RWMutex
-	docs map[string]domain.ProjectDocument
+	msgs map[string]domain.TransactionalOutbox
 }
 
-func NewProjectDocumentRepository() *ProjectDocumentRepository {
-	return &ProjectDocumentRepository{
-		docs: make(map[string]domain.ProjectDocument),
+func NewTransactionalOutboxRepository() domain.TransactionalOutboxRepository {
+	return &TransactionalOutboxRepository{
+		msgs: make(map[string]domain.TransactionalOutbox),
 	}
 }
 
-func (r *ProjectDocumentRepository) Create(ctx context.Context, doc *domain.ProjectDocument) error {
+func (r *TransactionalOutboxRepository) Create(ctx context.Context, msg *domain.TransactionalOutbox) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.docs[doc.ID] = *doc
+	r.msgs[msg.ID] = *msg
 	return nil
 }
 
-func (r *ProjectDocumentRepository) GetByID(ctx context.Context, id string) (*domain.ProjectDocument, error) {
+func (r *TransactionalOutboxRepository) GetByID(ctx context.Context, id string) (*domain.TransactionalOutbox, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	d, ok := r.docs[id]
+	msg, ok := r.msgs[id]
 	if !ok {
-		return nil, fmt.Errorf("document not found: %s", id)
+		return nil, fmt.Errorf("outbox message not found: %s", id)
 	}
-	return &d, nil
+	return &msg, nil
 }
 
-func (r *ProjectDocumentRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ProjectDocument, error) {
+func (r *TransactionalOutboxRepository) GetUnsent(ctx context.Context, limit int) ([]domain.TransactionalOutbox, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var list []domain.ProjectDocument
-	for _, d := range r.docs {
-		if d.ProjectID == projectID {
-			list = append(list, d)
+	var list []domain.TransactionalOutbox
+	for _, msg := range r.msgs {
+		if msg.Status == domain.OutboxStatusPENDING {
+			list = append(list, msg)
 		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].CreatedAt.Before(list[j].CreatedAt)
+	})
+	if len(list) > limit {
+		list = list[:limit]
 	}
 	return list, nil
 }
 
-func (r *ProjectDocumentRepository) Delete(ctx context.Context, id string) error {
+func (r *TransactionalOutboxRepository) Update(ctx context.Context, msg *domain.TransactionalOutbox) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.docs, id)
+	if _, ok := r.msgs[msg.ID]; !ok {
+		return fmt.Errorf("outbox message not found: %s", msg.ID)
+	}
+	r.msgs[msg.ID] = *msg
 	return nil
 }
 
 // ==========================================
-// ProjectIssue Memory Repository
+// KafkaEventInbox Memory Repository
 // ==========================================
 
-type ProjectIssueRepository struct {
-	mu     sync.RWMutex
-	issues map[string]domain.ProjectIssue
-}
-
-func NewProjectIssueRepository() *ProjectIssueRepository {
-	return &ProjectIssueRepository{
-		issues: make(map[string]domain.ProjectIssue),
-	}
-}
-
-func (r *ProjectIssueRepository) Create(ctx context.Context, issue *domain.ProjectIssue) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.issues[issue.ID] = *issue
-	return nil
-}
-
-func (r *ProjectIssueRepository) GetByID(ctx context.Context, id string) (*domain.ProjectIssue, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	i, ok := r.issues[id]
-	if !ok {
-		return nil, fmt.Errorf("issue not found: %s", id)
-	}
-	return &i, nil
-}
-
-func (r *ProjectIssueRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ProjectIssue, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	var list []domain.ProjectIssue
-	for _, i := range r.issues {
-		if i.ProjectID == projectID {
-			list = append(list, i)
-		}
-	}
-	return list, nil
-}
-
-func (r *ProjectIssueRepository) Update(ctx context.Context, issue *domain.ProjectIssue) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.issues[issue.ID]; !ok {
-		return fmt.Errorf("issue not found: %s", issue.ID)
-	}
-	r.issues[issue.ID] = *issue
-	return nil
-}
-
-func (r *ProjectIssueRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.issues, id)
-	return nil
-}
-
-// ==========================================
-// ChangeRequest Memory Repository
-// ==========================================
-
-type ChangeRequestRepository struct {
+type KafkaEventInboxRepository struct {
 	mu   sync.RWMutex
-	reqs map[string]domain.ChangeRequest
+	msgs map[string]domain.KafkaEventInbox
 }
 
-func NewChangeRequestRepository() *ChangeRequestRepository {
-	return &ChangeRequestRepository{
-		reqs: make(map[string]domain.ChangeRequest),
+func NewKafkaEventInboxRepository() domain.KafkaEventInboxRepository {
+	return &KafkaEventInboxRepository{
+		msgs: make(map[string]domain.KafkaEventInbox),
 	}
 }
 
-func (r *ChangeRequestRepository) Create(ctx context.Context, req *domain.ChangeRequest) error {
+func (r *KafkaEventInboxRepository) Create(ctx context.Context, msg *domain.KafkaEventInbox) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.reqs[req.ID] = *req
+	r.msgs[msg.EventID] = *msg
 	return nil
 }
 
-func (r *ChangeRequestRepository) GetByID(ctx context.Context, id string) (*domain.ChangeRequest, error) {
+func (r *KafkaEventInboxRepository) GetByID(ctx context.Context, eventID string) (*domain.KafkaEventInbox, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	rq, ok := r.reqs[id]
+	msg, ok := r.msgs[eventID]
 	if !ok {
-		return nil, fmt.Errorf("change request not found: %s", id)
+		return nil, fmt.Errorf("inbox message not found: %s", eventID)
 	}
-	return &rq, nil
+	return &msg, nil
 }
 
-func (r *ChangeRequestRepository) ListByProject(ctx context.Context, projectID string) ([]domain.ChangeRequest, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	var list []domain.ChangeRequest
-	for _, rq := range r.reqs {
-		if rq.ProjectID == projectID {
-			list = append(list, rq)
-		}
-	}
-	return list, nil
-}
-
-func (r *ChangeRequestRepository) Update(ctx context.Context, req *domain.ChangeRequest) error {
+func (r *KafkaEventInboxRepository) Update(ctx context.Context, msg *domain.KafkaEventInbox) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.reqs[req.ID]; !ok {
-		return fmt.Errorf("change request not found: %s", req.ID)
+	if _, ok := r.msgs[msg.EventID]; !ok {
+		return fmt.Errorf("inbox message not found: %s", msg.EventID)
 	}
-	r.reqs[req.ID] = *req
-	return nil
-}
-
-func (r *ChangeRequestRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.reqs, id)
-	return nil
-}
-
-// ==========================================
-// Milestone Memory Repository (Phase 2.21)
-// ==========================================
-
-type MilestoneRepository struct {
-	mu         sync.RWMutex
-	milestones map[string]domain.Milestone
-}
-
-func NewMilestoneRepository() *MilestoneRepository {
-	return &MilestoneRepository{
-		milestones: make(map[string]domain.Milestone),
-	}
-}
-
-func (r *MilestoneRepository) Create(ctx context.Context, m *domain.Milestone) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.milestones[m.ID] = *m
-	return nil
-}
-
-func (r *MilestoneRepository) GetByID(ctx context.Context, id string) (*domain.Milestone, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	m, ok := r.milestones[id]
-	if !ok {
-		return nil, fmt.Errorf("milestone not found: %s", id)
-	}
-	return &m, nil
-}
-
-func (r *MilestoneRepository) ListByProject(ctx context.Context, projectID string) ([]domain.Milestone, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	list := make([]domain.Milestone, 0, len(r.milestones))
-	for _, m := range r.milestones {
-		if m.ProjectID == projectID {
-			list = append(list, m)
-		}
-	}
-	return list, nil
-}
-
-func (r *MilestoneRepository) Update(ctx context.Context, m *domain.Milestone) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, ok := r.milestones[m.ID]; !ok {
-		return fmt.Errorf("milestone not found: %s", m.ID)
-	}
-	r.milestones[m.ID] = *m
-	return nil
-}
-
-func (r *MilestoneRepository) Delete(ctx context.Context, id string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.milestones, id)
+	r.msgs[msg.EventID] = *msg
 	return nil
 }

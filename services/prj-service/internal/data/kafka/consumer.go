@@ -9,7 +9,7 @@ import (
 	"github.com/erp-system/pm-service/internal/business/domain"
 	"github.com/erp-system/pm-service/internal/business/service"
 	"github.com/segmentio/kafka-go"
-	"github.com/shopspring/decimal"
+	"erp-system/shared/utils"
 )
 
 type DeadLetterMessage struct {
@@ -21,32 +21,24 @@ type DeadLetterMessage struct {
 	ServiceName   string      `json:"service_name"`
 }
 
-const (
-	TopicCrmSalesOrderReceivedDeadLetter = domain.TopicCrmSalesOrderReceived + ".dead-letter"
-)
-
 type KafkaConsumer struct {
-	reader      *kafka.Reader
-	publisher   domain.EventPublisher
-	planningSvc *service.ProjectPlanningService
-	taskSvc     *service.TaskManagementService
+	reader          *kafka.Reader
+	publisher       domain.EventPublisher
+	reliableMsgSvc  service.ReliableMessagingService
+	projTrackingSvc service.ProjectTrackingService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
 	publisher domain.EventPublisher,
-	planningSvc *service.ProjectPlanningService,
-	taskSvc *service.TaskManagementService,
+	reliableMsgSvc service.ReliableMessagingService,
+	projTrackingSvc service.ProjectTrackingService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicHrEmployeeAvailable,
-		domain.TopicHrEmployeeSkillsUpdated,
-		domain.TopicFinBudgetApproved,
-		domain.TopicFinPaymentReceived,
-		domain.TopicCrmSalesOrderReceived,
-		domain.TopicScmMaterialDelivered,
-		domain.TopicMfgCustomProductionCompleted,
+		domain.TopicHrEmployeeCreated,
+		domain.TopicHrEmployeeTerminated,
+		domain.TopicCrmSalesOrderConfirmed,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -56,10 +48,10 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:      reader,
-		publisher:   publisher,
-		planningSvc: planningSvc,
-		taskSvc:     taskSvc,
+		reader:          reader,
+		publisher:       publisher,
+		reliableMsgSvc:  reliableMsgSvc,
+		projTrackingSvc: projTrackingSvc,
 	}
 }
 
@@ -108,82 +100,54 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 }
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
-	switch topic {
-	case domain.TopicHrEmployeeAvailable:
-		var ev domain.EmployeeAvailableEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing HR Employee Available: Employee %s is %s. Updating resource scheduling options.", ev.EmployeeID, ev.Status)
-		return nil
-
-	case domain.TopicHrEmployeeSkillsUpdated:
-		var ev domain.EmployeeSkillsUpdatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing HR Employee Skills Updated: Employee %s skills updated to %v. Re-mapping project resource capabilities.", ev.EmployeeID, ev.Skills)
-		return nil
-
-	case domain.TopicFinBudgetApproved:
-		var ev domain.BudgetApprovedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Finance Budget Approved: Project %s budget approved for amount %s. Updating project planning budget ceiling.", ev.ProjectID, ev.TotalBudget.String())
-		_, err := c.planningSvc.UpdateProjectStatus(ctx, ev.ProjectID, "ACTIVE")
+	var genericEv struct {
+		EventID string `json:"event_id"`
+	}
+	if err := json.Unmarshal(value, &genericEv); err != nil {
 		return err
-
-	case domain.TopicFinPaymentReceived:
-		var ev domain.PaymentReceivedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Finance Payment Received: Project %s received payment of %s on Invoice %s. Updating billing summary.", ev.ProjectID, ev.AmountPaid.String(), ev.InvoiceID)
-		return nil
-
-	case domain.TopicCrmSalesOrderReceived:
-		var ev domain.SalesOrderReceivedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing CRM Sales Order Received: Order %s for Customer %s. Automanaging custom project creation.", ev.SalesOrderID, ev.CustomerID)
-
-		// Create a custom project automatically for this sales order
-		projName := "Order Delivery Project - " + ev.SalesOrderID
-		projDesc := "Automatically generated project to fulfill sales order " + ev.SalesOrderID
-		startDate := time.Now()
-		endDate := startDate.AddDate(0, 1, 0) // 1 month duration
-
-		proj, err := c.planningSvc.CreateProject(ctx, projName, projDesc, startDate, &endDate, "", "")
-		if err != nil {
-			log.Printf("Failed to auto-create custom project: %v", err)
-			return err
-		}
-		log.Printf("Successfully auto-created project %s (ID: %s) for Sales Order %s", proj.Name, proj.ID, ev.SalesOrderID)
-
-		// Auto-create initial kick-off task
-		_, _ = c.taskSvc.CreateTask(ctx, proj.ID, "", "Project Kick-off & Alignment", "Confirm requirements and resources for Sales Order "+ev.SalesOrderID, "", &startDate, &startDate, decimal.NewFromInt(0))
-		return nil
-
-	case domain.TopicScmMaterialDelivered:
-		var ev domain.MaterialDeliveredEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing SCM Material Delivered: Material delivered for project %s, task %s (Shipment: %s). Updating task resource status.", ev.ProjectID, ev.TaskID, ev.ShipmentID)
-		return nil
-
-	case domain.TopicMfgCustomProductionCompleted:
-		var ev domain.CustomProductionCompletedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Manufacturing Custom Production Completed: Custom production completed for project %s, Item %s. Marking production order %s resolved.", ev.ProjectID, ev.CustomItemID, ev.ProductionOrderID)
-		return nil
+	}
+	if genericEv.EventID == "" {
+		genericEv.EventID = utils.NewID("missing-evt")
 	}
 
-	return nil
+	return c.reliableMsgSvc.ExecuteIdempotentTransaction(ctx, genericEv.EventID, topic, value, func(txCtx context.Context) error {
+		switch topic {
+		case domain.TopicHrEmployeeCreated:
+			var ev domain.HrEmployeeCreatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("[Idempotent Inbox] Processed HR Employee Created: ID=%s, LegalEntity=%s, Role=%s", ev.EmployeeID, ev.LegalEntityID, ev.ExplicitRole)
+			return nil
+
+		case domain.TopicHrEmployeeTerminated:
+			var ev domain.HrEmployeeTerminatedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("[Idempotent Inbox] Processed HR Employee Terminated: ID=%s, LegalEntity=%s", ev.EmployeeID, ev.LegalEntityID)
+			return nil
+
+		case domain.TopicCrmSalesOrderConfirmed:
+			var ev domain.CrmSalesOrderConfirmedEvent
+			if err := json.Unmarshal(value, &ev); err != nil {
+				return err
+			}
+			log.Printf("[Idempotent Inbox] Processed CRM Sales Order Confirmed: SalesOrder=%s, Customer=%s, LegalEntity=%s", ev.SalesOrderID, ev.CustomerID, ev.LegalEntityID)
+
+			_, err := c.projTrackingSvc.InitializeProject(
+				txCtx,
+				ev.LegalEntityID,
+				ev.CustomerID,
+				"PRJ-"+ev.SalesOrderID,
+				"Project Fulfilling Sales Order "+ev.SalesOrderID,
+				domain.BillingMethodTIME_AND_MATERIALS,
+				time.Now(),
+			)
+			return err
+		}
+		return nil
+	})
 }
 
 func (c *KafkaConsumer) Close() error {

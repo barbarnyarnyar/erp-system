@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/erp-system/m-service/internal/config"
+	"github.com/erp-system/pm-service/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -36,14 +36,11 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// AutoMigrate all Manufacturing entities
+	// AutoMigrate all PRJ entities
 	err = db.AutoMigrate(
-		&WorkCenter{},
-		&RoutingStation{},
-		&WorkOrder{},
-		&WorkOrderRoutingState{},
-		&MaterialConsumptionLog{},
-		&ProductionYieldLog{},
+		&Project{},
+		&WbsNode{},
+		&TimeLog{},
 		&TransactionalOutbox{},
 		&KafkaEventInbox{},
 	)

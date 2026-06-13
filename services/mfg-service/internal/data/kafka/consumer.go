@@ -108,7 +108,7 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		}
 		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
 			log.Printf("Processing PLM BOM Released: BOM %s for Material %s", ev.BomHeaderID, ev.MaterialID)
-			return nil
+			return c.execSvc.FreezeObsoleteWorkOrders(txCtx, ev.MaterialID, ev.BomHeaderID)
 		})
 
 	case domain.TopicQmsInspectionPassed:
