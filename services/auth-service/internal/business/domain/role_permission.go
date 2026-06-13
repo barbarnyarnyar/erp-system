@@ -6,9 +6,9 @@ import (
 )
 
 type RolePermission struct {
-	ID           string    `json:"id"`
-	RoleID       string    `json:"role_id"`
-	PermissionID string    `json:"permission_id"`
-	CreatedAt    time.Time `json:"created_at"`
-	AssignedBy   *string   `json:"assigned_by"`
+	ID               string    `json:"id"`
+	RoleID           string    `json:"role_id"`
+	PermissionID     string    `json:"permission_id"`
+	AssignedByUserID *string   `json:"assigned_by_user_id,omitempty"` // Audit trail — who granted this permission
+	CreatedAt        time.Time `json:"created_at"`
 }

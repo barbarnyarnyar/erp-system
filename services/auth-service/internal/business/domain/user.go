@@ -6,14 +6,17 @@ import (
 )
 
 type User struct {
-	ID            string    `json:"id"`
-	Username      string    `json:"username"`
-	Email         string    `json:"email"`
-	PasswordHash  string    `json:"password_hash"`
-	FirstName     string    `json:"first_name"`
-	LastName      string    `json:"last_name"`
-	IsActive      bool      `json:"is_active"`
-	SecurityStamp string    `json:"security_stamp,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            string     `json:"id"`
+	LegalEntityID string     `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+	Username      string     `json:"username"`        // Unique within tenant boundary
+	Email         string     `json:"email"`           // Unique within tenant boundary
+	PasswordHash  string     `json:"password_hash"`   // bcrypt hash — never returned in API responses
+	FirstName     string     `json:"first_name"`
+	LastName      string     `json:"last_name"`
+	Status        UserStatus `json:"status"`         // ACTIVE / INACTIVE / SUSPENDED
+	SecurityStamp string     `json:"security_stamp"` // Rotated on every password change — invalidates all sessions
+	Version       int        `json:"version"`        // Concurrency Control Shield (Optimistic Locking)
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	DeletedAt     *time.Time `json:"deleted_at,omitempty"` // GORM Native Soft Delete Support
 }

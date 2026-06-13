@@ -7,189 +7,99 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// EventPublisher defines the publisher interface for event streaming
 type EventPublisher interface {
 	Publish(ctx context.Context, topic string, key string, payload interface{}) error
 }
 
-type ProductionScheduledEvent struct {
-	ProductionOrderID string    `json:"production_order_id"`
-	ProductID         string    `json:"product_id"`
-	Quantity          int       `json:"quantity"`
-	ScheduledDate     time.Time `json:"scheduled_date"`
-	Timestamp         time.Time `json:"timestamp"`
+// ==========================================
+// PRODUCER EVENTS (EMITTED BY MFG)
+// ==========================================
+
+// MfgProductionStartedEvent (mfg.production.started)
+type MfgProductionStartedEvent struct {
+	EventID       string    `json:"event_id"`
+	LegalEntityID string    `json:"legal_entity_id"`
+	WorkOrderID   string    `json:"work_order_id"`
+	MaterialID    string    `json:"material_id"`
+	Timestamp     time.Time `json:"timestamp"`
 }
 
-type ProductionCompletedEvent struct {
-	ProductionOrderID string    `json:"production_order_id"`
-	ProductID         string    `json:"product_id"`
-	Quantity          int       `json:"quantity"`
-	Timestamp         time.Time `json:"timestamp"`
+// MfgMaterialConsumedEvent (mfg.material.consumed)
+type MfgMaterialConsumedEvent struct {
+	EventID       string                `json:"event_id"`
+	LegalEntityID string                `json:"legal_entity_id"`
+	WorkOrderID   string                `json:"work_order_id"`
+	Items         []ConsumedItemPayload `json:"items"`
+	Timestamp     time.Time             `json:"timestamp"`
 }
 
-type MaterialConsumedEvent struct {
-	ProductionOrderID string          `json:"production_order_id"`
-	ProductID         string          `json:"product_id"`
-	Quantity          decimal.Decimal `json:"quantity"`
-	Timestamp         time.Time       `json:"timestamp"`
+// MfgYieldProducedEvent (mfg.yield.produced)
+type MfgYieldProducedEvent struct {
+	EventID          string          `json:"event_id"`
+	LegalEntityID    string          `json:"legal_entity_id"`
+	WorkOrderID      string          `json:"work_order_id"`
+	RoutingStationID string          `json:"routing_station_id"`
+	QuantityGood     decimal.Decimal `json:"quantity_good"`
+	QuantityScrap    decimal.Decimal `json:"quantity_scrap"`
+	OperatorHrID     string          `json:"operator_hr_id"`
+	Timestamp        time.Time       `json:"timestamp"`
 }
 
-type MaterialRequiredEvent struct {
-	ProductID  string          `json:"product_id"`
-	Quantity   decimal.Decimal `json:"quantity"`
-	RequiredBy time.Time       `json:"required_by"`
-	Timestamp  time.Time       `json:"timestamp"`
+// MfgWorkOrderCompletedEvent (mfg.work_order.completed)
+type MfgWorkOrderCompletedEvent struct {
+	EventID          string          `json:"event_id"`
+	LegalEntityID    string          `json:"legal_entity_id"`
+	WorkOrderID      string          `json:"work_order_id"`
+	MaterialID       string          `json:"material_id"`
+	QuantityProduced decimal.Decimal `json:"quantity_produced"`
+	Timestamp        time.Time       `json:"timestamp"`
 }
 
-type SalesOrderCreatedEvent struct {
-	SalesOrderID string    `json:"sales_order_id"`
-	CustomerID   string    `json:"customer_id"`
-	ProductID    string    `json:"product_id"`
-	Quantity     int       `json:"quantity"`
-	Timestamp    time.Time `json:"timestamp"`
+// ==========================================
+// CONSUMER EVENTS (RECEIVED BY MFG)
+// ==========================================
+
+// PlmBomReleasedEvent (plm.bom.released)
+type PlmBomReleasedEvent struct {
+	EventID       string      `json:"event_id"`
+	LegalEntityID string      `json:"legal_entity_id"`
+	BomHeaderID   string      `json:"bom_header_id"`
+	MaterialID    string      `json:"material_id"`
+	VersionString string      `json:"version_string"`
+	Components    interface{} `json:"components"` // JSONB payload
+	Timestamp     time.Time   `json:"timestamp"`
 }
 
-type DemandForecastEvent struct {
-	ProductID        string    `json:"product_id"`
-	ForecastQuantity int       `json:"forecast_quantity"`
-	Period           string    `json:"period"`
-	Timestamp        time.Time `json:"timestamp"`
-}
-
-type ProductionStartedEvent struct {
-	ProductionOrderID string    `json:"production_order_id"`
-	ProductID         string    `json:"product_id"`
-	Timestamp         time.Time `json:"timestamp"`
-}
-
-type ProductionDelayedEvent struct {
-	ProductionOrderID string    `json:"production_order_id"`
-	Reason            string    `json:"reason"`
-	NewScheduledDate  time.Time `json:"new_scheduled_date"`
-	Timestamp         time.Time `json:"timestamp"`
-}
-
-type WorkOrderCreatedEvent struct {
-	WorkOrderID       string    `json:"work_order_id"`
-	ProductionOrderID string    `json:"production_order_id"`
-	WorkCenterID      string    `json:"work_center_id"`
-	Timestamp         time.Time `json:"timestamp"`
-}
-
-type WorkOrderStartedEvent struct {
-	WorkOrderID string    `json:"work_order_id"`
-	Timestamp   time.Time `json:"timestamp"`
-}
-
-type WorkOrderCompletedEvent struct {
-	WorkOrderID string    `json:"work_order_id"`
-	Timestamp   time.Time `json:"timestamp"`
-}
-
-type WorkOrderCancelledEvent struct {
-	WorkOrderID string    `json:"work_order_id"`
-	Reason      string    `json:"reason"`
-	Timestamp   time.Time `json:"timestamp"`
-}
-
-type MaterialWastedEvent struct {
-	ProductionOrderID string          `json:"production_order_id"`
-	ProductID         string          `json:"product_id"`
-	Quantity          decimal.Decimal `json:"quantity"`
-	Reason            string          `json:"reason"`
-	Timestamp         time.Time       `json:"timestamp"`
-}
-
-type QualityInspectionPassedEvent struct {
-	InspectionID string    `json:"inspection_id"`
-	WorkOrderID  string    `json:"work_order_id"`
-	InspectorID  string    `json:"inspector_id"`
-	Timestamp    time.Time `json:"timestamp"`
-}
-
-type QualityInspectionFailedEvent struct {
-	InspectionID string    `json:"inspection_id"`
-	WorkOrderID  string    `json:"work_order_id"`
-	InspectorID  string    `json:"inspector_id"`
-	Remarks      string    `json:"remarks"`
-	Timestamp    time.Time `json:"timestamp"`
-}
-
-type QualityNonConformanceDetectedEvent struct {
-	NonConformanceID string    `json:"non_conformance_id"`
+// QmsInspectionPassedEvent (qms.inspection.passed)
+type QmsInspectionPassedEvent struct {
+	EventID          string    `json:"event_id"`
+	LegalEntityID    string    `json:"legal_entity_id"`
 	InspectionID     string    `json:"inspection_id"`
-	Severity         string    `json:"severity"`
-	Description      string    `json:"description"`
+	TriggerSource    string    `json:"trigger_source"`
+	SourceDocumentID string    `json:"source_document_id"`
+	MaterialID       string    `json:"material_id"`
 	Timestamp        time.Time `json:"timestamp"`
 }
 
-type MaintenanceScheduledEvent struct {
-	MaintenanceOrderID string    `json:"maintenance_order_id"`
-	EquipmentID        string    `json:"equipment_id"`
-	ScheduledDate      time.Time `json:"scheduled_date"`
-	Timestamp          time.Time `json:"timestamp"`
+// QmsInspectionFailedEvent (qms.inspection.failed)
+type QmsInspectionFailedEvent struct {
+	EventID          string    `json:"event_id"`
+	LegalEntityID    string    `json:"legal_entity_id"`
+	InspectionID     string    `json:"inspection_id"`
+	TriggerSource    string    `json:"trigger_source"`
+	SourceDocumentID string    `json:"source_document_id"`
+	MaterialID       string    `json:"material_id"`
+	NonConformanceID string    `json:"non_conformance_id"`
+	Timestamp        time.Time `json:"timestamp"`
 }
 
-type MaintenanceCompletedEvent struct {
-	MaintenanceOrderID string    `json:"maintenance_order_id"`
-	EquipmentID        string    `json:"equipment_id"`
-	Timestamp          time.Time `json:"timestamp"`
-}
-
-type EquipmentDownEvent struct {
-	EquipmentID  string    `json:"equipment_id"`
-	WorkCenterID string    `json:"work_center_id"`
-	Reason       string    `json:"reason"`
-	Timestamp    time.Time `json:"timestamp"`
-}
-
-type EquipmentUpEvent struct {
-	EquipmentID  string    `json:"equipment_id"`
-	WorkCenterID string    `json:"work_center_id"`
-	Timestamp    time.Time `json:"timestamp"`
-}
-
-type CustomProductionCompletedEvent struct {
-	ProjectID         string    `json:"project_id"`
-	ProductionOrderID string    `json:"production_order_id"`
-	CustomItemID      string    `json:"custom_item_id"`
-	Quantity          int       `json:"quantity"`
-	Timestamp         time.Time `json:"timestamp"`
-}
-
-type SCMMaterialReceivedEvent struct {
-	PurchaseOrderID string          `json:"purchase_order_id"`
-	ProductID       string          `json:"product_id"`
-	Quantity        decimal.Decimal `json:"quantity"`
-	Timestamp       time.Time       `json:"timestamp"`
-}
-
-type SCMInventoryUpdatedEvent struct {
-	ProductID      string          `json:"product_id"`
-	LocationID     string          `json:"location_id"`
-	QuantityOnHand decimal.Decimal `json:"quantity_on_hand"`
-	ChangeType     string          `json:"change_type"` // e.g. ADJUSTED, RECEIVED, SHIPPED
-	Timestamp      time.Time       `json:"timestamp"`
-}
-
-type FinCostBudgetAllocatedEvent struct {
-	DepartmentID string          `json:"department_id"`
-	ProjectID    string          `json:"project_id"`
-	Amount       decimal.Decimal `json:"amount"`
-	Timestamp    time.Time       `json:"timestamp"`
-}
-
-type HREmployeeScheduledEvent struct {
-	EmployeeID   string    `json:"employee_id"`
-	WorkCenterID string    `json:"work_center_id"`
-	ShiftStart   time.Time `json:"shift_start"`
-	ShiftEnd     time.Time `json:"shift_end"`
-	Timestamp    time.Time `json:"timestamp"`
-}
-
-type PrjCustomOrderCreatedEvent struct {
-	ProjectID    string    `json:"project_id"`
-	CustomItemID string    `json:"custom_item_id"`
-	Quantity     int       `json:"quantity"`
-	RequiredBy   time.Time `json:"required_by"`
-	Timestamp    time.Time `json:"timestamp"`
+// EamMachineOfflineEvent (eam.machine.offline)
+type EamMachineOfflineEvent struct {
+	EventID       string    `json:"event_id"`
+	LegalEntityID string    `json:"legal_entity_id"`
+	EquipmentID   string    `json:"equipment_id"`
+	WorkOrderID   string    `json:"work_order_id"`
+	Priority      string    `json:"priority"`
+	Timestamp     time.Time `json:"timestamp"`
 }

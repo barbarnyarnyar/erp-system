@@ -2,17 +2,20 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type ExpenseClaim struct {
-	ID          string          `json:"id"`
-	EmployeeID  string          `json:"employee_id"`
-	ClaimDate   time.Time       `json:"claim_date"`
-	Status      string          `json:"status"` // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
-	TotalAmount decimal.Decimal `json:"total_amount"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ID            string          `json:"id"`
+	LegalEntityID string          `json:"legal_entity_id"`
+	EmployeeID    string          `json:"employee_id"`
+	ClaimNumber   string          `json:"claim_number"`
+	Purpose       string          `json:"purpose"`
+	TotalAmount   decimal.Decimal `json:"total_amount"`
+	Status        ExpenseStatus   `json:"status"`
+	CostCenterTag string          `json:"cost_center_tag"` // Plain-string dynamic accounting dimension
+	Version       int             `json:"version"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }

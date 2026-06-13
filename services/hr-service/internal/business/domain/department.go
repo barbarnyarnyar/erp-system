@@ -6,13 +6,11 @@ import (
 )
 
 type Department struct {
-	ID           string    `json:"id"`
-	Code         string    `json:"code"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
-	ManagerID    *string   `json:"manager_id"`
-	ParentDeptID *string   `json:"parent_dept_id"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	LegalEntityID  string    `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity (Loose Link)
+	DepartmentCode string    `json:"department_code"` // Unique within tenant boundary (e.g., "DEPT_ENG")
+	Name           string    `json:"name"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }

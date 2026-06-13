@@ -20,30 +20,25 @@ type DeadLetterMessage struct {
 	ServiceName   string      `json:"service_name"`
 }
 
-const (
-	TopicCrmSalesOrderCreatedDeadLetter  = domain.TopicCrmSalesOrderCreated + ".dead-letter"
-	TopicPrjCustomOrderCreatedDeadLetter = domain.TopicPrjCustomOrderCreated + ".dead-letter"
-)
-
 type KafkaConsumer struct {
-	reader    *kafka.Reader
-	publisher domain.EventPublisher
-	prod      *service.ProductionService
+	reader      *kafka.Reader
+	publisher   domain.EventPublisher
+	reliableSvc service.ReliableMessagingService
+	execSvc     service.WorkOrderExecutionService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
 	publisher domain.EventPublisher,
-	prod *service.ProductionService,
+	reliableSvc service.ReliableMessagingService,
+	execSvc service.WorkOrderExecutionService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicCrmSalesOrderCreated,
-		domain.TopicScmMaterialReceived,
-		domain.TopicScmInventoryUpdated,
-		domain.TopicFinCostBudgetAllocated,
-		domain.TopicHrEmployeeScheduled,
-		domain.TopicPrjCustomOrderCreated,
+		domain.TopicPlmBomReleased,
+		domain.TopicQmsInspectionPassed,
+		domain.TopicQmsInspectionFailed,
+		domain.TopicEamMachineOffline,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -53,14 +48,15 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:    reader,
-		publisher: publisher,
-		prod:      prod,
+		reader:      reader,
+		publisher:   publisher,
+		reliableSvc: reliableSvc,
+		execSvc:     execSvc,
 	}
 }
 
 func (c *KafkaConsumer) Start(ctx context.Context) {
-	log.Println("Starting Kafka Event Consumer for m-service...")
+	log.Println("Starting Kafka Event Consumer for mfg-service...")
 	for {
 		select {
 		case <-ctx.Done():
@@ -93,7 +89,7 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 		Payload:       string(value),
 		Error:         err.Error(),
 		FailedAt:      time.Now(),
-		ServiceName:   "m-service",
+		ServiceName:   "mfg-service",
 	}
 	dlqTopic := topic + ".dead-letter"
 	if dlqErr := c.publisher.Publish(ctx, dlqTopic, key, dlqMsg); dlqErr != nil {
@@ -105,69 +101,63 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	case domain.TopicCrmSalesOrderCreated:
-		var ev domain.SalesOrderCreatedEvent
+	case domain.TopicPlmBomReleased:
+		var ev domain.PlmBomReleasedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("Processing Sales Order Created: Auto-scheduling production order for Product: %s, Quantity: %d", ev.ProductID, ev.Quantity)
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("Processing PLM BOM Released: BOM %s for Material %s", ev.BomHeaderID, ev.MaterialID)
+			return nil
+		})
 
-		// Auto-schedule production order using a default BOM (or fallback/mock logic)
-		bomID := "bom_default"
-		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, time.Now().AddDate(0, 0, 7), ev.SalesOrderID)
-		if err != nil {
-			log.Printf("Failed to auto-schedule production order for Sales Order %s: %v", ev.SalesOrderID, err)
-			return err
-		}
-		return nil
-
-	case domain.TopicScmMaterialReceived:
-		var ev domain.SCMMaterialReceivedEvent
+	case domain.TopicQmsInspectionPassed:
+		var ev domain.QmsInspectionPassedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("Processing SCM Material Received: Material Product %s received for PO %s, quantity: %s. Updating material availability.", ev.ProductID, ev.PurchaseOrderID, ev.Quantity.String())
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("Processing QMS Inspection Passed: Inspection %s for Material %s", ev.InspectionID, ev.MaterialID)
+			if ev.TriggerSource == "WORK_ORDER" && ev.SourceDocumentID != "" {
+				_, err := c.execSvc.TransitionWorkOrderState(txCtx, ev.SourceDocumentID, domain.WorkOrderStateIN_PROGRESS, domain.WorkOrderStateCOMPLETED)
+				if err != nil {
+					log.Printf("Failed to transition work order %s to COMPLETED: %v", ev.SourceDocumentID, err)
+				}
+			}
+			return nil
+		})
 
-	case domain.TopicScmInventoryUpdated:
-		var ev domain.SCMInventoryUpdatedEvent
+	case domain.TopicQmsInspectionFailed:
+		var ev domain.QmsInspectionFailedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("Processing SCM Inventory Updated: Product %s changed by type %s at location %s. New QOH: %s. Updating production material status.", ev.ProductID, ev.ChangeType, ev.LocationID, ev.QuantityOnHand.String())
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("Processing QMS Inspection Failed: Inspection %s failed for Material %s. NC: %s", ev.InspectionID, ev.MaterialID, ev.NonConformanceID)
+			if ev.TriggerSource == "WORK_ORDER" && ev.SourceDocumentID != "" {
+				_, err := c.execSvc.TransitionWorkOrderState(txCtx, ev.SourceDocumentID, domain.WorkOrderStateIN_PROGRESS, domain.WorkOrderStateON_HOLD)
+				if err != nil {
+					log.Printf("Failed to transition work order %s to ON_HOLD: %v", ev.SourceDocumentID, err)
+				}
+			}
+			return nil
+		})
 
-	case domain.TopicFinCostBudgetAllocated:
-		var ev domain.FinCostBudgetAllocatedEvent
+	case domain.TopicEamMachineOffline:
+		var ev domain.EamMachineOfflineEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("Processing Financial Cost Budget Allocated: Allocated budget amount: %s to Project: %s (Dept: %s).", ev.Amount.String(), ev.ProjectID, ev.DepartmentID)
-		return nil
-
-	case domain.TopicHrEmployeeScheduled:
-		var ev domain.HREmployeeScheduledEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing HR Employee Scheduled: Employee %s scheduled for Work Center %s from %s to %s. Updating labor capacity.", ev.EmployeeID, ev.WorkCenterID, ev.ShiftStart, ev.ShiftEnd)
-		return nil
-
-	case domain.TopicPrjCustomOrderCreated:
-		var ev domain.PrjCustomOrderCreatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Project Custom Order Created: Scheduling custom production order for item: %s, quantity: %d.", ev.CustomItemID, ev.Quantity)
-
-		// Auto-schedule production order for custom product
-		bomID := "bom_default"
-		_, err := c.prod.CreateProductionOrder(ctx, bomID, ev.Quantity, ev.RequiredBy, "")
-		if err != nil {
-			log.Printf("Failed to auto-schedule production order for Project Custom Order %s: %v", ev.ProjectID, err)
-			return err
-		}
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("Processing EAM Machine Offline: Equipment %s is offline. Work Order ID: %s", ev.EquipmentID, ev.WorkOrderID)
+			if ev.WorkOrderID != "" {
+				_, err := c.execSvc.TransitionWorkOrderState(txCtx, ev.WorkOrderID, domain.WorkOrderStateIN_PROGRESS, domain.WorkOrderStateON_HOLD)
+				if err != nil {
+					log.Printf("Failed to transition work order %s to ON_HOLD: %v", ev.WorkOrderID, err)
+				}
+			}
+			return nil
+		})
 	}
 
 	return nil

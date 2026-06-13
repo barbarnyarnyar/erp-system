@@ -6,9 +6,10 @@ import (
 )
 
 type Permission struct {
-	ID          string    `json:"id"`
-	Code        string    `json:"code"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	LegalEntityID string    `json:"legal_entity_id"`
+	Code          string    `json:"code"` // e.g., "invoices:write", "employees:read"
+	Description   string    `json:"description"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

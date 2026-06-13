@@ -18,7 +18,7 @@ SERVICES=(
     "crm-service:crm"
     "fm-service:fm"
     "hr-service:hr"
-    "m-service:m"
+    "mfg-service:mfg"
     "pm-service:pm"
     "scm-service:scm"
 )

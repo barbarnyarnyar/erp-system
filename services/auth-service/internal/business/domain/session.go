@@ -8,10 +8,10 @@ import (
 type Session struct {
 	ID           string    `json:"id"`
 	UserID       string    `json:"user_id"`
-	RefreshToken string    `json:"refresh_token"`
-	IpAddress    *string   `json:"ip_address"`
-	UserAgent    *string   `json:"user_agent"`
-	IsRevoked    bool      `json:"is_revoked"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	RefreshToken string    `json:"refresh_token"`        // Cryptographically random — used for token refresh
+	IpAddress    *string   `json:"ip_address,omitempty"` // Audit trail for security forensics
+	UserAgent    *string   `json:"user_agent,omitempty"` // Device fingerprint for anomaly detection
+	IsRevoked    bool      `json:"is_revoked"`           // Explicitly revoked sessions (logout / admin force)
+	ExpiresAt    time.Time `json:"expires_at"`           // Hard expiry — cron purges stale sessions
 	CreatedAt    time.Time `json:"created_at"`
 }

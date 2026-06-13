@@ -6,9 +6,9 @@ import (
 )
 
 type UserRole struct {
-	ID         string    `json:"id"`
-	UserID     string    `json:"user_id"`
-	RoleID     string    `json:"role_id"`
-	CreatedAt  time.Time `json:"created_at"`
-	AssignedBy *string   `json:"assigned_by"`
+	ID               string    `json:"id"`
+	UserID           string    `json:"user_id"`
+	RoleID           string    `json:"role_id"`
+	AssignedByUserID *string   `json:"assigned_by_user_id,omitempty"` // Audit trail — who granted this role
+	CreatedAt        time.Time `json:"created_at"`
 }

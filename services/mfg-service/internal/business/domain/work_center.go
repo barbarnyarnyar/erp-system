@@ -2,14 +2,15 @@
 package domain
 
 import (
-	"github.com/shopspring/decimal"
+	"time"
 )
 
 type WorkCenter struct {
-	ID            string          `json:"id"`
-	Code          string          `json:"code"`
-	Name          string          `json:"name"`
-	Status        string          `json:"status"` // e.g., ACTIVE, MAINTENANCE, DOWN
-	CapacityHours decimal.Decimal `json:"capacity_hours"`
-	HourlyRate    decimal.Decimal `json:"hourly_rate"`
+	ID             string    `json:"id"`
+	LegalEntityID  string    `json:"legal_entity_id"`  // Primitive Ref -> FM.LegalEntity
+	WorkCenterCode string    `json:"work_center_code"` // e.g., "WC-MILLING-01"
+	Name           string    `json:"name"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }

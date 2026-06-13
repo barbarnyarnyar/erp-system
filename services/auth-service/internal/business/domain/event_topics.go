@@ -4,11 +4,15 @@ package domain
 const (
 	// Producer Events
 	TopicAuthUserCreated       = "auth.user.created"
-	TopicAuthUserDeactivated   = "auth.user.deactivated"
+	TopicAuthUserSuspended     = "auth.user.suspended"
 	TopicAuthUserRoleAssigned  = "auth.user.role.assigned"
+	TopicAuthUserRoleRevoked   = "auth.user.role.revoked"
 	TopicAuthUserStoreAssigned = "auth.user.store.assigned"
 	TopicAuthPasswordChanged   = "auth.password.changed"
+	TopicAuthSessionRevoked    = "auth.session.revoked"
 
 	// Consumer Events
+	TopicHrEmployeeCreated    = "hr.employee.created"
 	TopicHrEmployeeTerminated = "hr.employee.terminated"
+	TopicFmLegalEntityCreated = "fm.legal_entity.created"
 )

@@ -6,8 +6,9 @@ import (
 )
 
 type UserStore struct {
-	ID         string    `json:"id"`
-	UserID     string    `json:"user_id"`
-	StoreID    string    `json:"store_id"`
-	AssignedAt time.Time `json:"assigned_at"`
+	ID               string    `json:"id"`
+	UserID           string    `json:"user_id"`
+	StoreID          string    `json:"store_id"` // Primitive Ref -> store context (Loose Cross-Domain Link)
+	AssignedByUserID *string   `json:"assigned_by_user_id,omitempty"`
+	AssignedAt       time.Time `json:"assigned_at"`
 }

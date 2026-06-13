@@ -3,11 +3,13 @@ package domain
 
 import (
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type ExpenseClaimLine struct {
-	ID          string          `json:"id"`
-	ClaimID     string          `json:"claim_id"`
-	Description string          `json:"description"`
-	Amount      decimal.Decimal `json:"amount"`
+	ID             string          `json:"id"`
+	ExpenseClaimID string          `json:"expense_claim_id"`
+	Description    string          `json:"description"`
+	LineAmount     decimal.Decimal `json:"line_amount"`
+	CreatedAt      time.Time       `json:"created_at"`
 }

@@ -6,9 +6,11 @@ import (
 )
 
 type Role struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	LegalEntityID string    `json:"legal_entity_id"` // Roles are scoped per tenant
+	Name          string    `json:"name"`            // e.g., "ADMIN", "MANAGER", "VIEWER"
+	Description   string    `json:"description"`
+	Version       int       `json:"version"` // OCC Shield
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

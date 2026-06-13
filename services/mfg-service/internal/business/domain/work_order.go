@@ -2,38 +2,22 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
-
-type WorkOrderStatus string
-
-const (
-	WorkOrderStatusPending    WorkOrderStatus = "PENDING"
-	WorkOrderStatusInProgress WorkOrderStatus = "IN_PROGRESS"
-	WorkOrderStatusCompleted  WorkOrderStatus = "COMPLETED"
-	WorkOrderStatusBlocked    WorkOrderStatus = "BLOCKED"
-)
-
-func (s WorkOrderStatus) IsValid() bool {
-	switch s {
-	case WorkOrderStatusPending, WorkOrderStatusInProgress, WorkOrderStatusCompleted, WorkOrderStatusBlocked:
-		return true
-	}
-	return false
-}
 
 type WorkOrder struct {
-	ID                string           `json:"id"`
-	ProductionOrderID string           `json:"production_order_id"`
-	SequenceNumber    int              `json:"sequence_number"`
-	WorkCenterID      string           `json:"work_center_id"`
-	ScheduledStart    time.Time        `json:"scheduled_start"`
-	ScheduledEnd      time.Time        `json:"scheduled_end"`
-	ActualStart       *time.Time       `json:"actual_start"`
-	ActualEnd         *time.Time       `json:"actual_end"`
-	Status            WorkOrderStatus  `json:"status"` // e.g., PENDING, IN_PROGRESS, COMPLETED, BLOCKED
-	LaborHours        *decimal.Decimal `json:"labor_hours"`
-	MachineHours      *decimal.Decimal `json:"machine_hours"`
+	ID               string          `json:"id"`
+	LegalEntityID    string          `json:"legal_entity_id"` // Strict multi-tenant data isolation shield
+	MaterialID       string          `json:"material_id"`     // Primitive Ref -> PLM.MaterialMaster
+	BomHeaderID      string          `json:"bom_header_id"`   // Primitive Ref -> PLM.BomHeader
+	WorkOrderNumber  string          `json:"work_order_number"`
+	QuantityTarget   decimal.Decimal `json:"quantity_target"`
+	QuantityProduced decimal.Decimal `json:"quantity_produced"`
+	Status           WorkOrderState  `json:"status"` // Managed strictly via State Transition interface gates
+	ScheduledStart   time.Time       `json:"scheduled_start"`
+	ScheduledEnd     time.Time       `json:"scheduled_end"`
+	Version          int             `json:"version"` // Concurrency Verification Shield (Optimistic Locking)
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }

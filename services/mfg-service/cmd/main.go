@@ -1,19 +1,18 @@
 package main
 
 import (
-	"erp-system/shared/utils"
 	"context"
-	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
 
+	"erp-system/shared/utils"
+	sharedkafka "erp-system/shared/kafka"
 	"github.com/erp-system/m-service/internal/api/handlers"
 	"github.com/erp-system/m-service/internal/api/routes"
-	"github.com/erp-system/m-service/internal/business/domain"
 	"github.com/erp-system/m-service/internal/business/service"
 	"github.com/erp-system/m-service/internal/config"
 	"github.com/erp-system/m-service/internal/data/kafka"
-	"github.com/erp-system/m-service/internal/data/memory"
+	"github.com/erp-system/m-service/internal/data/sql"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,8 +23,6 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 	utils.InitLogger("mfg-service")
-	responseHelper := utils.NewResponseHelper("mfg-service")
-
 
 	// 2. Initialize Event Publisher (Kafka)
 	publisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
@@ -35,56 +32,35 @@ func main() {
 		}
 	}()
 
-	// 3. Initialize Memory Repositories
-	bomRepo := memory.NewMemoryBillOfMaterialsRepo()
-	compRepo := memory.NewMemoryBOMComponentRepo()
-	wcRepo := memory.NewMemoryWorkCenterRepo()
-	routingRepo := memory.NewMemoryRoutingOperationRepo()
-	poRepo := memory.NewMemoryProductionOrderRepo()
-	woRepo := memory.NewMemoryWorkOrderRepo()
-	laborRepo := memory.NewMemoryLaborReportRepo()
-	machineRepo := memory.NewMemoryMachineLogRepo()
-	qualityRepo := memory.NewMemoryQualityInspectionRepo()
-	nonConfRepo := memory.NewMemoryNonConformanceRepo()
-	equipRepo := memory.NewMemoryEquipmentRepo()
-	maintRepo := memory.NewMemoryMaintenanceOrderRepo()
-	costRepo := memory.NewMemoryCostingRecordRepo()
+	// 3. Initialize GORM Database & SQL Repositories
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 
-	// Seed some initial data for testing
-	ctx := context.Background()
-	// Seed a default BOM
-	_ = bomRepo.Create(ctx, &domain.BillOfMaterials{
-		ID:          "bom_default",
-		ProductID:   "prod_default",
-		Version:     "V1.0",
-		Status:      "ACTIVE",
-		Description: "Default BOM for Auto-Scheduled Production",
-	})
+	wcRepo := sql.NewSQLWorkCenterRepository(db)
+	stationRepo := sql.NewSQLRoutingStationRepository(db)
+	woRepo := sql.NewSQLWorkOrderRepository(db)
+	stateRepo := sql.NewSQLWorkOrderRoutingStateRepository(db)
+	consumeRepo := sql.NewSQLMaterialConsumptionLogRepository(db)
+	yieldRepo := sql.NewSQLProductionYieldLogRepository(db)
+	outboxRepo := sql.NewSQLTransactionalOutboxRepository(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepository(db)
 
 	// 4. Initialize Services (Split Components)
-	bomSvc := service.NewBOMService(bomRepo, compRepo, wcRepo, routingRepo, publisher)
-	prodSvc := service.NewProductionService(poRepo, woRepo, bomRepo, compRepo, routingRepo, wcRepo, laborRepo, costRepo, publisher)
-	qualitySvc := service.NewQualityService(qualityRepo, nonConfRepo, woRepo, publisher)
-	qualitySvc.SetProductionService(prodSvc)
-	maintSvc := service.NewMaintenanceService(machineRepo, equipRepo, maintRepo, publisher)
-	costingSvc := service.NewCostingService(costRepo, poRepo, compRepo, publisher)
-
-	prodSvc.SetMaintenanceService(maintSvc)
-	prodSvc.SetQualityService(qualitySvc)
-	prodSvc.SetCostingService(costingSvc)
+	floorSvc := service.NewFloorConfigurationService(wcRepo, stationRepo)
+	execSvc := service.NewWorkOrderExecutionService(db, woRepo, stateRepo, stationRepo, outboxRepo)
+	teleSvc := service.NewShopFloorTelemetryService(db, woRepo, stationRepo, consumeRepo, yieldRepo, outboxRepo)
+	reliableSvc := service.NewReliableMessagingService(db, inboxRepo)
 
 	// 5. Initialize Handlers
-	bomHandler := handlers.NewBOMHandler(bomSvc, responseHelper)
-	prodHandler := handlers.NewProductionHandler(prodSvc, responseHelper)
-	qualityHandler := handlers.NewQualityHandler(qualitySvc, responseHelper)
-	maintHandler := handlers.NewMaintenanceHandler(maintSvc, responseHelper)
-	costingHandler := handlers.NewCostingHandler(costingSvc, responseHelper)
+	mfgHandler := handlers.NewMfgHandler(floorSvc, execSvc, teleSvc)
 
 	// 5b. Initialize Event Consumer (Kafka)
 	ctxCancel, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, prodSvc)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, reliableSvc, execSvc)
 	go consumer.Start(ctxCancel)
 	defer func() {
 		if err := consumer.Close(); err != nil {
@@ -98,7 +74,7 @@ func main() {
 	// Health Check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"service": "m-service",
+			"service": "mfg-service",
 			"status":  "healthy",
 			"port":    cfg.Server.Port,
 		})
@@ -108,13 +84,13 @@ func main() {
 	r.GET("/api/manufacturing/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Hello World from Manufacturing Service!",
-			"service": "m-service",
+			"service": "mfg-service",
 			"port":    cfg.Server.Port,
 		})
 	})
 
 	// Register API Routes
-	routes.RegisterRoutes(r, bomHandler, prodHandler, qualityHandler, maintHandler, costingHandler)
+	routes.RegisterRoutes(r, mfgHandler)
 
 	// Start Server
 	log.Printf("Starting Manufacturing Service on port %s...", cfg.Server.Port)
