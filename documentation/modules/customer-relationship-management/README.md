@@ -55,6 +55,114 @@ This README documents the following CRM features inline:
 
 ---
 
+## Topographical Domain Interaction Map
+
+The diagram below outlines the runtime boundary of the `erp.crm` module, demonstrating how the system boundary remains clean of direct compile-time coupling ($C_e = 0$) by relying entirely on asynchronous event streams and primitive `uuid` tracking identifiers.
+
+```
+       [ PLM Core ]               [ SCM Logs ]               [ PRJ Engine ]
+            │                          │                          │
+            │ plm.material.released    │ scm.order.shipped        │ prj.milestone.achieved
+            ▼                          ▼                          ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│ erp.crm BOUNDED CONTEXT (Go / Gin / GORM)                                             │
+│                                                                                       │
+│  ┌─────────────────────────┐     ┌─────────────────────────┐     ┌─────────────────┐  │
+│  │   KafkaEventInbox       │     │   CustomerProfile       │     │ PricingStrategy │  │
+│  │   (Idempotent Receiver) │     │   (OCC Versioning)      │     │ (JSONB Matrix)  │  │
+│  └───────────┬─────────────┘     └─────────────────────────┘     └─────────────────┘  │
+│              │                                                                        │
+│              ▼                                                                        │
+│  ┌─────────────────────────┐             ┌────────────────────────────────────────┐  │
+│  │   SalesOrder Engine     │────────────►│   BillingTrigger                       │  │
+│  │   (State Machine Gates) │             │   (Monthly Range Partitioned)          │  │
+│  └───────────┬─────────────┘             └───────────────────┬────────────────────┘  │
+│              │                                               │                        │
+│              ▼                                               ▼                        │
+│  ┌─────────────────────────┐                                                          │
+│  │   TransactionalOutbox   │                                                          │
+│  │   (Atomic Event Log)    │                                                          │
+│  └───────────┬─────────────┘                                                          │
+└──────────────┼───────────────────────────────────────────────┬────────────────────────┘
+               │                                               │
+               │ crm.order.confirmed / cancelled               │ crm.billing.accrued
+               ▼                                               ▼
+     [ SCM / MFG Domains ]                               [ FM Ledger Core ]
+```
+
+---
+
+## Event Ingress & Egress Pipelines
+
+### 1. Ingress Pipeline: Inbound Message Streams
+
+Inbound streams handle data ingestion via an **Idempotent Consumer** pattern. Processing status is recorded in the `crm_kafka_event_inbox` table to guarantee exactly-once processing semantics before mutating internal business tables.
+
+#### A. `plm.material.released`
+* **Source Boundary:** Product Lifecycle Management (PLM)
+* **Ingress Execution Pattern:** 
+  1. The Kafka consumer intercepts the message payload and checks the `event_id` against the `KafkaEventInbox`.
+  2. If the message is unique, the payload is parsed and passed to the domain layer.
+  3. The system saves the raw identifier token (`material_id`) into the CRM namespace.
+  4. This token becomes immediately available within the `PricingCalculationService` for assigning list prices or configuration matrices via `PriceBookEntry`.
+
+#### B. `scm.order.shipped`
+* **Source Boundary:** Supply Chain Management (SCM / Logistics)
+* **Ingress Execution Pattern:**
+  1. This event indicates physical stock has left the warehouse and ownership has been legally transferred.
+  2. The consumer invokes `RevenueBillingService.stageLogisticsBillingEntry`.
+  3. The service maps fulfillment data to create a new record in `crm_billing_triggers`.
+  4. The record is appended to the appropriate monthly partition based on the `triggered_at` timestamp coordinate, bypassing global lock boundaries.
+
+#### C. `prj.milestone.achieved`
+* **Source Boundary:** Project Management (PRJ)
+* **Ingress Execution Pattern:**
+  1. This event confirms customer sign-off on a fixed-price contract phase or a deliverables milestone.
+  2. The consumer converts the project metrics into a financial format.
+  3. It writes a billable row directly into the active `crm_billing_triggers` partition, establishing an audit trail for professional services.
+
+---
+
+### 2. Egress Pipeline: Outbound Message Streams
+
+Outbound communication uses the **Transactional Outbox Pattern** to decouple the core system from network conditions. State mutations and event payloads are committed within the same atomic database transaction.
+
+#### A. `crm.order.confirmed`
+* **Target Consumers:** `erp.scm` (Logistics Allocation), `erp.mfg` (Factory Production)
+* **Egress Trigger:** Fired when `SalesOrderService.processOrderStateTransition` successfully completes financial and credit validation checks, moving the order state to `APPROVED`.
+* **Downstream Reactive Mechanics:**
+  * **SCM:** Reads the `List<OrderLinePayload>` array to lock down and allocate warehouse stock buffers.
+  * **MFG:** Parses line items marked with a `MAKE` procurement flag to initiate production schedules.
+
+#### B. `crm.order.cancelled`
+* **Target Consumers:** `erp.scm` (Stock Management), `erp.mfg` (Operations Control)
+* **Egress Trigger:** Emitted when a sales contract is voided or terminated.
+* **Downstream Reactive Mechanics:**
+  * **SCM:** Releases reserved stock allocations back to the available inventory pool.
+  * **MFG:** Halts active shop-floor work orders tied to the cancelled sales document.
+
+#### C. `crm.billing.accrued`
+* **Target Consumer:** `erp.fm` (Financial Ledger Core)
+* **Egress Trigger:** Executed during the worker sweep cycle: `RevenueBillingService.dispatchStagedBillingToAccountsReceivable`.
+* **Downstream Reactive Mechanics:**
+  * The Financial Management module processes this event to generate a `UniversalJournalEntry`.
+  * This action posts directly to the Accounts Receivable sub-ledger, balancing multi-tenant ledger accounts without requiring manual batch reconciliation.
+
+---
+
+## Architectural Trade-off Analysis (ATAM Matrix)
+
+Evaluating these interactions reveals explicit trade-offs between system performance, auditability, and operational maintainability.
+
+| Architectural Decision | Positive Quality Axis (Benefits) | Negative Quality Axis (Risks/Trade-offs) | Mitigation Strategy |
+| :--- | :--- | :--- | :--- |
+| **Primitive Ref Tokenization** (`uuid` based cross-domain links) | **Maintainability:** Achieves $C_e = 0$. Package updates in SCM/PLM never trigger compilation breakage inside CRM. | **Data Integrity:** The database cannot enforce traditional foreign key constraints across different service boundaries. | Inbound consumer contract validation layers via `ReliableMessagingService` to catch invalid references before database execution. |
+| **Transactional Outbox Storage** (`crm_transactional_outbox`) | **Reliability:** Guarantees an RPO of zero. Business state and event entries succeed or fail together. | **Performance:** Double-write penalty. Every transaction requires writing to both the business table and the outbox log. | Utilize high-throughput composite indexing `(status, created_at)` and rapid polling loops on the outbox relay worker. |
+| **Data-Driven Strategy Engines** (`jsonb` configuration matrices) | **Modularity:** New pricing policies are added by creating database rows, avoiding code deployments. | **Performance Efficiency:** Parsing complex JSON trees at runtime introduces higher CPU overhead than native code paths. | Apply optimized PostgreSQL indexes to look up active `strategy_version` matrices efficiently. |
+| **Time-Bounded Range Partitioning** (`crm_billing_triggers`) | **Capacity:** Prevents large, slow tables. Deleting older records via batch loops maintains index efficiency. | **Operational Complexity:** Requires proactive table maintenance to manage partition creation and data retention policies. | Expose clear maintenance interfaces, such as `purgeProcessedBillingTriggers`, to automate data lifecycle management. |
+
+---
+
 ## Domain Models
 
 ### 1. Transactional Core Engine (`erp.crm.core`)
