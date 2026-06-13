@@ -6,16 +6,16 @@ import (
 )
 
 type MaterialMaster struct {
-	ID                      string      `json:"id"`
-	LegalEntityID           string      `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
-	Sku                     string      `json:"sku"`             // Stock Keeping Unit unique within tenant boundary
-	Description             string      `json:"description"`
-	Uom                     string      `json:"uom"` // Base Unit of Measure (e.g., "EA", "KG", "L")
-	ProcurementType         interface{} `json:"procurement_type"`
-	Status                  interface{} `json:"status"`
-	TechnicalSpecifications interface{} `json:"technical_specifications"` // Dynamic technical parameters
-	Version                 int         `json:"version"`                  // Concurrency Control Shield (Optimistic Locking)
-	CreatedAt               time.Time   `json:"created_at"`
-	UpdatedAt               time.Time   `json:"updated_at"`
-	DeletedAt               *time.Time  `json:"deleted_at,omitempty"` // GORM Native Soft Delete Support
+	ID                      string          `json:"id"`
+	LegalEntityID           string          `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+	Sku                     string          `json:"sku"`             // Stock Keeping Unit unique within tenant boundary
+	Description             string          `json:"description"`
+	Uom                     string          `json:"uom"` // Base Unit of Measure (e.g., "EA", "KG", "L")
+	ProcurementType         ProcurementType `json:"procurement_type"`
+	Status                  MaterialStatus  `json:"status"`
+	TechnicalSpecifications interface{}     `json:"technical_specifications"` // Dynamic technical parameters
+	Version                 int             `json:"version"`                  // Concurrency Control Shield (Optimistic Locking)
+	CreatedAt               time.Time       `json:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+	DeletedAt               *time.Time      `json:"deleted_at,omitempty"` // GORM Native Soft Delete Support
 }

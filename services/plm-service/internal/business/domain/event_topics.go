@@ -12,4 +12,6 @@ const (
 	TopicScmReceiptStaged    = "scm.receipt.staged"
 	TopicMfgMaterialConsumed = "mfg.material.consumed"
 	TopicHrEmployeeCreated   = "hr.employee.created"
+	TopicQmsInspectionFailed = "qms.inspection.failed"
+	TopicEamMachineOffline   = "eam.machine.offline"
 )

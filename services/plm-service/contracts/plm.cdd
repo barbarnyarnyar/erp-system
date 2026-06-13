@@ -182,5 +182,7 @@ events Emitters {
         scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, vendor_id: uuid, items: jsonb, timestamp: timestamp }
         mfg.material.consumed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, inventory_item_id: uuid, volume_lost: decimal, timestamp: timestamp }
         hr.employee.created: { event_id: uuid, legal_entity_id: uuid, employee_id: uuid, explicit_role: string, timestamp: timestamp }
+        qms.inspection.failed: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, batch_number: string, inspector_id: uuid, timestamp: timestamp }
+        eam.machine.offline: { event_id: uuid, legal_entity_id: uuid, machine_id: uuid, downtime_duration_seconds: int, reason_code: string, timestamp: timestamp }
     }
 }

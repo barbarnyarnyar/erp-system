@@ -6,16 +6,16 @@ import (
 )
 
 type EngineeringChangeOrder struct {
-	ID               string      `json:"id"`
-	LegalEntityID    string      `json:"legal_entity_id"`
-	TargetMaterialID string      `json:"target_material_id"`
-	EcoNumber        string      `json:"eco_number"`
-	Title            string      `json:"title"`
-	Description      string      `json:"description"`
-	Status           interface{} `json:"status"`
-	RequestedByHrID  string      `json:"requested_by_hr_id"`          // Primitive Ref -> HR.Employee
-	ApprovedByHrID   *string     `json:"approved_by_hr_id,omitempty"` // Primitive Ref -> HR.Employee
-	Version          int         `json:"version"`                     // Concurrency Verification Shield for Workflows
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
+	ID               string    `json:"id"`
+	LegalEntityID    string    `json:"legal_entity_id"`
+	TargetMaterialID string    `json:"target_material_id"`
+	EcoNumber        string    `json:"eco_number"`
+	Title            string    `json:"title"`
+	Description      string    `json:"description"`
+	Status           EcoStatus `json:"status"`
+	RequestedByHrID  string    `json:"requested_by_hr_id"`          // Primitive Ref -> HR.Employee
+	ApprovedByHrID   *string   `json:"approved_by_hr_id,omitempty"` // Primitive Ref -> HR.Employee
+	Version          int       `json:"version"`                     // Concurrency Verification Shield for Workflows
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }

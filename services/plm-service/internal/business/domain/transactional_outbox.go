@@ -6,10 +6,10 @@ import (
 )
 
 type TransactionalOutbox struct {
-	ID          string      `json:"id"`
-	EventType   string      `json:"event_type"`
-	AggregateID string      `json:"aggregate_id"`
-	Payload     interface{} `json:"payload"`
-	Status      interface{} `json:"status"`
-	CreatedAt   time.Time   `json:"created_at"`
+	ID          string       `json:"id"`
+	EventType   string       `json:"event_type"`
+	AggregateID string       `json:"aggregate_id"`
+	Payload     interface{}  `json:"payload"`
+	Status      OutboxStatus `json:"status"`
+	CreatedAt   time.Time    `json:"created_at"`
 }

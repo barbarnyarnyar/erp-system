@@ -38,6 +38,7 @@ func main() {
 	hdrRepo := memory.NewMemoryBomHeaderRepo()
 	lineRepo := memory.NewMemoryBomLineRepo()
 	ecoRepo := memory.NewMemoryEngineeringChangeOrderRepo()
+	inboxRepo := memory.NewMemoryKafkaEventInboxRepo()
 
 	// 4. Initialize Services
 	matSvc := service.NewMaterialService(matRepo, publisher)
@@ -50,7 +51,7 @@ func main() {
 	// 5b. Start Event Consumer (Kafka)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, matSvc, bomSvc)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, matSvc, bomSvc, inboxRepo)
 	go consumer.Start(ctx)
 	defer func() {
 		if err := consumer.Close(); err != nil {

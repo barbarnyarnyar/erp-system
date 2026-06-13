@@ -6,12 +6,12 @@ import (
 )
 
 type BomHeader struct {
-	ID            string      `json:"id"`
-	LegalEntityID string      `json:"legal_entity_id"`
-	MaterialID    string      `json:"material_id"`      // Parent material being manufactured
-	EcoID         *string     `json:"eco_id,omitempty"` // Associated Engineering Change Order ID context
-	VersionString string      `json:"version_string"`   // e.g., "REV-1.0", "REV-2.4"
-	Status        interface{} `json:"status"`
-	CreatedAt     time.Time   `json:"created_at"`
-	UpdatedAt     time.Time   `json:"updated_at"`
+	ID            string    `json:"id"`
+	LegalEntityID string    `json:"legal_entity_id"`
+	MaterialID    string    `json:"material_id"`      // Parent material being manufactured
+	EcoID         *string   `json:"eco_id,omitempty"` // Associated Engineering Change Order ID context
+	VersionString string    `json:"version_string"`   // e.g., "REV-1.0", "REV-2.4"
+	Status        BomStatus `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

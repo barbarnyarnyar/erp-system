@@ -690,6 +690,35 @@ Bill of materials, routings, work orders, production planning, MRP, quality cont
 | `hr.employee.scheduled` | HR | Logged only |
 | `prj.custom.order.created` | PM | Schedule custom production |
 
+## [Product Lifecycle Management](product-lifecycle-management/)
+
+Material specifications, Bill of Materials (BOM), Engineering Change Orders (ECO), and design revision tracking. Port **8008**.
+
+### Domain Models (4 types)
+
+| Model | Key Fields |
+|-------|-----------|
+| `MaterialMaster` | ID, LegalEntityID, SKU, Description, UOM, ProcurementType, Status, TechnicalSpecifications |
+| `BomHeader` | ID, LegalEntityID, MaterialID, EcoID, VersionString, Status |
+| `BomLine` | ID, BomHeaderID, ComponentMaterialID, SequenceNumber, QuantityRequired, UOM, ScrapPercentage |
+| `EngineeringChangeOrder` | ID, LegalEntityID, TargetMaterialID, EcoNumber, Title, Description, Status, RequestedByHrID, ApprovedByHrID |
+
+### Business Services (3)
+
+| Service | Key Methods |
+|---------|-------------|
+| `MaterialService` | `createMaterial`, `updateTechnicalSpecs`, `transitionStatus` |
+| `BomService` | `establishBomHeader`, `releaseBom`, `explodeBillOfMaterials` |
+| `EngineeringChangeService` | `initiateChangeRequest`, `processApprovalAction` |
+
+### Kafka Events Published (4 topics)
+
+`plm.material.released`, `plm.material.obsoleted`, `plm.bom.released`, `plm.eco.implemented`
+
+### Kafka Events Consumed (5 topics)
+
+`scm.receipt.staged`, `mfg.material.consumed`, `hr.employee.created`, `qms.inspection.failed`, `eam.machine.offline`
+
 ---
 
 ## [Project Management](project-management/)

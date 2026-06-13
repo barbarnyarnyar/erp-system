@@ -6,9 +6,9 @@ import (
 )
 
 type KafkaEventInbox struct {
-	EventID          string      `json:"event_id"`
-	EventType        string      `json:"event_type"`
-	ProcessedAt      time.Time   `json:"processed_at"`
-	ProcessingStatus interface{} `json:"processing_status"`
-	Payload          interface{} `json:"payload"`
+	EventID          string                `json:"event_id"`
+	EventType        string                `json:"event_type"`
+	ProcessedAt      time.Time             `json:"processed_at"`
+	ProcessingStatus EventProcessingStatus `json:"processing_status"`
+	Payload          interface{}           `json:"payload"`
 }

@@ -14,7 +14,9 @@ const (
 func (e ProcurementType) IsValid() bool {
 	switch e {
 	case ProcurementTypeMAKE:
+		return true
 	case ProcurementTypeBUY:
+		return true
 	case ProcurementTypeASSEMBLE:
 		return true
 	}
@@ -34,7 +36,9 @@ const (
 func (e MaterialStatus) IsValid() bool {
 	switch e {
 	case MaterialStatusACTIVE:
+		return true
 	case MaterialStatusINACTIVE:
+		return true
 	case MaterialStatusOBSOLETE:
 		return true
 	}
@@ -54,7 +58,9 @@ const (
 func (e BomStatus) IsValid() bool {
 	switch e {
 	case BomStatusDRAFT:
+		return true
 	case BomStatusRELEASED:
+		return true
 	case BomStatusOBSOLETE:
 		return true
 	}
@@ -76,9 +82,13 @@ const (
 func (e EcoStatus) IsValid() bool {
 	switch e {
 	case EcoStatusDRAFT:
+		return true
 	case EcoStatusIN_REVIEW:
+		return true
 	case EcoStatusAPPROVED:
+		return true
 	case EcoStatusIMPLEMENTED:
+		return true
 	case EcoStatusREJECTED:
 		return true
 	}
@@ -98,7 +108,9 @@ const (
 func (e OutboxStatus) IsValid() bool {
 	switch e {
 	case OutboxStatusPENDING:
+		return true
 	case OutboxStatusSENT:
+		return true
 	case OutboxStatusFAILED:
 		return true
 	}
@@ -117,6 +129,7 @@ const (
 func (e EventProcessingStatus) IsValid() bool {
 	switch e {
 	case EventProcessingStatusSUCCESS:
+		return true
 	case EventProcessingStatusFAILED:
 		return true
 	}
