@@ -16,7 +16,7 @@ import (
 	"github.com/erp-system/crm-service/internal/business/service"
 	"github.com/erp-system/crm-service/internal/config"
 	"github.com/erp-system/crm-service/internal/data/kafka"
-	"github.com/erp-system/crm-service/internal/data/memory"
+	"github.com/erp-system/crm-service/internal/data/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
@@ -33,20 +33,25 @@ func main() {
 
 	log.Printf("Starting crm-service in %s environment...", cfg.Server.Env)
 
-	// 2. Initialize in-memory repositories
-	custRepo := memory.NewCustomerRepository()
-	leadRepo := memory.NewLeadRepository()
-	oppRepo := memory.NewOpportunityRepository()
-	oppStageHistoryRepo := memory.NewOpportunityStageHistoryRepository()
-	orderRepo := memory.NewSalesOrderRepository()
-	orderItemRepo := memory.NewSalesOrderLineRepository()
-	quoteRepo := memory.NewQuoteRepository()
-	quoteItemRepo := memory.NewQuoteLineItemRepository()
-	priceListRepo := memory.NewPriceBookHeaderRepository()
-	priceListItemRepo := memory.NewPriceBookEntryRepository()
-	ticketRepo := memory.NewServiceTicketRepository()
-	campaignRepo := memory.NewCampaignRepository()
-	custInteractionRepo := memory.NewCustomerInteractionRepository()
+	// 2. Initialize GORM Database & SQL Repositories
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	custRepo := sql.NewSQLCustomerRepository(db)
+	leadRepo := sql.NewSQLLeadRepository(db)
+	oppRepo := sql.NewSQLOpportunityRepository(db)
+	oppStageHistoryRepo := sql.NewSQLOpportunityStageHistoryRepository(db)
+	orderRepo := sql.NewSQLSalesOrderRepository(db)
+	orderItemRepo := sql.NewSQLSalesOrderLineRepository(db)
+	quoteRepo := sql.NewSQLQuoteRepository(db)
+	quoteItemRepo := sql.NewSQLQuoteLineItemRepository(db)
+	priceListRepo := sql.NewSQLPriceBookHeaderRepository(db)
+	priceListItemRepo := sql.NewSQLPriceBookEntryRepository(db)
+	ticketRepo := sql.NewSQLServiceTicketRepository(db)
+	campaignRepo := sql.NewSQLCampaignRepository(db)
+	custInteractionRepo := sql.NewSQLCustomerInteractionRepository(db)
 
 	// 3. Initialize Kafka publisher
 	kafkaPub := sharedkafka.NewPublisher(cfg.Kafka.Brokers)

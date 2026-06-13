@@ -12,7 +12,7 @@ import (
 	"github.com/erp-system/plm-service/internal/business/service"
 	"github.com/erp-system/plm-service/internal/config"
 	"github.com/erp-system/plm-service/internal/data/kafka"
-	"github.com/erp-system/plm-service/internal/data/memory"
+	"github.com/erp-system/plm-service/internal/data/sql"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,12 +33,17 @@ func main() {
 		}
 	}()
 
-	// 3. Initialize Memory Repositories
-	matRepo := memory.NewMemoryMaterialMasterRepo()
-	hdrRepo := memory.NewMemoryBomHeaderRepo()
-	lineRepo := memory.NewMemoryBomLineRepo()
-	ecoRepo := memory.NewMemoryEngineeringChangeOrderRepo()
-	inboxRepo := memory.NewMemoryKafkaEventInboxRepo()
+	// 3. Initialize GORM Database & SQL Repositories
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	matRepo := sql.NewSQLMaterialMasterRepository(db)
+	hdrRepo := sql.NewSQLBomHeaderRepository(db)
+	lineRepo := sql.NewSQLBomLineRepository(db)
+	ecoRepo := sql.NewSQLEngineeringChangeOrderRepository(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepository(db)
 
 	// 4. Initialize Services
 	matSvc := service.NewMaterialService(matRepo, publisher)

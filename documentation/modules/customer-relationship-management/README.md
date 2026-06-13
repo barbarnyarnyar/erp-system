@@ -42,16 +42,16 @@ graph TB
 
 ## Documentation Structure
 
-### Features Covered in This Document
+### Features Covered
 
-This README documents the following CRM features inline:
-- **Customer Directory & Profiling** — Accounts, credit limits, and manager assignments
-- **Price Books & Strategy Evaluation** — Volume breaks, temporal discounts, and contract Markups
-- **Sales Order Life-Cycle** — Drafts, state transitions, validation, and confirmation
-- **Billing Accrual & Purging** — Integration and handoff to Accounts Receivable (FM)
-- **Outbox Relay & Event Sourcing** — Reliable transaction replication to Kafka
-- **Marketing Campaign Ingestion** — Campaigns, leads, opportunity stages, and conversions
-- **Customer Interactions & Support** — Meeting summaries, ticket resolutions, and quotes
+* **[Order-to-Cash Trinity Integration Specification](order-to-cash.md)** — Architectural alignment, sequence flow, and resilience designs between CRM, SCM, and FM.
+* **Customer Directory & Profiling** — Accounts, credit limits, and manager assignments (inline).
+* **Price Books & Strategy Evaluation** — Volume breaks, temporal discounts, and contract Markups (inline).
+* **Sales Order Life-Cycle** — Drafts, state transitions, validation, and confirmation (inline).
+* **Billing Accrual & Purging** — Integration and handoff to Accounts Receivable (FM) (inline).
+* **Outbox Relay & Event Sourcing** — Reliable transaction replication to Kafka (inline).
+* **Marketing Campaign Ingestion** — Campaigns, leads, opportunity stages, and conversions (inline).
+* **Customer Interactions & Support** — Meeting summaries, ticket resolutions, and quotes (inline).
 
 ---
 
