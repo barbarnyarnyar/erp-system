@@ -11,8 +11,8 @@ type StockTransfer struct {
 	ToLocationID   string     `json:"to_location_id"`
 	ProductID      string     `json:"product_id"`
 	Quantity       int        `json:"quantity"`
-	Status         string     `json:"status"` // e.g., PENDING, TRANSFERRED, CANCELLED
-	TransferredAt  *time.Time `json:"transferred_at"`
+	Status         string     `json:"status"`
+	TransferredAt  *time.Time `json:"transferred_at,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 }

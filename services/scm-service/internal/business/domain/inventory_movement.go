@@ -2,16 +2,15 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type InventoryMovement struct {
 	ID            string          `json:"id"`
 	ProductID     string          `json:"product_id"`
 	LocationID    string          `json:"location_id"`
-	MovementType  string          `json:"movement_type"` // e.g., RECEIPT, ISSUE, TRANSFER, ADJUSTMENT
+	MovementType  string          `json:"movement_type"`
 	Quantity      int             `json:"quantity"`
 	UnitCost      decimal.Decimal `json:"unit_cost"`
 	ReferenceType string          `json:"reference_type"`

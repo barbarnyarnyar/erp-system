@@ -282,157 +282,149 @@ Employee lifecycle, payroll, time tracking, leave management, recruitment, perfo
 
 Product catalog, inventory, procurement, warehouse operations, vendor management, and demand forecasting. Port **8003** (docker-compose: 8006).
 
-### Domain Models (18 types)
+### Domain Models
 
 | Model | Key Fields |
 |-------|-----------|
-| `Product` | ID, SKU, Name, Description, CategoryID, UnitPrice, UnitCost, ReorderPoint |
-| `ProductCategory` | ID, Name, Description, ParentCategoryID |
-| `Supplier` | ID, Code, Name, ContactPerson, Email, PaymentTerms, Status |
-| `VendorContract` | ID, SupplierID, StartDate, EndDate, Terms, DiscountRate |
-| `PurchaseRequisition` | ID, RequesterID, DepartmentID, Status, Lines[], TotalAmount |
-| `PurchaseRequisitionLine` | ProductID, Quantity, EstimatedUnitPrice |
-| `PurchaseOrder` | ID, SupplierID, OrderDate, ExpectedDelivery, Status, Lines[] |
-| `PurchaseOrderLine` | ProductID, Quantity, UnitPrice, ReceivedQuantity |
-| `InventoryItem` | ID, ProductID, LocationID, QuantityOnHand, QuantityReserved, ReorderPoint |
-| `InventoryMovement` | ID, ProductID, LocationID, MovementType, Quantity, ReferenceID |
-| `StockTransfer` | ID, FromLocationID, ToLocationID, Status, Lines[] |
-| `Location` | ID, Name, Code, Type, Address |
-| `Receipt` | ID, PurchaseOrderID, ReceivedDate, Lines[], Status |
-| `ReceiptLine` | ProductID, QuantityReceived, QuantityAccepted, Notes |
-| `Shipment` | ID, CustomerID, ShippedDate, Status, Lines[] |
-| `ShipmentLine` | ProductID, QuantityShipped |
-| `DemandForecast` | ID, ProductID, PeriodStart, PeriodEnd, ForecastQuantity, ActualQuantity |
+| `Product` | ID, ProductCode, ProductName, Description, ProductType, CategoryID, UnitOfMeasure, StandardCost, ListPrice, IsActive |
+| `ProductCategory` | ID, Code, Name, Description |
+| `Location` | ID, LocationCode, LocationName, LocationType, IsActive |
+| `Supplier` | ID, SupplierCode, SupplierName, ContactName, Email, Phone, IsActive |
+| `VendorContract` | ID, ContractNumber, SupplierID, StartDate, EndDate, Terms, Status |
+| `PurchaseRequisition` | ID, ReqNumber, RequesterID, RequestDate, Status, TotalAmount, Notes |
+| `PurchaseRequisitionLine` | ID, PurchaseRequisitionID, ProductID, QuantityRequested, EstimatedUnitPrice, LineTotal |
+| `PurchaseOrder` | ID, PoNumber, SupplierID, OrderDate, ExpectedDelivery, Status, TotalAmount, Notes |
+| `PurchaseOrderLine` | ID, PurchaseOrderID, ProductID, QuantityOrdered, QuantityReceived, UnitPrice, LineTotal, Description |
+| `InventoryItem` | ID, ProductID, LocationID, QuantityOnHand, QuantityReserved, QuantityAvailable, ReorderPoint, MaximumStock, UnitCost |
+| `InventoryMovement` | ID, ProductID, LocationID, MovementType, Quantity, UnitCost, ReferenceType, ReferenceID, Notes |
+| `StockTransfer` | ID, FromLocationID, ToLocationID, ProductID, Quantity, Status, TransferredAt |
+| `Receipt` | ID, PurchaseOrderID, ReceivedDate, Status, Notes |
+| `ReceiptLine` | ID, ReceiptID, ProductID, QuantityReceived, LocationID |
+| `Shipment` | ID, Carrier, TrackingNumber, EstimatedDelivery, Status, Notes |
+| `ShipmentLine` | ID, ShipmentID, ProductID, QuantityShipped, LocationID |
+| `DemandForecast` | ID, ProductID, ForecastDate, ForecastQuantity, ConfidenceLevel, Notes |
 
 ### Business Services (7)
 
 | Service | Key Responsibilities |
 |---------|---------------------|
-| `ProductManagementService` | Product CRUD, category hierarchy |
+| `ProductManagementService` | Product CRUD, category classification, locations CRUD |
 | `SupplierManagementService` | Supplier CRUD, contract management |
-| `PurchaseOrderService` | Requisition→PO lifecycle, approval, send-to-supplier |
-| `InventoryService` | Stock tracking, reservations, adjustments, movement recording |
-| `WarehouseService` | Receipt processing, shipment processing, stock transfers |
-| `DemandPlanningService` | Forecast CRUD, demand data consumption |
-| `ReportService` | Inventory levels, vendor performance, procurement metrics, safety stock |
+| `PurchaseOrderService` | Requisition→PO lifecycle, approvals, send PO to vendor |
+| `InventoryService` | Stock tracking, reservations, movements recording, transfers |
+| `WarehouseService` | Goods receipts processing, outbound shipments |
+| `DemandPlanningService` | Demand forecasts management |
 
-### API Endpoints (49 routes)
+### API Endpoints (47 routes)
 
-**Product Management:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/product-categories` | List categories |
-| POST | `/api/v1/product-categories` | Create category |
-| GET | `/api/v1/product-categories/:id` | Get category |
-| PUT | `/api/v1/product-categories/:id` | Update category |
-| DELETE | `/api/v1/product-categories/:id` | Delete category |
-| GET | `/api/v1/products` | List products |
-| POST | `/api/v1/products` | Create product |
-| GET | `/api/v1/products/:id` | Get product |
-| PUT | `/api/v1/products/:id` | Update product |
-| DELETE | `/api/v1/products/:id` | Delete product |
+**Product Categories:**
+- `GET /api/v1/product-categories` — List categories
+- `POST /api/v1/product-categories` — Create category
+- `GET /api/v1/product-categories/:id` — Get category details
+- `PUT /api/v1/product-categories/:id` — Update category
+- `DELETE /api/v1/product-categories/:id` — Delete category
+
+**Products:**
+- `GET /api/v1/products` — List products
+- `POST /api/v1/products` — Create product
+- `GET /api/v1/products/:id` — Get product details
+- `PUT /api/v1/products/:id` — Update product
+- `DELETE /api/v1/products/:id` — Delete product
+
+**Locations:**
+- `GET /api/v1/locations` — List locations
+- `POST /api/v1/locations` — Create location
+- `GET /api/v1/locations/:id` — Get location details
+- `PUT /api/v1/locations/:id` — Update location
+- `DELETE /api/v1/locations/:id` — Delete location
 
 **Supplier Management:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/vendors` | List vendors |
-| POST | `/api/v1/vendors` | Create vendor |
-| GET | `/api/v1/vendors/:id` | Get vendor |
-| PUT | `/api/v1/vendors/:id` | Update vendor |
-| DELETE | `/api/v1/vendors/:id` | Delete vendor |
-| GET | `/api/v1/vendor-contracts` | List contracts |
-| POST | `/api/v1/vendor-contracts` | Create contract |
-| GET | `/api/v1/vendor-contracts/:id` | Get contract |
-| PUT | `/api/v1/vendor-contracts/:id` | Update contract |
-| DELETE | `/api/v1/vendor-contracts/:id` | Delete contract |
+- `GET /api/v1/vendors` — List vendors
+- `POST /api/v1/vendors` — Create vendor
+- `GET /api/v1/vendors/:id` — Get vendor details
+- `PUT /api/v1/vendors/:id` — Update vendor details
+- `DELETE /api/v1/vendors/:id` — Delete vendor
+- `GET /api/v1/vendor-contracts` — List contracts
+- `POST /api/v1/vendor-contracts` — Create contract
+- `GET /api/v1/vendor-contracts/:id` — Get contract details
+- `PUT /api/v1/vendor-contracts/:id` — Update contract details
+- `DELETE /api/v1/vendor-contracts/:id` — Delete contract
 
-**Procurement:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/purchase-requisitions` | List requisitions |
-| POST | `/api/v1/purchase-requisitions` | Create requisition |
-| GET | `/api/v1/purchase-requisitions/:id` | Get requisition |
-| PUT | `/api/v1/purchase-requisitions/:id` | Update |
-| DELETE | `/api/v1/purchase-requisitions/:id` | Delete |
-| POST | `/api/v1/purchase-requisitions/:id/approve` | Approve |
-| POST | `/api/v1/purchase-requisitions/:id/reject` | Reject |
-| GET | `/api/v1/purchase-orders` | List purchase orders |
-| POST | `/api/v1/purchase-orders` | Create PO |
-| GET | `/api/v1/purchase-orders/:id` | Get PO |
-| PUT | `/api/v1/purchase-orders/:id` | Update PO |
-| DELETE | `/api/v1/purchase-orders/:id` | Delete PO |
-| POST | `/api/v1/purchase-orders/:id/send` | Send PO to supplier |
+**Purchase Requisitions:**
+- `GET /api/v1/purchase-requisitions` — List requisitions
+- `POST /api/v1/purchase-requisitions` — Create requisition
+- `GET /api/v1/purchase-requisitions/:id` — Get requisition details
+- `PUT /api/v1/purchase-requisitions/:id` — Update requisition details
+- `DELETE /api/v1/purchase-requisitions/:id` — Delete requisition
+- `POST /api/v1/purchase-requisitions/:id/approve` — Approve requisition
+- `POST /api/v1/purchase-requisitions/:id/reject` — Reject requisition
+- `GET /api/v1/purchase-requisitions/:id/lines` — Get requisition line items
 
-**Inventory:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/inventory` | List inventory items |
-| POST | `/api/v1/inventory` | Create item |
-| GET | `/api/v1/inventory/:id` | Get item |
-| PUT | `/api/v1/inventory/:id` | Update item |
-| DELETE | `/api/v1/inventory/:id` | Delete item |
-| POST | `/api/v1/inventory/:id/reserve` | Reserve stock |
-| POST | `/api/v1/inventory/:id/release` | Release reservation |
+**Purchase Orders:**
+- `GET /api/v1/purchase-orders` — List purchase orders
+- `POST /api/v1/purchase-orders` — Create purchase order
+- `GET /api/v1/purchase-orders/:id` — Get purchase order details
+- `PUT /api/v1/purchase-orders/:id` — Update purchase order details
+- `DELETE /api/v1/purchase-orders/:id` — Delete purchase order
+- `POST /api/v1/purchase-orders/:id/send` — Send PO to supplier
+- `GET /api/v1/purchase-orders/:id/lines` — Get PO line items
 
-**Stock Transfers:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/stock-transfers` | List transfers |
-| POST | `/api/v1/stock-transfers` | Create transfer |
-| GET | `/api/v1/stock-transfers/:id` | Get transfer |
-| PUT | `/api/v1/stock-transfers/:id` | Update |
-| DELETE | `/api/v1/stock-transfers/:id` | Delete |
-| POST | `/api/v1/stock-transfers/:id/execute` | Execute transfer |
+**Inventory & Transfers:**
+- `GET /api/v1/inventory` — List inventory items
+- `POST /api/v1/inventory` — Create inventory item
+- `GET /api/v1/inventory/:id` — Get inventory item details
+- `PUT /api/v1/inventory/:id` — Update inventory item details
+- `DELETE /api/v1/inventory/:id` — Delete inventory item
+- `POST /api/v1/inventory/reserve` — Reserve stock
+- `POST /api/v1/inventory/release` — Release stock reservation
+- `GET /api/v1/inventory/movements` — List inventory movements
+- `GET /api/v1/stock-transfers` — List transfers
+- `POST /api/v1/stock-transfers` — Create stock transfer
+- `GET /api/v1/stock-transfers/:id` - Get transfer details
+- `POST /api/v1/stock-transfers/:id/execute` — Execute stock transfer
 
-**Receiving & Shipping:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/receipts` | List receipts |
-| POST | `/api/v1/receipts` | Create receipt |
-| GET | `/api/v1/receipts/:id` | Get receipt |
-| PUT | `/api/v1/receipts/:id` | Update |
-| DELETE | `/api/v1/receipts/:id` | Delete |
-| GET | `/api/v1/shipments` | List shipments |
-| POST | `/api/v1/shipments` | Create shipment |
-| GET | `/api/v1/shipments/:id` | Get shipment |
-| PUT | `/api/v1/shipments/:id` | Update |
-| DELETE | `/api/v1/shipments/:id` | Delete |
+**Warehouse Operations:**
+- `GET /api/v1/receipts` — List receipts
+- `POST /api/v1/receipts` — Create goods receipt
+- `GET /api/v1/receipts/:id` — Get receipt details
+- `PUT /api/v1/receipts/:id` — Update receipt details
+- `GET /api/v1/receipts/:id/lines` — Get receipt line items
+- `GET /api/v1/shipments` — List shipments
+- `POST /api/v1/shipments` — Create shipment
+- `GET /api/v1/shipments/:id` — Get shipment details
+- `PUT /api/v1/shipments/:id` — Update shipment details
+- `GET /api/v1/shipments/:id/lines` — Get shipment line items
 
 **Demand Planning:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/demand-forecasts` | List forecasts |
-| POST | `/api/v1/demand-forecasts` | Create forecast |
-| GET | `/api/v1/demand-forecasts/:id` | Get forecast |
-| PUT | `/api/v1/demand-forecasts/:id` | Update |
-| DELETE | `/api/v1/demand-forecasts/:id` | Delete |
+- `GET /api/v1/demand-forecasts` — List forecasts
+- `POST /api/v1/demand-forecasts` — Create forecast
+- `GET /api/v1/demand-forecasts/:id` — Get forecast details
+- `PUT /api/v1/demand-forecasts/:id` — Update forecast details
 
 **Reports:**
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/reports/inventory-levels` | Inventory level report |
-| GET | `/api/v1/reports/vendor-performance` | Vendor performance report |
-| GET | `/api/v1/reports/procurement-metrics` | Procurement metrics report |
-| GET | `/api/v1/reports/safety-stock` | Safety stock calculations |
+- `GET /api/v1/reports/inventory-levels` — Inventory levels report
+- `GET /api/v1/reports/vendor-performance` — Vendor performance metrics
+- `GET /api/v1/reports/procurement-metrics` — Procurement metrics
+- `GET /api/v1/reports/safety-stock` — Safety stock report
 
 ### Kafka Events Published (22 topics)
 
-**Inventory:** `scm.inventory.received`, `scm.inventory.shipped`, `scm.inventory.adjusted`, `scm.inventory.low.stock`, `scm.inventory.out.of.stock`, `scm.inventory.valued`, `scm.inventory.updated`
-**Purchase Orders:** `scm.purchase.order.created`, `scm.purchase.order.sent`, `scm.purchase.order.received`, `scm.purchase.order.cancelled`
-**Vendors:** `scm.vendor.created`, `scm.vendor.updated`, `scm.vendor.performance.evaluated`
-**Shipments:** `scm.shipment.created`, `scm.shipment.dispatched`, `scm.shipment.delivered`, `scm.shipment.delayed`
-**Other:** `scm.training.required`, `scm.material.delivered`, `scm.material.received`, `scm.invoice.received`
+- **Inventory**: `scm.inventory.received`, `scm.inventory.shipped`, `scm.inventory.adjusted`, `scm.inventory.low.stock`, `scm.inventory.out.of.stock`, `scm.inventory.valued`, `scm.inventory.updated`
+- **Purchase Orders**: `scm.purchase.order.created`, `scm.purchase.order.sent`, `scm.purchase.order.received`, `scm.purchase.order.cancelled`
+- **Vendors**: `scm.vendor.created`, `scm.vendor.updated`, `scm.vendor.performance.evaluated`
+- **Shipments**: `scm.shipment.created`, `scm.shipment.dispatched`, `scm.shipment.delivered`, `scm.shipment.delayed`
+- **Other**: `scm.training.required`, `scm.material.delivered`
 
-### Kafka Events Consumed (8 topics, per CDD)
+### Kafka Events Consumed (7 topics)
 
 | Topic | Publisher | Logic |
 |-------|-----------|-------|
-| `crm.sales.order.created` | CRM | Logged only |
+| `crm.sales.order.created` | CRM | Logged for metrics |
 | `crm.customer.demand.forecast` | CRM | Create demand forecast record |
 | `mfg.material.required` | MFG | Auto-create purchase requisition |
 | `mfg.material.consumed` | MFG | Issue raw material from inventory |
 | `mfg.production.completed` | MFG | Receive finished goods into inventory |
-| `fin.vendor.payment.processed` | FM | Logged only |
+| `fin.vendor.payment.processed` | FM | Logged for status sync |
 | `prj.material.requested` | PM | Issue material from inventory |
 
 ---

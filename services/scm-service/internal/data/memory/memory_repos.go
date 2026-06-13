@@ -822,3 +822,88 @@ func (r *MemoryStockTransferRepo) Update(ctx context.Context, st *domain.StockTr
 	r.data[st.ID] = *st
 	return nil
 }
+
+// MemoryKafkaEventInboxRepo implements domain.KafkaEventInboxRepository
+type MemoryKafkaEventInboxRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.KafkaEventInbox
+}
+
+func NewMemoryKafkaEventInboxRepo() *MemoryKafkaEventInboxRepo {
+	return &MemoryKafkaEventInboxRepo{data: make(map[string]domain.KafkaEventInbox)}
+}
+
+func (r *MemoryKafkaEventInboxRepo) Create(ctx context.Context, e *domain.KafkaEventInbox) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[e.EventID] = *e
+	return nil
+}
+
+func (r *MemoryKafkaEventInboxRepo) GetByID(ctx context.Context, id string) (*domain.KafkaEventInbox, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	e, ok := r.data[id]
+	if !ok {
+		return nil, errors.New("event inbox record not found")
+	}
+	return &e, nil
+}
+
+// MemoryTransactionalOutboxRepo implements domain.TransactionalOutboxRepository
+type MemoryTransactionalOutboxRepo struct {
+	mu   sync.RWMutex
+	data map[string]domain.TransactionalOutbox
+}
+
+func NewMemoryTransactionalOutboxRepo() *MemoryTransactionalOutboxRepo {
+	return &MemoryTransactionalOutboxRepo{data: make(map[string]domain.TransactionalOutbox)}
+}
+
+func (r *MemoryTransactionalOutboxRepo) Create(ctx context.Context, o *domain.TransactionalOutbox) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[o.ID] = *o
+	return nil
+}
+
+func (r *MemoryTransactionalOutboxRepo) GetUnsent(ctx context.Context, limit int) ([]domain.TransactionalOutbox, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []domain.TransactionalOutbox
+	for _, o := range r.data {
+		if o.Status == domain.OutboxStatusPENDING || o.Status == domain.OutboxStatusFAILED {
+			list = append(list, o)
+			if len(list) >= limit {
+				break
+			}
+		}
+	}
+	return list, nil
+}
+
+func (r *MemoryTransactionalOutboxRepo) UpdateStatus(ctx context.Context, id string, status domain.OutboxStatus, retryCount int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	o, ok := r.data[id]
+	if !ok {
+		return errors.New("outbox message not found")
+	}
+	o.Status = status
+	o.RetryCount = retryCount
+	r.data[id] = o
+	return nil
+}
+
+// MemoryTransactionManager implements domain.TransactionManager for memory tests (no-op)
+type MemoryTransactionManager struct{}
+
+func NewMemoryTransactionManager() domain.TransactionManager {
+	return &MemoryTransactionManager{}
+}
+
+func (m *MemoryTransactionManager) WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
+}
+
+

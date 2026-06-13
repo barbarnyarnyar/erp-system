@@ -1,6 +1,11 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrOptimisticLock = errors.New("optimistic lock conflict: inventory item updated by another transaction")
 
 type ProductRepository interface {
 	Create(ctx context.Context, p *Product) error
@@ -125,4 +130,19 @@ type StockTransferRepository interface {
 	GetByID(ctx context.Context, id string) (*StockTransfer, error)
 	List(ctx context.Context) ([]StockTransfer, error)
 	Update(ctx context.Context, st *StockTransfer) error
+}
+
+type TransactionManager interface {
+	WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
+type KafkaEventInboxRepository interface {
+	Create(ctx context.Context, e *KafkaEventInbox) error
+	GetByID(ctx context.Context, id string) (*KafkaEventInbox, error)
+}
+
+type TransactionalOutboxRepository interface {
+	Create(ctx context.Context, o *TransactionalOutbox) error
+	GetUnsent(ctx context.Context, limit int) ([]TransactionalOutbox, error)
+	UpdateStatus(ctx context.Context, id string, status OutboxStatus, retryCount int) error
 }

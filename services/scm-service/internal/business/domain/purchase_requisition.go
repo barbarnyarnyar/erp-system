@@ -2,9 +2,8 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type PurchaseRequisition struct {
@@ -12,7 +11,7 @@ type PurchaseRequisition struct {
 	ReqNumber   string          `json:"req_number"`
 	RequesterID string          `json:"requester_id"`
 	RequestDate time.Time       `json:"request_date"`
-	Status      string          `json:"status"` // e.g., DRAFT, SUBMITTED, APPROVED, REJECTED
+	Status      string          `json:"status"`
 	TotalAmount decimal.Decimal `json:"total_amount"`
 	Notes       string          `json:"notes"`
 	CreatedAt   time.Time       `json:"created_at"`

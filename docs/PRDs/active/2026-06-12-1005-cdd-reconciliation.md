@@ -2,7 +2,7 @@
 
 **PRD ID**: PRD-2026-06-12-1005  
 **Date**: 2026-06-12  
-**Status**: In Progress (CRM completed, FM topics aligned)  
+**Status**: Implemented  
 **Parent Initiative**: ERP Quality & Architecture Alignment  
 **Target Coverage**: 100% CDD-to-Go struct alignment, 0 stale domain entities  
 
@@ -98,10 +98,10 @@ graph TD
 - [x] Verify unit tests pass: `cd services/crm-service && go test ./...`.
 
 #### 2. SCM Service Reconciliation
-- [ ] Update `scm.cdd` with `PurchaseRequisition`, `PurchaseRequisitionLine`, `StockTransfer`, `VendorContract`, `DemandForecast`.
-- [ ] Regenerate Go models: `go run cdd-engine/main.go -cdd services/scm-service/contracts/scm.cdd -go-out services/scm-service/internal/business/domain`.
-- [ ] Delete stale Go files: `inventory_item.go`, `inventory_movement.go`, `demand_forecast.go`, `product.go`, `product_category.go`, `location.go`, `stock_transfer.go`, `vendor_contract.go`, `purchase_requisition.go`, `purchase_requisition_line.go`.
-- [ ] Refactor SCM services and repositories to map to the new entities.
+- [x] Reconcile `scm.cdd` with all active SCM entities (`Product`, `ProductCategory`, `Location`, `Supplier`, `InventoryItem`, `InventoryMovement`, `Receipt`, `ReceiptLine`, `Shipment`, `ShipmentLine`, `PurchaseRequisition`, `PurchaseRequisitionLine`, `StockTransfer`, `VendorContract`, `DemandForecast`, `TransactionalOutbox`, `KafkaEventInbox`).
+- [x] Regenerate Go models: `go run cdd-engine/main.go -cdd services/scm-service/contracts/scm.cdd -go-out services/scm-service/internal/business/domain`.
+- [x] Relocate custom repository definitions in generated files to `repository.go` to keep them clean and decoupled.
+- [x] Verify SCM service compiles and tests pass cleanly.
 
 #### 3. FM Service Reconciliation
 - [x] Update `fm.cdd` with `Payment`, `BankAccount`, `CustomerCredit`, `BankStatement`, `BankStatementLine`, `TaxRate`, `CurrencyRate`.

@@ -16,6 +16,7 @@ type PurchaseOrderService struct {
 	reqRepo     domain.PurchaseRequisitionRepository
 	reqLineRepo domain.PurchaseRequisitionLineRepository
 	publisher   domain.EventPublisher
+	tm          domain.TransactionManager
 }
 
 func NewPurchaseOrderService(
@@ -24,6 +25,7 @@ func NewPurchaseOrderService(
 	reqRepo domain.PurchaseRequisitionRepository,
 	reqLineRepo domain.PurchaseRequisitionLineRepository,
 	publisher domain.EventPublisher,
+	tm domain.TransactionManager,
 ) *PurchaseOrderService {
 	return &PurchaseOrderService{
 		poRepo:      poRepo,
@@ -31,6 +33,7 @@ func NewPurchaseOrderService(
 		reqRepo:     reqRepo,
 		reqLineRepo: reqLineRepo,
 		publisher:   publisher,
+		tm:          tm,
 	}
 }
 
@@ -90,16 +93,23 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(ctx context.Context, supplier
 		UpdatedAt:        time.Now(),
 	}
 
-	err := s.poRepo.Create(ctx, po)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.poRepo.Create(txCtx, po)
+		if err != nil {
+			return err
+		}
+
+		for _, line := range poLines {
+			err = s.lineRepo.Create(txCtx, &line)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	for _, line := range poLines {
-		err = s.lineRepo.Create(ctx, &line)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &PurchaseOrderDetails{
@@ -168,9 +178,12 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 }
 
 func (s *PurchaseOrderService) DeletePurchaseOrder(ctx context.Context, id string) error {
-	// First delete lines
-	_ = s.lineRepo.DeleteByPOID(ctx, id)
-	return s.poRepo.Delete(ctx, id)
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		if err := s.lineRepo.DeleteByPOID(txCtx, id); err != nil {
+			return err
+		}
+		return s.poRepo.Delete(txCtx, id)
+	})
 }
 
 func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string) (*domain.PurchaseOrder, error) {
@@ -259,16 +272,23 @@ func (s *PurchaseOrderService) CreatePurchaseRequisition(ctx context.Context, re
 		UpdatedAt:   time.Now(),
 	}
 
-	err := s.reqRepo.Create(ctx, pr)
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.reqRepo.Create(txCtx, pr)
+		if err != nil {
+			return err
+		}
+
+		for _, line := range reqLines {
+			err = s.reqLineRepo.Create(txCtx, &line)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	for _, line := range reqLines {
-		err = s.reqLineRepo.Create(ctx, &line)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &PurchaseRequisitionDetails{
@@ -314,8 +334,12 @@ func (s *PurchaseOrderService) UpdatePurchaseRequisition(ctx context.Context, id
 }
 
 func (s *PurchaseOrderService) DeletePurchaseRequisition(ctx context.Context, id string) error {
-	_ = s.reqLineRepo.DeleteByRequisitionID(ctx, id)
-	return s.reqRepo.Delete(ctx, id)
+	return s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		if err := s.reqLineRepo.DeleteByRequisitionID(txCtx, id); err != nil {
+			return err
+		}
+		return s.reqRepo.Delete(txCtx, id)
+	})
 }
 
 func (s *PurchaseOrderService) ApprovePurchaseRequisition(ctx context.Context, id string) (*domain.PurchaseRequisition, error) {

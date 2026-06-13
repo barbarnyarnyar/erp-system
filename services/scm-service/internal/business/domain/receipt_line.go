@@ -2,9 +2,8 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type ReceiptLine struct {
@@ -12,6 +11,6 @@ type ReceiptLine struct {
 	ReceiptID        string          `json:"receipt_id"`
 	ProductID        string          `json:"product_id"`
 	QuantityReceived int             `json:"quantity_received"`
-	UnitCost         decimal.Decimal `json:"unit_cost"` // Landed cost (freight, duties)
+	UnitCost         decimal.Decimal `json:"unit_cost"`
 	CreatedAt        time.Time       `json:"created_at"`
 }

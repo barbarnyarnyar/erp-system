@@ -18,6 +18,7 @@ type WarehouseService struct {
 	poLRepo    domain.PurchaseOrderLineRepository
 	invService *InventoryService
 	publisher  domain.EventPublisher
+	tm         domain.TransactionManager
 }
 
 func NewWarehouseService(
@@ -29,6 +30,7 @@ func NewWarehouseService(
 	poLRepo domain.PurchaseOrderLineRepository,
 	invService *InventoryService,
 	publisher domain.EventPublisher,
+	tm domain.TransactionManager,
 ) *WarehouseService {
 	return &WarehouseService{
 		recRepo:    recRepo,
@@ -39,6 +41,7 @@ func NewWarehouseService(
 		poLRepo:    poLRepo,
 		invService: invService,
 		publisher:  publisher,
+		tm:         tm,
 	}
 }
 
@@ -89,76 +92,87 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 		rec.PurchaseOrderID = &poID
 	}
 
-	err := s.recRepo.Create(ctx, rec)
+	var savedLines []domain.ReceiptLine
+
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.recRepo.Create(txCtx, rec)
+		if err != nil {
+			return err
+		}
+
+		// Look up purchase order lines to match quantities if poID is provided
+		var poLines []domain.PurchaseOrderLine
+		if poID != "" {
+			poLines, _ = s.poLRepo.ListByPOID(txCtx, poID)
+		}
+
+		for _, l := range lines {
+			line := domain.ReceiptLine{
+				ID:               utils.NewID("receipt-line"),
+				ReceiptID:        recID,
+				ProductID:        l.ProductID,
+				QuantityReceived: l.QuantityReceived,
+				CreatedAt:        time.Now(),
+			}
+
+			err = s.recLRepo.Create(txCtx, &line)
+			if err != nil {
+				return err
+			}
+			savedLines = append(savedLines, line)
+
+			// Increment PO received quantity if matching
+			if poID != "" {
+				for _, pol := range poLines {
+					if pol.ProductID == l.ProductID {
+						pol.QuantityReceived += l.QuantityReceived
+						_ = s.poLRepo.Create(txCtx, &pol) // Save back/update line
+						break
+					}
+				}
+			}
+
+			// Adjust stock levels
+			locationID := l.LocationID
+			if locationID == "" {
+				locationID = "loc_default" // default warehouse
+			}
+			_, err = s.invService.AdjustInventory(txCtx, l.ProductID, locationID, l.QuantityReceived, "RECEIPT", "Received stock via "+recNum)
+			if err != nil {
+				return err
+			}
+		}
+
+		// If all items received, update PO status to DELIVERED
+		if poID != "" {
+			po, err := s.poRepo.GetByID(txCtx, poID)
+			if err == nil {
+				updatedPOLines, _ := s.poLRepo.ListByPOID(txCtx, poID)
+				allReceived := true
+				for _, pol := range updatedPOLines {
+					if pol.QuantityReceived < pol.QuantityOrdered {
+						allReceived = false
+						break
+					}
+				}
+				if allReceived {
+					po.Status = "DELIVERED"
+				} else {
+					po.Status = "PARTIALLY_DELIVERED"
+				}
+				po.UpdatedAt = time.Now()
+				_ = s.poRepo.Update(txCtx, po)
+			}
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	savedLines := make([]domain.ReceiptLine, 0, len(lines))
-
-	// Look up purchase order lines to match quantities if poID is provided
-	var poLines []domain.PurchaseOrderLine
-	if poID != "" {
-		poLines, _ = s.poLRepo.ListByPOID(ctx, poID)
-	}
-
-	for _, l := range lines {
-		line := domain.ReceiptLine{
-			ID:               utils.NewID("receipt-line"),
-			ReceiptID:        recID,
-			ProductID:        l.ProductID,
-			QuantityReceived: l.QuantityReceived,
-			CreatedAt:        time.Now(),
-		}
-
-		err = s.recLRepo.Create(ctx, &line)
-		if err != nil {
-			return nil, err
-		}
-		savedLines = append(savedLines, line)
-
-		// Increment PO received quantity if matching
-		if poID != "" {
-			for _, pol := range poLines {
-				if pol.ProductID == l.ProductID {
-					pol.QuantityReceived += l.QuantityReceived
-					_ = s.poLRepo.Create(ctx, &pol) // Save back/update line in in-memory repo
-					break
-				}
-			}
-		}
-
-		// Adjust stock levels
-		locationID := l.LocationID
-		if locationID == "" {
-			locationID = "loc_default" // default warehouse
-		}
-		_, _ = s.invService.AdjustInventory(ctx, l.ProductID, locationID, l.QuantityReceived, "RECEIPT", "Received stock via "+recNum)
-	}
-
-	// If all items received, update PO status to DELIVERED
-	if poID != "" {
-		po, err := s.poRepo.GetByID(ctx, poID)
-		if err == nil {
-			updatedPOLines, _ := s.poLRepo.ListByPOID(ctx, poID)
-			allReceived := true
-			for _, pol := range updatedPOLines {
-				if pol.QuantityReceived < pol.QuantityOrdered {
-					allReceived = false
-					break
-				}
-			}
-			if allReceived {
-				po.Status = "DELIVERED"
-			} else {
-				po.Status = "PARTIALLY_DELIVERED"
-			}
-			po.UpdatedAt = time.Now()
-			_ = s.poRepo.Update(ctx, po)
-		}
-	}
-
-	// Publish material delivered event for each line
+	// Publish material delivered event for each line outside of transaction
 	for _, l := range savedLines {
 		if err := s.publisher.Publish(ctx, domain.TopicScmMaterialDelivered, l.ProductID, domain.MaterialDeliveredEvent{
 			ProjectID:    "",
@@ -237,34 +251,45 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 		UpdatedAt:         time.Now(),
 	}
 
-	err := s.shipRepo.Create(ctx, ship)
+	var savedLines []domain.ShipmentLine
+
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err := s.shipRepo.Create(txCtx, ship)
+		if err != nil {
+			return err
+		}
+
+		for _, l := range lines {
+			line := domain.ShipmentLine{
+				ID:              utils.NewID("shipment-line"),
+				ShipmentID:      shipID,
+				ProductID:       l.ProductID,
+				QuantityShipped: l.QuantityShipped,
+				CreatedAt:       time.Now(),
+			}
+
+			err = s.shipLRepo.Create(txCtx, &line)
+			if err != nil {
+				return err
+			}
+			savedLines = append(savedLines, line)
+
+			// Deduct stock levels (Issue)
+			locationID := l.LocationID
+			if locationID == "" {
+				locationID = "loc_default"
+			}
+			_, err = s.invService.AdjustInventory(txCtx, l.ProductID, locationID, l.QuantityShipped, "ISSUE", "Shipped stock out via "+shipNum)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
-	}
-
-	savedLines := make([]domain.ShipmentLine, 0, len(lines))
-
-	for _, l := range lines {
-		line := domain.ShipmentLine{
-			ID:              utils.NewID("shipment-line"),
-			ShipmentID:      shipID,
-			ProductID:       l.ProductID,
-			QuantityShipped: l.QuantityShipped,
-			CreatedAt:       time.Now(),
-		}
-
-		err = s.shipLRepo.Create(ctx, &line)
-		if err != nil {
-			return nil, err
-		}
-		savedLines = append(savedLines, line)
-
-		// Deduct stock levels (Issue)
-		locationID := l.LocationID
-		if locationID == "" {
-			locationID = "loc_default"
-		}
-		_, _ = s.invService.AdjustInventory(ctx, l.ProductID, locationID, l.QuantityShipped, "ISSUE", "Shipped stock out via "+shipNum)
 	}
 
 	if err := s.publisher.Publish(ctx, domain.TopicScmShipmentCreated, ship.ID, domain.ShipmentCreatedEvent{

@@ -17,6 +17,7 @@ func newInventoryService(t *testing.T) *InventoryService {
 		memory.NewMemoryInventoryMovementRepo(),
 		memory.NewMemoryStockTransferRepo(),
 		&sharedtesting.MockPublisher{},
+		memory.NewMemoryTransactionManager(),
 	)
 }
 

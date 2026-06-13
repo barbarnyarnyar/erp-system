@@ -2,9 +2,8 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type Product struct {
@@ -12,8 +11,8 @@ type Product struct {
 	ProductCode   string          `json:"product_code"`
 	ProductName   string          `json:"product_name"`
 	Description   string          `json:"description"`
-	ProductType   string          `json:"product_type"` // e.g., RAW_MATERIAL, WORK_IN_PROGRESS, FINISHED_GOOD
-	CategoryID    *string         `json:"category_id"`
+	ProductType   string          `json:"product_type"`
+	CategoryID    *string         `json:"category_id,omitempty"`
 	UnitOfMeasure string          `json:"unit_of_measure"`
 	StandardCost  decimal.Decimal `json:"standard_cost"`
 	ListPrice     decimal.Decimal `json:"list_price"`

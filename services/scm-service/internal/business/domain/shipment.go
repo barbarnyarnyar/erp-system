@@ -8,12 +8,12 @@ import (
 type Shipment struct {
 	ID                string    `json:"id"`
 	ShipmentNumber    string    `json:"shipment_number"`
-	SalesOrderID      *string   `json:"sales_order_id"` // Links outbound dispatch to CRM sales order
+	SalesOrderID      *string   `json:"sales_order_id,omitempty"`
 	Carrier           string    `json:"carrier"`
 	TrackingNumber    string    `json:"tracking_number"`
 	ShippedDate       time.Time `json:"shipped_date"`
 	EstimatedDelivery time.Time `json:"estimated_delivery"`
-	Status            string    `json:"status"` // e.g., PENDING, SHIPPED, DELIVERED, CANCELLED
+	Status            string    `json:"status"`
 	Notes             string    `json:"notes"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`

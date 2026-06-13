@@ -4,6 +4,7 @@ import (
 	"erp-system/shared/utils"
 	"net/http"
 
+	"github.com/erp-system/scm-service/internal/business/domain"
 	"github.com/erp-system/scm-service/internal/business/service"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -89,7 +90,13 @@ func (h *InventoryHandler) UpdateInventoryItem(c *gin.Context) {
 		costDec = decimal.Zero
 	}
 
-	ii, err := h.svc.UpdateInventoryItem(c.Request.Context(), id, req.QuantityOnHand, req.QuantityReserved, req.ReorderPoint, req.MaximumStock, costDec)
+	var ii *domain.InventoryItem
+	for i := 0; i < 5; i++ {
+		ii, err = h.svc.UpdateInventoryItem(c.Request.Context(), id, req.QuantityOnHand, req.QuantityReserved, req.ReorderPoint, req.MaximumStock, costDec)
+		if err != domain.ErrOptimisticLock {
+			break
+		}
+	}
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -120,7 +127,13 @@ func (h *InventoryHandler) ReserveStock(c *gin.Context) {
 		return
 	}
 
-	err := h.svc.ReserveStock(c.Request.Context(), req.ProductID, req.LocationID, req.Quantity, req.ReferenceID)
+	var err error
+	for i := 0; i < 5; i++ {
+		err = h.svc.ReserveStock(c.Request.Context(), req.ProductID, req.LocationID, req.Quantity, req.ReferenceID)
+		if err != domain.ErrOptimisticLock {
+			break
+		}
+	}
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -139,7 +152,13 @@ func (h *InventoryHandler) ReleaseReservation(c *gin.Context) {
 		return
 	}
 
-	err := h.svc.ReleaseReservation(c.Request.Context(), req.ReferenceID)
+	var err error
+	for i := 0; i < 5; i++ {
+		err = h.svc.ReleaseReservation(c.Request.Context(), req.ReferenceID)
+		if err != domain.ErrOptimisticLock {
+			break
+		}
+	}
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -161,7 +180,14 @@ func (h *InventoryHandler) CreateStockTransfer(c *gin.Context) {
 		return
 	}
 
-	st, err := h.svc.CreateStockTransfer(c.Request.Context(), req.FromLocationID, req.ToLocationID, req.ProductID, req.Quantity)
+	var st *domain.StockTransfer
+	var err error
+	for i := 0; i < 5; i++ {
+		st, err = h.svc.CreateStockTransfer(c.Request.Context(), req.FromLocationID, req.ToLocationID, req.ProductID, req.Quantity)
+		if err != domain.ErrOptimisticLock {
+			break
+		}
+	}
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -193,7 +219,14 @@ func (h *InventoryHandler) GetStockTransfers(c *gin.Context) {
 
 func (h *InventoryHandler) ExecuteStockTransfer(c *gin.Context) {
 	id := c.Param("id")
-	st, err := h.svc.ExecuteStockTransfer(c.Request.Context(), id)
+	var st *domain.StockTransfer
+	var err error
+	for i := 0; i < 5; i++ {
+		st, err = h.svc.ExecuteStockTransfer(c.Request.Context(), id)
+		if err != domain.ErrOptimisticLock {
+			break
+		}
+	}
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return

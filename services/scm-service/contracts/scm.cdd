@@ -2,7 +2,7 @@
 // MODULE BOUNDARY: SUPPLY CHAIN MANAGEMENT (SCM)
 // Architectural Pattern: Multi-Tenant Event-Driven Logistics Core (10/10 Certified)
 // Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
-// Domain Coverage: Suppliers, Purchase Orders, Inventory Ledger, Concurrency Shield
+// Domain Coverage: Product Categories, Products, Locations, Suppliers, Purchase Requisitions/Orders, Receipts/Shipments, Inventory Items/Movements, Concurrency Shield
 // ============================================================================
 
 namespace erp.logistics;
@@ -14,14 +14,6 @@ enum PurchaseOrderStatus {
     PARTIALLY_RECEIVED,
     FULLY_RECEIVED,
     CANCELLED
-}
-
-enum InventoryTransactionType {
-    PURCHASE_RECEIPT,    
-    SALES_SHIPMENT,      
-    PRODUCTION_ISSUE, 
-    PRODUCTION_RECEIPT,     
-    CYCLE_COUNT_ADJ      
 }
 
 enum OutboxStatus {
@@ -41,134 +33,60 @@ struct RequisitionLineInput {
     estimated_unit_price: decimal;
 }
 
-@table("scm_suppliers")
+@table("product_categories")
+entity ProductCategory {
+    id: uuid @primary;
+    code: string @unique;
+    name: string;
+    description: string;
+}
+
+@table("products")
+entity Product {
+    id: uuid @primary;
+    product_code: string @unique;
+    product_name: string;
+    description: string;
+    product_type: string;
+    category_id: uuid @optional @reference(ProductCategory.id);
+    unit_of_measure: string;
+    standard_cost: decimal;
+    list_price: decimal;
+    is_active: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("locations")
+@unique_composite(legal_entity_id, location_code)
+entity Location {
+    id: uuid @primary;
+    location_code: string;
+    location_name: string;
+    location_type: string;
+    is_active: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("suppliers")
 @unique_composite(legal_entity_id, supplier_code)
 entity Supplier {
     id: uuid @primary;
-    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
-    supplier_code: string;                        // Scoped unique constraint inside the tenant
-    name: string;
-    currency: string;                             // ISO 4217 code
-    payment_terms_days: int;
+    supplier_code: string;
+    supplier_name: string;
+    contact_name: string;
+    email: string;
+    phone: string;
     is_active: boolean;
-    
     created_at: timestamp;
     updated_at: timestamp;
 }
 
-@table("scm_warehouses")
-@unique_composite(legal_entity_id, warehouse_code)
-entity Warehouse {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    warehouse_code: string;                       // e.g., "WH_NORTH"
-    name: string;
-    location_address: string;
-    is_active: boolean;
-    
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("scm_stock_balances")
-@unique_composite(legal_entity_id, warehouse_id, material_id)
-entity StockBalance {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    warehouse_id: uuid @reference(Warehouse.id);
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
-    
-    quantity_on_hand: decimal @digits(14, 4);
-    quantity_allocated: decimal @digits(14, 4);   
-    quantity_available: decimal @digits(14, 4);   
-    
-    version: int;                                 // Concurrency Verification Shield (Optimistic Locking)
-    updated_at: timestamp;
-}
-
-@table("scm_inventory_transactions")
-entity InventoryTransaction {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    warehouse_id: uuid @reference(Warehouse.id);
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
-    
-    transaction_type: InventoryTransactionType;
-    quantity_delta: decimal @digits(14, 4);       
-    
-    source_document_id: uuid;                     // Context token (PO ID, Sales Order ID)
-    executed_by_hr_id: uuid;                      // Primitive Ref -> HR.Employee
-    
-    created_at: timestamp;                        // Immutable sub-ledger timestamp logging
-}
-
-@table("scm_purchase_orders")
-entity PurchaseOrder {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    supplier_id: uuid @reference(Supplier.id);
-    
-    po_number: string @unique;
-    status: PurchaseOrderStatus;
-    order_date: date;
-    estimated_delivery_date: date @optional;
-    
-    total_gross_value: decimal @digits(18, 4);
-    
-    created_at: timestamp;
-    updated_at: timestamp;
-    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
-}
-
-@table("scm_purchase_order_lines")
-entity PurchaseOrderLine {
-    id: uuid @primary;
-    purchase_order_id: uuid @reference(PurchaseOrder.id);
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
-    
-    quantity_ordered: decimal @digits(14, 4);
-    quantity_received: decimal @digits(14, 4);    
-    unit_price: decimal @digits(18, 4);
-    net_line_amount: decimal @digits(18, 4);
-}
-
-@table("scm_transactional_outbox")
-@index_composite(status, created_at)
-entity TransactionalOutbox {
-    id: uuid @primary;
-    event_type: string;                           
-    aggregate_id: uuid;                           
-    payload: jsonb;
-    status: OutboxStatus;                         
-    retry_count: int;                             // Retry monitor
-    created_at: timestamp;
-}
-
-@table("scm_kafka_event_inbox")
-entity KafkaEventInbox {
-    event_id: uuid @primary;                      
-    event_type: string;                           
-    processed_at: timestamp;
-    processing_status: EventProcessingStatus;
-    payload: jsonb;                               
-}
-
-@table("scm_demand_forecasts")
-entity DemandForecast {
-    id: uuid @primary;
-    product_id: uuid;
-    forecast_date: timestamp;
-    forecast_quantity: int;
-    confidence_level: decimal;
-    notes: string;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("scm_vendor_contracts")
+@table("vendor_contracts")
 entity VendorContract {
     id: uuid @primary;
-    contract_number: string;
+    contract_number: string @unique;
     supplier_id: uuid @reference(Supplier.id);
     start_date: timestamp;
     end_date: timestamp;
@@ -178,11 +96,54 @@ entity VendorContract {
     updated_at: timestamp;
 }
 
-@table("scm_purchase_requisitions")
+@table("inventory_items")
+@unique_composite(legal_entity_id, location_id, product_id)
+entity InventoryItem {
+    id: uuid @primary;
+    product_id: uuid @reference(Product.id);
+    location_id: uuid @reference(Location.id);
+    quantity_on_hand: int;
+    quantity_reserved: int;
+    quantity_available: int;
+    reorder_point: int;
+    maximum_stock: int;
+    unit_cost: decimal;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("inventory_movements")
+entity InventoryMovement {
+    id: uuid @primary;
+    product_id: uuid @reference(Product.id);
+    location_id: uuid @reference(Location.id);
+    movement_type: string;
+    quantity: int;
+    unit_cost: decimal;
+    reference_type: string;
+    reference_id: string;
+    notes: string;
+    created_at: timestamp;
+}
+
+@table("stock_transfers")
+entity StockTransfer {
+    id: uuid @primary;
+    from_location_id: uuid @reference(Location.id);
+    to_location_id: uuid @reference(Location.id);
+    product_id: uuid @reference(Product.id);
+    quantity: int;
+    status: string;
+    transferred_at: timestamp @optional;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("purchase_requisitions")
 entity PurchaseRequisition {
     id: uuid @primary;
-    req_number: string;
-    requester_id: uuid;
+    req_number: string @unique;
+    requester_id: string;
     request_date: timestamp;
     status: string;
     total_amount: decimal;
@@ -191,27 +152,119 @@ entity PurchaseRequisition {
     updated_at: timestamp;
 }
 
-@table("scm_purchase_requisition_lines")
+@table("purchase_requisition_lines")
 entity PurchaseRequisitionLine {
     id: uuid @primary;
     purchase_requisition_id: uuid @reference(PurchaseRequisition.id);
-    product_id: uuid;
+    product_id: uuid @reference(Product.id);
     quantity_requested: int;
     estimated_unit_price: decimal;
     line_total: decimal;
 }
 
-@table("scm_stock_transfers")
-entity StockTransfer {
+@table("purchase_orders")
+entity PurchaseOrder {
     id: uuid @primary;
-    from_location_id: uuid;
-    to_location_id: uuid;
-    product_id: uuid;
-    quantity: int;
+    po_number: string @unique;
+    supplier_id: uuid @reference(Supplier.id);
+    order_date: timestamp;
+    expected_delivery: timestamp;
     status: string;
-    transferred_at: timestamp @optional;
+    total_amount: decimal;
+    notes: string;
     created_at: timestamp;
     updated_at: timestamp;
+}
+
+@table("purchase_order_lines")
+entity PurchaseOrderLine {
+    id: uuid @primary;
+    purchase_order_id: uuid @reference(PurchaseOrder.id);
+    product_id: uuid @reference(Product.id);
+    quantity_ordered: int;
+    quantity_received: int;
+    unit_price: decimal;
+    line_total: decimal;
+    description: string;
+    created_at: timestamp;
+}
+
+@table("receipts")
+entity Receipt {
+    id: uuid @primary;
+    receipt_number: string @unique;
+    purchase_order_id: uuid @optional @reference(PurchaseOrder.id);
+    received_date: timestamp;
+    status: string;
+    notes: string;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("receipt_lines")
+entity ReceiptLine {
+    id: uuid @primary;
+    receipt_id: uuid @reference(Receipt.id);
+    product_id: uuid @reference(Product.id);
+    quantity_received: int;
+    unit_cost: decimal;
+    created_at: timestamp;
+}
+
+@table("shipments")
+entity Shipment {
+    id: uuid @primary;
+    shipment_number: string @unique;
+    sales_order_id: uuid @optional;
+    carrier: string;
+    tracking_number: string;
+    shipped_date: timestamp;
+    estimated_delivery: timestamp;
+    status: string;
+    notes: string;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("shipment_lines")
+entity ShipmentLine {
+    id: uuid @primary;
+    shipment_id: uuid @reference(Shipment.id);
+    product_id: uuid @reference(Product.id);
+    quantity_shipped: int;
+    created_at: timestamp;
+}
+
+@table("demand_forecasts")
+entity DemandForecast {
+    id: uuid @primary;
+    product_id: uuid @reference(Product.id);
+    forecast_date: timestamp;
+    forecast_quantity: int;
+    confidence_level: decimal;
+    notes: string;
+    created_at: timestamp;
+    updated_at: timestamp;
+}
+
+@table("transactional_outboxes")
+entity TransactionalOutbox {
+    id: uuid @primary;
+    event_type: string;
+    aggregate_id: uuid;
+    payload: jsonb;
+    status: OutboxStatus;
+    retry_count: int;
+    created_at: timestamp;
+}
+
+@table("kafka_event_inboxes")
+entity KafkaEventInbox {
+    event_id: uuid @primary;
+    event_type: string;
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: string;
 }
 
 interface ProcurementService {
@@ -246,6 +299,28 @@ interface ReliableMessagingService {
 
 events Emitters {
     producer_events {
+        scm.product.created: { event_id: uuid, product_id: uuid }
+        scm.product.updated: { event_id: uuid, product_id: uuid }
+        scm.product.discontinued: { event_id: uuid, product_id: uuid }
+        scm.inventory.received: { event_id: uuid }
+        scm.inventory.shipped: { event_id: uuid }
+        scm.inventory.adjusted: { event_id: uuid }
+        scm.inventory.low.stock: { event_id: uuid }
+        scm.inventory.out.of.stock: { event_id: uuid }
+        scm.inventory.valued: { event_id: uuid }
+        scm.purchase.order.created: { event_id: uuid }
+        scm.purchase.order.sent: { event_id: uuid }
+        scm.purchase.order.received: { event_id: uuid }
+        scm.purchase.order.cancelled: { event_id: uuid }
+        scm.vendor.created: { event_id: uuid }
+        scm.vendor.updated: { event_id: uuid }
+        scm.vendor.performance.evaluated: { event_id: uuid }
+        scm.shipment.created: { event_id: uuid }
+        scm.shipment.dispatched: { event_id: uuid }
+        scm.shipment.delivered: { event_id: uuid }
+        scm.shipment.delayed: { event_id: uuid }
+        scm.training.required: { event_id: uuid }
+        scm.material.delivered: { event_id: uuid }
         scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, vendor_id: uuid, receipt_value: decimal, items: jsonb, timestamp: timestamp }
         scm.inventory.reservation.completed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, timestamp: timestamp }
         scm.inventory.reservation.failed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, reason: string, timestamp: timestamp }
@@ -259,5 +334,11 @@ events Emitters {
         mfg.material.consumed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, quantity: decimal, timestamp: timestamp }
         mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, warehouse_id: uuid, material_id: uuid, quantity: decimal, unit_cost: decimal, timestamp: timestamp }
         fm.vendor.paid: { event_id: uuid, bill_id: uuid, legal_entity_id: uuid, vendor_id: uuid, timestamp: timestamp }
+        crm.sales.order.created: { event_id: uuid }
+        crm.customer.demand.forecast: { event_id: uuid }
+        mfg.material.required: { event_id: uuid }
+        mfg.production.completed: { event_id: uuid }
+        fin.vendor.payment.processed: { event_id: uuid }
+        prj.material.requested: { event_id: uuid }
     }
 }

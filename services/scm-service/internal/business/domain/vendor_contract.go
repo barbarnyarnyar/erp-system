@@ -12,7 +12,7 @@ type VendorContract struct {
 	StartDate      time.Time `json:"start_date"`
 	EndDate        time.Time `json:"end_date"`
 	Terms          string    `json:"terms"`
-	Status         string    `json:"status"` // e.g., ACTIVE, EXPIRED, TERMINATED
+	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }

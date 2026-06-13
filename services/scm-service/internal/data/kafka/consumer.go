@@ -2,7 +2,9 @@ package kafka
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -35,6 +37,7 @@ type KafkaConsumer struct {
 	poSvc     *service.PurchaseOrderService
 	invSvc    *service.InventoryService
 	demandSvc *service.DemandPlanningService
+	inbox     domain.KafkaEventInboxRepository
 }
 
 func NewKafkaConsumer(
@@ -44,6 +47,7 @@ func NewKafkaConsumer(
 	poSvc *service.PurchaseOrderService,
 	invSvc *service.InventoryService,
 	demandSvc *service.DemandPlanningService,
+	inbox domain.KafkaEventInboxRepository,
 ) *KafkaConsumer {
 	topics := []string{
 		domain.TopicCrmSalesOrderCreated,
@@ -67,6 +71,7 @@ func NewKafkaConsumer(
 		poSvc:     poSvc,
 		invSvc:    invSvc,
 		demandSvc: demandSvc,
+		inbox:     inbox,
 	}
 }
 
@@ -114,7 +119,55 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 	}
 }
 
+type rawEventEnvelope struct {
+	EventID string `json:"event_id"`
+}
+
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
+	// 1. Idempotency Check
+	var env rawEventEnvelope
+	if err := json.Unmarshal(value, &env); err == nil && env.EventID != "" {
+		if existing, err := c.inbox.GetByID(ctx, env.EventID); err == nil && existing != nil {
+			log.Printf("[SCM-CONSUMER] Event %s already processed. Skipping.", env.EventID)
+			return nil
+		}
+	} else {
+		h := sha256.New()
+		h.Write([]byte(topic))
+		h.Write(value)
+		env.EventID = fmt.Sprintf("evt_%x", h.Sum(nil))[:36]
+
+		if existing, err := c.inbox.GetByID(ctx, env.EventID); err == nil && existing != nil {
+			log.Printf("[SCM-CONSUMER] Event %s (hashed from payload) already processed. Skipping.", env.EventID)
+			return nil
+		}
+	}
+
+	// 2. Process Event
+	err := c.processEvent(ctx, topic, value)
+
+	// 3. Log to Inbox
+	status := domain.EventProcessingStatusSUCCESS
+	if err != nil {
+		status = domain.EventProcessingStatusFAILED
+	}
+
+	inboxRec := &domain.KafkaEventInbox{
+		EventID:          env.EventID,
+		EventType:        topic,
+		ProcessedAt:      time.Now(),
+		ProcessingStatus: status,
+		Payload:          string(value),
+	}
+
+	if inboxErr := c.inbox.Create(ctx, inboxRec); inboxErr != nil {
+		log.Printf("[SCM-CONSUMER] Failed to record event %s in inbox: %v", env.EventID, inboxErr)
+	}
+
+	return err
+}
+
+func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []byte) error {
 	switch topic {
 	case domain.TopicCrmSalesOrderCreated:
 		var ev domain.SalesOrderCreatedEvent

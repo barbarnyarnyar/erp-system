@@ -8,9 +8,9 @@ import (
 type Receipt struct {
 	ID              string    `json:"id"`
 	ReceiptNumber   string    `json:"receipt_number"`
-	PurchaseOrderID *string   `json:"purchase_order_id"`
+	PurchaseOrderID *string   `json:"purchase_order_id,omitempty"`
 	ReceivedDate    time.Time `json:"received_date"`
-	Status          string    `json:"status"` // e.g., PENDING, RECEIVED, CANCELLED
+	Status          string    `json:"status"`
 	Notes           string    `json:"notes"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`

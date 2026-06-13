@@ -9,7 +9,7 @@ type Location struct {
 	ID           string    `json:"id"`
 	LocationCode string    `json:"location_code"`
 	LocationName string    `json:"location_name"`
-	LocationType string    `json:"location_type"` // e.g., WAREHOUSE, RETAIL, TRANSIT
+	LocationType string    `json:"location_type"`
 	IsActive     bool      `json:"is_active"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

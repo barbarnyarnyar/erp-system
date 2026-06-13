@@ -48,6 +48,7 @@ type InventoryService struct {
 	moveRepo     domain.InventoryMovementRepository
 	transferRepo domain.StockTransferRepository
 	publisher    domain.EventPublisher
+	tm           domain.TransactionManager
 
 	mu           sync.RWMutex
 	reservations map[string]stockReservation
@@ -58,12 +59,14 @@ func NewInventoryService(
 	moveRepo domain.InventoryMovementRepository,
 	transferRepo domain.StockTransferRepository,
 	publisher domain.EventPublisher,
+	tm domain.TransactionManager,
 ) *InventoryService {
 	return &InventoryService{
 		invRepo:      invRepo,
 		moveRepo:     moveRepo,
 		transferRepo: transferRepo,
 		publisher:    publisher,
+		tm:           tm,
 		reservations: make(map[string]stockReservation),
 	}
 }
@@ -136,56 +139,84 @@ func (s *InventoryService) UpdateInventoryItem(ctx context.Context, id string, q
 }
 
 func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locationID string, qty int, movementType string, notes string) (*domain.InventoryItem, error) {
-	ii, err := s.invRepo.GetByProductAndLocation(ctx, productID, locationID)
-	if err != nil {
-		// Not found, initialize a new inventory item
-		ii, err = s.CreateInventoryItem(ctx, productID, locationID, 0, 10, 1000, decimal.Zero)
+	var result *domain.InventoryItem
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		ii, err := s.invRepo.GetByProductAndLocation(txCtx, productID, locationID)
 		if err != nil {
-			return nil, err
+			// Not found, initialize a new inventory item
+			ii, err = s.CreateInventoryItem(txCtx, productID, locationID, 0, 10, 1000, decimal.Zero)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	switch movementType {
-	case "RECEIPT", "ADJUSTMENT_ADD":
-		ii.QuantityOnHand += qty
-	case "ISSUE", "ADJUSTMENT_SUB":
-		if ii.QuantityOnHand < qty {
-			return nil, errors.New("insufficient inventory on hand to perform issue")
+		switch movementType {
+		case "RECEIPT", "ADJUSTMENT_ADD":
+			ii.QuantityOnHand += qty
+		case "ISSUE", "ADJUSTMENT_SUB":
+			if ii.QuantityOnHand < qty {
+				return errors.New("insufficient inventory on hand to perform issue")
+			}
+			ii.QuantityOnHand -= qty
+		default:
+			return fmt.Errorf("unknown inventory movement type: %s", movementType)
 		}
-		ii.QuantityOnHand -= qty
-	default:
-		return nil, fmt.Errorf("unknown inventory movement type: %s", movementType)
-	}
-	// Always recompute available from the formula; never mutate it by a delta.
-	// This preserves the invariant `available = on_hand - reserved` even
-	// when `reserved > 0`.
-	ii.QuantityAvailable = ii.QuantityOnHand - ii.QuantityReserved
+		// Always recompute available from the formula; never mutate it by a delta.
+		// This preserves the invariant `available = on_hand - reserved` even
+		// when `reserved > 0`.
+		ii.QuantityAvailable = ii.QuantityOnHand - ii.QuantityReserved
 
-	ii.UpdatedAt = time.Now()
-	if err := assertInventoryInvariant(ii); err != nil {
-		return nil, err
-	}
-	err = s.invRepo.Update(ctx, ii)
+		ii.UpdatedAt = time.Now()
+		if err := assertInventoryInvariant(ii); err != nil {
+			return err
+		}
+		err = s.invRepo.Update(txCtx, ii)
+		if err != nil {
+			return err
+		}
+
+		// Create movement log
+		move := &domain.InventoryMovement{
+			ID:            utils.NewID("move"),
+			ProductID:     productID,
+			LocationID:    locationID,
+			MovementType:  movementType,
+			Quantity:      qty,
+			UnitCost:      ii.UnitCost,
+			ReferenceType: "MANUAL_ADJUSTMENT",
+			ReferenceID:   ii.ID,
+			Notes:         notes,
+			CreatedAt:     time.Now(),
+		}
+		err = s.moveRepo.Create(txCtx, move)
+		if err != nil {
+			return err
+		}
+
+		result = ii
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Publish specific events
+	// Publish specific events outside the transaction block
 	if utils.IsAny(movementType, "RECEIPT", "ADJUSTMENT_ADD") {
-		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryReceived, ii.ID, domain.InventoryReceivedEvent{
-			InventoryItemID: ii.ID,
-			ProductID:       ii.ProductID,
-			LocationID:      ii.LocationID,
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryReceived, result.ID, domain.InventoryReceivedEvent{
+			InventoryItemID: result.ID,
+			ProductID:       result.ProductID,
+			LocationID:      result.LocationID,
 			Quantity:        qty,
 			Timestamp:       time.Now(),
 		}); err != nil {
 			utils.LogPublishErr("scm-service", domain.TopicScmInventoryReceived, err)
 		}
 	} else if utils.IsAny(movementType, "ISSUE", "ADJUSTMENT_SUB") {
-		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryShipped, ii.ID, domain.InventoryShippedEvent{
-			InventoryItemID: ii.ID,
-			ProductID:       ii.ProductID,
-			LocationID:      ii.LocationID,
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryShipped, result.ID, domain.InventoryShippedEvent{
+			InventoryItemID: result.ID,
+			ProductID:       result.ProductID,
+			LocationID:      result.LocationID,
 			Quantity:        qty,
 			Timestamp:       time.Now(),
 		}); err != nil {
@@ -198,12 +229,12 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 	if utils.IsAny(movementType, "ISSUE", "ADJUSTMENT_SUB") {
 		qtyChange = -qty
 	}
-	if err := s.publisher.Publish(ctx, domain.TopicScmInventoryAdjusted, ii.ID, domain.InventoryAdjustedEvent{
-		InventoryItemID: ii.ID,
-		ProductID:       ii.ProductID,
-		LocationID:      ii.LocationID,
+	if err := s.publisher.Publish(ctx, domain.TopicScmInventoryAdjusted, result.ID, domain.InventoryAdjustedEvent{
+		InventoryItemID: result.ID,
+		ProductID:       result.ProductID,
+		LocationID:      result.LocationID,
 		QuantityChange:  qtyChange,
-		NewQuantity:     ii.QuantityOnHand,
+		NewQuantity:     result.QuantityOnHand,
 		Reason:          notes,
 		Timestamp:       time.Now(),
 	}); err != nil {
@@ -211,44 +242,29 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, productID, locat
 	}
 
 	// Check low stock / out of stock
-	if ii.QuantityOnHand == 0 {
-		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryOutOfStock, ii.ProductID, domain.InventoryOutOfStockEvent{
-			ProductID:  ii.ProductID,
-			LocationID: ii.LocationID,
+	if result.QuantityOnHand == 0 {
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryOutOfStock, result.ProductID, domain.InventoryOutOfStockEvent{
+			ProductID:  result.ProductID,
+			LocationID: result.LocationID,
 			Timestamp:  time.Now(),
 		}); err != nil {
 			utils.LogPublishErr("scm-service", domain.TopicScmInventoryOutOfStock, err)
 		}
-	} else if ii.QuantityOnHand < ii.ReorderPoint {
-		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryLowStock, ii.ProductID, domain.InventoryLowStockEvent{
-			ProductID:      ii.ProductID,
-			LocationID:     ii.LocationID,
-			QuantityOnHand: ii.QuantityOnHand,
-			ReorderPoint:   ii.ReorderPoint,
+	} else if result.QuantityOnHand < result.ReorderPoint {
+		if err := s.publisher.Publish(ctx, domain.TopicScmInventoryLowStock, result.ProductID, domain.InventoryLowStockEvent{
+			ProductID:      result.ProductID,
+			LocationID:     result.LocationID,
+			QuantityOnHand: result.QuantityOnHand,
+			ReorderPoint:   result.ReorderPoint,
 			Timestamp:      time.Now(),
 		}); err != nil {
 			utils.LogPublishErr("scm-service", domain.TopicScmInventoryLowStock, err)
 		}
 	}
 
-	// Create movement log
-	move := &domain.InventoryMovement{
-		ID:            utils.NewID("move"),
-		ProductID:     productID,
-		LocationID:    locationID,
-		MovementType:  movementType,
-		Quantity:      qty,
-		UnitCost:      ii.UnitCost,
-		ReferenceType: "MANUAL_ADJUSTMENT",
-		ReferenceID:   ii.ID,
-		Notes:         notes,
-		CreatedAt:     time.Now(),
-	}
-	_ = s.moveRepo.Create(ctx, move)
+	s.publishValuation(ctx, result)
 
-	s.publishValuation(ctx, ii)
-
-	return ii, nil
+	return result, nil
 }
 
 func (s *InventoryService) ReserveStock(ctx context.Context, productID, locationID string, quantity int, referenceID string) error {
@@ -345,12 +361,19 @@ func (s *InventoryService) CreateStockTransfer(ctx context.Context, fromLocation
 		UpdatedAt:      time.Now(),
 	}
 
-	err = s.transferRepo.Create(ctx, st)
-	if err != nil {
-		return nil, err
-	}
+	err = s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		err = s.transferRepo.Create(txCtx, st)
+		if err != nil {
+			return err
+		}
 
-	err = s.ReserveStock(ctx, productID, fromLocationID, quantity, id)
+		err = s.ReserveStock(txCtx, productID, fromLocationID, quantity, id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -367,91 +390,114 @@ func (s *InventoryService) ListStockTransfers(ctx context.Context) ([]domain.Sto
 }
 
 func (s *InventoryService) ExecuteStockTransfer(ctx context.Context, id string) (*domain.StockTransfer, error) {
-	st, err := s.transferRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if st.Status != "PENDING" {
-		return nil, fmt.Errorf("stock transfer %s is not pending (status: %s)", id, st.Status)
-	}
-
-	err = s.ReleaseReservation(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	fromItem, err := s.invRepo.GetByProductAndLocation(ctx, st.ProductID, st.FromLocationID)
-	if err != nil {
-		return nil, err
-	}
-	fromItem.QuantityOnHand -= st.Quantity
-	fromItem.QuantityAvailable = fromItem.QuantityOnHand - fromItem.QuantityReserved
-	fromItem.UpdatedAt = time.Now()
-	if err := assertInventoryInvariant(fromItem); err != nil {
-		return nil, err
-	}
-	err = s.invRepo.Update(ctx, fromItem)
-	if err != nil {
-		return nil, err
-	}
-	s.publishValuation(ctx, fromItem)
-
-	fromMove := &domain.InventoryMovement{
-		ID:            utils.NewID("move-from"),
-		ProductID:     st.ProductID,
-		LocationID:    st.FromLocationID,
-		MovementType:  "ISSUE",
-		Quantity:      st.Quantity,
-		UnitCost:      fromItem.UnitCost,
-		ReferenceType: "STOCK_TRANSFER",
-		ReferenceID:   st.ID,
-		Notes:         fmt.Sprintf("Stock transfer to %s", st.ToLocationID),
-		CreatedAt:     time.Now(),
-	}
-	_ = s.moveRepo.Create(ctx, fromMove)
-
-	toItem, err := s.invRepo.GetByProductAndLocation(ctx, st.ProductID, st.ToLocationID)
-	if err != nil {
-		toItem, err = s.CreateInventoryItem(ctx, st.ProductID, st.ToLocationID, 0, 10, 1000, fromItem.UnitCost)
+	var st *domain.StockTransfer
+	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {
+		var err error
+		st, err = s.transferRepo.GetByID(txCtx, id)
 		if err != nil {
-			return nil, err
+			return err
 		}
-	}
-	toItem.QuantityOnHand += st.Quantity
-	toItem.QuantityAvailable = toItem.QuantityOnHand - toItem.QuantityReserved
-	toItem.UpdatedAt = time.Now()
-	if err := assertInventoryInvariant(toItem); err != nil {
-		return nil, err
-	}
-	err = s.invRepo.Update(ctx, toItem)
+
+		if st.Status != "PENDING" {
+			return fmt.Errorf("stock transfer %s is not pending (status: %s)", id, st.Status)
+		}
+
+		err = s.ReleaseReservation(txCtx, id)
+		if err != nil {
+			return err
+		}
+
+		fromItem, err := s.invRepo.GetByProductAndLocation(txCtx, st.ProductID, st.FromLocationID)
+		if err != nil {
+			return err
+		}
+		fromItem.QuantityOnHand -= st.Quantity
+		fromItem.QuantityAvailable = fromItem.QuantityOnHand - fromItem.QuantityReserved
+		fromItem.UpdatedAt = time.Now()
+		if err := assertInventoryInvariant(fromItem); err != nil {
+			return err
+		}
+		err = s.invRepo.Update(txCtx, fromItem)
+		if err != nil {
+			return err
+		}
+
+		fromMove := &domain.InventoryMovement{
+			ID:            utils.NewID("move-from"),
+			ProductID:     st.ProductID,
+			LocationID:    st.FromLocationID,
+			MovementType:  "ISSUE",
+			Quantity:      st.Quantity,
+			UnitCost:      fromItem.UnitCost,
+			ReferenceType: "STOCK_TRANSFER",
+			ReferenceID:   st.ID,
+			Notes:         fmt.Sprintf("Stock transfer to %s", st.ToLocationID),
+			CreatedAt:     time.Now(),
+		}
+		err = s.moveRepo.Create(txCtx, fromMove)
+		if err != nil {
+			return err
+		}
+
+		toItem, err := s.invRepo.GetByProductAndLocation(txCtx, st.ProductID, st.ToLocationID)
+		if err != nil {
+			toItem, err = s.CreateInventoryItem(txCtx, st.ProductID, st.ToLocationID, 0, 10, 1000, fromItem.UnitCost)
+			if err != nil {
+				return err
+			}
+		} else {
+			toItem.QuantityOnHand += st.Quantity
+			toItem.QuantityAvailable = toItem.QuantityOnHand - toItem.QuantityReserved
+			toItem.UpdatedAt = time.Now()
+			if err := assertInventoryInvariant(toItem); err != nil {
+				return err
+			}
+			err = s.invRepo.Update(txCtx, toItem)
+			if err != nil {
+				return err
+			}
+		}
+
+		toMove := &domain.InventoryMovement{
+			ID:            utils.NewID("move-to"),
+			ProductID:     st.ProductID,
+			LocationID:    st.ToLocationID,
+			MovementType:  "RECEIPT",
+			Quantity:      st.Quantity,
+			UnitCost:      fromItem.UnitCost,
+			ReferenceType: "STOCK_TRANSFER",
+			ReferenceID:   st.ID,
+			Notes:         fmt.Sprintf("Stock transfer from %s", st.FromLocationID),
+			CreatedAt:     time.Now(),
+		}
+		err = s.moveRepo.Create(txCtx, toMove)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		st.Status = "TRANSFERRED"
+		st.TransferredAt = &now
+		st.UpdatedAt = now
+
+		err = s.transferRepo.Update(txCtx, st)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-	s.publishValuation(ctx, toItem)
 
-	toMove := &domain.InventoryMovement{
-		ID:            utils.NewID("move-to"),
-		ProductID:     st.ProductID,
-		LocationID:    st.ToLocationID,
-		MovementType:  "RECEIPT",
-		Quantity:      st.Quantity,
-		UnitCost:      fromItem.UnitCost,
-		ReferenceType: "STOCK_TRANSFER",
-		ReferenceID:   st.ID,
-		Notes:         fmt.Sprintf("Stock transfer from %s", st.FromLocationID),
-		CreatedAt:     time.Now(),
+	// Publish valuations outside the transaction
+	if fromItem, err := s.invRepo.GetByProductAndLocation(ctx, st.ProductID, st.FromLocationID); err == nil {
+		s.publishValuation(ctx, fromItem)
 	}
-	_ = s.moveRepo.Create(ctx, toMove)
-
-	now := time.Now()
-	st.Status = "TRANSFERRED"
-	st.TransferredAt = &now
-	st.UpdatedAt = now
-
-	err = s.transferRepo.Update(ctx, st)
-	if err != nil {
-		return nil, err
+	if toItem, err := s.invRepo.GetByProductAndLocation(ctx, st.ProductID, st.ToLocationID); err == nil {
+		s.publishValuation(ctx, toItem)
 	}
 
 	return st, nil
