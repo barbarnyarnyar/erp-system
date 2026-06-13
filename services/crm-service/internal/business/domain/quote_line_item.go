@@ -8,7 +8,7 @@ import (
 type QuoteLineItem struct {
 	ID        string          `json:"id"`
 	QuoteID   string          `json:"quote_id"`
-	ProductID string          `json:"product_id"`
+	ProductID string          `json:"product_id"` // Primitive Ref -> PLM.MaterialMaster
 	Quantity  int             `json:"quantity"`
 	UnitPrice decimal.Decimal `json:"unit_price"`
 }

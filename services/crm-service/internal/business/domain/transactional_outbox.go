@@ -7,10 +7,10 @@ import (
 
 type TransactionalOutbox struct {
 	ID          string       `json:"id"`
-	EventType   string       `json:"event_type"`   // e.g., "crm.order.confirmed"
-	AggregateID string       `json:"aggregate_id"` // Target context identity token
+	EventType   string       `json:"event_type"`
+	AggregateID string       `json:"aggregate_id"`
 	Payload     interface{}  `json:"payload"`
 	Status      OutboxStatus `json:"status"`
-	RetryCount  int          `json:"retry_count"` // Protects Relay worker from poison-pill roadblocks
+	RetryCount  int          `json:"retry_count"`
 	CreatedAt   time.Time    `json:"created_at"`
 }

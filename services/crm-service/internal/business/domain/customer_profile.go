@@ -8,20 +8,20 @@ import (
 
 type CustomerProfile struct {
 	ID                 string          `json:"id"`
-	LegalEntityID      string          `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+	LegalEntityID      string          `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity
 	CustomerCode       string          `json:"customer_code"`   // Unique business key per tenant
 	CompanyName        string          `json:"company_name"`
-	AccountManagerHrID string          `json:"account_manager_hr_id"` // Primitive Ref -> HR.Employee (Loose Cross-Domain Link)
+	AccountManagerHrID string          `json:"account_manager_hr_id"` // Primitive Ref -> HR.Employee
 	Status             CustomerStatus  `json:"status"`
 	CreditLimit        decimal.Decimal `json:"credit_limit"`
-	Currency           string          `json:"currency"` // ISO 4217 code (e.g., "USD", "EUR")
+	Currency           string          `json:"currency"` // ISO 4217 code
 	ContactName        *string         `json:"contact_name,omitempty"`
 	Email              *string         `json:"email,omitempty"`
 	Phone              *string         `json:"phone,omitempty"`
 	Category           *string         `json:"category,omitempty"`
 	ParentCustomerID   *string         `json:"parent_customer_id,omitempty"`
-	Version            int             `json:"version"` // Concurrency Control Shield (Optimistic Locking)
+	Version            int             `json:"version"` // Optimistic Locking Shield
 	CreatedAt          time.Time       `json:"created_at"`
 	UpdatedAt          time.Time       `json:"updated_at"`
-	DeletedAt          *time.Time      `json:"deleted_at,omitempty"` // GORM Native Soft Delete Support
+	DeletedAt          *time.Time      `json:"deleted_at,omitempty"`
 }

@@ -9,13 +9,13 @@ import (
 type SalesOrder struct {
 	ID              string          `json:"id"`
 	LegalEntityID   string          `json:"legal_entity_id"`
-	CustomerID      string          `json:"customer_id"`   // Strict Relational Internal Link
-	PriceBookID     string          `json:"price_book_id"` // Strict Relational Internal Link
-	OrderNumber     string          `json:"order_number"`  // e.g., "SO-0004122"
+	CustomerID      string          `json:"customer_id"`
+	PriceBookID     string          `json:"price_book_id"`
+	OrderNumber     string          `json:"order_number"`
 	Status          SalesOrderState `json:"status"`
 	TotalGrossValue decimal.Decimal `json:"total_gross_value"`
 	TotalTaxValue   decimal.Decimal `json:"total_tax_value"`
-	Version         int             `json:"version"` // Concurrency Verification Shield (Optimistic Locking)
+	Version         int             `json:"version"` // Optimistic Locking Shield
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }

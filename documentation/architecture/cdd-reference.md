@@ -120,19 +120,28 @@ graph LR
 
 ### CRM Service
 
-| CDD Entity | Generated Go Struct | File |
-|-----------|-------------------|------|
-| `Customer` | `Customer` | `services/crm-service/internal/business/domain/customer.go` |
-| `Lead` | `Lead` | `services/crm-service/internal/business/domain/lead.go` |
-| `Opportunity` | `Opportunity` | `services/crm-service/internal/business/domain/opportunity.go` |
-| `SalesOrder` | `SalesOrder` | `services/crm-service/internal/business/domain/sales_order.go` |
-| `Quote` | `Quote` | `services/crm-service/internal/business/domain/quote.go` |
-| `PriceList` | `PriceList` | `services/crm-service/internal/business/domain/price_list.go` |
-| `ServiceTicket` | `ServiceTicket` | `services/crm-service/internal/business/domain/service_ticket.go` |
-| `Campaign` | `Campaign` | `services/crm-service/internal/business/domain/campaign.go` |
-| — Event topics | Constants | `services/crm-service/internal/business/domain/event_topics.go` |
-| — Event types | Structs | `services/crm-service/internal/business/domain/events.go` |
-| — Repository interfaces | Interfaces | `services/crm-service/internal/business/domain/repository.go` |
+| CDD Namespace | CDD Entity | Generated Go Struct | File |
+|---------------|------------|---------------------|------|
+| **`erp.crm.core`** | `CustomerProfile` | `CustomerProfile` | `services/crm-service/internal/business/domain/customer_profile.go` |
+| | `PriceBookHeader` | `PriceBookHeader` | `services/crm-service/internal/business/domain/price_book_header.go` |
+| | `PriceBookEntry` | `PriceBookEntry` | `services/crm-service/internal/business/domain/price_book_entry.go` |
+| | `PricingStrategy` | `PricingStrategy` | `services/crm-service/internal/business/domain/pricing_strategy.go` |
+| | `SalesOrder` | `SalesOrder` | `services/crm-service/internal/business/domain/sales_order.go` |
+| | `SalesOrderLine` | `SalesOrderLine` | `services/crm-service/internal/business/domain/sales_order_line.go` |
+| | `BillingTrigger` | `BillingTrigger` | `services/crm-service/internal/business/domain/billing_trigger.go` |
+| | `TransactionalOutbox` | `TransactionalOutbox` | `services/crm-service/internal/business/domain/transactional_outbox.go` |
+| | `KafkaEventInbox` | `KafkaEventInbox` | `services/crm-service/internal/business/domain/kafka_event_inbox.go` |
+| **`erp.crm.operations`** | `Campaign` | `Campaign` | `services/crm-service/internal/business/domain/campaign.go` |
+| | `Lead` | `Lead` | `services/crm-service/internal/business/domain/lead.go` |
+| | `Opportunity` | `Opportunity` | `services/crm-service/internal/business/domain/opportunity.go` |
+| | `CustomerInteraction` | `CustomerInteraction` | `services/crm-service/internal/business/domain/customer_interaction.go` |
+| | `ServiceTicket` | `ServiceTicket` | `services/crm-service/internal/business/domain/service_ticket.go` |
+| | `Quote` | `Quote` | `services/crm-service/internal/business/domain/quote.go` |
+| | `QuoteLineItem` | `QuoteLineItem` | `services/crm-service/internal/business/domain/quote_line_item.go` |
+| — | — Event topics | Constants | `services/crm-service/internal/business/domain/event_topics.go` |
+| — | — Event types | Structs | `services/crm-service/internal/business/domain/events.go` |
+| — | — Repository interfaces | Interfaces | `services/crm-service/internal/business/domain/repository.go` |
+
 
 ### Project Management Service
 

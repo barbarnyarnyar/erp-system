@@ -1,77 +1,24 @@
 // ============================================================================
-// MODULE BOUNDARY: CUSTOMER RELATIONSHIP MANAGEMENT (CRM)
-// Architectural Pattern: Multi-Tenant Event-Driven Demand & Billing Trigger Core (10/10 Certified)
+// PACKAGE 1: CUSTOMER RELATIONSHIP MANAGEMENT CORE (ENGINE)
+// Architectural Pattern: Multi-Tenant Event-Driven Demand & Billing Trigger Core
 // Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
-// Domain Coverage: Customer Directory, Versioned Pricing Strategies, Sales Orders, Billing Triggers
+// Domain Coverage: Customer Directory, Versioned Pricing Strategies, Orders, Billing
 // ============================================================================
 
-namespace erp.crm;
+namespace erp.crm.core;
 
-enum CustomerStatus {
-    PROSPECT,
-    ACTIVE,
-    CREDIT_HOLD,
-    INACTIVE
-}
-
-enum PriceBookType {
-    STANDARD,
-    CUSTOMER_SPECIFIC,
-    REGIONAL,
-    PROMOTIONAL
-}
-
-enum StrategyEvaluationRule {
-    FLAT_MARKUP,
-    TIERED_VOLUME,
-    CUSTOMER_CONTRACT,
-    TEMPORAL_DISCOUNT
-}
-
-enum SalesOrderState {
-    DRAFT,
-    PENDING_CREDIT_CHECK,
-    APPROVED,
-    PARTIALLY_FULFILLED,
-    FULLY_FULFILLED,
-    INVOICED,
-    CANCELLED
-}
-
-enum BillingTriggerStatus {
-    PENDING,
-    PROCESSED,
-    FAILED
-}
-
-enum OutboxStatus {
-    PENDING,
-    SENT,
-    FAILED
-}
-
-enum EventProcessingStatus {
-    SUCCESS,
-    FAILED
-}
-
-enum OpportunityStage {
-    DISCOVERY,
-    NEGOTIATION,
-    CLOSED_WON,
-    CLOSED_LOST
-}
+enum CustomerStatus { PROSPECT, ACTIVE, CREDIT_HOLD, INACTIVE }
+enum PriceBookType { STANDARD, CUSTOMER_SPECIFIC, REGIONAL, PROMOTIONAL }
+enum StrategyEvaluationRule { FLAT_MARKUP, TIERED_VOLUME, CUSTOMER_CONTRACT, TEMPORAL_DISCOUNT }
+enum SalesOrderState { DRAFT, PENDING_CREDIT_CHECK, APPROVED, PARTIALLY_FULFILLED, FULLY_FULFILLED, INVOICED, CANCELLED }
+enum BillingTriggerStatus { PENDING, PROCESSED, FAILED }
+enum OutboxStatus { PENDING, SENT, FAILED }
+enum EventProcessingStatus { SUCCESS, FAILED }
 
 struct SalesOrderLineInput {
     material_id: uuid;
     line_sequence: int;
     quantity_ordered: decimal @digits(14, 4);
-}
-
-struct QuoteLineItemInput {
-    product_id: uuid;
-    quantity: int;
-    unit_price: decimal;
 }
 
 struct OrderLinePayload {
@@ -86,25 +33,25 @@ struct OrderLinePayload {
 @unique_composite(legal_entity_id, customer_code)
 entity CustomerProfile {
     id: uuid @primary;
-    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity (Loose Cross-Domain Link)
+    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
     customer_code: string;                        // Unique business key per tenant
     company_name: string;
-    account_manager_hr_id: uuid;                  // Primitive Ref -> HR.Employee (Loose Cross-Domain Link)
-    
+    account_manager_hr_id: uuid;                  // Primitive Ref -> HR.Employee
     status: CustomerStatus;
     credit_limit: decimal @digits(18, 4);
-    currency: string;                             // ISO 4217 code (e.g., "USD", "EUR")
+    currency: string;                             // ISO 4217 code
     
+    // Extended properties used in active business/handler logic
     contact_name: string @optional;
     email: string @optional;
     phone: string @optional;
     category: string @optional;
     parent_customer_id: uuid @optional;
 
-    version: int;                                 // Concurrency Control Shield (Optimistic Locking)
+    version: int;                                 // Optimistic Locking Shield
     created_at: timestamp;
     updated_at: timestamp;
-    deleted_at: timestamp @optional;              // GORM Native Soft Delete Support
+    deleted_at: timestamp @optional;
 }
 
 @table("crm_price_books")
@@ -112,14 +59,12 @@ entity CustomerProfile {
 entity PriceBookHeader {
     id: uuid @primary;
     legal_entity_id: uuid;
-    price_book_code: string;                      // e.g., "PRICING_EU_2026"
+    price_book_code: string;
     name: string;
     type: PriceBookType;
-    
     start_date: date;
     end_date: date;
     is_active: boolean;
-    
     created_at: timestamp;
     updated_at: timestamp;
 }
@@ -128,12 +73,10 @@ entity PriceBookHeader {
 @unique_composite(price_book_id, material_id)     
 entity PriceBookEntry {
     id: uuid @primary;
-    price_book_id: uuid @reference(PriceBookHeader.id); // Strict Relational Internal Link
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster (Loose Link)
-    
+    price_book_id: uuid @reference(PriceBookHeader.id);
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
     unit_list_price: decimal @digits(18, 4);
     min_quantity_threshold: decimal @digits(14, 4); 
-    
     created_at: timestamp;
     updated_at: timestamp;
 }
@@ -142,14 +85,12 @@ entity PriceBookEntry {
 @unique_composite(price_book_id, evaluation_rule, strategy_version)
 entity PricingStrategy {
     id: uuid @primary;
-    price_book_id: uuid @reference(PriceBookHeader.id); // Strict Relational Internal Link
+    price_book_id: uuid @reference(PriceBookHeader.id);
     evaluation_rule: StrategyEvaluationRule;
-    strategy_version: int;                        // Tracks evolutionary schema changes over historic audits
-    
+    strategy_version: int;                        // Zero-drift historical audit tracker
     modifier_percentage: decimal @digits(5, 4);   
-    configuration_matrix: jsonb;                  // Houses dynamic structural rules (e.g., volume break boundaries)
+    configuration_matrix: jsonb;                  // Dynamic volume breaks/tier structures
     is_active: boolean;
-    
     created_at: timestamp;
     updated_at: timestamp;
 }
@@ -159,15 +100,13 @@ entity PricingStrategy {
 entity SalesOrder {
     id: uuid @primary;
     legal_entity_id: uuid;
-    customer_id: uuid @reference(CustomerProfile.id); // Strict Relational Internal Link
-    price_book_id: uuid @reference(PriceBookHeader.id); // Strict Relational Internal Link
-    
-    order_number: string;                         // e.g., "SO-0004122"
+    customer_id: uuid @reference(CustomerProfile.id);
+    price_book_id: uuid @reference(PriceBookHeader.id);
+    order_number: string;
     status: SalesOrderState;
     total_gross_value: decimal @digits(18, 4);
     total_tax_value: decimal @digits(18, 4);
-    
-    version: int;                                 // Concurrency Verification Shield (Optimistic Locking)
+    version: int;                                 // Optimistic Locking Shield
     created_at: timestamp;
     updated_at: timestamp;
 }
@@ -176,19 +115,15 @@ entity SalesOrder {
 @unique_composite(sales_order_id, line_sequence)
 entity SalesOrderLine {
     id: uuid @primary;
-    sales_order_id: uuid @reference(SalesOrder.id); // Strict Relational Parent-Child Link
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster (Loose Link)
-    line_sequence: int;                           // e.g., 10, 20, 30...
-    
+    sales_order_id: uuid @reference(SalesOrder.id);
+    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
+    line_sequence: int;
     quantity_ordered: decimal @digits(14, 4);
     quantity_shipped: decimal @digits(14, 4);    
-    
     unit_sell_price: decimal @digits(18, 4);      
     discount_applied: decimal @digits(5, 4);     
     net_line_amount: decimal @digits(18, 4);
-    
-    applied_strategy_version: int @optional;      // Tracks the exact strategy version applied at execution point
-    
+    applied_strategy_version: int @optional;      // Links exact calculation lineage
     created_at: timestamp;
     updated_at: timestamp;
 }
@@ -199,14 +134,12 @@ entity SalesOrderLine {
 entity BillingTrigger {
     id: uuid @primary;
     legal_entity_id: uuid;
-    sales_order_id: uuid @reference(SalesOrder.id); // Strict Relational Internal Link
-    source_delivery_document_id: uuid;            // Primitive Ref -> SCM.OrderShipped or PRJ.MilestoneAchieved
-    
+    sales_order_id: uuid @reference(SalesOrder.id);
+    source_delivery_document_id: uuid;            // Primitive Ref -> SCM or PRJ
     billable_amount: decimal @digits(18, 4);
     tax_amount: decimal @digits(18, 4);
     status: BillingTriggerStatus;
-    
-    triggered_at: timestamp;                       // Partitioning Key Coordinate
+    triggered_at: timestamp;                       // Partition Coordinate
     processed_at: timestamp @optional;
 }
 
@@ -214,21 +147,72 @@ entity BillingTrigger {
 @index_composite(status, created_at)
 entity TransactionalOutbox {
     id: uuid @primary;
-    event_type: string;                           // e.g., "crm.order.confirmed"
-    aggregate_id: uuid;                           // Target context identity token
+    event_type: string;
+    aggregate_id: uuid;
     payload: jsonb;
     status: OutboxStatus;                         
-    retry_count: int;                             // Protects Relay worker from poison-pill roadblocks
+    retry_count: int;                             
     created_at: timestamp;
 }
 
 @table("crm_kafka_event_inbox")
 entity KafkaEventInbox {
-    event_id: uuid @primary;                      // Unique transaction message trace key for idempotency checks
+    event_id: uuid @primary;                      // Idempotency Tracking Key
     event_type: string;                           
     processed_at: timestamp;
     processing_status: EventProcessingStatus;
     payload: jsonb;                               
+}
+
+interface CustomerAccountService {
+    CustomerProfile createProfile(ctx: context, legalEntityId: uuid, code: string, name: string, managerHrId: uuid, crLimit: decimal, currency: string);
+    CustomerProfile updateCreditStatus(ctx: context, customerId: uuid, targetStatus: CustomerStatus);
+}
+
+interface PricingCalculationService {
+    PriceBookHeader createPriceBook(ctx: context, legalEntityId: uuid, code: string, name: string, bookType: PriceBookType, start: date, end: date);
+    PriceBookEntry assignMaterialPrice(ctx: context, priceBookId: uuid, materialId: uuid, price: decimal, minQty: decimal);
+    void registerStrategyModifier(ctx: context, priceBookId: uuid, rule: StrategyEvaluationRule, version: int, modifier: decimal, matrixConfig: jsonb);
+    decimal resolveItemUnitPrice(ctx: context, customerId: uuid, priceBookId: uuid, materialId: uuid, targetQuantity: decimal);
+}
+
+interface SalesOrderService {
+    SalesOrder instantiateDraftOrder(ctx: context, legalEntityId: uuid, customerId: uuid, priceBookId: uuid, orderNum: string, lines: List<SalesOrderLineInput>);
+    SalesOrder processOrderStateTransition(ctx: context, salesOrderId: uuid, currentState: SalesOrderState, targetState: SalesOrderState);
+}
+
+interface RevenueBillingService {
+    void stageLogisticsBillingEntry(ctx: context, legalEntityId: uuid, salesOrderId: uuid, deliveryDocId: uuid, amount: decimal, tax: decimal);
+    void dispatchStagedBillingToAccountsReceivable(ctx: context, batchLimit: int);
+    void purgeProcessedBillingTriggers(ctx: context, olderThan: timestamp, batchLimit: int);
+}
+
+interface OutboxRelayWorker {
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+}
+
+interface ReliableMessagingService {
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+// ============================================================================
+// PACKAGE 2: CUSTOMER RELATIONSHIP MANAGEMENT OPERATIONS
+// Architectural Pattern: Independent Data-Surface CRUD & Marketing Ingestion Layer
+// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
+// Domain Coverage: Campaigns, Leads, Opportunities, Customer Interactions, Quotes, Tickets
+// ============================================================================
+
+namespace erp.crm.operations;
+
+enum OpportunityStage { DISCOVERY, NEGOTIATION, CLOSED_WON, CLOSED_LOST }
+
+struct QuoteLineItemInput {
+    product_id: uuid;
+    quantity: int;
+    unit_price: decimal;
 }
 
 @table("crm_campaigns")
@@ -312,43 +296,9 @@ entity Quote {
 entity QuoteLineItem {
     id: uuid @primary;
     quote_id: uuid @reference(Quote.id);
-    product_id: uuid;
+    product_id: uuid;                             // Primitive Ref -> PLM.MaterialMaster
     quantity: int;
     unit_price: decimal;
-}
-
-interface CustomerAccountService {
-    CustomerProfile createProfile(ctx: context, legalEntityId: uuid, code: string, name: string, managerHrId: uuid, crLimit: decimal, currency: string);
-    CustomerProfile updateCreditStatus(ctx: context, customerId: uuid, targetStatus: CustomerStatus);
-}
-
-interface PricingCalculationService {
-    PriceBookHeader createPriceBook(ctx: context, legalEntityId: uuid, code: string, name: string, bookType: PriceBookType, start: date, end: date);
-    PriceBookEntry assignMaterialPrice(ctx: context, priceBookId: uuid, materialId: uuid, price: decimal, minQty: decimal);
-    void registerStrategyModifier(ctx: context, priceBookId: uuid, rule: StrategyEvaluationRule, version: int, modifier: decimal, matrixConfig: jsonb);
-    decimal resolveItemUnitPrice(ctx: context, customerId: uuid, priceBookId: uuid, materialId: uuid, targetQuantity: decimal);
-}
-
-interface SalesOrderService {
-    SalesOrder instantiateDraftOrder(ctx: context, legalEntityId: uuid, customerId: uuid, priceBookId: uuid, orderNum: string, lines: List<SalesOrderLineInput>);
-    SalesOrder processOrderStateTransition(ctx: context, salesOrderId: uuid, currentState: SalesOrderState, targetState: SalesOrderState);
-}
-
-interface RevenueBillingService {
-    void stageLogisticsBillingEntry(ctx: context, legalEntityId: uuid, salesOrderId: uuid, deliveryDocId: uuid, amount: decimal, tax: decimal);
-    void dispatchStagedBillingToAccountsReceivable(ctx: context, batchLimit: int);
-    void purgeProcessedBillingTriggers(ctx: context, olderThan: timestamp, batchLimit: int);
-}
-
-interface OutboxRelayWorker {
-    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
-    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
-    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
-}
-
-interface ReliableMessagingService {
-    boolean isEventProcessed(ctx: context, eventId: uuid);
-    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
 }
 
 interface CampaignService {
@@ -365,7 +315,7 @@ interface LeadService {
     List<Lead> listLeads(ctx: context);
     Lead updateLead(ctx: context, id: uuid, status: string, score: int);
     void deleteLead(ctx: context, id: uuid);
-    void convertLead(ctx: context, id: uuid);
+    void convertLead(ctx: context, id: uuid);     // Emits downstream profile registration signals
 }
 
 interface OpportunityService {
@@ -400,7 +350,7 @@ interface CustomerInteractionService {
     void deleteInteraction(ctx: context, id: uuid);
 }
 
-events Emitters {
+events OperationsHub {
     producer_events {
         crm.order.confirmed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, line_items: List<OrderLinePayload>, timestamp: timestamp }
         crm.order.cancelled: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, timestamp: timestamp }
@@ -446,5 +396,7 @@ events Emitters {
         mfg.production.completed: { event_id: uuid, timestamp: timestamp }
         prj.project.completed: { event_id: uuid, timestamp: timestamp }
         hr.employee.performance: { event_id: uuid, timestamp: timestamp }
+        crm.core.customer.registered: { event_id: uuid, customer_id: uuid, customer_code: string, legal_entity_id: uuid, timestamp: timestamp }
+        crm.core.customer.status_changed: { event_id: uuid, customer_id: uuid, status: string, timestamp: timestamp }
     }
 }

@@ -8,7 +8,7 @@ import (
 type PriceBookHeader struct {
 	ID            string        `json:"id"`
 	LegalEntityID string        `json:"legal_entity_id"`
-	PriceBookCode string        `json:"price_book_code"` // e.g., "PRICING_EU_2026"
+	PriceBookCode string        `json:"price_book_code"`
 	Name          string        `json:"name"`
 	Type          PriceBookType `json:"type"`
 	StartDate     time.Time     `json:"start_date"`

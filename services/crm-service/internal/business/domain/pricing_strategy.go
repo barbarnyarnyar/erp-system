@@ -8,11 +8,11 @@ import (
 
 type PricingStrategy struct {
 	ID                  string                 `json:"id"`
-	PriceBookID         string                 `json:"price_book_id"` // Strict Relational Internal Link
+	PriceBookID         string                 `json:"price_book_id"`
 	EvaluationRule      StrategyEvaluationRule `json:"evaluation_rule"`
-	StrategyVersion     int                    `json:"strategy_version"` // Tracks evolutionary schema changes over historic audits
+	StrategyVersion     int                    `json:"strategy_version"` // Zero-drift historical audit tracker
 	ModifierPercentage  decimal.Decimal        `json:"modifier_percentage"`
-	ConfigurationMatrix interface{}            `json:"configuration_matrix"` // Houses dynamic structural rules (e.g., volume break boundaries)
+	ConfigurationMatrix interface{}            `json:"configuration_matrix"` // Dynamic volume breaks/tier structures
 	IsActive            bool                   `json:"is_active"`
 	CreatedAt           time.Time              `json:"created_at"`
 	UpdatedAt           time.Time              `json:"updated_at"`

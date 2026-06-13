@@ -8,8 +8,8 @@ import (
 
 type PriceBookEntry struct {
 	ID                   string          `json:"id"`
-	PriceBookID          string          `json:"price_book_id"` // Strict Relational Internal Link
-	MaterialID           string          `json:"material_id"`   // Primitive Ref -> PLM.MaterialMaster (Loose Link)
+	PriceBookID          string          `json:"price_book_id"`
+	MaterialID           string          `json:"material_id"` // Primitive Ref -> PLM.MaterialMaster
 	UnitListPrice        decimal.Decimal `json:"unit_list_price"`
 	MinQuantityThreshold decimal.Decimal `json:"min_quantity_threshold"`
 	CreatedAt            time.Time       `json:"created_at"`

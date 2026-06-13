@@ -20,23 +20,27 @@ This document serves as the master directory of all **91 domain entities** acros
 ---
 
 ## 2. CRM Service (Customer Relationship Management)
-*Manages customer profiles, sales pipelines, marketing campaigns, and quoting.*
+*Manages customer profiles, price books, sales pipelines, billing triggers, marketing campaigns, and quoting.*
 
-| Entity Name | CDD Reference | Description | Relationships & Dependencies |
-|-------------|---------------|-------------|------------------------------|
-| **Customer** | `Customer` | Master customer profile with company and contact details. | Linked to `Opportunity`, `Quote`, `SalesOrder`. |
-| **Lead** | `Lead` | Unqualified contact profiles with score and source. | References `Customer.id` (1:N, optional). |
-| **Opportunity** | `Opportunity` | Qualified deals in the sales pipeline with stages and probability. | References `Customer.id` (1:N). |
-| **OpportunityStageHistory** | `OpportunityStageHistory` | Historical audit log of stages transitions (e.g., Prospecting to Won). | References `Opportunity.id` (1:N). |
-| **SalesOrder** | `SalesOrder` | Confirmed customer sales transaction before billing. | References `Customer.id` (1:N). |
-| **SalesOrderItem** | `SalesOrderItem` | Individual items/SKUs included in a sales order. | References `SalesOrder.id` (1:N), SCM `Product.id`. |
-| **Quote** | `Quote` | Customer pricing proposals with validity dates. | References `Customer.id` (1:N). |
-| **QuoteLineItem** | `QuoteLineItem` | Proposed items and volumes in a quote. | References `Quote.id` (1:N), SCM `Product.id`. |
-| **PriceList** | `PriceList` | Grouping of pricing rules (e.g. Wholesale vs. Retail). | Linked to price items. |
-| **PriceListItem** | `PriceListItem` | Pricing overrides for products in a specific list. | References `PriceList.id` (1:N), SCM `Product.id`. |
-| **ServiceTicket** | `ServiceTicket` | Support/service request case log. | References `Customer.id` (1:N). |
-| **Campaign** | `Campaign` | Marketing campaign tracking target audience and budget. | Linked to Lead attribution. |
-| **CustomerInteraction**| `CustomerInteraction` | Log of meetings, phone calls, and emails. | References `Customer.id` (1:N). |
+| CDD Namespace | Entity Name | CDD Reference | Description | Relationships & Dependencies |
+|---------------|-------------|---------------|-------------|------------------------------|
+| **`erp.crm.core`** | **CustomerProfile** | `CustomerProfile` | Master customer profile with company and contact details. | Linked to `Opportunity`, `Quote`, `SalesOrder`. |
+| | **PriceBookHeader** | `PriceBookHeader` | Grouping of pricing rules (e.g. Standard vs. Regional). | Linked to price book entries and pricing strategies. |
+| | **PriceBookEntry** | `PriceBookEntry` | Price entry overrides for products in a specific book. | References `PriceBookHeader.id` (1:N), SCM `Product.id`. |
+| | **PricingStrategy** | `PricingStrategy` | Rule configuration modifier (markup, temporal, volume splits). | References `PriceBookHeader.id` (1:N). |
+| | **SalesOrder** | `SalesOrder` | Confirmed customer sales transaction before billing. | References `CustomerProfile.id` (1:N), `PriceBookHeader.id`. |
+| | **SalesOrderLine** | `SalesOrderLine` | Individual items/SKUs included in a sales order. | References `SalesOrder.id` (1:N), SCM `Product.id`. |
+| | **BillingTrigger** | `BillingTrigger` | Monthly partitioned records staging billing outputs for AR. | References `SalesOrder.id` (1:N). |
+| | **TransactionalOutbox** | `TransactionalOutbox` | Outbox message cache for atomic operations events dispatch. | Outbox pattern integration. |
+| | **KafkaEventInbox** | `KafkaEventInbox` | Inbound messaging idempotency checking register. | Idempotent consumer protection. |
+| **`erp.crm.operations`** | **Campaign** | `Campaign` | Marketing campaign tracking target audience and budget. | Linked to Lead attribution. |
+| | **Lead** | `Lead` | Unqualified contact profiles with score and campaign source. | References `Campaign.id` (1:N, optional). |
+| | **Opportunity** | `Opportunity` | Qualified deals in the pipeline with stages and expected values. | References `CustomerProfile.id` (1:N). |
+| | **CustomerInteraction** | `CustomerInteraction` | Log of meetings, phone calls, and emails. | References `CustomerProfile.id` (1:N). |
+| | **ServiceTicket** | `ServiceTicket` | Support/service request case log with priority. | References `CustomerProfile.id` (1:N). |
+| | **Quote** | `Quote` | Customer pricing proposals with validity dates. | References `CustomerProfile.id` (1:N), `Opportunity.id`. |
+| | **QuoteLineItem** | `QuoteLineItem` | Proposed items and volumes in a quote. | References `Quote.id` (1:N), SCM `Product.id`. |
+
 
 ---
 

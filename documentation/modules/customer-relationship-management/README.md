@@ -4,35 +4,40 @@ Customer accounts, lead management, opportunity pipeline, sales orders, quotes, 
 
 ## Module Overview
 
+The CRM Service is architected into two distinct, decoupled domain packages to isolate transactional core business operations from operational and marketing functions, ensuring zero direct dependency coupling ($C_e = 0$) across namespaces:
+
+1. **`erp.crm.core`**: The high-throughput, transactional execution engine that processes customer directories, versioned price books, pricing strategy modifiers, sales orders, and billing triggers.
+2. **`erp.crm.operations`**: The operational CRM surface handling lead ingestion, pipelines, opportunity scoring, customer support tickets, campaign attribution, and quoting.
+
 ```mermaid
 graph TB
-    subgraph "CRM Core"
-        CUST[Customer Management<br/>Accounts & Contacts]
-        LEAD[Lead Management<br/>Capture & Qualification]
-        OPP[Opportunity Pipeline<br/>Stages & Forecasting]
-        QUOTE[Quote Generation<br/>Pricing & Configurations]
-        SO[Sales Orders<br/>Order Processing]
-        TICKET[Service Tickets<br/>Support & Resolution]
-        CAMP[Campaigns<br/>Marketing Activities]
-        PRICE[Price Lists<br/>Product Pricing]
+    subgraph "erp.crm.core (Transactional Engine)"
+        CUST[Customer Profile<br/>Directory & Credit]
+        PRICE[Price Books &<br/>Pricing Strategies]
+        SO[Sales Orders<br/>Transactional Core]
+        BILL[Billing Triggers<br/>Accruals & Purges]
+        OUTBOX[Outbox Relay<br/>Event Sourcing]
     end
 
-    subgraph "Integration Points"
-        MFG_INT[Manufacturing Integration<br/>Production Trigger]
-        SCM_INT[SCM Integration<br/>Fulfillment & Forecast]
-        FM_INT[Finance Integration<br/>Invoicing & Revenue]
-        PM_INT[Project Integration<br/>Project Creation]
+    subgraph "erp.crm.operations (Operational Surface)"
+        LEAD[Lead Management<br/>Conversion Pipeline]
+        OPP[Opportunity Tracking<br/>Stages & Value]
+        QUOTE[Quote Generation<br/>Negotiation & Ingestion]
+        TICKET[Service Tickets<br/>Support Desk]
+        CAMP[Campaigns & Leads<br/>Marketing Attribution]
+        INTERACT[Customer Interactions<br/>Meetings & Calls]
     end
 
-    LEAD --> OPP
-    OPP --> QUOTE
-    QUOTE --> SO
-    SO --> MFG_INT
-    SO --> SCM_INT
-    SO --> FM_INT
-    CUST --> TICKET
-    CAMP --> LEAD
-    PRICE --> QUOTE
+    subgraph "Kafka Message Bus (C_e = 0 Integration)"
+        KAFKA{Kafka Streams<br/>Primitive Token 'uuid'}
+    end
+
+    LEAD -.->|Converts & Registers| KAFKA
+    KAFKA -.->|crm.core.customer.registered| CUST
+    KAFKA -.->|crm.core.customer.status_changed| LEAD
+    QUOTE --> OPP
+    OPP --> SO
+    SO --> BILL
 ```
 
 ## Documentation Structure
@@ -40,114 +45,99 @@ graph TB
 ### Features Covered in This Document
 
 This README documents the following CRM features inline:
-- Customer Management — Accounts, contacts, and segmentation
-- Lead Management — Capture, qualification, and conversion
-- Opportunity Management — Pipeline and forecasting
-- Quote Management — Pricing and configuration
-- Sales Orders — Order processing and lifecycle
-- Service Tickets — Customer support and resolution
-- Campaigns — Marketing activities
-- Price Lists — Product pricing configuration
+- **Customer Directory & Profiling** — Accounts, credit limits, and manager assignments
+- **Price Books & Strategy Evaluation** — Volume breaks, temporal discounts, and contract Markups
+- **Sales Order Life-Cycle** — Drafts, state transitions, validation, and confirmation
+- **Billing Accrual & Purging** — Integration and handoff to Accounts Receivable (FM)
+- **Outbox Relay & Event Sourcing** — Reliable transaction replication to Kafka
+- **Marketing Campaign Ingestion** — Campaigns, leads, opportunity stages, and conversions
+- **Customer Interactions & Support** — Meeting summaries, ticket resolutions, and quotes
 
-## Domain Models (11 types)
+---
 
-| Model | Key Fields | Description |
-|-------|-----------|-------------|
-| `Customer` | ID, Name, Email, Phone, Status (Active/Inactive/Lead), CreditLimit, BillingAddress, ShippingAddress, ParentCustomerID | Business customer account |
-| `Lead` | ID, FirstName, LastName, Email, Phone, CompanyName, Source (Website/Referral/ColdCall/Campaign/Other), Status (New/Contacted/Qualified/Disqualified/Converted), Score | Sales prospect |
-| `Opportunity` | ID, CustomerID, Title, Amount, Stage (Prospecting/Qualification/NeedsAnalysis/Proposal/Negotiation/ClosedWon/ClosedLost), Probability, ExpectedCloseDate | Sales opportunity |
-| `SalesOrder` | ID, CustomerID, OrderDate, TotalAmount, Status (Draft/Pending/Confirmed/Shipped/Delivered/Cancelled), Items[] | Customer sales order |
-| `SalesOrderItem` | ProductID, ProductName, Quantity, UnitPrice, Discount, Total | Line item on sales order |
-| `Quote` | ID, CustomerID, ValidUntil, TotalAmount, Status (Draft/Sent/Accepted/Rejected/Expired), Items[] | Customer price quote |
-| `QuoteLineItem` | ProductID, ProductName, Quantity, UnitPrice, Discount, Total | Line item on quote |
-| `ServiceTicket` | ID, CustomerID, Subject, Description, Priority (Low/Medium/High/Critical), Status (Open/InProgress/Resolved/Closed), AssignedTo | Customer support ticket |
-| `Campaign` | ID, Name, Type (Email/Social/Event/DirectMail/Other), StartDate, EndDate, Budget, Status (Draft/Active/Paused/Completed/Cancelled) | Marketing campaign |
-| `PriceList` | ID, Name, Currency, Description | Product pricing list |
-| `PriceListItem` | PriceListID, ProductID, ProductName, UnitPrice, MinQuantity | Price entry in list |
+## Domain Models
 
-## Business Services (8)
+### 1. Transactional Core Engine (`erp.crm.core`)
 
-### CustomerService
+| Model | CDD Table Reference | Description |
+|-------|---------------------|-------------|
+| `CustomerProfile` | `crm_customers` | Master customer account with credit limits, currency, and manager assignments. Includes optional contact info. |
+| `PriceBookHeader` | `crm_price_books` | Header representing a pricing policy (Standard, Regional, etc.) with active dates. |
+| `PriceBookEntry` | `crm_price_book_entries` | Map of unit list prices and quantity thresholds for materials within a price book. |
+| `PricingStrategy` | `crm_pricing_strategies` | Zero-drift historical audit rules (flat markups, tiered breaks) applied dynamically. |
+| `SalesOrder` | `crm_sales_orders` | Sales transactions containing total valuation, tax, and tracking state. |
+| `SalesOrderLine` | `crm_sales_order_lines` | Detail line items representing quantity ordered/shipped, material IDs, and net amounts. |
+| `BillingTrigger` | `crm_billing_triggers` | Monthly partitioned records staging revenue recognition inputs for Accounts Receivable. |
+| `TransactionalOutbox` | `crm_transactional_outbox` | Outbox pattern message store ensuring at-least-once message delivery to Kafka. |
+| `KafkaEventInbox` | `crm_kafka_event_inbox` | Idempotency log tracking processed Kafka message IDs and execution statuses. |
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create customer with ACTIVE status | Publishes `crm.customer.created` |
-| `GetByID` | Get customer by ID | — |
-| `GetAll` | List all customers | — |
-| `Update` | Update customer, publish activation event if status changes to ACTIVE | Publishes `crm.customer.activated` |
-| `Delete` | Delete customer | — |
+### 2. Operational CRM Surface (`erp.crm.operations`)
 
-### LeadService
+| Model | CDD Table Reference | Description |
+|-------|---------------------|-------------|
+| `Campaign` | `crm_campaigns` | Marketing campaigns tracking name, type, budget, and schedules. |
+| `Lead` | `crm_leads` | Contact profiles representing qualified or unqualified prospective clients. |
+| `Opportunity` | `crm_opportunities` | Pipeline tracker for potential deals detailing expected values and stage probabilities. |
+| `CustomerInteraction` | `crm_customer_interactions` | Narrative log of customer meetings, phone calls, and email correspondence. |
+| `ServiceTicket` | `crm_service_tickets` | Support desk request tickets tracking assignment, priority, and resolution states. |
+| `Quote` | `crm_quotes` | Customer pricing proposals capturing overall valuation and validation duration. |
+| `QuoteLineItem` | `crm_quote_line_items` | Individual line entries detailing material SKU quotes and pricing. |
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create lead with NEW status, score 10 | — |
-| `GetByID` | Get lead by ID | — |
-| `GetAll` | List all leads | — |
-| `Update` | Update lead, publish qualified/disqualified events | Publishes `crm.lead.qualified` or `crm.lead.disqualified` |
-| `Delete` | Delete lead | — |
-| `ConvertLead` | Convert lead → customer + opportunity in one operation | Publishes `crm.lead.converted`, `crm.customer.created`, `crm.opportunity.created` |
+---
 
-### OpportunityService
+## Business Services
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create opportunity with 10% probability | — |
-| `GetByID` | Get opportunity by ID | — |
-| `GetAll` | List all opportunities | — |
-| `Update` | Update opportunity, publish won/lost events on status change | Publishes `crm.opportunity.won` or `crm.opportunity.lost` |
-| `Delete` | Delete opportunity | — |
+### Package 1: Transactional Core Services (`erp.crm.core`)
 
-### SalesOrderService
+#### CustomerAccountService
+- `createProfile`: Provision a new customer profile under a legal entity with an manager employee ID.
+- `updateCreditStatus`: Modify customer accounts (Active, Credit Hold, etc.) based on credit reviews.
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create order with item subtotals | Publishes `crm.sales.order.created` |
-| `GetByID` | Get order by ID | — |
-| `GetAll` | List all orders | — |
-| `Update` | Update order, publish status events | Publishes `crm.sales.order.confirmed`, `crm.sales.order.shipped`, `crm.sales.order.delivered`, or `crm.sales.order.cancelled` |
-| `Delete` | Delete order | — |
+#### PricingCalculationService
+- `createPriceBook`: Define a new pricing matrix list header.
+- `assignMaterialPrice`: Set baseline list price overrides for items in a price book.
+- `registerStrategyModifier`: Apply modifier percentages or configuration tier rules to a strategy.
+- `resolveItemUnitPrice`: Compute net line prices based on customer profiles and tiered pricing rules.
 
-### QuoteService
+#### SalesOrderService
+- `instantiateDraftOrder`: Create a draft order with line-item validation.
+- `processOrderStateTransition`: Drive state machine changes (Draft → Pending Check → Approved → Shipped → Delivered).
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create quote with total from line items | — |
-| `GetByID` | Get quote by ID | — |
-| `GetAll` | List all quotes | — |
-| `Update` | Update quote | — |
-| `Delete` | Delete quote | — |
-| `SendQuote` | Set status SENT | Publishes `crm.quote.sent` |
+#### RevenueBillingService
+- `stageLogisticsBillingEntry`: Stage accrued billing amounts derived from SCM shipping documents.
+- `dispatchStagedBillingToAccountsReceivable`: Batch transmit completed billing triggers to FM.
+- `purgeProcessedBillingTriggers`: Clean up old database records using a monthly partition purge.
 
-### ServiceTicketService
+#### OutboxRelayWorker / ReliableMessagingService
+- `getUnsentMessages`: Poll transactional outbox for pending payloads.
+- `logProcessingAttempt` / `updateOutboxStatus`: Track delivery retries and success events.
+- `executeIdempotentTransaction`: Process incoming event streams inside a transaction log.
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create ticket with OPEN status | Publishes `crm.ticket.created` |
-| `GetByID` | Get ticket by ID | — |
-| `GetAll` | List all tickets | — |
-| `Update` | Update ticket, publish resolved/escalated events | Publishes `crm.ticket.updated`, `crm.ticket.resolved`, or `crm.ticket.escalated` |
-| `Delete` | Delete ticket | — |
+---
 
-### CampaignService
+### Package 2: Operational CRM Services (`erp.crm.operations`)
 
-| Method | Description | Side Effects |
-|--------|-------------|-------------|
-| `Create` | Create campaign with DRAFT status | — |
-| `GetByID` | Get campaign by ID | — |
-| `GetAll` | List all campaigns | — |
-| `Update` | Update campaign, publish launched/completed events | Publishes `crm.campaign.launched` or `crm.campaign.completed` |
-| `Delete` | Delete campaign | — |
+#### CampaignService
+- `createCampaign` / `getCampaign` / `listCampaigns` / `updateCampaign` / `deleteCampaign`: Manage campaign lifecycles.
 
-### PriceListService
+#### LeadService
+- `createLead` / `getLead` / `listLeads` / `updateLead` / `deleteLead`: Perform typical lead maintenance.
+- `convertLead`: Execute the lead conversion routine. Emits a registration signal to trigger downstream customer and opportunity profiles.
 
-| Method | Description |
-|--------|-------------|
-| `Create` | Create price list with items |
-| `GetByID` | Get price list by ID |
-| `GetAll` | List all price lists |
-| `Update` | Update price list |
-| `Delete` | Delete price list |
+#### OpportunityService
+- `createOpportunity` / `getOpportunity` / `listOpportunities` / `updateOpportunity` / `deleteOpportunity`: Maintain opportunities.
+
+#### QuoteService
+- `createQuote` / `getQuote` / `listQuotes` / `updateQuote` / `deleteQuote`: Handle customer quotes and items.
+- `sendQuote`: Transition quote status to `SENT` and dispatch events.
+
+#### TicketService
+- `createTicket` / `getTicket` / `listTickets` / `updateTicket` / `deleteTicket`: Support ticket lifecycle operations.
+
+#### CustomerInteractionService
+- `createInteraction` / `getInteraction` / `listInteractions` / `deleteInteraction`: Manage communication logs.
+
+---
 
 ## API Endpoints (35 routes)
 
@@ -225,6 +215,8 @@ PUT    /api/v1/price-lists/:id        # Update price list
 DELETE /api/v1/price-lists/:id        # Delete price list
 ```
 
+---
+
 ## Sales Pipeline Flow
 
 ### Lead-to-Cash Process
@@ -250,39 +242,79 @@ flowchart LR
     style N fill:#ffcdd2
 ```
 
+---
+
 ## Kafka Integration
 
-### Events Published (28 topics, per CDD)
+The service decoupling requires all cross-boundary communications between `erp.crm.core` and `erp.crm.operations` (as well as external services) to be processed asynchronously over Kafka streams using primitive identifiers (`uuid`) to guarantee $C_e = 0$.
 
-**Customer:** `crm.customer.created`, `crm.customer.updated`, `crm.customer.activated`, `crm.customer.deactivated`
-**Lead:** `crm.lead.created`, `crm.lead.qualified`, `crm.lead.converted`, `crm.lead.lost`
-**Opportunity:** `crm.opportunity.created`, `crm.opportunity.updated`, `crm.opportunity.won`, `crm.opportunity.lost`
-**Sales Orders:** `crm.sales.order.created`, `crm.sales.order.updated`, `crm.sales.order.confirmed`, `crm.sales.order.shipped`, `crm.sales.order.delivered`, `crm.sales.order.cancelled`, `crm.sales.order.received`
-**Service Tickets:** `crm.service.ticket.created`, `crm.service.ticket.updated`, `crm.service.ticket.resolved`, `crm.service.ticket.escalated`
-**Campaigns:** `crm.campaign.launched`, `crm.campaign.completed`
-**Email:** `crm.email.sent`, `crm.email.opened`, `crm.email.clicked`
+### Events Published (32 topics, per CDD)
 
-### Events Consumed (7 topics, per CDD)
+* **Orders & Billing:**
+  - `crm.order.confirmed`
+  - `crm.order.cancelled`
+  - `crm.billing.accrued`
+  - `crm.sales.order.created`
+  - `crm.sales.order.updated`
+  - `crm.sales.order.confirmed`
+  - `crm.sales.order.cancelled`
+  - `crm.sales.order.shipped`
+  - `crm.sales.order.delivered`
+  - `crm.sales.order.received`
+* **Customers & Profiles:**
+  - `crm.customer.created`
+  - `crm.customer.updated`
+  - `crm.customer.activated`
+  - `crm.customer.deactivated`
+* **Leads & Opportunities:**
+  - `crm.lead.created`
+  - `crm.lead.qualified`
+  - `crm.lead.converted`
+  - `crm.lead.lost`
+  - `crm.opportunity.created`
+  - `crm.opportunity.updated`
+  - `crm.opportunity.won`
+  - `crm.opportunity.lost`
+* **Marketing & Interactions:**
+  - `crm.campaign.launched`
+  - `crm.campaign.completed`
+  - `crm.customer.interaction.logged`
+  - `crm.email.sent`
+  - `crm.email.opened`
+  - `crm.email.clicked`
+* **Service Tickets:**
+  - `crm.service.ticket.created`
+  - `crm.service.ticket.updated`
+  - `crm.service.ticket.resolved`
+  - `crm.service.ticket.escalated`
 
-| Topic | Publisher | Logic |
-|-------|-----------|-------|
+### Events Consumed (12 topics, per CDD)
+
+| Topic | Publisher | Integration / Logic |
+|-------|-----------|--------------------|
+| `plm.material.released` | PLM | Update material catalogs |
+| `scm.order.shipped` | SCM | Mark sales order as SHIPPED |
+| `prj.milestone.achieved` | PM | Trigger billing for project milestones |
 | `scm.inventory.available` | SCM | Logged only |
-| `scm.shipment.delivered` | SCM | Update sales order to DELIVERED |
-| `fin.payment.received` | FM | Logged only |
-| `fin.credit.check.completed` | FM | Logged only |
+| `scm.shipment.delivered` | SCM | Update sales order status to DELIVERED |
+| `fm.payment.received` | FM | Mark associated transactions as paid |
+| `fm.credit.check.completed` | FM | Trigger credit-hold resolution flows |
 | `mfg.production.completed` | MFG | Logged only |
-| `prj.project.completed` | PM | Logged only |
+| `prj.project.completed` | PM | Trigger final order reconciliations |
 | `hr.employee.performance` | HR | Logged only |
+| `crm.core.customer.registered` | Core | Synchronize profile mutations safely |
+| `crm.core.customer.status_changed`| Core | Inform operational status views of credit holds |
+
+---
 
 ## Seed Data
 
 On startup, the service seeds mock data for development:
+- **Customers**: Acme Corporation (Active)
+- **Leads**: John Doe from Initech (score 10, New), Jane Smith from Umbrella Corp (score 10, Contacted)
+- **Opportunities**: "Enterprise Software Deal" for Acme Corp ($50,000, Stage: Prospecting, 10% probability)
 
-| Entity | Records | Key Details |
-|--------|---------|-------------|
-| **Customers** | 1 | Acme Corporation (Active) |
-| **Leads** | 2 | John Doe from Initech (score 10, New), Jane Smith from Umbrella Corp (score 10, Contacted) |
-| **Opportunities** | 1 | "Enterprise Software Deal" for Acme Corp ($50,000, Stage: Prospecting, 10% probability) |
+---
 
 ## Relation to Other Modules
 
@@ -293,13 +325,3 @@ On startup, the service seeds mock data for development:
 | **SCM** | Order fulfillment trigger | Outbound | `crm.sales.order.created` |
 | **PM** | Sales order creates project | Outbound | `crm.sales.order.received` |
 | **FM** | Completed sale creates revenue entry | Outbound | `crm.sale.completed` |
-
-## Known Limitations
-
-- **Lead conversion is a stub** — `ConvertLead` creates a customer with a hardcoded name and an opportunity, no real data mapping from lead fields
-- **No email integration** — `SendQuote` sets status to SENT but performs no actual email delivery
-- **No campaign execution** — campaigns are CRUD only with no actual email, social, or event execution
-- **No product catalog** — `SalesOrderItem` and `PriceListItem` reference `ProductName` as a string, no link to SCM product catalog
-- **No order-to-cash automation** — the `crm.sales.order.created` → `crm.sale.completed` pipeline is manual
-- **No customer portal** — self-service access for customers does not exist
-- **No service ticket SLA tracking** — priority levels exist but no SLA breach logic

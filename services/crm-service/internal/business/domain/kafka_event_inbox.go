@@ -6,7 +6,7 @@ import (
 )
 
 type KafkaEventInbox struct {
-	EventID          string                `json:"event_id"` // Unique transaction message trace key for idempotency checks
+	EventID          string                `json:"event_id"` // Idempotency Tracking Key
 	EventType        string                `json:"event_type"`
 	ProcessedAt      time.Time             `json:"processed_at"`
 	ProcessingStatus EventProcessingStatus `json:"processing_status"`
