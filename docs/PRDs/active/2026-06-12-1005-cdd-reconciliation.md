@@ -106,14 +106,14 @@ graph TD
 #### 3. FM Service Reconciliation
 - [x] Update `fm.cdd` with `Payment`, `BankAccount`, `CustomerCredit`, `BankStatement`, `BankStatementLine`, `TaxRate`, `CurrencyRate`.
 - [x] Regenerate Go models: `go run cdd-engine/main.go -cdd services/fm-service/contracts/fm.cdd -go-out services/fm-service/internal/business/domain`.
-- [ ] Delete stale Go files: `account.go`, `fiscal_year.go`, `journal_entry.go`, `transaction.go`, `transaction_line.go`, `invoice.go`, `invoice_line.go`, `vendor_bill.go`, `vendor_bill_line.go` (deferred until universal ledger migration).
-- [ ] Refactor FM service, SQL, and Memory repositories to use the Universal Ledger.
+- [x] Delete stale Go files: `account.go`, `fiscal_year.go`, `journal_entry.go`, `transaction.go`, `transaction_line.go`, `invoice.go`, `invoice_line.go`, `vendor_bill.go`, `vendor_bill_line.go` (deferred until universal ledger migration).
+- [x] Refactor FM service, SQL, and Memory repositories to use the Universal Ledger.
 
 ---
 
 ## 4. Definition of Done
-- [ ] Stale domain files are 100% pruned.
-- [ ] Go models and database migrations are generated from the updated, reconciled contracts.
-- [ ] Services, repository layers, and handlers compile cleanly using the CDD-aligned structs.
-- [ ] Gateway routes match and forward to the active service paths.
-- [ ] All unit and integration smoke tests pass.
+- [x] Stale domain files are 100% pruned.
+- [x] Go models and database migrations are generated from the updated, reconciled contracts.
+- [x] Services, repository layers, and handlers compile cleanly using the CDD-aligned structs.
+- [x] Gateway routes match and forward to the active service paths.
+- [x] All unit and integration smoke tests pass.

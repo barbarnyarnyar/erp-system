@@ -2,12 +2,23 @@ package service
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"erp-system/shared/utils"
 	"github.com/erp-system/qms-service/internal/business/domain"
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
+
+const txKey = "gorm_tx"
+
+func GetDB(ctx context.Context, defaultDB *gorm.DB) *gorm.DB {
+	if tx, ok := ctx.Value(txKey).(*gorm.DB); ok {
+		return tx.WithContext(ctx)
+	}
+	return defaultDB.WithContext(ctx)
+}
 
 type SpcMetricsSummary struct {
 	PlanID            string          `json:"plan_id"`
@@ -17,13 +28,19 @@ type SpcMetricsSummary struct {
 	SampleSize        int             `json:"sample_size"`
 }
 
+// ==========================================
+// InspectionPlanService Implementation
+// ==========================================
+
 type InspectionPlanService struct {
+	db         *gorm.DB
 	planRepo   domain.InspectionPlanRepository
 	metricRepo domain.InspectionMetricDefinitionRepository
 }
 
-func NewInspectionPlanService(planRepo domain.InspectionPlanRepository, metricRepo domain.InspectionMetricDefinitionRepository) *InspectionPlanService {
+func NewInspectionPlanService(db *gorm.DB, planRepo domain.InspectionPlanRepository, metricRepo domain.InspectionMetricDefinitionRepository) *InspectionPlanService {
 	return &InspectionPlanService{
+		db:         db,
 		planRepo:   planRepo,
 		metricRepo: metricRepo,
 	}
@@ -44,6 +61,11 @@ func (s *InspectionPlanService) ConfigurePlan(ctx context.Context, legalEntityId
 	return ip, err
 }
 
+func (s *InspectionPlanService) GetPlanByMaterial(ctx context.Context, legalEntityId, materialId string) (*domain.InspectionPlan, error) {
+	return s.planRepo.GetByMaterial(ctx, legalEntityId, materialId)
+}
+
+
 func (s *InspectionPlanService) RegisterPlanMetric(ctx context.Context, planId string, key string, displayName string, dataType domain.MetricDataType, minLim, maxLim *decimal.Decimal) (*domain.InspectionMetricDefinition, error) {
 	imd := &domain.InspectionMetricDefinition{
 		ID:                utils.NewID("met"),
@@ -60,27 +82,34 @@ func (s *InspectionPlanService) RegisterPlanMetric(ctx context.Context, planId s
 	return imd, err
 }
 
+// ==========================================
+// InspectionExecutionService Implementation
+// ==========================================
+
 type InspectionExecutionService struct {
-	qiRepo    domain.QualityInspectionRepository
-	resRepo   domain.InspectionResultLineRepository
-	planRepo  domain.InspectionPlanRepository
-	ncSvc     *NonConformanceService
-	publisher domain.EventPublisher
+	db          *gorm.DB
+	qiRepo      domain.QualityInspectionRepository
+	resRepo     domain.InspectionResultLineRepository
+	planRepo    domain.InspectionPlanRepository
+	ncSvc       *NonConformanceService
+	reliableSvc ReliableMessagingService
 }
 
 func NewInspectionExecutionService(
+	db *gorm.DB,
 	qiRepo domain.QualityInspectionRepository,
 	resRepo domain.InspectionResultLineRepository,
 	planRepo domain.InspectionPlanRepository,
 	ncSvc *NonConformanceService,
-	publisher domain.EventPublisher,
+	reliableSvc ReliableMessagingService,
 ) *InspectionExecutionService {
 	return &InspectionExecutionService{
-		qiRepo:    qiRepo,
-		resRepo:   resRepo,
-		planRepo:  planRepo,
-		ncSvc:     ncSvc,
-		publisher: publisher,
+		db:          db,
+		qiRepo:      qiRepo,
+		resRepo:     resRepo,
+		planRepo:    planRepo,
+		ncSvc:       ncSvc,
+		reliableSvc: reliableSvc,
 	}
 }
 
@@ -115,84 +144,119 @@ func (s *InspectionExecutionService) AssignInspector(ctx context.Context, inspec
 }
 
 func (s *InspectionExecutionService) RecordBulkMeasurements(ctx context.Context, inspectionId string, samples []domain.MetricSubmissionInput) error {
-	qi, err := s.qiRepo.GetByID(ctx, inspectionId)
-	if err != nil {
-		return err
-	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		txCtx := context.WithValue(ctx, txKey, tx)
 
-	plan, err := s.planRepo.GetByID(ctx, qi.InspectionPlanID)
-	if err != nil {
-		return err
-	}
-
-	allPassed := true
-	for _, sample := range samples {
-		res := &domain.InspectionResultLine{
-			ID:                   utils.NewID("res"),
-			InspectionID:         inspectionId,
-			MetricDefinitionID:   sample.MetricDefinitionID,
-			SampleSequence:       sample.SampleSequence,
-			MeasuredNumericValue: sample.NumericValue,
-			MeasuredBooleanValue: sample.BooleanValue,
-			IsCompliant:          sample.IsCompliant,
-			CreatedAt:            time.Now(),
+		qi, err := s.qiRepo.GetByID(txCtx, inspectionId)
+		if err != nil {
+			return err
 		}
-		_ = s.resRepo.Create(ctx, res)
-		if !sample.IsCompliant {
-			allPassed = false
+
+		plan, err := s.planRepo.GetByID(txCtx, qi.InspectionPlanID)
+		if err != nil {
+			return err
 		}
-	}
 
-	if allPassed {
-		qi.Status = domain.InspectionStatusPASSED
-	} else {
-		qi.Status = domain.InspectionStatusFAILED
-	}
-	qi.Version++
-	qi.UpdatedAt = time.Now()
-	_ = s.qiRepo.Update(ctx, qi)
+		allPassed := true
+		for _, sample := range samples {
+			res := &domain.InspectionResultLine{
+				ID:                   utils.NewID("res"),
+				InspectionID:         inspectionId,
+				MetricDefinitionID:   sample.MetricDefinitionID,
+				SampleSequence:       sample.SampleSequence,
+				MeasuredNumericValue: sample.NumericValue,
+				MeasuredBooleanValue: sample.BooleanValue,
+				IsCompliant:          sample.IsCompliant,
+				CreatedAt:            time.Now(),
+			}
+			if err := s.resRepo.Create(txCtx, res); err != nil {
+				return err
+			}
+			if !sample.IsCompliant {
+				allPassed = false
+			}
+		}
 
-	if allPassed {
-		_ = s.publisher.Publish(ctx, domain.TopicQmsInspectionPassed, qi.ID, map[string]interface{}{
-			"event_id":           utils.NewID("evt"),
-			"legal_entity_id":    qi.LegalEntityID,
-			"inspection_id":      qi.ID,
-			"trigger_source":     qi.TriggerSource,
-			"source_document_id": qi.SourceDocumentID,
-			"material_id":        plan.MaterialID,
-			"timestamp":          time.Now(),
-		})
-	} else {
-		// Log non-conformance incident
-		nc, _ := s.ncSvc.LogFailureIncident(ctx, qi.LegalEntityID, qi.ID, "Inspection failed due to non-compliant metric readings", decimal.NewFromInt(1), true)
-		_ = s.publisher.Publish(ctx, domain.TopicQmsInspectionFailed, qi.ID, map[string]interface{}{
-			"event_id":           utils.NewID("evt"),
-			"legal_entity_id":    qi.LegalEntityID,
-			"inspection_id":      qi.ID,
-			"trigger_source":     qi.TriggerSource,
-			"source_document_id": qi.SourceDocumentID,
-			"material_id":        plan.MaterialID,
-			"non_conformance_id": nc.ID,
-			"timestamp":          time.Now(),
-		})
-	}
+		if allPassed {
+			qi.Status = domain.InspectionStatusPASSED
+		} else {
+			qi.Status = domain.InspectionStatusFAILED
+		}
+		qi.Version++
+		qi.UpdatedAt = time.Now()
+		if err := s.qiRepo.Update(txCtx, qi); err != nil {
+			return err
+		}
 
-	return nil
+		triggerTypeStr := ""
+		if t, ok := qi.TriggerSource.(domain.InspectionTriggerType); ok {
+			triggerTypeStr = string(t)
+		} else if t, ok := qi.TriggerSource.(string); ok {
+			triggerTypeStr = t
+		}
+
+		if allPassed {
+			err = s.reliableSvc.PushToOutbox(txCtx, tx, domain.TopicQmsInspectionPassed, qi.ID, map[string]interface{}{
+				"event_id":           utils.NewID("evt"),
+				"legal_entity_id":    qi.LegalEntityID,
+				"inspection_id":      qi.ID,
+				"trigger_source":     triggerTypeStr,
+				"source_document_id": qi.SourceDocumentID,
+				"material_id":        plan.MaterialID,
+				"timestamp":          time.Now(),
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			// Log non-conformance incident
+			nc, err := s.ncSvc.LogFailureIncident(txCtx, qi.LegalEntityID, qi.ID, "Inspection failed due to non-compliant metric readings", decimal.NewFromInt(1), true)
+			if err != nil {
+				return err
+			}
+			err = s.reliableSvc.PushToOutbox(txCtx, tx, domain.TopicQmsInspectionFailed, qi.ID, map[string]interface{}{
+				"event_id":           utils.NewID("evt"),
+				"legal_entity_id":    qi.LegalEntityID,
+				"inspection_id":      qi.ID,
+				"trigger_source":     triggerTypeStr,
+				"source_document_id": qi.SourceDocumentID,
+				"material_id":        plan.MaterialID,
+				"non_conformance_id": nc.ID,
+				"timestamp":          time.Now(),
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
+
+// ==========================================
+// NonConformanceService Implementation
+// ==========================================
 
 type NonConformanceService struct {
-	ncRepo    domain.NonConformanceLogRepository
-	planRepo  domain.InspectionPlanRepository
-	qiRepo    domain.QualityInspectionRepository
-	publisher domain.EventPublisher
+	db          *gorm.DB
+	ncRepo      domain.NonConformanceLogRepository
+	planRepo    domain.InspectionPlanRepository
+	qiRepo      domain.QualityInspectionRepository
+	reliableSvc ReliableMessagingService
 }
 
-func NewNonConformanceService(ncRepo domain.NonConformanceLogRepository, planRepo domain.InspectionPlanRepository, qiRepo domain.QualityInspectionRepository, publisher domain.EventPublisher) *NonConformanceService {
+func NewNonConformanceService(
+	db *gorm.DB,
+	ncRepo domain.NonConformanceLogRepository,
+	planRepo domain.InspectionPlanRepository,
+	qiRepo domain.QualityInspectionRepository,
+	reliableSvc ReliableMessagingService,
+) *NonConformanceService {
 	return &NonConformanceService{
-		ncRepo:    ncRepo,
-		planRepo:  planRepo,
-		qiRepo:    qiRepo,
-		publisher: publisher,
+		db:          db,
+		ncRepo:      ncRepo,
+		planRepo:    planRepo,
+		qiRepo:      qiRepo,
+		reliableSvc: reliableSvc,
 	}
 }
 
@@ -224,55 +288,243 @@ func (s *NonConformanceService) LogFailureIncident(ctx context.Context, legalEnt
 }
 
 func (s *NonConformanceService) ExecuteDisposition(ctx context.Context, ncLogId string, action domain.DispositionAction, notes string, resolverHrId string) (*domain.NonConformanceLog, error) {
-	ncl, err := s.ncRepo.GetByID(ctx, ncLogId)
-	if err != nil {
-		return nil, err
-	}
+	var ncl *domain.NonConformanceLog
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		txCtx := context.WithValue(ctx, txKey, tx)
+		var err error
+		ncl, err = s.ncRepo.GetByID(txCtx, ncLogId)
+		if err != nil {
+			return err
+		}
 
-	var actionVal interface{} = action
-	ncl.Disposition = &actionVal
-	ncl.DispositionNotes = &notes
-	ncl.ResolvedByHrID = &resolverHrId
-	now := time.Now()
-	ncl.ResolvedAt = &now
-	ncl.IsQuarantined = false // Released from quarantine upon resolution
-	ncl.Version++
-	ncl.UpdatedAt = now
+		var actionVal interface{} = action
+		ncl.Disposition = &actionVal
+		ncl.DispositionNotes = &notes
+		ncl.ResolvedByHrID = &resolverHrId
+		now := time.Now()
+		ncl.ResolvedAt = &now
+		ncl.IsQuarantined = false // Released from quarantine upon resolution
+		ncl.Version++
+		ncl.UpdatedAt = now
 
-	err = s.ncRepo.Update(ctx, ncl)
-	if err != nil {
-		return nil, err
-	}
+		err = s.ncRepo.Update(txCtx, ncl)
+		if err != nil {
+			return err
+		}
 
-	// Publish disposition executed event
-	_ = s.publisher.Publish(ctx, domain.TopicQmsDispositionExecuted, ncl.ID, map[string]interface{}{
-		"event_id":           utils.NewID("evt"),
-		"legal_entity_id":    ncl.LegalEntityID,
-		"non_conformance_id": ncl.ID,
-		"material_id":        ncl.MaterialID,
-		"action":             ncl.Disposition,
-		"quantity":           ncl.QuantityDefective,
-		"timestamp":          time.Now(),
+		// Publish disposition executed event
+		err = s.reliableSvc.PushToOutbox(txCtx, tx, domain.TopicQmsDispositionExecuted, ncl.ID, map[string]interface{}{
+			"event_id":           utils.NewID("evt"),
+			"legal_entity_id":    ncl.LegalEntityID,
+			"non_conformance_id": ncl.ID,
+			"material_id":        ncl.MaterialID,
+			"action":             string(action),
+			"quantity":           ncl.QuantityDefective,
+			"timestamp":          time.Now(),
+		})
+		return err
 	})
-
-	return ncl, nil
+	return ncl, err
 }
 
+// ==========================================
+// QualityAnalyticsService Implementation
+// ==========================================
+
 type QualityAnalyticsService struct {
+	db      *gorm.DB
 	resRepo domain.InspectionResultLineRepository
 }
 
-func NewQualityAnalyticsService(resRepo domain.InspectionResultLineRepository) *QualityAnalyticsService {
-	return &QualityAnalyticsService{resRepo: resRepo}
+func NewQualityAnalyticsService(db *gorm.DB, resRepo domain.InspectionResultLineRepository) *QualityAnalyticsService {
+	return &QualityAnalyticsService{
+		db:      db,
+		resRepo: resRepo,
+	}
 }
 
 func (s *QualityAnalyticsService) ComputeSpcDistribution(ctx context.Context, planId string, metricDefId string, window domain.TimeRange) (*SpcMetricsSummary, error) {
-	// Simple mock calculation for testing
+	lines, err := s.resRepo.ListByMetricAndDateRange(ctx, metricDefId, window.StartDate, window.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	if len(lines) == 0 {
+		return &SpcMetricsSummary{
+			PlanID:            planId,
+			MetricDefID:       metricDefId,
+			Mean:              decimal.Zero,
+			StandardDeviation: decimal.Zero,
+			SampleSize:        0,
+		}, nil
+	}
+
+	n := len(lines)
+	sum := decimal.Zero
+	numericVals := make([]decimal.Decimal, 0, n)
+	for _, l := range lines {
+		if l.MeasuredNumericValue != nil {
+			sum = sum.Add(*l.MeasuredNumericValue)
+			numericVals = append(numericVals, *l.MeasuredNumericValue)
+		}
+	}
+
+	nNumeric := len(numericVals)
+	if nNumeric == 0 {
+		return &SpcMetricsSummary{
+			PlanID:            planId,
+			MetricDefID:       metricDefId,
+			Mean:              decimal.Zero,
+			StandardDeviation: decimal.Zero,
+			SampleSize:        0,
+		}, nil
+	}
+
+	mean := sum.Div(decimal.NewFromInt(int64(nNumeric)))
+
+	varianceSum := decimal.Zero
+	for _, val := range numericVals {
+		diff := val.Sub(mean)
+		varianceSum = varianceSum.Add(diff.Mul(diff))
+	}
+	variance := varianceSum.Div(decimal.NewFromInt(int64(nNumeric)))
+	
+	var stdDev decimal.Decimal
+	varF, _ := variance.Float64()
+	if varF > 0 {
+		stdDev = decimal.NewFromFloat(math.Sqrt(varF))
+	} else {
+		stdDev = decimal.Zero
+	}
+
 	return &SpcMetricsSummary{
 		PlanID:            planId,
 		MetricDefID:       metricDefId,
-		Mean:              decimal.NewFromFloat(10.5),
-		StandardDeviation: decimal.NewFromFloat(0.12),
-		SampleSize:        100,
+		Mean:              mean.Round(4),
+		StandardDeviation: stdDev.Round(4),
+		SampleSize:        nNumeric,
 	}, nil
+}
+
+// ==========================================
+// OutboxRelayWorker Implementation
+// ==========================================
+
+type OutboxRelayWorker interface {
+	GetUnsentMessages(ctx context.Context, limit int) ([]domain.TransactionalOutbox, error)
+	UpdateOutboxStatus(ctx context.Context, tx *gorm.DB, outboxID string, status domain.OutboxStatus) error
+}
+
+type OutboxRelayWorkerImpl struct {
+	db         *gorm.DB
+	outboxRepo domain.TransactionalOutboxRepository
+}
+
+func NewOutboxRelayWorker(db *gorm.DB, outboxRepo domain.TransactionalOutboxRepository) OutboxRelayWorker {
+	return &OutboxRelayWorkerImpl{
+		db:         db,
+		outboxRepo: outboxRepo,
+	}
+}
+
+func (s *OutboxRelayWorkerImpl) GetUnsentMessages(ctx context.Context, limit int) ([]domain.TransactionalOutbox, error) {
+	return s.outboxRepo.GetUnsent(ctx, limit)
+}
+
+func (s *OutboxRelayWorkerImpl) UpdateOutboxStatus(ctx context.Context, tx *gorm.DB, outboxID string, status domain.OutboxStatus) error {
+	txCtx := ctx
+	if tx != nil {
+		txCtx = context.WithValue(ctx, txKey, tx)
+	}
+	return s.outboxRepo.UpdateStatus(txCtx, outboxID, status)
+}
+
+// ==========================================
+// ReliableMessagingService Implementation
+// ==========================================
+
+type ReliableMessagingService interface {
+	IsEventProcessed(ctx context.Context, eventID string) (bool, error)
+	CommitInboundEvent(ctx context.Context, eventID string, eventType string, payload interface{}) error
+	PushToOutbox(ctx context.Context, tx *gorm.DB, eventType string, aggregateID string, payload interface{}) error
+	ExecuteIdempotentTransaction(ctx context.Context, eventID string, eventType string, payload interface{}, businessRoutine func(ctx context.Context) error) error
+}
+
+type ReliableMessagingServiceImpl struct {
+	db         *gorm.DB
+	inboxRepo  domain.KafkaEventInboxRepository
+	outboxRepo domain.TransactionalOutboxRepository
+}
+
+func NewReliableMessagingService(db *gorm.DB, inboxRepo domain.KafkaEventInboxRepository, outboxRepo domain.TransactionalOutboxRepository) ReliableMessagingService {
+	return &ReliableMessagingServiceImpl{
+		db:         db,
+		inboxRepo:  inboxRepo,
+		outboxRepo: outboxRepo,
+	}
+}
+
+func (s *ReliableMessagingServiceImpl) IsEventProcessed(ctx context.Context, eventID string) (bool, error) {
+	return s.inboxRepo.Exists(ctx, eventID)
+}
+
+func (s *ReliableMessagingServiceImpl) CommitInboundEvent(ctx context.Context, eventID string, eventType string, payload interface{}) error {
+	inbox := &domain.KafkaEventInbox{
+		EventID:          eventID,
+		EventType:        eventType,
+		ProcessedAt:      time.Now(),
+		ProcessingStatus: domain.EventProcessingStatusSUCCESS,
+		Payload:          payload,
+	}
+	return s.inboxRepo.Create(ctx, inbox)
+}
+
+func (s *ReliableMessagingServiceImpl) PushToOutbox(ctx context.Context, tx *gorm.DB, eventType string, aggregateID string, payload interface{}) error {
+	outbox := &domain.TransactionalOutbox{
+		ID:          utils.NewID("out"),
+		EventType:   eventType,
+		AggregateID: aggregateID,
+		Payload:     payload,
+		Status:      domain.OutboxStatusPENDING,
+		CreatedAt:   time.Now(),
+	}
+	txCtx := ctx
+	if tx != nil {
+		txCtx = context.WithValue(ctx, txKey, tx)
+	}
+	return s.outboxRepo.Create(txCtx, outbox)
+}
+
+func (s *ReliableMessagingServiceImpl) ExecuteIdempotentTransaction(ctx context.Context, eventID string, eventType string, payload interface{}, businessRoutine func(ctx context.Context) error) error {
+	processed, err := s.IsEventProcessed(ctx, eventID)
+	if err != nil {
+		return err
+	}
+	if processed {
+		return nil
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		txCtx := context.WithValue(ctx, txKey, tx)
+
+		if err := businessRoutine(txCtx); err != nil {
+			inboxEntry := &domain.KafkaEventInbox{
+				EventID:          eventID,
+				EventType:        eventType,
+				ProcessedAt:      time.Now(),
+				ProcessingStatus: domain.EventProcessingStatusFAILED,
+				Payload:          payload,
+			}
+			_ = s.inboxRepo.Create(txCtx, inboxEntry)
+			return err
+		}
+
+		inboxEntry := &domain.KafkaEventInbox{
+			EventID:          eventID,
+			EventType:        eventType,
+			ProcessedAt:      time.Now(),
+			ProcessingStatus: domain.EventProcessingStatusSUCCESS,
+			Payload:          payload,
+		}
+		return s.inboxRepo.Create(txCtx, inboxEntry)
+	})
 }

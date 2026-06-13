@@ -12,16 +12,18 @@ import (
 )
 
 type KafkaConsumer struct {
-	reader    *kafkago.Reader
-	publisher domain.EventPublisher
-	planSvc   *service.InspectionPlanService
-	execSvc   *service.InspectionExecutionService
+	reader      *kafkago.Reader
+	publisher   domain.EventPublisher
+	reliableSvc service.ReliableMessagingService
+	planSvc     *service.InspectionPlanService
+	execSvc     *service.InspectionExecutionService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
 	publisher domain.EventPublisher,
+	reliableSvc service.ReliableMessagingService,
 	planSvc *service.InspectionPlanService,
 	execSvc *service.InspectionExecutionService,
 ) *KafkaConsumer {
@@ -38,10 +40,11 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:    reader,
-		publisher: publisher,
-		planSvc:   planSvc,
-		execSvc:   execSvc,
+		reader:      reader,
+		publisher:   publisher,
+		reliableSvc: reliableSvc,
+		planSvc:     planSvc,
+		execSvc:     execSvc,
 	}
 }
 
@@ -75,36 +78,56 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 	switch topic {
 	case domain.TopicScmReceiptStaged:
 		var ev struct {
-			EventID         string `json:"event_id"`
-			LegalEntityID   string `json:"legal_entity_id"`
-			PurchaseOrderID string `json:"purchase_order_id"`
-			MaterialID      string `json:"material_id"`
+			EventID         string  `json:"event_id"`
+			LegalEntityID   string  `json:"legal_entity_id"`
+			PurchaseOrderID string  `json:"purchase_order_id"`
+			MaterialID      string  `json:"material_id"`
 			Quantity        float64 `json:"quantity"`
-			Timestamp       string `json:"timestamp"`
+			Timestamp       string  `json:"timestamp"`
 		}
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("[QMS-CONSUMER] SCM goods receipt staged: material %s, quantity %f. Staging quality inspection.", ev.MaterialID, ev.Quantity)
-		// Try to stage inspection under a default plan
-		_, err := c.execSvc.StageInspection(ctx, ev.LegalEntityID, "plan_default", domain.InspectionTriggerTypeINBOUND_RECEIPT, ev.PurchaseOrderID)
-		return err
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("[QMS-CONSUMER] SCM goods receipt staged: material %s, quantity %f. Staging quality inspection.", ev.MaterialID, ev.Quantity)
+			// Try to stage inspection under default plan or find matching plan
+			plan, err := c.planSvc.ConfigurePlan(txCtx, ev.LegalEntityID, ev.MaterialID, "Receiving plan for "+ev.MaterialID)
+			if err != nil {
+				// Plan might already exist, try retrieval
+				plan, err = c.planSvc.GetPlanByMaterial(txCtx, ev.LegalEntityID, ev.MaterialID)
+				if err != nil {
+					// Fallback to plan_default
+					plan = &domain.InspectionPlan{ID: "plan_default"}
+				}
+			}
+			_, err = c.execSvc.StageInspection(txCtx, ev.LegalEntityID, plan.ID, domain.InspectionTriggerTypeINBOUND_RECEIPT, ev.PurchaseOrderID)
+			return err
+		})
 
 	case domain.TopicMfgYieldProduced:
 		var ev struct {
-			EventID       string `json:"event_id"`
-			LegalEntityID string `json:"legal_entity_id"`
-			WorkOrderID   string `json:"work_order_id"`
-			MaterialID    string `json:"material_id"`
+			EventID       string  `json:"event_id"`
+			LegalEntityID string  `json:"legal_entity_id"`
+			WorkOrderID   string  `json:"work_order_id"`
+			MaterialID    string  `json:"material_id"`
 			YieldQuantity float64 `json:"yield_quantity"`
-			Timestamp     string `json:"timestamp"`
+			Timestamp     string  `json:"timestamp"`
 		}
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("[QMS-CONSUMER] Manufacturing yield produced: material %s, quantity %f. Staging quality inspection.", ev.MaterialID, ev.YieldQuantity)
-		_, err := c.execSvc.StageInspection(ctx, ev.LegalEntityID, "plan_default", domain.InspectionTriggerTypePRODUCTION_YIELD, ev.WorkOrderID)
-		return err
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("[QMS-CONSUMER] Manufacturing yield produced: material %s, quantity %f. Staging quality inspection.", ev.MaterialID, ev.YieldQuantity)
+			plan, err := c.planSvc.ConfigurePlan(txCtx, ev.LegalEntityID, ev.MaterialID, "Yield plan for "+ev.MaterialID)
+			if err != nil {
+				plan, err = c.planSvc.GetPlanByMaterial(txCtx, ev.LegalEntityID, ev.MaterialID)
+				if err != nil {
+					plan = &domain.InspectionPlan{ID: "plan_default"}
+				}
+			}
+			_, err = c.execSvc.StageInspection(txCtx, ev.LegalEntityID, plan.ID, domain.InspectionTriggerTypePRODUCTION_YIELD, ev.WorkOrderID)
+			return err
+		})
 
 	case domain.TopicHrEmployeeCreated:
 		var ev struct {
@@ -117,8 +140,10 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("[QMS-CONSUMER] Syncing inspector %s", ev.EmployeeID)
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("[QMS-CONSUMER] Syncing inspector %s", ev.EmployeeID)
+			return nil
+		})
 	}
 
 	return nil

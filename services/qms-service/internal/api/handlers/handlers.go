@@ -3,6 +3,7 @@ package handlers
 import (
 	"erp-system/shared/utils"
 	"net/http"
+	"time"
 
 	"github.com/erp-system/qms-service/internal/business/domain"
 	"github.com/erp-system/qms-service/internal/business/service"
@@ -176,7 +177,30 @@ func (h *QmsHandler) ComputeSpcDistribution(c *gin.Context) {
 		h.resp.BadRequest(c, "plan_id and metric_def_id are required query params")
 		return
 	}
-	summary, err := h.analySvc.ComputeSpcDistribution(c.Request.Context(), planId, metricDefId, domain.TimeRange{})
+
+	startDateStr := c.Query("start_date")
+	endDateStr := c.Query("end_date")
+
+	start := time.Now().AddDate(0, 0, -30) // Default last 30 days
+	end := time.Now()
+
+	if startDateStr != "" {
+		if t, err := time.Parse(time.RFC3339, startDateStr); err == nil {
+			start = t
+		}
+	}
+	if endDateStr != "" {
+		if t, err := time.Parse(time.RFC3339, endDateStr); err == nil {
+			end = t
+		}
+	}
+
+	window := domain.TimeRange{
+		StartDate: start,
+		EndDate:   end,
+	}
+
+	summary, err := h.analySvc.ComputeSpcDistribution(c.Request.Context(), planId, metricDefId, window)
 	if err != nil {
 		h.resp.InternalErr(c, err)
 		return

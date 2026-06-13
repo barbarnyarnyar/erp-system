@@ -2,19 +2,19 @@ package main
 
 import (
 	"context"
-	sharedkafka "erp-system/shared/kafka"
-	"erp-system/shared/utils"
 	"log"
 	"net/http"
 
+	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils"
+	"github.com/gin-gonic/gin"
 	"github.com/erp-system/qms-service/internal/api/handlers"
 	"github.com/erp-system/qms-service/internal/api/routes"
 	"github.com/erp-system/qms-service/internal/business/domain"
 	"github.com/erp-system/qms-service/internal/business/service"
 	"github.com/erp-system/qms-service/internal/config"
 	"github.com/erp-system/qms-service/internal/data/kafka"
-	"github.com/erp-system/qms-service/internal/data/memory"
-	"github.com/gin-gonic/gin"
+	"github.com/erp-system/qms-service/internal/data/sql"
 )
 
 func main() {
@@ -34,37 +34,48 @@ func main() {
 		}
 	}()
 
-	// 3. Initialize Memory Repositories
-	planRepo := memory.NewMemoryInspectionPlanRepo()
-	metricRepo := memory.NewMemoryInspectionMetricDefinitionRepo()
-	qiRepo := memory.NewMemoryQualityInspectionRepo()
-	resRepo := memory.NewMemoryInspectionResultLineRepo()
-	ncRepo := memory.NewMemoryNonConformanceLogRepo()
+	// 3. Initialize GORM Database & SQL Repositories
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 
-	// Seed default inspection plan
-	_ = planRepo.Create(context.Background(), &domain.InspectionPlan{
-		ID:            "plan_default",
-		LegalEntityID: "tenant_default",
-		MaterialID:    "mat_default",
-		PlanName:      "Default Receiving Plan",
-		IsActive:      true,
-		Version:       1,
-	})
+	planRepo := sql.NewSQLInspectionPlanRepository(db)
+	metricRepo := sql.NewSQLInspectionMetricDefinitionRepository(db)
+	qiRepo := sql.NewSQLQualityInspectionRepository(db)
+	resRepo := sql.NewSQLInspectionResultLineRepository(db)
+	ncRepo := sql.NewSQLNonConformanceLogRepository(db)
+	outboxRepo := sql.NewSQLTransactionalOutboxRepository(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepository(db)
+
+	// Seed default inspection plan if it doesn't exist
+	ctx := context.Background()
+	if _, err := planRepo.GetByID(ctx, "plan_default"); err != nil {
+		_ = planRepo.Create(ctx, &domain.InspectionPlan{
+			ID:            "plan_default",
+			LegalEntityID: "tenant_default",
+			MaterialID:    "mat_default",
+			PlanName:      "Default Receiving Plan",
+			IsActive:      true,
+			Version:       1,
+		})
+	}
 
 	// 4. Initialize Services
-	planSvc := service.NewInspectionPlanService(planRepo, metricRepo)
-	ncSvc := service.NewNonConformanceService(ncRepo, planRepo, qiRepo, publisher)
-	execSvc := service.NewInspectionExecutionService(qiRepo, resRepo, planRepo, ncSvc, publisher)
-	analySvc := service.NewQualityAnalyticsService(resRepo)
+	reliableSvc := service.NewReliableMessagingService(db, inboxRepo, outboxRepo)
+	planSvc := service.NewInspectionPlanService(db, planRepo, metricRepo)
+	ncSvc := service.NewNonConformanceService(db, ncRepo, planRepo, qiRepo, reliableSvc)
+	execSvc := service.NewInspectionExecutionService(db, qiRepo, resRepo, planRepo, ncSvc, reliableSvc)
+	analySvc := service.NewQualityAnalyticsService(db, resRepo)
 
 	// 5. Initialize Handlers
 	qmsHandler := handlers.NewQmsHandler(planSvc, execSvc, ncSvc, analySvc, responseHelper)
 
 	// 5b. Start Event Consumer (Kafka)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctxCancel, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, planSvc, execSvc)
-	go consumer.Start(ctx)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, reliableSvc, planSvc, execSvc)
+	go consumer.Start(ctxCancel)
 	defer func() {
 		if err := consumer.Close(); err != nil {
 			log.Printf("Failed to close Kafka consumer: %v", err)

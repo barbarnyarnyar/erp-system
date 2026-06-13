@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/erp-system/qms-service/internal/business/domain"
 )
@@ -165,6 +166,18 @@ func (r *MemoryInspectionResultLineRepo) ListByInspectionID(ctx context.Context,
 	list := make([]domain.InspectionResultLine, 0)
 	for _, irl := range r.data {
 		if irl.InspectionID == inspectionID {
+			list = append(list, irl)
+		}
+	}
+	return list, nil
+}
+
+func (r *MemoryInspectionResultLineRepo) ListByMetricAndDateRange(ctx context.Context, metricDefID string, start, end time.Time) ([]domain.InspectionResultLine, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	list := make([]domain.InspectionResultLine, 0)
+	for _, irl := range r.data {
+		if irl.MetricDefinitionID == metricDefID && (irl.CreatedAt.After(start) || irl.CreatedAt.Equal(start)) && (irl.CreatedAt.Before(end) || irl.CreatedAt.Equal(end)) {
 			list = append(list, irl)
 		}
 	}

@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type EventPublisher interface {
 	Publish(ctx context.Context, topic string, key string, payload interface{}) error
@@ -30,6 +33,7 @@ type QualityInspectionRepository interface {
 type InspectionResultLineRepository interface {
 	Create(ctx context.Context, irl *InspectionResultLine) error
 	ListByInspectionID(ctx context.Context, inspectionID string) ([]InspectionResultLine, error)
+	ListByMetricAndDateRange(ctx context.Context, metricDefID string, start, end time.Time) ([]InspectionResultLine, error)
 }
 
 type NonConformanceLogRepository interface {

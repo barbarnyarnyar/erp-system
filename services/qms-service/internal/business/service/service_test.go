@@ -3,26 +3,51 @@ package service_test
 import (
 	"context"
 	"testing"
+	"time"
 
-	sharedtesting "erp-system/shared/testing"
 	"github.com/erp-system/qms-service/internal/business/domain"
 	"github.com/erp-system/qms-service/internal/business/service"
-	"github.com/erp-system/qms-service/internal/data/memory"
+	"github.com/erp-system/qms-service/internal/data/sql"
 	"github.com/shopspring/decimal"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestQmsService(t *testing.T) {
-	planRepo := memory.NewMemoryInspectionPlanRepo()
-	metricRepo := memory.NewMemoryInspectionMetricDefinitionRepo()
-	qiRepo := memory.NewMemoryQualityInspectionRepo()
-	resRepo := memory.NewMemoryInspectionResultLineRepo()
-	ncRepo := memory.NewMemoryNonConformanceLogRepo()
-	publisher := &sharedtesting.MockPublisher{}
+	// Initialize an in-memory SQLite database for test stability and isolation
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open sqlite database: %v", err)
+	}
 
-	planSvc := service.NewInspectionPlanService(planRepo, metricRepo)
-	ncSvc := service.NewNonConformanceService(ncRepo, planRepo, qiRepo, publisher)
-	execSvc := service.NewInspectionExecutionService(qiRepo, resRepo, planRepo, ncSvc, publisher)
-	analySvc := service.NewQualityAnalyticsService(resRepo)
+	// AutoMigrate all domain models matching QMS
+	err = db.AutoMigrate(
+		&sql.InspectionPlan{},
+		&sql.InspectionMetricDefinition{},
+		&sql.QualityInspection{},
+		&sql.InspectionResultLine{},
+		&sql.NonConformanceLog{},
+		&sql.TransactionalOutbox{},
+		&sql.KafkaEventInbox{},
+	)
+	if err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+
+	// Instantiate repositories wrapping the GORM connection
+	planRepo := sql.NewSQLInspectionPlanRepository(db)
+	metricRepo := sql.NewSQLInspectionMetricDefinitionRepository(db)
+	qiRepo := sql.NewSQLQualityInspectionRepository(db)
+	resRepo := sql.NewSQLInspectionResultLineRepository(db)
+	ncRepo := sql.NewSQLNonConformanceLogRepository(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepository(db)
+	outboxRepo := sql.NewSQLTransactionalOutboxRepository(db)
+
+	reliableSvc := service.NewReliableMessagingService(db, inboxRepo, outboxRepo)
+	planSvc := service.NewInspectionPlanService(db, planRepo, metricRepo)
+	ncSvc := service.NewNonConformanceService(db, ncRepo, planRepo, qiRepo, reliableSvc)
+	execSvc := service.NewInspectionExecutionService(db, qiRepo, resRepo, planRepo, ncSvc, reliableSvc)
+	analySvc := service.NewQualityAnalyticsService(db, resRepo)
 
 	ctx := context.Background()
 
@@ -97,11 +122,19 @@ func TestQmsService(t *testing.T) {
 	}
 
 	// 8. Test ComputeSpcDistribution
-	analytics, err := analySvc.ComputeSpcDistribution(ctx, plan.ID, metric.ID, domain.TimeRange{})
+	// Create a window that includes the current timestamp
+	tr := domain.TimeRange{
+		StartDate: time.Now().Add(-24 * time.Hour),
+		EndDate:   time.Now().Add(24 * time.Hour),
+	}
+	analytics, err := analySvc.ComputeSpcDistribution(ctx, plan.ID, metric.ID, tr)
 	if err != nil {
 		t.Fatalf("failed to compute analytics: %v", err)
 	}
 	if analytics.PlanID != plan.ID {
 		t.Errorf("expected plan %s, got %s", plan.ID, analytics.PlanID)
+	}
+	if analytics.SampleSize != 1 {
+		t.Errorf("expected sample size 1, got %d", analytics.SampleSize)
 	}
 }
