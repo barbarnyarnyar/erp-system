@@ -1,9 +1,7 @@
 package main
 
 import (
-	"erp-system/shared/utils"
 	"context"
-	sharedkafka "erp-system/shared/kafka"
 	"log"
 	"net/http"
 
@@ -12,7 +10,9 @@ import (
 	"github.com/erp-system/hr-service/internal/business/service"
 	"github.com/erp-system/hr-service/internal/config"
 	"github.com/erp-system/hr-service/internal/data/kafka"
-	"github.com/erp-system/hr-service/internal/data/memory"
+	"github.com/erp-system/hr-service/internal/data/sql"
+	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,8 +23,6 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 	utils.InitLogger("hr-service")
-	responseHelper := utils.NewResponseHelper("hr-service")
-
 
 	// 2. Initialize Event Publisher (Kafka)
 	publisher := sharedkafka.NewPublisher(cfg.Kafka.Brokers)
@@ -34,54 +32,43 @@ func main() {
 		}
 	}()
 
-	// 3. Initialize Memory Repositories
-	empRepo := memory.NewMemoryEmployeeRepo()
-	deptRepo := memory.NewMemoryDepartmentRepo()
-	posRepo := memory.NewMemoryPositionRepo()
-	payrollRepo := memory.NewMemoryPayrollRecordRepo()
-	deductionRepo := memory.NewMemoryPayrollDeductionRepo()
-	timesheetRepo := memory.NewMemoryAttendanceEntryRepo()
-	leaveRepo := memory.NewMemoryLeaveRequestRepo()
-	leaveBalanceRepo := memory.NewMemoryLeaveBalanceRepo()
-	jobPostingRepo := memory.NewMemoryJobPostingRepo()
-	jobAppRepo := memory.NewMemoryJobApplicationRepo()
-	perfRepo := memory.NewMemoryPerformanceReviewRepo()
-	trainingRepo := memory.NewMemoryTrainingProgramRepo()
-	trainingEnrollmentRepo := memory.NewMemoryTrainingEnrollmentRepo()
-	docRepo := memory.NewMemoryEmployeeDocumentRepo()
-	expenseClaimRepo := memory.NewMemoryExpenseClaimRepo()
-	expenseClaimLineRepo := memory.NewMemoryExpenseClaimLineRepo()
-	compHistoryRepo := memory.NewMemoryEmployeeCompensationHistoryRepo()
-	posHistoryRepo := memory.NewMemoryPositionHistoryRepo()
-	deptHistoryRepo := memory.NewMemoryDepartmentHistoryRepo()
+	// 3. Initialize GORM Database & SQL Repositories
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize GORM database: %v", err)
+	}
+
+	empRepo := sql.NewSQLEmployeeMasterRepository(db)
+	deptRepo := sql.NewSQLDepartmentRepository(db)
+	payrollRepo := sql.NewSQLPayrollRunRepository(db)
+	expenseClaimRepo := sql.NewSQLExpenseClaimRepository(db)
+	expenseClaimLineRepo := sql.NewSQLExpenseClaimLineRepository(db)
+	outboxRepo := sql.NewSQLTransactionalOutboxRepository(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepository(db)
 
 	// 4. Initialize Services
-	empSvc := service.NewEmployeeManagementService(empRepo, expenseClaimRepo, expenseClaimLineRepo, compHistoryRepo, posHistoryRepo, deptHistoryRepo, deptRepo, posRepo, publisher)
-	payrollSvc := service.NewPayrollService(payrollRepo, deductionRepo, empRepo, publisher)
-	timesheetSvc := service.NewTimeAttendanceService(timesheetRepo, publisher)
-	leaveSvc := service.NewLeaveManagementService(leaveRepo, leaveBalanceRepo, publisher)
-	recruitmentSvc := service.NewRecruitmentService(jobPostingRepo, jobAppRepo)
-	perfSvc := service.NewPerformanceService(perfRepo, publisher)
-	trainingSvc := service.NewTrainingService(trainingRepo, trainingEnrollmentRepo, publisher)
-	docSvc := service.NewEmployeeDocumentService(docRepo)
-	reportSvc := service.NewReportService(empRepo, payrollRepo, timesheetRepo)
+	empSvc := service.NewEmployeeService(db, empRepo, deptRepo, outboxRepo)
+	payrollSvc := service.NewPayrollService(db, payrollRepo, empRepo, outboxRepo)
+	expenseSvc := service.NewExpenseService(db, expenseClaimRepo, expenseClaimLineRepo, empRepo, outboxRepo)
+	reliableSvc := service.NewReliableMessagingService(db, inboxRepo)
 
 	// 5. Initialize Handlers
-	empHandler := handlers.NewEmployeeHandler(empSvc, responseHelper)
-	payrollHandler := handlers.NewPayrollHandler(payrollSvc, responseHelper)
-	timesheetHandler := handlers.NewTimesheetHandler(timesheetSvc, responseHelper)
-	leaveHandler := handlers.NewLeaveHandler(leaveSvc, responseHelper)
-	recruitmentHandler := handlers.NewRecruitmentHandler(recruitmentSvc, responseHelper)
-	perfHandler := handlers.NewPerformanceHandler(perfSvc, responseHelper)
-	trainingHandler := handlers.NewTrainingHandler(trainingSvc, responseHelper)
-	docHandler := handlers.NewDocumentHandler(docSvc, responseHelper)
-	reportHandler := handlers.NewReportHandler(reportSvc, responseHelper)
+	hrHandler := handlers.NewHrHandler(
+		empSvc,
+		payrollSvc,
+		expenseSvc,
+		deptRepo,
+		empRepo,
+		payrollRepo,
+		expenseClaimRepo,
+		expenseClaimLineRepo,
+	)
 
 	// 5b. Initialize Event Consumer (Kafka)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, trainingSvc)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, expenseSvc, reliableSvc)
 	go consumer.Start(ctx)
 	defer func() {
 		if err := consumer.Close(); err != nil {
@@ -102,18 +89,7 @@ func main() {
 	})
 
 	// Register API Routes
-	routes.RegisterRoutes(
-		r,
-		empHandler,
-		payrollHandler,
-		timesheetHandler,
-		leaveHandler,
-		recruitmentHandler,
-		perfHandler,
-		trainingHandler,
-		docHandler,
-		reportHandler,
-	)
+	routes.RegisterRoutes(r, hrHandler)
 
 	// 7. Start Server
 	log.Printf("Starting hr-service on port %s in %s mode", cfg.Server.Port, cfg.Server.Env)

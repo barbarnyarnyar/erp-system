@@ -20,29 +20,23 @@ type DeadLetterMessage struct {
 	ServiceName   string      `json:"service_name"`
 }
 
-const (
-	TopicMfgProductionScheduledDeadLetter = domain.TopicMfgProductionScheduled + ".dead-letter"
-	TopicScmTrainingRequiredDeadLetter    = domain.TopicScmTrainingRequired + ".dead-letter"
-)
-
 type KafkaConsumer struct {
-	reader    *kafka.Reader
-	publisher domain.EventPublisher
-	training  *service.TrainingService
+	reader      *kafka.Reader
+	publisher   domain.EventPublisher
+	expenseSvc  service.ExpenseService
+	reliableSvc service.ReliableMessagingService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
 	publisher domain.EventPublisher,
-	training *service.TrainingService,
+	expenseSvc service.ExpenseService,
+	reliableSvc service.ReliableMessagingService,
 ) *KafkaConsumer {
 	topics := []string{
-		domain.TopicPrjProjectCreated,
-		domain.TopicPrjTaskAssigned,
-		domain.TopicFinBudgetAllocated,
-		domain.TopicMfgProductionScheduled,
-		domain.TopicScmTrainingRequired,
+		domain.TopicPrjTimeLogged,
+		domain.TopicFmVendorPaid,
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -52,9 +46,10 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:    reader,
-		publisher: publisher,
-		training:  training,
+		reader:      reader,
+		publisher:   publisher,
+		expenseSvc:  expenseSvc,
+		reliableSvc: reliableSvc,
 	}
 }
 
@@ -104,51 +99,27 @@ func (c *KafkaConsumer) publishToDLQ(ctx context.Context, topic string, key stri
 
 func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value []byte) error {
 	switch topic {
-	case domain.TopicPrjProjectCreated:
-		var ev domain.ProjectCreatedEvent
+	case domain.TopicPrjTimeLogged:
+		var ev domain.PrjTimeLoggedEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("Processing Project Created: assigning resource buffer for Project %s (%s)", ev.ProjectID, ev.Name)
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, domain.TopicPrjTimeLogged, ev, func(txCtx context.Context) error {
+			log.Printf("[Idempotent] Processing PrjTimeLoggedEvent: Contractor %s, Hours Spent: %s, Internal Billing Rate: %s",
+				ev.ContractorID, ev.HoursSpent.String(), ev.InternalBillingRate.String())
+			return nil
+		})
 
-	case domain.TopicPrjTaskAssigned:
-		var ev domain.TaskAssignedEvent
+	case domain.TopicFmVendorPaid:
+		var ev domain.FmVendorPaidEvent
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("Processing Task Assigned: updating employee workload for Employee %s, Task %s, Workload %d hours", ev.EmployeeID, ev.TaskID, ev.Workload)
-		return nil
-
-	case domain.TopicFinBudgetAllocated:
-		var ev domain.BudgetAllocatedEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Budget Allocated: updating salary budgets for Dept %s, Allocated Amount: %s, Period: %s", ev.DepartmentID, ev.Amount.String(), ev.Period)
-		return nil
-
-	case domain.TopicMfgProductionScheduled:
-		var ev domain.ProductionScheduledEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing Production Scheduled: scheduling workforce for workstation %s, required staff: %d", ev.Workstation, ev.RequiredStaff)
-		return nil
-
-	case domain.TopicScmTrainingRequired:
-		var ev domain.SCMTrainingRequiredEvent
-		if err := json.Unmarshal(value, &ev); err != nil {
-			return err
-		}
-		log.Printf("Processing SCM Training Required: auto-scheduling training program for topic: %s, deadline: %s", ev.Topic, ev.Deadline.String())
-
-		title := "SCM Required Training: " + ev.Topic
-		description := "Automated mandatory training scheduled due to supply chain requirement for department " + ev.DepartmentID
-		trainer := "SCM Technical Specialist"
-
-		_, err := c.training.CreateTrainingProgram(ctx, title, description, trainer, time.Now(), ev.Deadline)
-		return err
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, domain.TopicFmVendorPaid, ev, func(txCtx context.Context) error {
+			log.Printf("[Idempotent] Processing FmVendorPaidEvent: Bill %s, Target Document (Expense Claim) %s Paid",
+				ev.BillID, ev.TargetDocumentID)
+			return c.expenseSvc.ClearClaimForPayment(txCtx, ev.TargetDocumentID)
+		})
 	}
 
 	return nil

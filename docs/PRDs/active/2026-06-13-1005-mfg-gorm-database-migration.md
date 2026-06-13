@@ -20,9 +20,9 @@ Currently, the Manufacturing service (`mfg-service` / `m-service`) operates on v
 
 ## 2. Technical Specification & Scope
 
-### A. Manufacturing Service Database Schema (13 Entities)
+### A. Manufacturing Service Database Schema (8 CDD Entities)
 We will define GORM mappings and database repository adapters for the following entities:
-* `BillOfMaterials`, `BOMComponent`, `WorkCenter`, `RoutingOperation`, `ProductionOrder`, `WorkOrder`, `LaborReport`, `MachineLog`, `QualityInspection`, `NonConformance`, `Equipment`, `MaintenanceOrder`, `CostingRecord`.
+* `WorkCenter`, `RoutingStation`, `WorkOrder`, `WorkOrderRoutingState`, `MaterialConsumptionLog`, `ProductionYieldLog`, `TransactionalOutbox`, `KafkaEventInbox`.
 
 ---
 
@@ -33,13 +33,13 @@ We will define GORM mappings and database repository adapters for the following 
 - [x] Create `services/mfg-service/internal/data/sql/models.go` (GORM entity model mappings).
 
 ### Phase 2: SQL Repositories & main.go Wiring
-- [x] Create `services/mfg-service/internal/data/sql/sql_repos.go` (13 repository adapters).
+- [x] Create `services/mfg-service/internal/data/sql/sql_repos.go` (8 repository adapters).
 - [x] Wire the GORM connection and repositories into `services/mfg-service/cmd/main.go`.
 - [x] Verify compilation of the manufacturing service with database repositories.
 
 ---
 
 ## 4. Definition of Done
-- [x] All 13 Manufacturing repositories are implemented in SQL using GORM.
+- [x] All 8 Manufacturing repositories are implemented in SQL using GORM.
 - [x] The service initializes PostgreSQL database on startup using GORM.
 - [x] The service compiles and runs cleanly.

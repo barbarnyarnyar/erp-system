@@ -57,6 +57,6 @@ The Product Lifecycle Management (PLM) module operates as the absolute design au
 ---
 
 ## 4. Definition of Done
-- [ ] `plm.cdd` fully declares the ingress and egress event streams.
-- [ ] PLM consumer processes QMS and EAM events without thread locks or failures.
-- [ ] Go models compile cleanly and `go test ./...` passes successfully.
+- [x] `plm.cdd` fully declares the ingress and egress event streams.
+- [x] PLM consumer processes QMS and EAM events without thread locks or failures.
+- [x] Go models compile cleanly and `go test ./...` passes successfully.
