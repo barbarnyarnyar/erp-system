@@ -105,8 +105,8 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 			return err
 		}
 		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, domain.TopicPrjTimeLogged, ev, func(txCtx context.Context) error {
-			log.Printf("[Idempotent] Processing PrjTimeLoggedEvent: Contractor %s, Hours Spent: %s, Internal Billing Rate: %s",
-				ev.ContractorID, ev.HoursSpent.String(), ev.InternalBillingRate.String())
+			log.Printf("[Idempotent] Processing PrjTimeLoggedEvent: Project %s, Total Hours: %s, Number of Logs: %d",
+				ev.ProjectID, ev.TotalAccumulatedHours.String(), len(ev.Details))
 			return nil
 		})
 

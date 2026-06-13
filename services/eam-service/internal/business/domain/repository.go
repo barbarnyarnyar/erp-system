@@ -19,6 +19,7 @@ type EquipmentRepository interface {
 	List(ctx context.Context) ([]Equipment, error)
 	Update(ctx context.Context, eq *Equipment) error
 	ListByTenant(ctx context.Context, legalEntityId string) ([]Equipment, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type MaintenanceWorkOrderRepository interface {
@@ -39,15 +40,18 @@ type TelemetryIngestBufferRepository interface {
 	Create(ctx context.Context, tb *TelemetryIngestBuffer) error
 	List(ctx context.Context) ([]TelemetryIngestBuffer, error)
 	DeleteBatch(ctx context.Context, ids []string) error
+	LockAndList(ctx context.Context, limit int) ([]TelemetryIngestBuffer, error)
 }
 
 type TransactionalOutboxRepository interface {
 	Create(ctx context.Context, outbox *TransactionalOutbox) error
+	GetByID(ctx context.Context, id string) (*TransactionalOutbox, error)
 	GetUnsent(ctx context.Context, limit int) ([]TransactionalOutbox, error)
-	UpdateStatus(ctx context.Context, id string, status OutboxStatus) error
+	Update(ctx context.Context, outbox *TransactionalOutbox) error
 }
 
 type KafkaEventInboxRepository interface {
 	Create(ctx context.Context, inbox *KafkaEventInbox) error
-	Exists(ctx context.Context, eventID string) (bool, error)
+	GetByID(ctx context.Context, eventID string) (*KafkaEventInbox, error)
+	Update(ctx context.Context, inbox *KafkaEventInbox) error
 }

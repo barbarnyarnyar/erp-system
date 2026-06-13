@@ -717,6 +717,71 @@ Projects, Work Breakdown Structure (WBS), and timesheet validation. Port **8005*
 
 ---
 
+## [Enterprise Asset Management](enterprise-asset-management/)
+
+Physical plant locations, equipment registry, soft deletes, reactive and preventative maintenance schedules, and machine telemetry. Port **8007** (docker-compose: 8007).
+
+### Domain Models (7 types)
+
+| Model | Key Fields | Description |
+|-------|------------|-------------|
+| `Facility` | ID, LegalEntityID, Name, PhysicalAddress, IsActive | Plant location metadata |
+| `Equipment` | ID, LegalEntityID, FacilityID, AssetTag, Name, Manufacturer, SerialNumber, FinancialAssetID, Status, InstallationDate, TechnicalSpecifications, DeletedAt | Plant machinery with soft-delete support |
+| `MaintenanceWorkOrder` | ID, LegalEntityID, EquipmentID, TicketNumber, Title, Description, Category, Priority, Status, ReportedByHrID, AssignedTechHrID, ReportedAt, StartedAt, ResolvedAt, ResolutionNotes | Work orders for maintenance |
+| `PreventativeSchedule` | ID, LegalEntityID, EquipmentID, Title, InstructionSet, IntervalDays, LastExecutedAt, NextDueDate, IsActive | Preventative maintenance rules |
+| `TelemetryIngestBuffer` | ID, LegalEntityID, EquipmentID, SensorKey, ReadingValue, RecordedAt | Staged telemetry metrics |
+| `TransactionalOutbox` | ID, EventType, AggregateID, Payload, Status, CreatedAt | Outbox event delivery |
+| `KafkaEventInbox` | EventID, EventType, ProcessedAt, ProcessingStatus, Payload | Idempotent event receiver |
+
+### Business Services (5)
+
+| Service | Key Responsibilities |
+|---------|---------------------|
+| `EquipmentService` | Infrastructure config, plant asset registry, and manual status override |
+| `MaintenanceService` | Incident ticketing, tech routing, PM scheduling loop, and spares requests |
+| `TelemetryIngestionService` | Sensor metrics staging and skipped-lock transaction flushes |
+| `OutboxRelayWorker` | Dispatch outbox events to Kafka |
+| `ReliableMessagingService` | Idempotent transaction receiver |
+
+### API Endpoints (11 routes)
+
+**Infrastructure & Registry:**
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/eam/facilities` | Create new facility |
+| POST | `/api/v1/eam/equipment` | Register equipment |
+| GET | `/api/v1/eam/equipment` | List tenant equipment |
+| PUT | `/api/v1/eam/equipment/:id/status` | Override equipment status |
+| PUT | `/api/v1/eam/equipment/:id/finance-asset` | Associate financial asset |
+
+**Maintenance Work Orders:**
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/eam/work-orders` | File incident ticket |
+| PUT | `/api/v1/eam/work-orders/:id/route` | Assign technician |
+| POST | `/api/v1/eam/work-orders/:id/start` | Start work order |
+| POST | `/api/v1/eam/work-orders/:id/resolve` | Resolve work order |
+
+**Telemetry Logs:**
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/eam/telemetry/sensor-metrics` | Queue telemetry logs |
+| POST | `/api/v1/eam/telemetry/flush` | Flush telemetry logs |
+
+### Kafka Events Published (3 topics)
+
+`eam.machine.offline`, `eam.machine.online`, `eam.workorder.spares_requested`
+
+### Kafka Events Consumed (3 topics)
+
+| Topic | Publisher | Logic |
+|-------|-----------|-------|
+| `scm.asset.received` | SCM | Auto-registers equipment inside EAM |
+| `fm.asset.capitalized` | FM | Links equipment to financial capital asset |
+| `hr.employee.created` | HR | Syncs technician profile |
+
+---
+
 ## Module Integration Map
 
 ### Cross-Service Event Flows

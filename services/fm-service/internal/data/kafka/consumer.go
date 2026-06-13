@@ -461,23 +461,28 @@ func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []
 			return err
 		}
 
-		val := ev.HoursLogged.Mul(ev.BillableRate)
-		lines := []domain.UniversalJournalLine{
-			{
-				AccountID:             unbilledAcc.ID,
-				AmountFunctional:      val,
-				AmountTransactional:   val,
-				CurrencyTransactional: "USD",
-			},
-			{
-				AccountID:             revAcc.ID,
-				AmountFunctional:      val.Neg(),
-				AmountTransactional:   val.Neg(),
-				CurrencyTransactional: "USD",
-			},
+		for _, detail := range ev.Details {
+			val := detail.HoursSpent.Mul(detail.BillingRate)
+			lines := []domain.UniversalJournalLine{
+				{
+					AccountID:             unbilledAcc.ID,
+					AmountFunctional:      val,
+					AmountTransactional:   val,
+					CurrencyTransactional: "USD",
+				},
+				{
+					AccountID:             revAcc.ID,
+					AmountFunctional:      val.Neg(),
+					AmountTransactional:   val.Neg(),
+					CurrencyTransactional: "USD",
+				},
+			}
+			_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "PRJ", "PRJ-TIME-"+detail.TimeLogID, ev.Timestamp, lines)
+			if err != nil {
+				return err
+			}
 		}
-		_, err = c.gl.CreateJournalEntry(ctx, defaultLegalEntityID, "PRJ", "PRJ-TIME-"+ev.TimeLogID, ev.Timestamp, lines)
-		return err
+		return nil
 
 	case domain.TopicPrjExpenseIncurred:
 		var ev domain.ProjectExpenseIncurredEvent

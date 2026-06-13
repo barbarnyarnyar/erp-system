@@ -75,7 +75,7 @@ func (h *EamHandler) UpdateEquipmentStatus(c *gin.Context) {
 		h.resp.BadRequest(c, err.Error())
 		return
 	}
-	eq, err := h.eqSvc.UpdateEquipmentStatus(c.Request.Context(), id, req.Status)
+	eq, err := h.eqSvc.UpdateEquipmentStatus(c.Request.Context(), nil, id, req.Status)
 	if err != nil {
 		h.resp.InternalErr(c, err)
 		return
@@ -208,7 +208,7 @@ func (h *EamHandler) FlushStagedMetrics(c *gin.Context) {
 	if req.Limit <= 0 {
 		req.Limit = 100
 	}
-	ids, err := h.telSvc.FlushStagedMetricsToTimeSeriesStore(c.Request.Context(), req.Limit)
+	ids, err := h.telSvc.FlushStagedMetricsToTimeSeriesStore(c.Request.Context(), nil, req.Limit)
 	if err != nil {
 		h.resp.InternalErr(c, err)
 		return

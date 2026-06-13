@@ -184,13 +184,22 @@ type ProjectCreatedEvent struct {
 }
 
 // TimeLoggedEvent from Project Module
+type TimeLogPayload struct {
+	TimeLogID   string          `json:"time_log_id"`
+	WbsNodeID   string          `json:"wbs_node_id"`
+	EmployeeID  string          `json:"employee_id"`
+	HoursSpent  decimal.Decimal `json:"hours_spent"`
+	BillingRate decimal.Decimal `json:"billing_rate"`
+}
+
 type TimeLoggedEvent struct {
-	TimeLogID    string          `json:"time_log_id"`
-	ProjectID    string          `json:"project_id"`
-	EmployeeID   string          `json:"employee_id"`
-	HoursLogged  decimal.Decimal `json:"hours_logged"`
-	BillableRate decimal.Decimal `json:"billable_rate"`
-	Timestamp    time.Time       `json:"timestamp"`
+	EventID               string           `json:"event_id"`
+	LegalEntityID         string           `json:"legal_entity_id"`
+	ProjectID             string           `json:"project_id"`
+	CustomerID            string           `json:"customer_id"`
+	TotalAccumulatedHours decimal.Decimal  `json:"total_accumulated_hours"`
+	Details               []TimeLogPayload `json:"details"`
+	Timestamp             time.Time        `json:"timestamp"`
 }
 
 // ProjectExpenseIncurredEvent from Project Module

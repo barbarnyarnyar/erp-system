@@ -12,16 +12,18 @@ import (
 )
 
 type KafkaConsumer struct {
-	reader    *kafkago.Reader
-	publisher domain.EventPublisher
-	eqSvc     *service.EquipmentService
-	maintSvc  *service.MaintenanceService
+	reader      *kafkago.Reader
+	publisher   domain.EventPublisher
+	reliableSvc service.ReliableMessagingService
+	eqSvc       *service.EquipmentService
+	maintSvc    *service.MaintenanceService
 }
 
 func NewKafkaConsumer(
 	brokers []string,
 	groupID string,
 	publisher domain.EventPublisher,
+	reliableSvc service.ReliableMessagingService,
 	eqSvc *service.EquipmentService,
 	maintSvc *service.MaintenanceService,
 ) *KafkaConsumer {
@@ -38,10 +40,11 @@ func NewKafkaConsumer(
 	})
 
 	return &KafkaConsumer{
-		reader:    reader,
-		publisher: publisher,
-		eqSvc:     eqSvc,
-		maintSvc:  maintSvc,
+		reader:      reader,
+		publisher:   publisher,
+		reliableSvc: reliableSvc,
+		eqSvc:       eqSvc,
+		maintSvc:    maintSvc,
 	}
 }
 
@@ -84,10 +87,12 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("[EAM-CONSUMER] Auto-registering equipment for received asset: Serial: %s, Manufacturer: %s", ev.SerialNumber, ev.Manufacturer)
-		// Auto register under default/dummy facility
-		_, err := c.eqSvc.RegisterEquipment(ctx, ev.LegalEntityID, "fac_default", "TAG-"+ev.SerialNumber[:6], "Asset "+ev.SerialNumber, ev.SerialNumber)
-		return err
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("[EAM-CONSUMER] Auto-registering equipment for received asset: Serial: %s, Manufacturer: %s", ev.SerialNumber, ev.Manufacturer)
+			// Auto register under default/dummy facility
+			_, err := c.eqSvc.RegisterEquipment(txCtx, ev.LegalEntityID, "fac_default", "TAG-"+ev.SerialNumber[:6], "Asset "+ev.SerialNumber, ev.SerialNumber)
+			return err
+		})
 
 	case domain.TopicFmAssetCapitalized:
 		var ev struct {
@@ -100,9 +105,23 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("[EAM-CONSUMER] Linking financial asset %s to equipment with tag %s", ev.FinancialAssetID, ev.AssetTag)
-		// In memory test, find equipment by tag and associate
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("[EAM-CONSUMER] Linking financial asset %s to equipment with tag %s", ev.FinancialAssetID, ev.AssetTag)
+			all, err := c.eqSvc.FetchTargetTenantAssets(txCtx, ev.LegalEntityID, domain.EquipmentStatusONLINE)
+			if err != nil {
+				allOffline, _ := c.eqSvc.FetchTargetTenantAssets(txCtx, ev.LegalEntityID, domain.EquipmentStatusOFFLINE_BROKEN)
+				all = append(all, allOffline...)
+				allInMaint, _ := c.eqSvc.FetchTargetTenantAssets(txCtx, ev.LegalEntityID, domain.EquipmentStatusIN_MAINTENANCE)
+				all = append(all, allInMaint...)
+			}
+			for _, eq := range all {
+				if eq.AssetTag == ev.AssetTag {
+					_, err = c.eqSvc.AssociateFinancialAsset(txCtx, eq.ID, ev.FinancialAssetID)
+					return err
+				}
+			}
+			return nil
+		})
 
 	case domain.TopicHrEmployeeCreated:
 		var ev struct {
@@ -115,8 +134,10 @@ func (c *KafkaConsumer) handleMessage(ctx context.Context, topic string, value [
 		if err := json.Unmarshal(value, &ev); err != nil {
 			return err
 		}
-		log.Printf("[EAM-CONSUMER] Sycing employee %s as EAM Technician", ev.EmployeeID)
-		return nil
+		return c.reliableSvc.ExecuteIdempotentTransaction(ctx, ev.EventID, topic, ev, func(txCtx context.Context) error {
+			log.Printf("[EAM-CONSUMER] Syncing employee %s as EAM Technician", ev.EmployeeID)
+			return nil
+		})
 	}
 
 	return nil

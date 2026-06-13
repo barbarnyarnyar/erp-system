@@ -2,18 +2,18 @@ package main
 
 import (
 	"context"
-	sharedkafka "erp-system/shared/kafka"
-	"erp-system/shared/utils"
 	"log"
 	"net/http"
 
+	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils"
 	"github.com/erp-system/eam-service/internal/api/handlers"
 	"github.com/erp-system/eam-service/internal/api/routes"
 	"github.com/erp-system/eam-service/internal/business/domain"
 	"github.com/erp-system/eam-service/internal/business/service"
 	"github.com/erp-system/eam-service/internal/config"
 	"github.com/erp-system/eam-service/internal/data/kafka"
-	"github.com/erp-system/eam-service/internal/data/memory"
+	"github.com/erp-system/eam-service/internal/data/sql"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,35 +34,46 @@ func main() {
 		}
 	}()
 
-	// 3. Initialize Memory Repositories
-	facRepo := memory.NewMemoryFacilityRepo()
-	eqRepo := memory.NewMemoryEquipmentRepo()
-	woRepo := memory.NewMemoryMaintenanceWorkOrderRepo()
-	schRepo := memory.NewMemoryPreventativeScheduleRepo()
-	bufRepo := memory.NewMemoryTelemetryIngestBufferRepo()
+	// 3. Initialize GORM Database & SQL Repositories
+	db, err := sql.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 
-	// Seed default facility
-	_ = facRepo.Create(context.Background(), &domain.Facility{
-		ID:              "fac_default",
-		LegalEntityID:   "tenant_default",
-		Name:            "Default Facility",
-		PhysicalAddress: "123 Main St",
-		IsActive:        true,
-	})
+	facRepo := sql.NewSQLFacilityRepository(db)
+	eqRepo := sql.NewSQLEquipmentRepository(db)
+	woRepo := sql.NewSQLMaintenanceWorkOrderRepository(db)
+	schRepo := sql.NewSQLPreventativeScheduleRepository(db)
+	bufRepo := sql.NewSQLTelemetryIngestBufferRepository(db)
+	outboxRepo := sql.NewSQLTransactionalOutboxRepository(db)
+	inboxRepo := sql.NewSQLKafkaEventInboxRepository(db)
+
+	// Seed default facility if it doesn't exist
+	ctx := context.Background()
+	if _, err := facRepo.GetByID(ctx, "fac_default"); err != nil {
+		_ = facRepo.Create(ctx, &domain.Facility{
+			ID:              "fac_default",
+			LegalEntityID:   "tenant_default",
+			Name:            "Default Facility",
+			PhysicalAddress: "123 Main St",
+			IsActive:        true,
+		})
+	}
 
 	// 4. Initialize Services
-	eqSvc := service.NewEquipmentService(facRepo, eqRepo, publisher)
-	maintSvc := service.NewMaintenanceService(woRepo, eqRepo, schRepo, publisher)
-	telSvc := service.NewTelemetryIngestionService(bufRepo)
+	reliableSvc := service.NewReliableMessagingService(db, inboxRepo, outboxRepo)
+	eqSvc := service.NewEquipmentService(db, facRepo, eqRepo, reliableSvc)
+	maintSvc := service.NewMaintenanceService(db, woRepo, eqRepo, schRepo, reliableSvc)
+	telSvc := service.NewTelemetryIngestionService(db, bufRepo)
 
 	// 5. Initialize Handlers
 	eamHandler := handlers.NewEamHandler(eqSvc, maintSvc, telSvc, responseHelper)
 
 	// 5b. Start Event Consumer (Kafka)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctxCancel, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, eqSvc, maintSvc)
-	go consumer.Start(ctx)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, publisher, reliableSvc, eqSvc, maintSvc)
+	go consumer.Start(ctxCancel)
 	defer func() {
 		if err := consumer.Close(); err != nil {
 			log.Printf("Failed to close Kafka consumer: %v", err)
