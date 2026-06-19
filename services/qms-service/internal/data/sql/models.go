@@ -10,9 +10,9 @@ import (
 
 // 1. InspectionPlan
 type InspectionPlan struct {
-	ID            string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string    `gorm:"type:uuid;not null;uniqueIndex:idx_qms_plan_tenant_material"`
-	MaterialID    string    `gorm:"type:uuid;not null;uniqueIndex:idx_qms_plan_tenant_material"`
+	ID            string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_plan_tenant_material"`
+	MaterialID    string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_plan_tenant_material"`
 	PlanName      string    `gorm:"type:varchar(255);not null"`
 	IsActive      bool      `gorm:"type:boolean;not null"`
 	Version       int       `gorm:"type:integer;not null"`
@@ -58,8 +58,8 @@ func FromInspectionPlanDomain(p *domain.InspectionPlan) *InspectionPlan {
 
 // 2. InspectionMetricDefinition
 type InspectionMetricDefinition struct {
-	ID                string           `gorm:"primaryKey;type:uuid"`
-	InspectionPlanID  string           `gorm:"type:uuid;not null;uniqueIndex:idx_qms_metric_plan_key"`
+	ID                string           `gorm:"primaryKey;type:varchar(255)"`
+	InspectionPlanID  string           `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_metric_plan_key"`
 	MetricKey         string           `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_metric_plan_key"`
 	DisplayName       string           `gorm:"type:varchar(255);not null"`
 	DataType          string           `gorm:"type:varchar(50);not null"`
@@ -115,14 +115,14 @@ func FromInspectionMetricDefinitionDomain(d *domain.InspectionMetricDefinition) 
 
 // 3. QualityInspection
 type QualityInspection struct {
-	ID               string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string    `gorm:"type:uuid;not null;uniqueIndex:idx_qms_insp_tenant_num"`
-	InspectionPlanID string    `gorm:"type:uuid;not null"`
+	ID               string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_insp_tenant_num"`
+	InspectionPlanID string    `gorm:"type:varchar(255);not null"`
 	InspectionNumber string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_insp_tenant_num"`
 	TriggerSource    string    `gorm:"type:varchar(100);not null"`
-	SourceDocumentID string    `gorm:"type:uuid;not null"`
+	SourceDocumentID string    `gorm:"type:varchar(255);not null"`
 	Status           string    `gorm:"type:varchar(100);not null"`
-	InspectorHrID    *string   `gorm:"type:uuid;default:null"`
+	InspectorHrID    *string   `gorm:"type:varchar(255);default:null"`
 	Version          int       `gorm:"type:integer;not null"`
 	CreatedAt        time.Time `gorm:"not null"`
 	UpdatedAt        time.Time `gorm:"not null"`
@@ -184,9 +184,9 @@ func FromQualityInspectionDomain(i *domain.QualityInspection) *QualityInspection
 
 // 4. InspectionResultLine
 type InspectionResultLine struct {
-	ID                   string           `gorm:"primaryKey;type:uuid"`
-	InspectionID         string           `gorm:"type:uuid;not null;uniqueIndex:idx_qms_result_line"`
-	MetricDefinitionID   string           `gorm:"type:uuid;not null;uniqueIndex:idx_qms_result_line"`
+	ID                   string           `gorm:"primaryKey;type:varchar(255)"`
+	InspectionID         string           `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_result_line"`
+	MetricDefinitionID   string           `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_result_line"`
 	SampleSequence       int              `gorm:"type:integer;not null;uniqueIndex:idx_qms_result_line"`
 	MeasuredNumericValue *decimal.Decimal `gorm:"type:numeric(12,4);default:null"`
 	MeasuredBooleanValue *bool            `gorm:"type:boolean;default:null"`
@@ -232,17 +232,17 @@ func FromInspectionResultLineDomain(l *domain.InspectionResultLine) *InspectionR
 
 // 5. NonConformanceLog
 type NonConformanceLog struct {
-	ID                string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID     string          `gorm:"type:uuid;not null;uniqueIndex:idx_qms_nc_tenant_num"`
-	InspectionID      string          `gorm:"type:uuid;not null"`
+	ID                string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID     string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_nc_tenant_num"`
+	InspectionID      string          `gorm:"type:varchar(255);not null"`
 	NcNumber          string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_qms_nc_tenant_num"`
-	MaterialID        string          `gorm:"type:uuid;not null"`
+	MaterialID        string          `gorm:"type:varchar(255);not null"`
 	DefectDescription string          `gorm:"type:text;not null"`
 	QuantityDefective decimal.Decimal `gorm:"type:numeric(14,4);not null"`
 	IsQuarantined     bool            `gorm:"type:boolean;not null"`
 	Disposition       *string         `gorm:"type:varchar(100);default:null"`
 	DispositionNotes  *string         `gorm:"type:text;default:null"`
-	ResolvedByHrID    *string         `gorm:"type:uuid;default:null"`
+	ResolvedByHrID    *string         `gorm:"type:varchar(255);default:null"`
 	ResolvedAt        *time.Time      `gorm:"default:null"`
 	Version           int             `gorm:"type:integer;not null"`
 	CreatedAt         time.Time       `gorm:"not null"`
@@ -314,9 +314,9 @@ func FromNonConformanceLogDomain(n *domain.NonConformanceLog) *NonConformanceLog
 
 // 6. TransactionalOutbox
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);not null"`
-	AggregateID string    `gorm:"type:uuid;not null"`
+	AggregateID string    `gorm:"type:varchar(255);not null"`
 	Payload     []byte    `gorm:"type:jsonb;not null"`
 	Status      string    `gorm:"type:varchar(50);not null;index:idx_qms_outbox_status_date"`
 	CreatedAt   time.Time `gorm:"not null;index:idx_qms_outbox_status_date"`
@@ -367,7 +367,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 
 // 7. KafkaEventInbox
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255);not null"`
 	ProcessedAt      time.Time `gorm:"not null"`
 	ProcessingStatus string    `gorm:"type:varchar(50);not null"`

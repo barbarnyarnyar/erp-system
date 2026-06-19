@@ -1,6 +1,6 @@
 module github.com/erp-system/plm-service
 
-go 1.25
+go 1.23
 
 require (
 	erp-system/shared v0.0.0
@@ -50,3 +50,5 @@ require (
 )
 
 replace erp-system/shared => ../../shared
+
+replace github.com/rogpeppe/go-internal => github.com/rogpeppe/go-internal v1.14.0

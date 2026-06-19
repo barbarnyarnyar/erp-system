@@ -55,3 +55,5 @@ require (
 )
 
 replace erp-system/shared => ../../shared
+
+replace github.com/rogpeppe/go-internal => github.com/rogpeppe/go-internal v1.14.0

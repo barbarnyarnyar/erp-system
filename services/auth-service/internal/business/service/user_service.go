@@ -33,7 +33,7 @@ func NewUserService(
 
 func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialStoreID string, roleIDs []string) (*domain.User, error) {
 	u.ID = utils.NewID("user")
-	u.IsActive = true
+	u.Status = domain.UserStatusACTIVE
 	// Initial security stamp. Every subsequent state change bumps this
 	// value so that any JWT issued before the change is rejected on
 	// ValidateToken (claims.SecurityStamp != user.SecurityStamp).
@@ -90,7 +90,7 @@ func (s *UserService) CreateUser(ctx context.Context, u *domain.User, initialSto
 		Email:     u.Email,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
-		IsActive:  u.IsActive,
+		IsActive:  u.Status == domain.UserStatusACTIVE,
 		Timestamp: time.Now(),
 	}); err != nil {
 		utils.LogPublishErr("auth-service", domain.TopicAuthUserCreated, err)
@@ -114,11 +114,15 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, firstName, 
 	if email != nil {
 		user.Email = *email
 	}
-	if isActive != nil && user.IsActive != *isActive {
-		// Bumping the security_stamp invalidates any in-flight JWTs the
-		// moment the activation flag flips. Critical for offboarding flow.
-		user.IsActive = *isActive
-		user.SecurityStamp = utils.NewID("ss")
+	if isActive != nil {
+		newStatus := domain.UserStatusINACTIVE
+		if *isActive {
+			newStatus = domain.UserStatusACTIVE
+		}
+		if user.Status != newStatus {
+			user.Status = newStatus
+			user.SecurityStamp = utils.NewID("ss")
+		}
 	}
 	user.UpdatedAt = time.Now()
 
@@ -167,7 +171,7 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 		return err
 	}
 
-	user.IsActive = false
+	user.Status = domain.UserStatusINACTIVE
 	// Critical: bump the security stamp so that any in-flight JWT becomes
 	// invalid the moment the user is deactivated. Without this, a terminated
 	// employee could keep using their old token until natural expiration.
@@ -179,16 +183,16 @@ func (s *UserService) DeactivateUser(ctx context.Context, userID string) error {
 	}
 
 	// Publish user deactivated event
-	if err := s.publisher.Publish(ctx, domain.TopicAuthUserDeactivated, user.ID, domain.UserEventPayload{
+	if err := s.publisher.Publish(ctx, domain.TopicAuthUserSuspended, user.ID, domain.UserEventPayload{
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
-		IsActive:  user.IsActive,
+		IsActive:  user.Status == domain.UserStatusACTIVE,
 		Timestamp: time.Now(),
 	}); err != nil {
-		utils.LogPublishErr("auth-service", domain.TopicAuthUserDeactivated, err)
+		utils.LogPublishErr("auth-service", domain.TopicAuthUserSuspended, err)
 	}
 
 	return nil

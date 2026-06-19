@@ -10,9 +10,9 @@ import (
 
 // 1. Project
 type Project struct {
-	ID            string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string    `gorm:"type:uuid;not null;uniqueIndex:idx_prj_project_code_tenant"`
-	CustomerID    string    `gorm:"type:uuid;not null"`
+	ID            string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_prj_project_code_tenant"`
+	CustomerID    string    `gorm:"type:varchar(255);not null"`
 	ProjectCode   string    `gorm:"type:varchar(100);not null;uniqueIndex:idx_prj_project_code_tenant"`
 	Name          string    `gorm:"type:varchar(255);not null"`
 	Status        string    `gorm:"type:varchar(50);not null"`
@@ -70,9 +70,9 @@ func FromProjectDomain(p *domain.Project) *Project {
 
 // 2. WbsNode
 type WbsNode struct {
-	ID                      string          `gorm:"primaryKey;type:uuid"`
-	ProjectID               string          `gorm:"type:uuid;not null;uniqueIndex:idx_prj_wbs_node_code"`
-	ParentNodeID            *string         `gorm:"type:uuid;default:null"`
+	ID                      string          `gorm:"primaryKey;type:varchar(255)"`
+	ProjectID               string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_prj_wbs_node_code"`
+	ParentNodeID            *string         `gorm:"type:varchar(255);default:null"`
 	WbsDepthLevel           int             `gorm:"type:integer;not null;default:0"`
 	NodeCode                string          `gorm:"type:varchar(100);not null;uniqueIndex:idx_prj_wbs_node_code"`
 	Title                   string          `gorm:"type:varchar(255);not null"`
@@ -133,17 +133,17 @@ func FromWbsNodeDomain(w *domain.WbsNode) *WbsNode {
 
 // 3. TimeLog
 type TimeLog struct {
-	ID               string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string          `gorm:"type:uuid;not null"`
-	WbsNodeID        string          `gorm:"type:uuid;not null;uniqueIndex:idx_prj_timelog_unique"`
-	EmployeeID       string          `gorm:"type:uuid;not null;uniqueIndex:idx_prj_timelog_unique"`
+	ID               string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string          `gorm:"type:varchar(255);not null"`
+	WbsNodeID        string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_prj_timelog_unique"`
+	EmployeeID       string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_prj_timelog_unique"`
 	WorkDate         time.Time       `gorm:"type:date;not null;uniqueIndex:idx_prj_timelog_unique"`
 	HoursSpent       decimal.Decimal `gorm:"type:numeric(6,2);not null"`
 	InternalCostRate decimal.Decimal `gorm:"type:numeric(12,4);not null"`
 	BillingRate      decimal.Decimal `gorm:"type:numeric(12,4);not null"`
 	IsBillable       bool            `gorm:"type:boolean;not null"`
 	IsApproved       bool            `gorm:"type:boolean;not null;default:false"`
-	ApprovedByHrID   *string         `gorm:"type:uuid;default:null"`
+	ApprovedByHrID   *string         `gorm:"type:varchar(255);default:null"`
 	CreatedAt        time.Time       `gorm:"not null"`
 }
 
@@ -193,9 +193,9 @@ func FromTimeLogDomain(t *domain.TimeLog) *TimeLog {
 
 // 4. TransactionalOutbox
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);not null"`
-	AggregateID string    `gorm:"type:uuid;not null"`
+	AggregateID string    `gorm:"type:varchar(255);not null"`
 	Payload     []byte    `gorm:"type:jsonb;not null"`
 	Status      string    `gorm:"type:varchar(50);not null;index:idx_prj_outbox_status_date"`
 	CreatedAt   time.Time `gorm:"not null;index:idx_prj_outbox_status_date"`
@@ -240,7 +240,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 
 // 5. KafkaEventInbox
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255);not null"`
 	ProcessedAt      time.Time `gorm:"not null"`
 	ProcessingStatus string    `gorm:"type:varchar(50);not null"`

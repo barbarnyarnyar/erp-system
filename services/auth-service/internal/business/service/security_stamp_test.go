@@ -77,7 +77,7 @@ func TestUser_DeactivateUser_BumpsSecurityStamp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
-	if fresh.IsActive {
+	if fresh.Status == domain.UserStatusACTIVE {
 		t.Errorf("expected IsActive=false after DeactivateUser")
 	}
 	if fresh.SecurityStamp == originalStamp {
@@ -160,7 +160,7 @@ func TestAuth_ValidateToken_RejectsStaleSecurityStamp(t *testing.T) {
 
 	// Also confirm IsActive is false.
 	fresh, _ := userRepo.GetByID(ctx, created.ID)
-	if fresh.IsActive {
+	if fresh.Status == domain.UserStatusACTIVE {
 		t.Errorf("expected user to be inactive")
 	}
 }

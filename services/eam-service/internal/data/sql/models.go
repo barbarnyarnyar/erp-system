@@ -11,8 +11,8 @@ import (
 
 // 1. Facility
 type Facility struct {
-	ID              string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID   string    `gorm:"type:uuid;not null"`
+	ID              string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID   string    `gorm:"type:varchar(255);not null"`
 	Name            string    `gorm:"type:varchar(255);not null"`
 	PhysicalAddress string    `gorm:"type:varchar(255);not null"`
 	IsActive        bool      `gorm:"type:boolean;not null"`
@@ -56,14 +56,14 @@ func FromFacilityDomain(f *domain.Facility) *Facility {
 
 // 2. Equipment
 type Equipment struct {
-	ID                       string         `gorm:"primaryKey;type:uuid"`
-	LegalEntityID            string         `gorm:"type:uuid;not null"`
-	FacilityID               string         `gorm:"type:uuid;not null"`
+	ID                       string         `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID            string         `gorm:"type:varchar(255);not null"`
+	FacilityID               string         `gorm:"type:varchar(255);not null"`
 	AssetTag                 string         `gorm:"type:varchar(100);not null;uniqueIndex"`
 	Name                     string         `gorm:"type:varchar(255);not null"`
 	Manufacturer             string         `gorm:"type:varchar(255);not null"`
 	SerialNumber             string         `gorm:"type:varchar(255);not null"`
-	FinancialAssetID         *string        `gorm:"type:uuid;default:null"`
+	FinancialAssetID         *string        `gorm:"type:varchar(255);default:null"`
 	Status                   string         `gorm:"type:varchar(50);not null"`
 	InstallationDate         time.Time      `gorm:"type:date;not null"`
 	TechnicalSpecifications  []byte         `gorm:"type:jsonb;not null"`
@@ -141,17 +141,17 @@ func FromEquipmentDomain(e *domain.Equipment) *Equipment {
 
 // 3. MaintenanceWorkOrder
 type MaintenanceWorkOrder struct {
-	ID               string     `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string     `gorm:"type:uuid;not null"`
-	EquipmentID      string     `gorm:"type:uuid;not null"`
+	ID               string     `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string     `gorm:"type:varchar(255);not null"`
+	EquipmentID      string     `gorm:"type:varchar(255);not null"`
 	TicketNumber     string     `gorm:"type:varchar(100);not null;uniqueIndex"`
 	Title            string     `gorm:"type:varchar(255);not null"`
 	Description      string     `gorm:"type:text;not null"`
 	Category         string     `gorm:"type:varchar(50);not null"`
 	Priority         string     `gorm:"type:varchar(50);not null"`
 	Status           string     `gorm:"type:varchar(50);not null"`
-	ReportedByHrID   string     `gorm:"type:uuid;not null"`
-	AssignedTechHrID *string    `gorm:"type:uuid;default:null"`
+	ReportedByHrID   string     `gorm:"type:varchar(255);not null"`
+	AssignedTechHrID *string    `gorm:"type:varchar(255);default:null"`
 	ReportedAt       time.Time  `gorm:"not null"`
 	StartedAt        *time.Time `gorm:"default:null"`
 	ResolvedAt       *time.Time `gorm:"default:null"`
@@ -240,9 +240,9 @@ func FromMaintenanceWorkOrderDomain(w *domain.MaintenanceWorkOrder) *Maintenance
 
 // 4. PreventativeSchedule
 type PreventativeSchedule struct {
-	ID             string     `gorm:"primaryKey;type:uuid"`
-	LegalEntityID  string     `gorm:"type:uuid;not null"`
-	EquipmentID    string     `gorm:"type:uuid;not null"`
+	ID             string     `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID  string     `gorm:"type:varchar(255);not null"`
+	EquipmentID    string     `gorm:"type:varchar(255);not null"`
 	Title          string     `gorm:"type:varchar(255);not null"`
 	InstructionSet string     `gorm:"type:text;not null"`
 	IntervalDays   int        `gorm:"type:integer;not null"`
@@ -297,9 +297,9 @@ func FromPreventativeScheduleDomain(p *domain.PreventativeSchedule) *Preventativ
 
 // 5. TelemetryIngestBuffer
 type TelemetryIngestBuffer struct {
-	ID            string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string          `gorm:"type:uuid;not null"`
-	EquipmentID   string          `gorm:"type:uuid;not null"`
+	ID            string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string          `gorm:"type:varchar(255);not null"`
+	EquipmentID   string          `gorm:"type:varchar(255);not null"`
 	SensorKey     string          `gorm:"type:varchar(255);not null"`
 	ReadingValue  decimal.Decimal `gorm:"type:numeric(12,4);not null"`
 	RecordedAt    time.Time       `gorm:"not null"`
@@ -339,9 +339,9 @@ func FromTelemetryIngestBufferDomain(t *domain.TelemetryIngestBuffer) *Telemetry
 
 // 6. TransactionalOutbox
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);not null"`
-	AggregateID string    `gorm:"type:uuid;not null"`
+	AggregateID string    `gorm:"type:varchar(255);not null"`
 	Payload     []byte    `gorm:"type:jsonb;not null"`
 	Status      string    `gorm:"type:varchar(50);not null;index:idx_eam_outbox_status_date"`
 	CreatedAt   time.Time `gorm:"not null;index:idx_eam_outbox_status_date"`
@@ -392,7 +392,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 
 // 7. KafkaEventInbox
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255);not null"`
 	ProcessedAt      time.Time `gorm:"not null"`
 	ProcessingStatus string    `gorm:"type:varchar(50);not null"`

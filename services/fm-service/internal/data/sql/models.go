@@ -24,7 +24,7 @@ type Payment struct {
 
 	Invoice     *ArInvoice    `gorm:"foreignKey:InvoiceID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	VendorBill  *ApVendorBill `gorm:"foreignKey:BillID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	BankAccount *BankAccount  `gorm:"foreignKey:BankAccountID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	BankAccount *BankAccount  `gorm:"-"`
 }
 
 func FromDomainPayment(d *domain.Payment) *Payment {

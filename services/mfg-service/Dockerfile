@@ -5,7 +5,7 @@ WORKDIR /
 COPY shared/ ./shared/
 
 WORKDIR /app
-COPY services/m-service/ ./
+COPY services/mfg-service/ ./
 
 # Build the application
 RUN go mod tidy && go build -o main ./cmd

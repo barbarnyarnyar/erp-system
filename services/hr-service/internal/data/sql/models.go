@@ -11,8 +11,8 @@ import (
 
 // 1. Department
 type Department struct {
-	ID            string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string    `gorm:"type:uuid;not null;uniqueIndex:idx_hr_dept_code_tenant"`
+	ID            string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_hr_dept_code_tenant"`
 	DepartmentCode string   `gorm:"type:varchar(100);not null;uniqueIndex:idx_hr_dept_code_tenant"`
 	Name          string    `gorm:"type:varchar(255);not null"`
 	IsActive      bool      `gorm:"type:boolean;default:true"`
@@ -56,10 +56,10 @@ func FromDepartmentDomain(d *domain.Department) *Department {
 
 // 2. EmployeeMaster
 type EmployeeMaster struct {
-	ID             string         `gorm:"primaryKey;type:uuid"`
-	LegalEntityID  string         `gorm:"type:uuid;not null;uniqueIndex:idx_hr_emp_num_tenant"`
-	DepartmentID   string         `gorm:"type:uuid;not null"`
-	ManagerHrID    *string        `gorm:"type:uuid;default:null"`
+	ID             string         `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID  string         `gorm:"type:varchar(255);not null;uniqueIndex:idx_hr_emp_num_tenant"`
+	DepartmentID   string         `gorm:"type:varchar(255);not null"`
+	ManagerHrID    *string        `gorm:"type:varchar(255);default:null"`
 	OrgDepthLevel  int            `gorm:"type:integer;not null;default:0"`
 	EmployeeNumber string         `gorm:"type:varchar(100);not null;uniqueIndex:idx_hr_emp_num_tenant"`
 	FirstName      string         `gorm:"type:varchar(255);not null"`
@@ -136,8 +136,8 @@ func FromEmployeeMasterDomain(e *domain.EmployeeMaster) *EmployeeMaster {
 
 // 3. PayrollRun
 type PayrollRun struct {
-	ID              string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID   string          `gorm:"type:uuid;not null;uniqueIndex:idx_hr_payroll_period"`
+	ID              string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID   string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_hr_payroll_period"`
 	FiscalYear      int             `gorm:"type:integer;not null;uniqueIndex:idx_hr_payroll_period"`
 	PeriodNumber    int             `gorm:"type:integer;not null;uniqueIndex:idx_hr_payroll_period"`
 	Status          string          `gorm:"type:varchar(50);not null"`
@@ -193,9 +193,9 @@ func FromPayrollRunDomain(p *domain.PayrollRun) *PayrollRun {
 
 // 4. ExpenseClaim
 type ExpenseClaim struct {
-	ID            string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string          `gorm:"type:uuid;not null;uniqueIndex:idx_hr_claim_num_tenant"`
-	EmployeeID    string          `gorm:"type:uuid;not null"`
+	ID            string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_hr_claim_num_tenant"`
+	EmployeeID    string          `gorm:"type:varchar(255);not null"`
 	ClaimNumber   string          `gorm:"type:varchar(100);not null;uniqueIndex:idx_hr_claim_num_tenant"`
 	Purpose       string          `gorm:"type:varchar(255);not null"`
 	TotalAmount   decimal.Decimal `gorm:"type:numeric(18,4);not null;default:0"`
@@ -250,8 +250,8 @@ func FromExpenseClaimDomain(e *domain.ExpenseClaim) *ExpenseClaim {
 
 // 5. ExpenseClaimLine
 type ExpenseClaimLine struct {
-	ID             string          `gorm:"primaryKey;type:uuid"`
-	ExpenseClaimID string          `gorm:"type:uuid;not null;index"`
+	ID             string          `gorm:"primaryKey;type:varchar(255)"`
+	ExpenseClaimID string          `gorm:"type:varchar(255);not null;index"`
 	Description    string          `gorm:"type:varchar(255);not null"`
 	LineAmount     decimal.Decimal `gorm:"type:numeric(18,4);not null"`
 	CreatedAt      time.Time       `gorm:"not null"`
@@ -289,9 +289,9 @@ func FromExpenseClaimLineDomain(e *domain.ExpenseClaimLine) *ExpenseClaimLine {
 
 // 6. TransactionalOutbox
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);not null"`
-	AggregateID string    `gorm:"type:uuid;not null"`
+	AggregateID string    `gorm:"type:varchar(255);not null"`
 	Payload     []byte    `gorm:"type:jsonb;not null"`
 	Status      string    `gorm:"type:varchar(50);not null;index:idx_hr_outbox_status_date"`
 	CreatedAt   time.Time `gorm:"not null;index:idx_hr_outbox_status_date"`
@@ -336,7 +336,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 
 // 7. KafkaEventInbox
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255);not null"`
 	ProcessedAt      time.Time `gorm:"not null"`
 	ProcessingStatus string    `gorm:"type:varchar(50);not null"`

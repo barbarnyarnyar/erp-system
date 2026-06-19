@@ -9,11 +9,11 @@ import (
 )
 
 type CustomerProfile struct {
-	ID                 string         `gorm:"primaryKey;type:uuid"`
-	LegalEntityID      string         `gorm:"type:uuid;index"`
+	ID                 string         `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID      string         `gorm:"type:varchar(255);index"`
 	CustomerCode       string         `gorm:"type:varchar(255);uniqueIndex:idx_cust_code"`
 	CompanyName        string         `gorm:"type:varchar(255)"`
-	AccountManagerHrID string         `gorm:"type:uuid;index"`
+	AccountManagerHrID string         `gorm:"type:varchar(255);index"`
 	Status             string         `gorm:"type:varchar(50)"`
 	CreditLimit        decimal.Decimal `gorm:"type:numeric(18,4)"`
 	Currency           string         `gorm:"type:varchar(10)"`
@@ -21,7 +21,7 @@ type CustomerProfile struct {
 	Email              *string        `gorm:"type:varchar(255)"`
 	Phone              *string        `gorm:"type:varchar(50)"`
 	Category           *string        `gorm:"type:varchar(100)"`
-	ParentCustomerID   *string        `gorm:"type:uuid;index"`
+	ParentCustomerID   *string        `gorm:"type:varchar(255);index"`
 	Version            int            `gorm:"type:int;default:1"`
 	CreatedAt          time.Time      `gorm:"index"`
 	UpdatedAt          time.Time
@@ -91,7 +91,7 @@ func FromCustomerProfileDomain(c *domain.CustomerProfile) *CustomerProfile {
 }
 
 type Lead struct {
-	ID         string    `gorm:"primaryKey;type:uuid"`
+	ID         string    `gorm:"primaryKey;type:varchar(255)"`
 	FirstName  string    `gorm:"type:varchar(255)"`
 	LastName   string    `gorm:"type:varchar(255)"`
 	Company    string    `gorm:"type:varchar(255)"`
@@ -100,7 +100,7 @@ type Lead struct {
 	Status     string    `gorm:"type:varchar(50)"`
 	Score      int       `gorm:"type:int"`
 	Source     string    `gorm:"type:varchar(100)"`
-	CampaignID *string   `gorm:"type:uuid;index"`
+	CampaignID *string   `gorm:"type:varchar(255);index"`
 	CreatedAt  time.Time `gorm:"index"`
 	UpdatedAt  time.Time
 }
@@ -150,8 +150,8 @@ func FromLeadDomain(l *domain.Lead) *Lead {
 }
 
 type Opportunity struct {
-	ID          string          `gorm:"primaryKey;type:uuid"`
-	CustomerID  string          `gorm:"type:uuid;index"`
+	ID          string          `gorm:"primaryKey;type:varchar(255)"`
+	CustomerID  string          `gorm:"type:varchar(255);index"`
 	Title       string          `gorm:"type:varchar(255)"`
 	Value       decimal.Decimal `gorm:"type:numeric(18,4)"`
 	Status      string          `gorm:"type:varchar(50)"`
@@ -200,8 +200,8 @@ func FromOpportunityDomain(o *domain.Opportunity) *Opportunity {
 }
 
 type OpportunityStageHistory struct {
-	ID            string `gorm:"primaryKey;type:uuid"`
-	OpportunityID string `gorm:"type:uuid;index"`
+	ID            string `gorm:"primaryKey;type:varchar(255)"`
+	OpportunityID string `gorm:"type:varchar(255);index"`
 	Stage         string `gorm:"type:varchar(50)"`
 	ChangedAt     time.Time
 	ChangedBy     string `gorm:"type:varchar(255)"`
@@ -238,10 +238,10 @@ func FromOpportunityStageHistoryDomain(h *domain.OpportunityStageHistory) *Oppor
 }
 
 type SalesOrder struct {
-	ID              string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID   string          `gorm:"type:uuid;index"`
-	CustomerID      string          `gorm:"type:uuid;index"`
-	PriceBookID     string          `gorm:"type:uuid;index"`
+	ID              string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID   string          `gorm:"type:varchar(255);index"`
+	CustomerID      string          `gorm:"type:varchar(255);index"`
+	PriceBookID     string          `gorm:"type:varchar(255);index"`
 	OrderNumber     string          `gorm:"type:varchar(255);uniqueIndex:idx_so_num"`
 	Status          string          `gorm:"type:varchar(50)"`
 	TotalGrossValue decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -294,9 +294,9 @@ func FromSalesOrderDomain(s *domain.SalesOrder) *SalesOrder {
 }
 
 type SalesOrderLine struct {
-	ID                     string          `gorm:"primaryKey;type:uuid"`
-	SalesOrderID           string          `gorm:"type:uuid;index"`
-	MaterialID             string          `gorm:"type:uuid;index"`
+	ID                     string          `gorm:"primaryKey;type:varchar(255)"`
+	SalesOrderID           string          `gorm:"type:varchar(255);index"`
+	MaterialID             string          `gorm:"type:varchar(255);index"`
 	LineSequence           int             `gorm:"type:int"`
 	QuantityOrdered        decimal.Decimal `gorm:"type:numeric(14,4)"`
 	QuantityShipped        decimal.Decimal `gorm:"type:numeric(14,4)"`
@@ -353,13 +353,13 @@ func FromSalesOrderLineDomain(l *domain.SalesOrderLine) *SalesOrderLine {
 }
 
 type Quote struct {
-	ID             string          `gorm:"primaryKey;type:uuid"`
-	CustomerID     string          `gorm:"type:uuid;index"`
+	ID             string          `gorm:"primaryKey;type:varchar(255)"`
+	CustomerID     string          `gorm:"type:varchar(255);index"`
 	Title          string          `gorm:"type:varchar(255)"`
 	ValidUntil     time.Time       `gorm:"index"`
 	Status         string          `gorm:"type:varchar(50)"`
 	TotalAmount    decimal.Decimal `gorm:"type:numeric(18,4)"`
-	OpportunityID  *string         `gorm:"type:uuid;index"`
+	OpportunityID  *string         `gorm:"type:varchar(255);index"`
 	CreatedAt      time.Time       `gorm:"index"`
 	UpdatedAt      time.Time
 }
@@ -403,9 +403,9 @@ func FromQuoteDomain(q *domain.Quote) *Quote {
 }
 
 type QuoteLineItem struct {
-	ID        string          `gorm:"primaryKey;type:uuid"`
-	QuoteID   string          `gorm:"type:uuid;index"`
-	ProductID string          `gorm:"type:uuid;index"`
+	ID        string          `gorm:"primaryKey;type:varchar(255)"`
+	QuoteID   string          `gorm:"type:varchar(255);index"`
+	ProductID string          `gorm:"type:varchar(255);index"`
 	Quantity  int             `gorm:"type:int"`
 	UnitPrice decimal.Decimal `gorm:"type:numeric(18,4)"`
 }
@@ -441,8 +441,8 @@ func FromQuoteLineItemDomain(l *domain.QuoteLineItem) *QuoteLineItem {
 }
 
 type PriceBookHeader struct {
-	ID            string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string    `gorm:"type:uuid;index"`
+	ID            string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string    `gorm:"type:varchar(255);index"`
 	PriceBookCode string    `gorm:"type:varchar(255);uniqueIndex:idx_pb_code"`
 	Name          string    `gorm:"type:varchar(255)"`
 	Type          string    `gorm:"type:varchar(50)"`
@@ -494,9 +494,9 @@ func FromPriceBookHeaderDomain(h *domain.PriceBookHeader) *PriceBookHeader {
 }
 
 type PriceBookEntry struct {
-	ID                    string          `gorm:"primaryKey;type:uuid"`
-	PriceBookID           string          `gorm:"type:uuid;index"`
-	MaterialID            string          `gorm:"type:uuid;index"`
+	ID                    string          `gorm:"primaryKey;type:varchar(255)"`
+	PriceBookID           string          `gorm:"type:varchar(255);index"`
+	MaterialID            string          `gorm:"type:varchar(255);index"`
 	UnitListPrice         decimal.Decimal `gorm:"type:numeric(18,4)"`
 	MinQuantityThreshold decimal.Decimal `gorm:"type:numeric(14,4)"`
 	CreatedAt             time.Time
@@ -538,8 +538,8 @@ func FromPriceBookEntryDomain(e *domain.PriceBookEntry) *PriceBookEntry {
 }
 
 type PricingStrategy struct {
-	ID                  string          `gorm:"primaryKey;type:uuid"`
-	PriceBookID         string          `gorm:"type:uuid;index"`
+	ID                  string          `gorm:"primaryKey;type:varchar(255)"`
+	PriceBookID         string          `gorm:"type:varchar(255);index"`
 	EvaluationRule      string          `gorm:"type:varchar(50)"`
 	StrategyVersion     int             `gorm:"type:int"`
 	ModifierPercentage  decimal.Decimal `gorm:"type:numeric(5,4)"`
@@ -594,8 +594,8 @@ func FromPricingStrategyDomain(s *domain.PricingStrategy) *PricingStrategy {
 }
 
 type ServiceTicket struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
-	CustomerID  string    `gorm:"type:uuid;index"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
+	CustomerID  string    `gorm:"type:varchar(255);index"`
 	Title       string    `gorm:"type:varchar(255)"`
 	Description string    `gorm:"type:text"`
 	Status      string    `gorm:"type:varchar(50)"`
@@ -641,7 +641,7 @@ func FromServiceTicketDomain(t *domain.ServiceTicket) *ServiceTicket {
 }
 
 type Campaign struct {
-	ID        string          `gorm:"primaryKey;type:uuid"`
+	ID        string          `gorm:"primaryKey;type:varchar(255)"`
 	Name      string          `gorm:"type:varchar(255)"`
 	Type      string          `gorm:"type:varchar(50)"`
 	Status    string          `gorm:"type:varchar(50)"`
@@ -685,8 +685,8 @@ func FromCampaignDomain(c *domain.Campaign) *Campaign {
 }
 
 type CustomerInteraction struct {
-	ID              string    `gorm:"primaryKey;type:uuid"`
-	CustomerID      string    `gorm:"type:uuid;index"`
+	ID              string    `gorm:"primaryKey;type:varchar(255)"`
+	CustomerID      string    `gorm:"type:varchar(255);index"`
 	Type            string    `gorm:"type:varchar(50)"`
 	Subject         string    `gorm:"type:varchar(255)"`
 	Description     string    `gorm:"type:text"`
@@ -732,10 +732,10 @@ func FromCustomerInteractionDomain(i *domain.CustomerInteraction) *CustomerInter
 }
 
 type BillingTrigger struct {
-	ID                          string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID               string          `gorm:"type:uuid;index"`
-	SalesOrderID                string          `gorm:"type:uuid;index"`
-	SourceDeliveryDocumentID    string          `gorm:"type:uuid;index"`
+	ID                          string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID               string          `gorm:"type:varchar(255);index"`
+	SalesOrderID                string          `gorm:"type:varchar(255);index"`
+	SourceDeliveryDocumentID    string          `gorm:"type:varchar(255);index"`
 	BillableAmount              decimal.Decimal `gorm:"type:numeric(18,4)"`
 	TaxAmount                   decimal.Decimal `gorm:"type:numeric(18,4)"`
 	Status                      string          `gorm:"type:varchar(50);index"`
@@ -782,9 +782,9 @@ func FromBillingTriggerDomain(b *domain.BillingTrigger) *BillingTrigger {
 }
 
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);index"`
-	AggregateID string    `gorm:"type:uuid;index"`
+	AggregateID string    `gorm:"type:varchar(255);index"`
 	Payload     string    `gorm:"type:jsonb"`
 	Status      string    `gorm:"type:varchar(50);index"`
 	RetryCount  int       `gorm:"type:int;default:0"`
@@ -832,7 +832,7 @@ func FromOutboxDomain(o *domain.TransactionalOutbox) *TransactionalOutbox {
 }
 
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255)"`
 	ProcessedAt      time.Time `gorm:"index"`
 	ProcessingStatus string    `gorm:"type:varchar(50)"`

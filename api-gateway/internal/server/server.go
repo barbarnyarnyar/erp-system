@@ -108,6 +108,7 @@ func (s *Server) setupRoutes() {
 			fmGroup.DELETE("/accounts/:id", 
 				authMiddleware.RequirePermission("fm", "accounts", "delete"),
 				proxyHandler.ProxyToService("fm"))
+			fmGroup.GET("/accounts/:id/balance", proxyHandler.ProxyToService("fm"))
 
 			// Parties (Customers/Vendors)
 			fmGroup.GET("/parties", proxyHandler.ProxyToService("fm"))
@@ -171,9 +172,6 @@ func (s *Server) setupRoutes() {
 		scmGroup := protected.Group("/scm")
 		scmGroup.Use(authMiddleware.RequirePermission("scm", "*", "read"))
 		{
-			scmGroup.GET("/purchase-orders/:id/lines", proxyHandler.ProxyToService("scm"))
-			scmGroup.GET("/receipts/:id/lines", proxyHandler.ProxyToService("scm"))
-			scmGroup.GET("/shipments/:id/lines", proxyHandler.ProxyToService("scm"))
 			scmGroup.Any("", proxyHandler.ProxyToService("scm"))
 			scmGroup.Any("/*path", proxyHandler.ProxyToService("scm"))
 		}

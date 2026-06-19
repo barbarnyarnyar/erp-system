@@ -26,7 +26,7 @@ func newConsumerWithUser(t *testing.T, userID string) (*KafkaConsumer, *memory.U
 		PasswordHash:  "password",
 		FirstName:     "Frank",
 		LastName:      "F",
-		IsActive:      true,
+		Status:        domain.UserStatusACTIVE,
 		SecurityStamp: "ss_initial",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
@@ -69,7 +69,7 @@ func TestConsumer_HREmployeeTerminated_DeactivatesUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user: %v", err)
 	}
-	if fresh.IsActive {
+	if fresh.Status == domain.UserStatusACTIVE {
 		t.Errorf("expected IsActive=false after HR termination event, got true")
 	}
 	if fresh.SecurityStamp == "ss_initial" {
@@ -94,5 +94,40 @@ func TestConsumer_HREmployeeTerminated_UnknownUserReturnsError(t *testing.T) {
 
 	if err := consumer.handleMessage(ctx, domain.TopicHrEmployeeTerminated, value); err == nil {
 		t.Errorf("expected error for unknown user, got nil")
+	}
+}
+
+func TestConsumer_StartAndClose(t *testing.T) {
+	consumer, _ := newConsumerWithUser(t, "user_existing")
+
+	// Test Start with already canceled context
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+	consumer.Start(canceledCtx)
+
+	// Test Start with context canceled after a short delay, triggering ReadMessage and ctx cancellation
+	ctx, cancel2 := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(1 * time.Second)
+		cancel2()
+	}()
+	consumer.Start(ctx)
+
+	// Test Close
+	_ = consumer.Close()
+}
+
+func TestConsumer_EdgeCases(t *testing.T) {
+	consumer, _ := newConsumerWithUser(t, "user_existing")
+	ctx := context.Background()
+
+	// 1. Invalid JSON payload
+	if err := consumer.handleMessage(ctx, domain.TopicHrEmployeeTerminated, []byte("invalid-json")); err == nil {
+		t.Errorf("expected error for invalid json, got nil")
+	}
+
+	// 2. Unknown topic
+	if err := consumer.handleMessage(ctx, "unknown-topic", []byte("{}")); err != nil {
+		t.Errorf("expected no error for unknown topic, got %v", err)
 	}
 }

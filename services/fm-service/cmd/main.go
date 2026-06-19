@@ -36,6 +36,22 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// Seed baseline legal entity for integration tests
+	var leCount int64
+	db.Model(&sql.LegalEntity{}).Where("id = ?", "le_e2e").Count(&leCount)
+	if leCount == 0 {
+		log.Println("Seeding baseline Legal Entity le_e2e...")
+		db.Create(&sql.LegalEntity{
+			ID:                    "le_e2e",
+			CompanyCode:           "E2E_CORP",
+			CompanyName:           "E2E Test Corporation",
+			FunctionalCurrency:    "USD",
+			TaxRegistrationNumber: "TAX-E2E-123",
+			CreatedAt:             time.Now(),
+			UpdatedAt:             time.Now(),
+		})
+	}
+
 	// Initialize GORM Transaction Manager
 	tm := sql.NewGORMTransactionManager(db)
 

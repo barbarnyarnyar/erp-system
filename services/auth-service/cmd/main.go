@@ -159,6 +159,14 @@ func seedAuthData(userSvc *service.UserService, rbacSvc *service.RBACService) {
 	pReadCRM, _ := rbacSvc.CreatePermission(ctx, "crm:*:read", "Read CRM")
 	pReadPM, _ := rbacSvc.CreatePermission(ctx, "pm:*:read", "Read Projects")
 	pReadFM, _ := rbacSvc.CreatePermission(ctx, "fm:*:read", "Read Finance")
+	pWriteFMAccounts, _ := rbacSvc.CreatePermission(ctx, "fm:accounts:write", "Write Finance Accounts")
+	pDeleteFMAccounts, _ := rbacSvc.CreatePermission(ctx, "fm:accounts:delete", "Delete Finance Accounts")
+	pWriteFMParties, _ := rbacSvc.CreatePermission(ctx, "fm:parties:write", "Write Finance Parties")
+	pWriteFMInvoices, _ := rbacSvc.CreatePermission(ctx, "fm:invoices:write", "Write Finance Invoices")
+	pWriteFMPayments, _ := rbacSvc.CreatePermission(ctx, "fm:payments:write", "Write Finance Payments")
+	pWriteFMJournal, _ := rbacSvc.CreatePermission(ctx, "fm:journal:write", "Write Finance Journal")
+	pPostFMJournal, _ := rbacSvc.CreatePermission(ctx, "fm:journal:post", "Post Finance Journal")
+	pReadFMReports, _ := rbacSvc.CreatePermission(ctx, "fm:reports:read", "Read Finance Reports")
 
 	// Link permissions to Admin Role
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pCreateProduct.ID)
@@ -171,6 +179,14 @@ func seedAuthData(userSvc *service.UserService, rbacSvc *service.RBACService) {
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadCRM.ID)
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadPM.ID)
 	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadFM.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pWriteFMAccounts.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pDeleteFMAccounts.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pWriteFMParties.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pWriteFMInvoices.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pWriteFMPayments.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pWriteFMJournal.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pPostFMJournal.ID)
+	_ = rbacSvc.AssignPermissionToRole(ctx, adminRole.ID, pReadFMReports.ID)
 
 	// Link permissions to Manager Role
 	_ = rbacSvc.AssignPermissionToRole(ctx, managerRole.ID, pReadProduct.ID)

@@ -10,8 +10,8 @@ import (
 
 // 1. WorkCenter
 type WorkCenter struct {
-	ID             string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID  string    `gorm:"type:uuid;not null;index"`
+	ID             string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID  string    `gorm:"type:varchar(255);not null;index"`
 	WorkCenterCode string    `gorm:"type:varchar(100);not null;uniqueIndex:idx_mfg_wc_code_tenant"`
 	Name           string    `gorm:"type:varchar(255);not null"`
 	IsActive       bool      `gorm:"type:boolean;default:true"`
@@ -55,11 +55,11 @@ func FromWorkCenterDomain(w *domain.WorkCenter) *WorkCenter {
 
 // 2. RoutingStation
 type RoutingStation struct {
-	ID                    string    `gorm:"primaryKey;type:uuid"`
-	WorkCenterID          string    `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_station_wc_code"`
+	ID                    string    `gorm:"primaryKey;type:varchar(255)"`
+	WorkCenterID          string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_station_wc_code"`
 	RoutingCode           string    `gorm:"type:varchar(100);not null;uniqueIndex:idx_mfg_station_wc_code"`
 	StationType           string    `gorm:"type:varchar(50);not null"`
-	EquipmentID           *string   `gorm:"type:uuid"`
+	EquipmentID           *string   `gorm:"type:varchar(255)"`
 	StandardSetupTimeMins int       `gorm:"type:integer;not null;default:0"`
 	StandardRunTimeMins   int       `gorm:"type:integer;not null;default:0"`
 	CreatedAt             time.Time `gorm:"not null"`
@@ -106,10 +106,10 @@ func FromRoutingStationDomain(r *domain.RoutingStation) *RoutingStation {
 
 // 3. WorkOrder
 type WorkOrder struct {
-	ID               string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string          `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_wo_num_tenant"`
-	MaterialID       string          `gorm:"type:uuid;not null"`
-	BomHeaderID      string          `gorm:"type:uuid;not null"`
+	ID               string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_wo_num_tenant"`
+	MaterialID       string          `gorm:"type:varchar(255);not null"`
+	BomHeaderID      string          `gorm:"type:varchar(255);not null"`
 	WorkOrderNumber  string          `gorm:"type:varchar(100);not null;uniqueIndex:idx_mfg_wo_num_tenant"`
 	QuantityTarget   decimal.Decimal `gorm:"type:numeric(14,4);not null"`
 	QuantityProduced decimal.Decimal `gorm:"type:numeric(14,4);not null;default:0"`
@@ -169,10 +169,10 @@ func FromWorkOrderDomain(w *domain.WorkOrder) *WorkOrder {
 
 // 4. WorkOrderRoutingState
 type WorkOrderRoutingState struct {
-	ID                     string     `gorm:"primaryKey;type:uuid"`
-	WorkOrderID            string     `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_wo_routing_state"`
-	CurrentStationID       string     `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_wo_routing_state"`
-	NextSuggestedStationID *string    `gorm:"type:uuid"`
+	ID                     string     `gorm:"primaryKey;type:varchar(255)"`
+	WorkOrderID            string     `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_wo_routing_state"`
+	CurrentStationID       string     `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_wo_routing_state"`
+	NextSuggestedStationID *string    `gorm:"type:varchar(255)"`
 	IsReworkLoop           bool       `gorm:"type:boolean;not null;default:false"`
 	EnteredAt              time.Time  `gorm:"not null"`
 	ExitedAt               *time.Time `gorm:"default:null"`
@@ -214,14 +214,14 @@ func FromWorkOrderRoutingStateDomain(s *domain.WorkOrderRoutingState) *WorkOrder
 
 // 5. MaterialConsumptionLog
 type MaterialConsumptionLog struct {
-	ID               string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string          `gorm:"type:uuid;not null"`
-	WorkOrderID      string          `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_mat_log"`
-	MaterialID       string          `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_mat_log"`
-	RoutingStationID string          `gorm:"type:uuid;not null"`
+	ID               string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string          `gorm:"type:varchar(255);not null"`
+	WorkOrderID      string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_mat_log"`
+	MaterialID       string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_mat_log"`
+	RoutingStationID string          `gorm:"type:varchar(255);not null"`
 	QuantityConsumed decimal.Decimal `gorm:"type:numeric(14,4);not null"`
-	WarehouseID      string          `gorm:"type:uuid;not null"`
-	OperatorHrID     string          `gorm:"type:uuid;not null"`
+	WarehouseID      string          `gorm:"type:varchar(255);not null"`
+	OperatorHrID     string          `gorm:"type:varchar(255);not null"`
 	ConsumedAt       time.Time       `gorm:"type:timestamp;not null;uniqueIndex:idx_mfg_mat_log"`
 }
 
@@ -265,13 +265,13 @@ func FromMaterialConsumptionLogDomain(l *domain.MaterialConsumptionLog) *Materia
 
 // 6. ProductionYieldLog
 type ProductionYieldLog struct {
-	ID               string          `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string          `gorm:"type:uuid;not null"`
-	WorkOrderID      string          `gorm:"type:uuid;not null;uniqueIndex:idx_mfg_yield_log"`
-	RoutingStationID string          `gorm:"type:uuid;not null"`
+	ID               string          `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string          `gorm:"type:varchar(255);not null"`
+	WorkOrderID      string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_mfg_yield_log"`
+	RoutingStationID string          `gorm:"type:varchar(255);not null"`
 	QuantityGood     decimal.Decimal `gorm:"type:numeric(14,4);not null"`
 	QuantityScrap    decimal.Decimal `gorm:"type:numeric(14,4);not null"`
-	OperatorHrID     string          `gorm:"type:uuid;not null"`
+	OperatorHrID     string          `gorm:"type:varchar(255);not null"`
 	RecordedAt       time.Time       `gorm:"type:timestamp;not null;uniqueIndex:idx_mfg_yield_log"`
 }
 
@@ -313,9 +313,9 @@ func FromProductionYieldLogDomain(l *domain.ProductionYieldLog) *ProductionYield
 
 // 7. TransactionalOutbox
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);not null"`
-	AggregateID string    `gorm:"type:uuid;not null"`
+	AggregateID string    `gorm:"type:varchar(255);not null"`
 	Payload     []byte    `gorm:"type:jsonb;not null"`
 	Status      string    `gorm:"type:varchar(50);not null;index:idx_mfg_outbox_status_date"`
 	RetryCount  int       `gorm:"type:integer;not null;default:0"`
@@ -363,7 +363,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 
 // 8. KafkaEventInbox
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255);not null"`
 	ProcessedAt      time.Time `gorm:"not null"`
 	ProcessingStatus string    `gorm:"type:varchar(50);not null"`

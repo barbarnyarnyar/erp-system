@@ -67,7 +67,7 @@ func (s *AuthService) AuthenticateUser(ctx context.Context, username, password, 
 		return "", "", fmt.Errorf("invalid credentials")
 	}
 
-	if !user.IsActive {
+	if user.Status != domain.UserStatusACTIVE {
 		return "", "", fmt.Errorf("user account is deactivated")
 	}
 
@@ -75,6 +75,10 @@ func (s *AuthService) AuthenticateUser(ctx context.Context, username, password, 
 		return "", "", fmt.Errorf("invalid credentials")
 	}
 
+	return s.generateTokens(ctx, user, ipAddress, userAgent)
+}
+
+func (s *AuthService) generateTokens(ctx context.Context, user *domain.User, ipAddress, userAgent string) (string, string, error) {
 	// Resolve Roles and Permissions via RBACService
 	roles, permissions, err := s.rbacSvc.GetUserRolesAndPermissions(ctx, user.ID)
 	if err != nil {
@@ -137,7 +141,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (st
 	}
 
 	user, err := s.userRepo.GetByID(ctx, session.UserID)
-	if err != nil || !user.IsActive {
+	if err != nil || user.Status != domain.UserStatusACTIVE {
 		return "", "", fmt.Errorf("user account inactive or invalid")
 	}
 
@@ -152,8 +156,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (st
 		ua = *session.UserAgent
 	}
 
-	// Issue new tokens
-	return s.AuthenticateUser(ctx, user.Username, user.PasswordHash, ip, ua)
+	return s.generateTokens(ctx, user, ip, ua)
 }
 
 func (s *AuthService) RevokeToken(ctx context.Context, sessionID string) error {
@@ -190,7 +193,7 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*Toke
 	if err != nil {
 		return nil, fmt.Errorf("token invalid: user no longer exists")
 	}
-	if !user.IsActive {
+	if user.Status != domain.UserStatusACTIVE {
 		return nil, fmt.Errorf("token invalid: user account is deactivated")
 	}
 

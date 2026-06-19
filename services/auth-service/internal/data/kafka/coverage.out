@@ -1,0 +1,19 @@
+mode: set
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:30.18,46.2 3 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:48.52,50.6 2 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:50.6,51.10 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:52.21,54.10 2 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:55.11,57.18 2 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:57.18,58.25 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:58.25,60.6 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:61.5,63.13 3 0
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:66.4,67.69 2 0
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:67.69,69.5 1 0
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:74.94,75.15 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:76.40,78.52 2 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:78.52,80.4 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:81.3,87.70 2 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:87.70,89.4 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:90.3,91.13 2 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:93.2,93.12 1 1
+github.com/erp-system/auth-service/internal/data/kafka/consumer.go:96.39,98.2 1 1

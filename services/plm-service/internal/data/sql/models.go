@@ -9,8 +9,8 @@ import (
 )
 
 type MaterialMaster struct {
-	ID                      string         `gorm:"primaryKey;type:uuid"`
-	LegalEntityID           string         `gorm:"type:uuid;index"`
+	ID                      string         `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID           string         `gorm:"type:varchar(255);index"`
 	Sku                     string         `gorm:"type:varchar(255);uniqueIndex:idx_mat_sku"`
 	Description             string         `gorm:"type:text"`
 	Uom                     string         `gorm:"column:uom;type:varchar(50)"`
@@ -82,10 +82,10 @@ func FromMaterialMasterDomain(m *domain.MaterialMaster) *MaterialMaster {
 }
 
 type BomHeader struct {
-	ID            string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID string    `gorm:"type:uuid;index"`
-	MaterialID    string    `gorm:"type:uuid;index"`
-	EcoID         *string   `gorm:"type:uuid;index"`
+	ID            string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID string    `gorm:"type:varchar(255);index"`
+	MaterialID    string    `gorm:"type:varchar(255);index"`
+	EcoID         *string   `gorm:"type:varchar(255);index"`
 	VersionString string    `gorm:"type:varchar(50)"`
 	Status        string    `gorm:"type:varchar(50)"`
 	CreatedAt     time.Time `gorm:"index"`
@@ -129,9 +129,9 @@ func FromBomHeaderDomain(b *domain.BomHeader) *BomHeader {
 }
 
 type BomLine struct {
-	ID                  string          `gorm:"primaryKey;type:uuid"`
-	BomHeaderID         string          `gorm:"type:uuid;index"`
-	ComponentMaterialID string          `gorm:"type:uuid;index"`
+	ID                  string          `gorm:"primaryKey;type:varchar(255)"`
+	BomHeaderID         string          `gorm:"type:varchar(255);index"`
+	ComponentMaterialID string          `gorm:"type:varchar(255);index"`
 	SequenceNumber      int             `gorm:"type:int"`
 	QuantityRequired    decimal.Decimal `gorm:"type:numeric(14,4)"`
 	Uom                 string          `gorm:"column:uom;type:varchar(50)"`
@@ -179,15 +179,15 @@ func FromBomLineDomain(l *domain.BomLine) *BomLine {
 }
 
 type EngineeringChangeOrder struct {
-	ID               string    `gorm:"primaryKey;type:uuid"`
-	LegalEntityID    string    `gorm:"type:uuid;index"`
-	TargetMaterialID string    `gorm:"type:uuid;index"`
+	ID               string    `gorm:"primaryKey;type:varchar(255)"`
+	LegalEntityID    string    `gorm:"type:varchar(255);index"`
+	TargetMaterialID string    `gorm:"type:varchar(255);index"`
 	EcoNumber        string    `gorm:"type:varchar(255);uniqueIndex:idx_eco_num"`
 	Title            string    `gorm:"type:varchar(255)"`
 	Description      string    `gorm:"type:text"`
 	Status           string    `gorm:"type:varchar(50)"`
-	RequestedByHrID  string    `gorm:"type:uuid;index"`
-	ApprovedByHrID   *string   `gorm:"type:uuid;index"`
+	RequestedByHrID  string    `gorm:"type:varchar(255);index"`
+	ApprovedByHrID   *string   `gorm:"type:varchar(255);index"`
 	Version          int       `gorm:"type:int;default:1"`
 	CreatedAt        time.Time `gorm:"index"`
 	UpdatedAt        time.Time
@@ -238,9 +238,9 @@ func FromEcoDomain(eco *domain.EngineeringChangeOrder) *EngineeringChangeOrder {
 }
 
 type TransactionalOutbox struct {
-	ID          string    `gorm:"primaryKey;type:uuid"`
+	ID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType   string    `gorm:"type:varchar(255);index"`
-	AggregateID string    `gorm:"type:uuid;index"`
+	AggregateID string    `gorm:"type:varchar(255);index"`
 	Payload     string    `gorm:"type:jsonb"`
 	Status      string    `gorm:"type:varchar(50);index"`
 	CreatedAt   time.Time `gorm:"index"`
@@ -285,7 +285,7 @@ func FromOutboxDomain(o *domain.TransactionalOutbox) *TransactionalOutbox {
 }
 
 type KafkaEventInbox struct {
-	EventID          string    `gorm:"primaryKey;type:uuid"`
+	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255)"`
 	ProcessedAt      time.Time `gorm:"index"`
 	ProcessingStatus string    `gorm:"type:varchar(50)"`

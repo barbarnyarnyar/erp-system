@@ -89,6 +89,11 @@ services:
     environment:
       - PORT=8001
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   crm-service:
@@ -100,6 +105,11 @@ services:
     environment:
       - PORT=8002
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   hr-service:
@@ -111,6 +121,11 @@ services:
     environment:
       - PORT=8003
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   mfg-service:
@@ -122,6 +137,11 @@ services:
     environment:
       - PORT=8004
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   pm-service:
@@ -133,6 +153,11 @@ services:
     environment:
       - PORT=8005
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   scm-service:
@@ -144,6 +169,11 @@ services:
     environment:
       - PORT=8006
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   eam-service:
@@ -155,6 +185,11 @@ services:
     environment:
       - PORT=8007
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   plm-service:
@@ -166,6 +201,11 @@ services:
     environment:
       - PORT=8008
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
   qms-service:
@@ -177,6 +217,11 @@ services:
     environment:
       - PORT=8009
       - KAFKA_BROKERS=kafka:9092
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
     restart: unless-stopped
 
 volumes:

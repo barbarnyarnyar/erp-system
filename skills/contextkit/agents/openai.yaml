@@ -1,0 +1,4 @@
+interface:
+  display_name: "ContextKit"
+  short_description: "Save and resume repo project memory"
+  default_prompt: "Use $contextkit to resume from the latest project memory before making edits."
