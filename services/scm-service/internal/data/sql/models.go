@@ -826,6 +826,7 @@ func ToDomainDemandForecast(dbModel *DemandForecast) *domain.DemandForecast {
 
 // KafkaEventInbox GORM struct
 type KafkaEventInbox struct {
+	AttemptCount     int       `gorm:"type:integer;default:0;not null"`
 	EventID          string `gorm:"primaryKey"`
 	EventType        string
 	ProcessedAt      time.Time
@@ -838,6 +839,7 @@ func FromDomainKafkaEventInbox(d *domain.KafkaEventInbox) *KafkaEventInbox {
 		return nil
 	}
 	return &KafkaEventInbox{
+		AttemptCount:     d.AttemptCount,
 		EventID:          d.EventID,
 		EventType:        d.EventType,
 		ProcessedAt:      d.ProcessedAt,
@@ -851,6 +853,7 @@ func ToDomainKafkaEventInbox(dbModel *KafkaEventInbox) *domain.KafkaEventInbox {
 		return nil
 	}
 	return &domain.KafkaEventInbox{
+		AttemptCount:     dbModel.AttemptCount,
 		EventID:          dbModel.EventID,
 		EventType:        dbModel.EventType,
 		ProcessedAt:      dbModel.ProcessedAt,

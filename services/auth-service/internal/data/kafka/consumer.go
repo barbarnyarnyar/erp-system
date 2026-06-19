@@ -10,7 +10,9 @@ import (
 	"github.com/erp-system/auth-service/internal/business/domain"
 	"github.com/erp-system/auth-service/internal/business/service"
 	"github.com/segmentio/kafka-go"
-)
+
+	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils")
 
 // KafkaConsumer subscribes to HR offboarding events and translates them
 // into Auth user deactivations. This closes the loop: when HR terminates an
@@ -64,9 +66,18 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			}
 
 			log.Printf("[AUTH-CONSUMER] Received event on topic %s, key %s", msg.Topic, string(msg.Key))
-			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
+			// Extract trace context and register trace ID
+			msgCtx := sharedkafka.ExtractTraceContext(ctx, msg.Headers)
+			traceID := utils.GetTraceIDFromContext(msgCtx)
+			utils.SetTraceID(traceID)
+
+			// Inject publisher into message context for DLQ routing in idempotent transactions
+			msgCtx = context.WithValue(msgCtx, "publisher", c.publisher)
+
+			if err := c.handleMessage(msgCtx, msg.Topic, msg.Value); err != nil {
 				log.Printf("[AUTH-CONSUMER] Failed to process event %s: %v", msg.Topic, err)
 			}
+			utils.ClearTraceID()
 		}
 	}
 }

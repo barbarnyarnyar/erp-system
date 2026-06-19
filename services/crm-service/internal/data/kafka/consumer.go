@@ -10,7 +10,9 @@ import (
 	"github.com/erp-system/crm-service/internal/business/service"
 	"github.com/segmentio/kafka-go"
 	"github.com/shopspring/decimal"
-)
+
+	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils")
 
 type DeadLetterMessage struct {
 	OriginalTopic string      `json:"original_topic"`
@@ -88,10 +90,19 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			}
 
 			log.Printf("Received event on topic %s, key %s", msg.Topic, string(msg.Key))
-			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
+			// Extract trace context and register trace ID
+			msgCtx := sharedkafka.ExtractTraceContext(ctx, msg.Headers)
+			traceID := utils.GetTraceIDFromContext(msgCtx)
+			utils.SetTraceID(traceID)
+
+			// Inject publisher into message context for DLQ routing in idempotent transactions
+			msgCtx = context.WithValue(msgCtx, "publisher", c.publisher)
+
+			if err := c.handleMessage(msgCtx, msg.Topic, msg.Value); err != nil {
 				log.Printf("Failed to process event %s: %v", msg.Topic, err)
-				c.publishToDLQ(ctx, msg.Topic, string(msg.Key), msg.Value, err)
+				c.publishToDLQ(msgCtx, msg.Topic, string(msg.Key), msg.Value, err)
 			}
+			utils.ClearTraceID()
 		}
 	}
 }

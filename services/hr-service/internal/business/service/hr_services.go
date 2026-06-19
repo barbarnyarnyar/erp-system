@@ -632,12 +632,54 @@ func (s *ReliableMessagingServiceImpl) ExecuteIdempotentTransaction(
 	payload interface{},
 	businessRoutine func(ctx context.Context) error,
 ) error {
-	processed, err := s.IsEventProcessed(ctx, eventID)
-	if err != nil {
-		return err
+	// First check if the event was already successfully processed or sent to DLQ
+	msg, err := s.inboxRepo.GetByID(ctx, eventID)
+	if err == nil && msg != nil {
+		if msg.ProcessingStatus == domain.EventProcessingStatusSUCCESS || msg.ProcessingStatus == "FAILED_DLQ" {
+			return nil
+		}
 	}
-	if processed {
-		return nil
+
+	attempts := 0
+	if msg != nil {
+		attempts = msg.AttemptCount
+	}
+	attempts++
+
+	// If attempts >= 5, route to DLQ
+	if attempts >= 5 {
+		inboxEntry := &domain.KafkaEventInbox{
+			EventID:          eventID,
+			EventType:        eventType,
+			ProcessedAt:      time.Now(),
+			ProcessingStatus: "FAILED_DLQ",
+			Payload:          payload,
+			AttemptCount:     attempts,
+		}
+
+		if msg != nil {
+			_ = s.inboxRepo.Update(ctx, inboxEntry)
+		} else {
+			_ = s.inboxRepo.Create(ctx, inboxEntry)
+		}
+
+		// Central DLQ topic
+		dlqTopic := "erp.system.dlq"
+		dlqMsg := map[string]interface{}{
+			"event_id":       eventID,
+			"original_topic": eventType,
+			"payload":        payload,
+			"error":          "Max retries reached (5 attempts)",
+			"failed_at":      time.Now(),
+		}
+
+		if pub, ok := ctx.Value("publisher").(interface {
+			Publish(ctx context.Context, topic string, key string, payload interface{}) error
+		}); ok && pub != nil {
+			_ = pub.Publish(ctx, dlqTopic, eventID, dlqMsg)
+		}
+
+		return nil // Return nil so consumer commits offset and doesn't loop
 	}
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
@@ -650,8 +692,13 @@ func (s *ReliableMessagingServiceImpl) ExecuteIdempotentTransaction(
 				ProcessedAt:      time.Now(),
 				ProcessingStatus: domain.EventProcessingStatusFAILED,
 				Payload:          payload,
+				AttemptCount:     attempts,
 			}
-			_ = s.inboxRepo.Create(txCtx, inboxEntry)
+			if msg != nil {
+				_ = s.inboxRepo.Update(txCtx, inboxEntry)
+			} else {
+				_ = s.inboxRepo.Create(txCtx, inboxEntry)
+			}
 			return err
 		}
 
@@ -661,7 +708,12 @@ func (s *ReliableMessagingServiceImpl) ExecuteIdempotentTransaction(
 			ProcessedAt:      time.Now(),
 			ProcessingStatus: domain.EventProcessingStatusSUCCESS,
 			Payload:          payload,
+			AttemptCount:     attempts,
 		}
-		return s.inboxRepo.Create(txCtx, inboxEntry)
+		if msg != nil {
+			return s.inboxRepo.Update(txCtx, inboxEntry)
+		} else {
+			return s.inboxRepo.Create(txCtx, inboxEntry)
+		}
 	})
 }

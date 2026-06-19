@@ -52,4 +52,6 @@ type TransactionalOutboxRepository interface {
 type KafkaEventInboxRepository interface {
 	Create(ctx context.Context, inbox *KafkaEventInbox) error
 	Exists(ctx context.Context, eventID string) (bool, error)
+	GetByID(ctx context.Context, eventID string) (*KafkaEventInbox, error)
+	Update(ctx context.Context, inbox *KafkaEventInbox) error
 }

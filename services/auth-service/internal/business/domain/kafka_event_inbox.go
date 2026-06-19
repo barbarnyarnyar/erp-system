@@ -10,5 +10,6 @@ type KafkaEventInbox struct {
 	EventType        string                `json:"event_type"` // e.g., "hr.employee.terminated"
 	ProcessedAt      time.Time             `json:"processed_at"`
 	ProcessingStatus EventProcessingStatus `json:"processing_status"`
-	Payload          interface{}           `json:"payload"` // Inbound event payload archived for audit replay
+	Payload          interface{}           `json:"payload"`
+	AttemptCount     int                   `json:"attempt_count"` // Inbound event payload archived for audit replay
 }

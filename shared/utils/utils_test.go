@@ -249,3 +249,53 @@ func TestResponseHelper(t *testing.T) {
 		}
 	})
 }
+
+func TestTracing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	InitLogger("test-tracing")
+	InitTracer("test-tracing")
+
+	t.Run("TracingMiddleware", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		_, r := gin.CreateTestContext(w)
+		r.Use(TracingMiddleware("test-tracing"))
+		
+		r.GET("/test", func(ctx *gin.Context) {
+			traceID := GetTraceID()
+			if traceID == "" {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "empty trace ID"})
+				return
+			}
+			
+			// Test standard log message is correlation-intercepted
+			var buf bytes.Buffer
+			log.SetOutput(&LogBridge{originalWriter: &buf})
+			log.Println("correlated event happened")
+			log.SetOutput(&LogBridge{originalWriter: os.Stderr}) // restore
+			
+			logged := buf.String()
+			if !strings.Contains(logged, "[trace_id: "+traceID+"]") {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "log not correlated: " + logged})
+				return
+			}
+
+			ctx.JSON(http.StatusOK, gin.H{"status": "ok", "trace_id": traceID})
+		})
+
+		req, _ := http.NewRequest("GET", "/test", nil)
+		// Optionally pass custom X-Trace-ID header to test fallback
+		customTraceID := "4bf92f3577b34da6a3ce929d0e0e4736"
+		req.Header.Set("X-Trace-ID", customTraceID)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+		
+		traceHeader := w.Header().Get("X-Trace-ID")
+		if traceHeader != customTraceID {
+			t.Errorf("expected X-Trace-ID header to be %s, got %s", customTraceID, traceHeader)
+		}
+	})
+}
+

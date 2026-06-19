@@ -832,6 +832,7 @@ func FromOutboxDomain(o *domain.TransactionalOutbox) *TransactionalOutbox {
 }
 
 type KafkaEventInbox struct {
+	AttemptCount     int       `gorm:"type:integer;default:0;not null"`
 	EventID          string    `gorm:"primaryKey;type:varchar(255)"`
 	EventType        string    `gorm:"type:varchar(255)"`
 	ProcessedAt      time.Time `gorm:"index"`
@@ -848,6 +849,7 @@ func ToInboxDomain(i *KafkaEventInbox) *domain.KafkaEventInbox {
 		return nil
 	}
 	return &domain.KafkaEventInbox{
+		AttemptCount:     i.AttemptCount,
 		EventID:          i.EventID,
 		EventType:        i.EventType,
 		ProcessedAt:      i.ProcessedAt,
@@ -867,6 +869,7 @@ func FromInboxDomain(i *domain.KafkaEventInbox) *KafkaEventInbox {
 		}
 	}
 	return &KafkaEventInbox{
+		AttemptCount:     i.AttemptCount,
 		EventID:          i.EventID,
 		EventType:        i.EventType,
 		ProcessedAt:      i.ProcessedAt,

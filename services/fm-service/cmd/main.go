@@ -163,6 +163,7 @@ func main() {
 
 	// Initialize Gin router
 	router := gin.Default()
+	router.Use(utils.TracingMiddleware("fm-service"))
 
 	// Setup routes
 	routes.SetupRoutes(router, cfg, accHandler, txHandler, repHandler, invHandler, payHandler, billHandler, leHandler, assetHandler)

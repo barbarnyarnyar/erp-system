@@ -111,6 +111,7 @@ func main() {
 
 	// 8. Setup Gin Engine
 	r := gin.Default()
+	r.Use(utils.TracingMiddleware("scm-service"))
 
 	// Health Check
 	r.GET("/health", func(c *gin.Context) {

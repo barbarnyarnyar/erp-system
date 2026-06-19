@@ -84,6 +84,7 @@ func main() {
 
 	// 6. Setup Gin Engine
 	r := gin.Default()
+	r.Use(utils.TracingMiddleware("qms-service"))
 
 	// Health Check
 	r.GET("/health", func(c *gin.Context) {

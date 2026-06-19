@@ -84,6 +84,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.Default()
+	r.Use(utils.TracingMiddleware("crm-service"))
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {

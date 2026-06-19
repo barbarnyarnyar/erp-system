@@ -10,5 +10,6 @@ type KafkaEventInbox struct {
 	EventType        string      `json:"event_type"` // e.g., "scm.asset.received"
 	ProcessedAt      time.Time   `json:"processed_at"`
 	ProcessingStatus interface{} `json:"processing_status"`
-	Payload          interface{} `json:"payload"` // Inbound historic tracking configuration dump
+	Payload          interface{} `json:"payload"`
+	AttemptCount     int                   `json:"attempt_count"` // Inbound historic tracking configuration dump
 }

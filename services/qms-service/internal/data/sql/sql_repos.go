@@ -331,3 +331,18 @@ func (r *SQLKafkaEventInboxRepository) Exists(ctx context.Context, eventID strin
 	}
 	return count > 0, nil
 }
+
+func (r *SQLKafkaEventInboxRepository) GetByID(ctx context.Context, eventID string) (*domain.KafkaEventInbox, error) {
+	db := GetDB(ctx, r.db)
+	var entity KafkaEventInbox
+	if err := db.Where("event_id = ?", eventID).First(&entity).Error; err != nil {
+		return nil, err
+	}
+	return ToKafkaEventInboxDomain(&entity), nil
+}
+
+func (r *SQLKafkaEventInboxRepository) Update(ctx context.Context, inbox *domain.KafkaEventInbox) error {
+	db := GetDB(ctx, r.db)
+	entity := FromKafkaEventInboxDomain(inbox)
+	return db.Save(entity).Error
+}

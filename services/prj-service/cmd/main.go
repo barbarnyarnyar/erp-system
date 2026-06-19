@@ -74,6 +74,7 @@ func main() {
 
 	// 7. Setup Gin Engine
 	r := gin.Default()
+	r.Use(utils.TracingMiddleware("prj-service"))
 
 	// Health Check
 	r.GET("/health", func(c *gin.Context) {

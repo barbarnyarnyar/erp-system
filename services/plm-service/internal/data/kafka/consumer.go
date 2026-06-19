@@ -11,7 +11,9 @@ import (
 	"github.com/erp-system/plm-service/internal/business/domain"
 	"github.com/erp-system/plm-service/internal/business/service"
 	kafkago "github.com/segmentio/kafka-go"
-)
+
+	sharedkafka "erp-system/shared/kafka"
+	"erp-system/shared/utils")
 
 type KafkaConsumer struct {
 	reader    *kafkago.Reader
@@ -71,7 +73,15 @@ func (c *KafkaConsumer) Start(ctx context.Context) {
 			}
 
 			log.Printf("[PLM-CONSUMER] Received event on topic %s, key %s", msg.Topic, string(msg.Key))
-			if err := c.handleMessage(ctx, msg.Topic, msg.Value); err != nil {
+			// Extract trace context and register trace ID
+			msgCtx := sharedkafka.ExtractTraceContext(ctx, msg.Headers)
+			traceID := utils.GetTraceIDFromContext(msgCtx)
+			utils.SetTraceID(traceID)
+
+			// Inject publisher into message context for DLQ routing in idempotent transactions
+			msgCtx = context.WithValue(msgCtx, "publisher", c.publisher)
+
+			if err := c.handleMessage(msgCtx, msg.Topic, msg.Value); err != nil {
 				log.Printf("[PLM-CONSUMER] Failed to process event %s: %v", msg.Topic, err)
 			}
 		}
