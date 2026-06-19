@@ -67,11 +67,11 @@ We will build a dedicated, multi-service integration flow test. This will run wi
 
 ## 3. Definition of Done
 
-- [ ] **API Handler Tests**: Unit tests exist for Gin handlers in `auth`, `fm`, `hr`, `scm`, `m`, `crm`, `pm` services.
-- [ ] **Kafka Consumer Tests**: Ingestion tests exist for consumers in `scm`, `auth`, `m`, `crm`, `pm` services.
-- [ ] **E2E Workflow Test Suite**: A standalone, repeatable shell script or Go test executes a full multi-service business loop.
-- [ ] **Code Coverage Targets**: Core business logic and HTTP handler packages achieve `go test -cover` >= 80% coverage.
-- [ ] **Validation Integrity**: All tests pass cleanly during local execution (`go test ./...`) and inside Docker containers.
+- [x] **API Handler Tests**: Unit tests exist for Gin handlers in `auth`, `fm`, `hr`, `scm`, `m`, `crm`, `pm` services.
+- [x] **Kafka Consumer Tests**: Ingestion tests exist for consumers in `scm`, `auth`, `m`, `crm`, `pm` services.
+- [x] **E2E Workflow Test Suite**: A standalone, repeatable shell script or Go test executes a full multi-service business loop.
+- [x] **Code Coverage Targets**: Core business logic and HTTP handler packages achieve `go test -cover` >= 80% coverage.
+- [x] **Validation Integrity**: All tests pass cleanly during local execution (`go test ./...`) and inside Docker containers.
 
 ---
 

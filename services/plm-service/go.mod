@@ -1,6 +1,8 @@
 module github.com/erp-system/plm-service
 
-go 1.23
+go 1.23.0
+
+toolchain go1.24.6
 
 require (
 	erp-system/shared v0.0.0

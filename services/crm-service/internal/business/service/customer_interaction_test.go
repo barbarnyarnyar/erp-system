@@ -3,6 +3,7 @@ package service_test
 import (
 	sharedtesting "erp-system/shared/testing"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -74,3 +75,22 @@ func TestCustomerInteraction_Delete(t *testing.T) {
 		t.Errorf("expected error fetching deleted interaction")
 	}
 }
+
+type failingCustomerInteractionRepo struct {
+	domain.CustomerInteractionRepository
+}
+
+func (r *failingCustomerInteractionRepo) Create(ctx context.Context, ci *domain.CustomerInteraction) error {
+	return errors.New("db error")
+}
+
+func TestCustomerInteraction_CreateRepoError(t *testing.T) {
+	repo := &failingCustomerInteractionRepo{}
+	svc := service.NewCustomerInteractionService(repo, &sharedtesting.MockPublisher{})
+
+	_, err := svc.CreateCustomerInteraction(context.Background(), "cust_1", "CALL", "x", "y", time.Now(), "alice")
+	if err == nil {
+		t.Errorf("expected error when repo fails")
+	}
+}
+

@@ -1,6 +1,8 @@
 module github.com/erp-system/scm-service
 
-go 1.23
+go 1.23.0
+
+toolchain go1.24.6
 
 require (
 	erp-system/shared v0.0.0
@@ -8,6 +10,7 @@ require (
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/shopspring/decimal v1.4.0
 	gorm.io/driver/postgres v1.5.11
+	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.30.0
 )
 
@@ -48,7 +51,6 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/sqlite v1.6.0 // indirect
 )
 
 replace erp-system/shared => ../../shared

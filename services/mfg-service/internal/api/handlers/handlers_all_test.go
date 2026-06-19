@@ -2,6 +2,8 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -277,3 +279,133 @@ func TestMfgErrorPaths(t *testing.T) {
 		t.Errorf("expected 500, got %d", w.Code)
 	}
 }
+
+// Mock services for handler error tests
+type mockFloorService struct {
+	service.FloorConfigurationService
+	establishWorkCenterFunc func(ctx context.Context, legalEntityID, code, name string) (*domain.WorkCenter, error)
+	appendStationToCenterFunc func(ctx context.Context, workCenterID, routingCode string, stationType domain.StationType, equipmentID *string, setupTime, runTime int) (*domain.RoutingStation, error)
+}
+
+func (m *mockFloorService) EstablishWorkCenter(ctx context.Context, legalEntityID, code, name string) (*domain.WorkCenter, error) {
+	if m.establishWorkCenterFunc != nil {
+		return m.establishWorkCenterFunc(ctx, legalEntityID, code, name)
+	}
+	return nil, nil
+}
+
+func (m *mockFloorService) AppendStationToCenter(ctx context.Context, workCenterID, routingCode string, stationType domain.StationType, equipmentID *string, setupTime, runTime int) (*domain.RoutingStation, error) {
+	if m.appendStationToCenterFunc != nil {
+		return m.appendStationToCenterFunc(ctx, workCenterID, routingCode, stationType, equipmentID, setupTime, runTime)
+	}
+	return nil, nil
+}
+
+type mockExecService struct {
+	service.WorkOrderExecutionService
+	instantiateWorkOrderFunc func(ctx context.Context, legalEntityID, materialID, bomHeaderID string, qtyTarget decimal.Decimal, start, end time.Time) (*domain.WorkOrder, error)
+	transitionWorkOrderStateFunc func(ctx context.Context, workOrderID string, currentState, targetState domain.WorkOrderState) (*domain.WorkOrder, error)
+	rerouteWorkOrderStationFunc func(ctx context.Context, workOrderID, currentStationID, targetStationID string, isRework bool) error
+}
+
+func (m *mockExecService) InstantiateWorkOrder(ctx context.Context, legalEntityID, materialID, bomHeaderID string, qtyTarget decimal.Decimal, start, end time.Time) (*domain.WorkOrder, error) {
+	if m.instantiateWorkOrderFunc != nil {
+		return m.instantiateWorkOrderFunc(ctx, legalEntityID, materialID, bomHeaderID, qtyTarget, start, end)
+	}
+	return nil, nil
+}
+
+func (m *mockExecService) TransitionWorkOrderState(ctx context.Context, workOrderID string, currentState, targetState domain.WorkOrderState) (*domain.WorkOrder, error) {
+	if m.transitionWorkOrderStateFunc != nil {
+		return m.transitionWorkOrderStateFunc(ctx, workOrderID, currentState, targetState)
+	}
+	return nil, nil
+}
+
+func (m *mockExecService) RerouteWorkOrderStation(ctx context.Context, workOrderID, currentStationID, targetStationID string, isRework bool) error {
+	if m.rerouteWorkOrderStationFunc != nil {
+		return m.rerouteWorkOrderStationFunc(ctx, workOrderID, currentStationID, targetStationID, isRework)
+	}
+	return nil
+}
+
+type mockTeleService struct {
+	service.ShopFloorTelemetryService
+	recordBulkMaterialConsumptionFunc func(ctx context.Context, legalEntityID, workOrderID string, lines []domain.ConsumptionSubmissionInput) error
+	commitProductionYieldFunc func(ctx context.Context, legalEntityID, workOrderID, stationID string, qtyGood, qtyScrap decimal.Decimal, operatorHrID string) error
+}
+
+func (m *mockTeleService) RecordBulkMaterialConsumption(ctx context.Context, legalEntityID, workOrderID string, lines []domain.ConsumptionSubmissionInput) error {
+	if m.recordBulkMaterialConsumptionFunc != nil {
+		return m.recordBulkMaterialConsumptionFunc(ctx, legalEntityID, workOrderID, lines)
+	}
+	return nil
+}
+
+func (m *mockTeleService) CommitProductionYield(ctx context.Context, legalEntityID, workOrderID, stationID string, qtyGood, qtyScrap decimal.Decimal, operatorHrID string) error {
+	if m.commitProductionYieldFunc != nil {
+		return m.commitProductionYieldFunc(ctx, legalEntityID, workOrderID, stationID, qtyGood, qtyScrap, operatorHrID)
+	}
+	return nil
+}
+
+func TestMfgHandlerServiceErrors(t *testing.T) {
+	floorSvc := &mockFloorService{
+		establishWorkCenterFunc: func(ctx context.Context, legalEntityID, code, name string) (*domain.WorkCenter, error) {
+			return nil, errors.New("establish error")
+		},
+		appendStationToCenterFunc: func(ctx context.Context, workCenterID, routingCode string, stationType domain.StationType, equipmentID *string, setupTime, runTime int) (*domain.RoutingStation, error) {
+			return nil, errors.New("append error")
+		},
+	}
+
+	execSvc := &mockExecService{
+		instantiateWorkOrderFunc: func(ctx context.Context, legalEntityID, materialID, bomHeaderID string, qtyTarget decimal.Decimal, start, end time.Time) (*domain.WorkOrder, error) {
+			return nil, errors.New("instantiate error")
+		},
+		transitionWorkOrderStateFunc: func(ctx context.Context, workOrderID string, currentState, targetState domain.WorkOrderState) (*domain.WorkOrder, error) {
+			return nil, errors.New("transition error")
+		},
+		rerouteWorkOrderStationFunc: func(ctx context.Context, workOrderID, currentStationID, targetStationID string, isRework bool) error {
+			return errors.New("reroute error")
+		},
+	}
+
+	teleSvc := &mockTeleService{
+		recordBulkMaterialConsumptionFunc: func(ctx context.Context, legalEntityID, workOrderID string, lines []domain.ConsumptionSubmissionInput) error {
+			return errors.New("consumption error")
+		},
+		commitProductionYieldFunc: func(ctx context.Context, legalEntityID, workOrderID, stationID string, qtyGood, qtyScrap decimal.Decimal, operatorHrID string) error {
+			return errors.New("yield error")
+		},
+	}
+
+	mfgHandler := handlers.NewMfgHandler(floorSvc, execSvc, teleSvc)
+	router := gin.New()
+	routes.RegisterRoutes(router, mfgHandler)
+
+	tests := []struct {
+		url    string
+		method string
+		body   string
+	}{
+		{"/api/v1/mfg/work-centers", http.MethodPost, `{"legal_entity_id":"t-1","code":"c-1","name":"n-1"}`},
+		{"/api/v1/mfg/work-centers/wc-123/stations", http.MethodPost, `{"routing_code":"rc-1","station_type":"ASSEMBLY"}`},
+		{"/api/v1/mfg/work-orders", http.MethodPost, `{"legal_entity_id":"t-1","material_id":"m-1","bom_header_id":"b-1","quantity_target":"10","scheduled_start":"2026-06-19T00:00:00Z","scheduled_end":"2026-06-20T00:00:00Z"}`},
+		{"/api/v1/mfg/work-orders/wo-123/transition", http.MethodPost, `{"current_state":"STAGED","target_state":"RELEASED"}`},
+		{"/api/v1/mfg/work-orders/wo-123/reroute", http.MethodPost, `{"current_station_id":"s-1","target_station_id":"s-2"}`},
+		{"/api/v1/mfg/work-orders/wo-123/consumption", http.MethodPost, `{"legal_entity_id":"t-1","lines":[{"material_id":"m-1","quantity_consumed":"5","routing_station_id":"s-1","warehouse_id":"w-1"}]}`},
+		{"/api/v1/mfg/work-orders/wo-123/yield", http.MethodPost, `{"legal_entity_id":"t-1","station_id":"s-1","quantity_good":"10","operator_hr_id":"op-1"}`},
+	}
+
+	for _, item := range tests {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(item.method, item.url, bytes.NewBufferString(item.body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("expected 500 for %s, got %d. Body: %s", item.url, w.Code, w.Body.String())
+		}
+	}
+}
+
