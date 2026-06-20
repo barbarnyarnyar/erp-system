@@ -10,40 +10,40 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type MockInventoryItemRepoEx struct {
-	domain.InventoryItemRepository
+type MockStockBalanceRepoEx struct {
+	domain.StockBalanceRepository
 	createErr           error
 	getErr              error
 	updateErr           error
-	getByProductLocErr error
+	getByMaterialLocErr error
 }
 
-func (m *MockInventoryItemRepoEx) Create(ctx context.Context, ii *domain.InventoryItem) error {
+func (m *MockStockBalanceRepoEx) Create(ctx context.Context, sb *domain.StockBalance) error {
 	if m.createErr != nil {
 		return m.createErr
 	}
-	return m.InventoryItemRepository.Create(ctx, ii)
+	return m.StockBalanceRepository.Create(ctx, sb)
 }
 
-func (m *MockInventoryItemRepoEx) GetByID(ctx context.Context, id string) (*domain.InventoryItem, error) {
+func (m *MockStockBalanceRepoEx) GetByID(ctx context.Context, id string) (*domain.StockBalance, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
-	return m.InventoryItemRepository.GetByID(ctx, id)
+	return m.StockBalanceRepository.GetByID(ctx, id)
 }
 
-func (m *MockInventoryItemRepoEx) Update(ctx context.Context, ii *domain.InventoryItem) error {
+func (m *MockStockBalanceRepoEx) Update(ctx context.Context, sb *domain.StockBalance) error {
 	if m.updateErr != nil {
 		return m.updateErr
 	}
-	return m.InventoryItemRepository.Update(ctx, ii)
+	return m.StockBalanceRepository.Update(ctx, sb)
 }
 
-func (m *MockInventoryItemRepoEx) GetByProductAndLocation(ctx context.Context, productID string, locationID string) (*domain.InventoryItem, error) {
-	if m.getByProductLocErr != nil {
-		return nil, m.getByProductLocErr
+func (m *MockStockBalanceRepoEx) GetByMaterialAndLocation(ctx context.Context, materialID string, locationID string) (*domain.StockBalance, error) {
+	if m.getByMaterialLocErr != nil {
+		return nil, m.getByMaterialLocErr
 	}
-	return m.InventoryItemRepository.GetByProductAndLocation(ctx, productID, locationID)
+	return m.StockBalanceRepository.GetByMaterialAndLocation(ctx, materialID, locationID)
 }
 
 type MockInventoryMovementRepoEx struct {
@@ -90,7 +90,7 @@ func TestInventoryService_ListInventory(t *testing.T) {
 	ctx := context.Background()
 	svc := newInventoryService(t)
 
-	_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+	_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 	list, err := svc.ListInventory(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -100,45 +100,45 @@ func TestInventoryService_ListInventory(t *testing.T) {
 	}
 }
 
-func TestInventoryService_CreateInventoryItemInvariantFailure(t *testing.T) {
+func TestInventoryService_CreateStockBalanceInvariantFailure(t *testing.T) {
 	ctx := context.Background()
 	svc := newInventoryService(t)
 
 	// Invariant violation: negative qtyOnHand
-	_, err := svc.CreateInventoryItem(ctx, "prod-1", "loc-1", -5, 5, 100, decimal.NewFromFloat(5.0))
+	_, err := svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(-5))
 	if err == nil {
 		t.Error("expected invariant error, got nil")
 	}
 }
 
-func TestInventoryService_UpdateInventoryItem(t *testing.T) {
+func TestInventoryService_UpdateStockBalance(t *testing.T) {
 	ctx := context.Background()
 	svc := newInventoryService(t)
 
-	ii, err := svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+	sb, err := svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
 
 	t.Run("success", func(t *testing.T) {
-		updated, err := svc.UpdateInventoryItem(ctx, ii.ID, 20, 2, 8, 200, decimal.NewFromFloat(6.0))
+		updated, err := svc.UpdateStockBalance(ctx, sb.ID, decimal.NewFromInt(20), decimal.NewFromInt(2))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if updated.QuantityOnHand != 20 || updated.QuantityReserved != 2 || updated.QuantityAvailable != 18 {
+		if !updated.QuantityOnHand.Equal(decimal.NewFromInt(20)) || !updated.QuantityReserved.Equal(decimal.NewFromInt(2)) || !updated.QuantityAvailable.Equal(decimal.NewFromInt(18)) {
 			t.Errorf("unexpected updated state: %+v", updated)
 		}
 	})
 
 	t.Run("nonexistent", func(t *testing.T) {
-		_, err := svc.UpdateInventoryItem(ctx, "nonexistent", 20, 0, 5, 100, decimal.Zero)
+		_, err := svc.UpdateStockBalance(ctx, "nonexistent", decimal.NewFromInt(20), decimal.Zero)
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
 	})
 
 	t.Run("invariant failure", func(t *testing.T) {
-		_, err := svc.UpdateInventoryItem(ctx, ii.ID, 10, 20, 5, 100, decimal.Zero) // reserved > on hand
+		_, err := svc.UpdateStockBalance(ctx, sb.ID, decimal.NewFromInt(10), decimal.NewFromInt(20)) // reserved > on hand
 		if err == nil {
 			t.Error("expected invariant error, got nil")
 		}
@@ -150,9 +150,9 @@ func TestInventoryService_AdjustInventory_Branches(t *testing.T) {
 
 	t.Run("insufficient stock for issue", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
-		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", 15, "ISSUE", "")
+		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", decimal.NewFromInt(15), "ISSUE", "")
 		if err == nil {
 			t.Error("expected error due to insufficient stock, got nil")
 		}
@@ -160,45 +160,33 @@ func TestInventoryService_AdjustInventory_Branches(t *testing.T) {
 
 	t.Run("unknown movement type", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
-		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", 5, "UNKNOWN", "")
+		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", decimal.NewFromInt(5), "UNKNOWN", "")
 		if err == nil {
 			t.Error("expected error for unknown movement type, got nil")
 		}
 	})
 
-	t.Run("low stock trigger event", func(t *testing.T) {
-		svc := newInventoryService(t)
-		// reorderPoint = 15, onHand = 20
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 20, 15, 100, decimal.NewFromFloat(5.0))
-
-		// Adjust sub 8 -> onHand = 12 (which is < 15, triggering low stock)
-		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", 8, "ADJUSTMENT_SUB", "low stock check")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	})
-
 	t.Run("out of stock trigger event", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
-		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", 10, "ISSUE", "clear stock")
+		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", decimal.NewFromInt(10), "ISSUE", "clear stock")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("db error inside transaction", func(t *testing.T) {
-		invRepo := &MockInventoryItemRepoEx{
-			InventoryItemRepository: memory.NewMemoryInventoryItemRepo(),
+		invRepo := &MockStockBalanceRepoEx{
+			StockBalanceRepository: memory.NewMemoryStockBalanceRepo(),
 			updateErr:               errors.New("db update failed"),
 		}
 		svc := NewInventoryService(invRepo, memory.NewMemoryInventoryMovementRepo(), memory.NewMemoryStockTransferRepo(), &MockPublisher{}, memory.NewMemoryTransactionManager())
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
-		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", 5, "RECEIPT", "")
+		_, err := svc.AdjustInventory(ctx, "prod-1", "loc-1", decimal.NewFromInt(5), "RECEIPT", "")
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -210,7 +198,7 @@ func TestInventoryService_ReserveStock_Errors(t *testing.T) {
 
 	t.Run("nonexistent item", func(t *testing.T) {
 		svc := newInventoryService(t)
-		err := svc.ReserveStock(ctx, "nonexistent", "loc-1", 5, "ref-1")
+		err := svc.ReserveStock(ctx, "nonexistent", "loc-1", decimal.NewFromInt(5), "ref-1")
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -218,9 +206,9 @@ func TestInventoryService_ReserveStock_Errors(t *testing.T) {
 
 	t.Run("insufficient available", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 5, 100, decimal.NewFromFloat(5.0))
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
-		err := svc.ReserveStock(ctx, "prod-1", "loc-1", 15, "ref-1")
+		err := svc.ReserveStock(ctx, "prod-1", "loc-1", decimal.NewFromInt(15), "ref-1")
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -239,15 +227,15 @@ func TestInventoryService_ReleaseReservation_Errors(t *testing.T) {
 	})
 
 	t.Run("inventory item not found for released reservation", func(t *testing.T) {
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		svc := NewInventoryService(invRepo, memory.NewMemoryInventoryMovementRepo(), memory.NewMemoryStockTransferRepo(), &MockPublisher{}, memory.NewMemoryTransactionManager())
 
 		// Create reservation manually to bypass checks
 		svc.mu.Lock()
 		svc.reservations["ref-invalid"] = stockReservation{
-			productID:  "prod-1",
-			locationID: "loc-1",
-			quantity:   5,
+			materialID:  "prod-1",
+			locationID:  "loc-1",
+			quantity:    decimal.NewFromInt(5),
 		}
 		svc.mu.Unlock()
 
@@ -279,7 +267,7 @@ func TestInventoryService_CreateStockTransfer_Errors(t *testing.T) {
 
 	t.Run("insufficient source inventory available", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 3, 0, 100, decimal.Zero)
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(3))
 
 		_, err := svc.CreateStockTransfer(ctx, "loc-1", "loc-2", "prod-1", 5)
 		if err == nil {
@@ -288,13 +276,13 @@ func TestInventoryService_CreateStockTransfer_Errors(t *testing.T) {
 	})
 
 	t.Run("db create error", func(t *testing.T) {
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		transferRepo := &MockStockTransferRepoEx{
 			StockTransferRepository: memory.NewMemoryStockTransferRepo(),
 			createErr:               errors.New("db create error"),
 		}
 		svc := NewInventoryService(invRepo, memory.NewMemoryInventoryMovementRepo(), transferRepo, &MockPublisher{}, memory.NewMemoryTransactionManager())
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 0, 100, decimal.Zero)
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
 		_, err := svc.CreateStockTransfer(ctx, "loc-1", "loc-2", "prod-1", 5)
 		if err == nil {
@@ -308,7 +296,7 @@ func TestInventoryService_ExecuteStockTransfer_Errors(t *testing.T) {
 
 	t.Run("not pending", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 0, 100, decimal.Zero)
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 		st, _ := svc.CreateStockTransfer(ctx, "loc-1", "loc-2", "prod-1", 5)
 
 		// Set status to TRANSFERRED first
@@ -323,7 +311,7 @@ func TestInventoryService_ExecuteStockTransfer_Errors(t *testing.T) {
 
 	t.Run("destination item auto-creation success", func(t *testing.T) {
 		svc := newInventoryService(t)
-		_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 0, 100, decimal.NewFromFloat(5.0))
+		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 		// Destination location loc-2 doesn't have inventory seeded, should auto-create it
 
 		st, err := svc.CreateStockTransfer(ctx, "loc-1", "loc-2", "prod-1", 5)
@@ -345,7 +333,7 @@ func TestInventoryService_ListMovementsAndGetStockTransfer(t *testing.T) {
 	ctx := context.Background()
 	svc := newInventoryService(t)
 
-	_, _ = svc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 0, 100, decimal.Zero)
+	_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 	st, _ := svc.CreateStockTransfer(ctx, "loc-1", "loc-2", "prod-1", 5)
 
 	got, err := svc.GetStockTransfer(ctx, st.ID)

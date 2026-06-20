@@ -1,403 +1,400 @@
 // ============================================================================
-// PACKAGE 1: CUSTOMER RELATIONSHIP MANAGEMENT CORE (ENGINE)
-// Architectural Pattern: Multi-Tenant Event-Driven Demand & Billing Trigger Core
-// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
-// Domain Coverage: Customer Directory, Versioned Pricing Strategies, Orders, Billing
+// COMPONENT 1: TRANSACTIONAL SERVICE CORE MODULE
 // ============================================================================
-
 namespace erp.crm.core;
 
-enum CustomerStatus { PROSPECT, ACTIVE, CREDIT_HOLD, INACTIVE }
-enum PriceBookType { STANDARD, CUSTOMER_SPECIFIC, REGIONAL, PROMOTIONAL }
-enum StrategyEvaluationRule { FLAT_MARKUP, TIERED_VOLUME, CUSTOMER_CONTRACT, TEMPORAL_DISCOUNT }
-enum SalesOrderState { DRAFT, PENDING_CREDIT_CHECK, APPROVED, PARTIALLY_FULFILLED, FULLY_FULFILLED, INVOICED, CANCELLED }
-enum BillingTriggerStatus { PENDING, PROCESSED, FAILED }
-enum OutboxStatus { PENDING, SENT, FAILED }
-enum EventProcessingStatus { SUCCESS, FAILED }
+enum CustomerStatus {
+    PROSPECT,
+    ACTIVE,
+    CREDIT_HOLD,
+    INACTIVE
+}
+
+enum PriceBookType {
+    STANDARD,
+    CUSTOMER_SPECIFIC,
+    REGIONAL,
+    PROMOTIONAL
+}
+
+enum StrategyEvaluationRule {
+    FLAT_MARKUP,
+    TIERED_VOLUME,
+    CUSTOMER_CONTRACT,
+    TEMPORAL_DISCOUNT
+}
+
+enum SalesOrderState {
+    DRAFT,
+    PENDING_CREDIT_CHECK,
+    APPROVED,
+    PARTIALLY_FULFILLED,
+    FULLY_FULFILLED,
+    INVOICED,
+    CANCELLED
+}
+
+enum BillingTriggerStatus {
+    PENDING,
+    PROCESSED,
+    FAILED
+}
+
+enum OutboxStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
+
+enum EventProcessingStatus {
+    SUCCESS,
+    FAILED
+}
 
 struct SalesOrderLineInput {
-    material_id: uuid;
-    line_sequence: int;
-    quantity_ordered: decimal @digits(14, 4);
+    material_id: uuid;
+    line_sequence: int;
+    quantity_ordered: decimal @digits(14, 4);
 }
 
 struct OrderLinePayload {
-    material_id: uuid;
-    line_sequence: int;
-    quantity_ordered: decimal @digits(14, 4);
-    unit_sell_price: decimal @digits(18, 4);
-    net_line_amount: decimal @digits(18, 4);
+    material_id: uuid;
+    line_sequence: int;
+    quantity_ordered: decimal @digits(14, 4);
+    unit_sell_price: decimal @digits(18, 4);
+    net_line_amount: decimal @digits(18, 4);
 }
 
 @table("crm_customers")
 @unique_composite(legal_entity_id, customer_code)
 entity CustomerProfile {
-    id: uuid @primary;
-    legal_entity_id: uuid;                        // Primitive Ref -> FM.LegalEntity
-    customer_code: string;                        // Unique business key per tenant
-    company_name: string;
-    account_manager_hr_id: uuid;                  // Primitive Ref -> HR.Employee
-    status: CustomerStatus;
-    credit_limit: decimal @digits(18, 4);
-    currency: string;                             // ISO 4217 code
-    
-    // Extended properties used in active business/handler logic
-    contact_name: string @optional;
-    email: string @optional;
-    phone: string @optional;
-    category: string @optional;
-    parent_customer_id: uuid @optional;
-
-    version: int;                                 // Optimistic Locking Shield
-    created_at: timestamp;
-    updated_at: timestamp;
-    deleted_at: timestamp @optional;
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    customer_code: string;
+    company_name: string;
+    account_manager_hr_id: uuid;
+    status: CustomerStatus;
+    credit_limit: decimal @digits(18, 4);
+    currency: string;
+    version: int;
+    created_at: timestamp;
+    updated_at: timestamp;
+    deleted_at: timestamp @optional;
 }
 
 @table("crm_price_books")
 @unique_composite(legal_entity_id, price_book_code)
 entity PriceBookHeader {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    price_book_code: string;
-    name: string;
-    type: PriceBookType;
-    start_date: date;
-    end_date: date;
-    is_active: boolean;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    price_book_code: string;
+    name: string;
+    type: PriceBookType;
+    start_date: date;
+    end_date: date;
+    is_active: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_price_book_entries")
-@unique_composite(price_book_id, material_id)     
+@unique_composite(price_book_id, material_id)     
 entity PriceBookEntry {
-    id: uuid @primary;
-    price_book_id: uuid @reference(PriceBookHeader.id);
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
-    unit_list_price: decimal @digits(18, 4);
-    min_quantity_threshold: decimal @digits(14, 4); 
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    price_book_id: uuid @reference(PriceBookHeader.id);
+    material_id: uuid;
+    unit_list_price: decimal @digits(18, 4);
+    min_quantity_threshold: decimal @digits(14, 4); 
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_pricing_strategies")
 @unique_composite(price_book_id, evaluation_rule, strategy_version)
 entity PricingStrategy {
-    id: uuid @primary;
-    price_book_id: uuid @reference(PriceBookHeader.id);
-    evaluation_rule: StrategyEvaluationRule;
-    strategy_version: int;                        // Zero-drift historical audit tracker
-    modifier_percentage: decimal @digits(5, 4);   
-    configuration_matrix: jsonb;                  // Dynamic volume breaks/tier structures
-    is_active: boolean;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    price_book_id: uuid @reference(PriceBookHeader.id);
+    evaluation_rule: StrategyEvaluationRule;
+    strategy_version: int;
+    modifier_percentage: decimal @digits(5, 4);   
+    configuration_matrix: jsonb;
+    is_active: boolean;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_sales_orders")
 @unique_composite(legal_entity_id, order_number)
 entity SalesOrder {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    customer_id: uuid @reference(CustomerProfile.id);
-    price_book_id: uuid @reference(PriceBookHeader.id);
-    order_number: string;
-    status: SalesOrderState;
-    total_gross_value: decimal @digits(18, 4);
-    total_tax_value: decimal @digits(18, 4);
-    version: int;                                 // Optimistic Locking Shield
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    customer_id: uuid @reference(CustomerProfile.id);
+    price_book_id: uuid @reference(PriceBookHeader.id);
+    order_number: string;
+    status: SalesOrderState;
+    total_gross_value: decimal @digits(18, 4);
+    total_tax_value: decimal @digits(18, 4);
+    version: int;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_sales_order_lines")
 @unique_composite(sales_order_id, line_sequence)
 entity SalesOrderLine {
-    id: uuid @primary;
-    sales_order_id: uuid @reference(SalesOrder.id);
-    material_id: uuid;                            // Primitive Ref -> PLM.MaterialMaster
-    line_sequence: int;
-    quantity_ordered: decimal @digits(14, 4);
-    quantity_shipped: decimal @digits(14, 4);    
-    unit_sell_price: decimal @digits(18, 4);      
-    discount_applied: decimal @digits(5, 4);     
-    net_line_amount: decimal @digits(18, 4);
-    applied_strategy_version: int @optional;      // Links exact calculation lineage
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    sales_order_id: uuid @reference(SalesOrder.id);
+    material_id: uuid;
+    line_sequence: int;
+    quantity_ordered: decimal @digits(14, 4);
+    quantity_shipped: decimal @digits(14, 4);    
+    unit_sell_price: decimal @digits(18, 4);      
+    discount_applied: decimal @digits(5, 4);     
+    net_line_amount: decimal @digits(18, 4);
+    applied_strategy_version: int @optional;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_billing_triggers")
 @partition_range_monthly(triggered_at)
 @unique_composite(id, sales_order_id, triggered_at)
 entity BillingTrigger {
-    id: uuid @primary;
-    legal_entity_id: uuid;
-    sales_order_id: uuid @reference(SalesOrder.id);
-    source_delivery_document_id: uuid;            // Primitive Ref -> SCM or PRJ
-    billable_amount: decimal @digits(18, 4);
-    tax_amount: decimal @digits(18, 4);
-    status: BillingTriggerStatus;
-    triggered_at: timestamp;                       // Partition Coordinate
-    processed_at: timestamp @optional;
+    id: uuid @primary;
+    legal_entity_id: uuid;
+    sales_order_id: uuid @reference(SalesOrder.id);
+    source_delivery_document_id: uuid;
+    billable_amount: decimal @digits(18, 4);
+    tax_amount: decimal @digits(18, 4);
+    status: BillingTriggerStatus;
+    triggered_at: timestamp;
+    processed_at: timestamp @optional;
 }
 
 @table("crm_transactional_outbox")
 @index_composite(status, created_at)
 entity TransactionalOutbox {
-    id: uuid @primary;
-    event_type: string;
-    aggregate_id: uuid;
-    payload: jsonb;
-    status: OutboxStatus;                         
-    retry_count: int;                             
-    created_at: timestamp;
+    id: uuid @primary;
+    event_type: string;
+    aggregate_id: uuid;
+    payload: jsonb;
+    status: OutboxStatus;                         
+    retry_count: int;                             
+    created_at: timestamp;
 }
 
 @table("crm_kafka_event_inbox")
 entity KafkaEventInbox {
-    event_id: uuid @primary;                      // Idempotency Tracking Key
-    event_type: string;                           
-    processed_at: timestamp;
-    processing_status: EventProcessingStatus;
-    payload: jsonb;                               
-    attempt_count: int;
+    event_id: uuid @primary;
+    event_type: string;                           
+    processed_at: timestamp;
+    processing_status: EventProcessingStatus;
+    payload: jsonb;                               
 }
 
 interface CustomerAccountService {
-    CustomerProfile createProfile(ctx: context, legalEntityId: uuid, code: string, name: string, managerHrId: uuid, crLimit: decimal, currency: string);
-    CustomerProfile updateCreditStatus(ctx: context, customerId: uuid, targetStatus: CustomerStatus);
+    CustomerProfile createProfile(ctx: context, legalEntityId: uuid, code: string, name: string, managerHrId: uuid, crLimit: decimal, currency: string);
+    CustomerProfile updateCreditStatus(ctx: context, customerId: uuid, targetStatus: CustomerStatus);
 }
 
 interface PricingCalculationService {
-    PriceBookHeader createPriceBook(ctx: context, legalEntityId: uuid, code: string, name: string, bookType: PriceBookType, start: date, end: date);
-    PriceBookEntry assignMaterialPrice(ctx: context, priceBookId: uuid, materialId: uuid, price: decimal, minQty: decimal);
-    void registerStrategyModifier(ctx: context, priceBookId: uuid, rule: StrategyEvaluationRule, version: int, modifier: decimal, matrixConfig: jsonb);
-    decimal resolveItemUnitPrice(ctx: context, customerId: uuid, priceBookId: uuid, materialId: uuid, targetQuantity: decimal);
+    PriceBookHeader createPriceBook(ctx: context, legalEntityId: uuid, code: string, name: string, bookType: PriceBookType, start: date, end: date);
+    PriceBookEntry assignMaterialPrice(ctx: context, priceBookId: uuid, materialId: uuid, price: decimal, minQty: decimal);
+    void registerStrategyModifier(ctx: context, priceBookId: uuid, rule: StrategyEvaluationRule, version: int, modifier: decimal, matrixConfig: jsonb);
+    decimal resolveItemUnitPrice(ctx: context, customerId: uuid, priceBookId: uuid, materialId: uuid, targetQuantity: decimal);
 }
 
 interface SalesOrderService {
-    SalesOrder instantiateDraftOrder(ctx: context, legalEntityId: uuid, customerId: uuid, priceBookId: uuid, orderNum: string, lines: List<SalesOrderLineInput>);
-    SalesOrder processOrderStateTransition(ctx: context, salesOrderId: uuid, currentState: SalesOrderState, targetState: SalesOrderState);
+    SalesOrder instantiateDraftOrder(ctx: context, legalEntityId: uuid, customerId: uuid, priceBookId: uuid, orderNum: string, lines: List<SalesOrderLineInput>);
+    SalesOrder processOrderStateTransition(ctx: context, salesOrderId: uuid, currentState: SalesOrderState, targetState: SalesOrderState);
 }
 
 interface RevenueBillingService {
-    void stageLogisticsBillingEntry(ctx: context, legalEntityId: uuid, salesOrderId: uuid, deliveryDocId: uuid, amount: decimal, tax: decimal);
-    void dispatchStagedBillingToAccountsReceivable(ctx: context, batchLimit: int);
-    void purgeProcessedBillingTriggers(ctx: context, olderThan: timestamp, batchLimit: int);
+    void stageLogisticsBillingEntry(ctx: context, legalEntityId: uuid, salesOrderId: uuid, deliveryDocId: uuid, amount: decimal, tax: decimal);
+    void dispatchStagedBillingToAccountsReceivable(ctx: context, batchLimit: int);
+    void purgeProcessedBillingTriggers(ctx: context, olderThan: timestamp, batchLimit: int);
 }
 
 interface OutboxRelayWorker {
-    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
-    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
-    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
+    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
+    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
+    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
 }
 
 interface ReliableMessagingService {
-    boolean isEventProcessed(ctx: context, eventId: uuid);
-    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+    boolean isEventProcessed(ctx: context, eventId: uuid);
+    void executeIdempotentTransaction(ctx: context, eventId: uuid, eventType: string, payload: jsonb, businessRoutine: function);
+}
+
+events Emitters {
+    producer_events {
+        crm.order.confirmed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, line_items: List<OrderLinePayload>, timestamp: timestamp }
+        crm.order.cancelled: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, timestamp: timestamp }
+        crm.billing.accrued: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, billing_trigger_id: uuid, accounts_receivable_value: decimal, tax_value: decimal, currency: string, timestamp: timestamp }
+    }
+    consumer_events {
+        plm.material.released: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, sku: string, description: string, timestamp: timestamp }
+        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, delivery_document_id: uuid, total_cogs_value: decimal, items: jsonb, timestamp: timestamp }
+        prj.milestone.achieved: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, wbs_node_id: uuid, revenue_amount: decimal, timestamp: timestamp }
+    }
 }
 
 // ============================================================================
-// PACKAGE 2: CUSTOMER RELATIONSHIP MANAGEMENT OPERATIONS
-// Architectural Pattern: Independent Data-Surface CRUD & Marketing Ingestion Layer
-// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
-// Domain Coverage: Campaigns, Leads, Opportunities, Customer Interactions, Quotes, Tickets
+// COMPONENT 2: OPERATIONAL MARKETING AND ENGAGEMENT SURFACE MODULE
 // ============================================================================
-
 namespace erp.crm.operations;
 
-enum OpportunityStage { DISCOVERY, NEGOTIATION, CLOSED_WON, CLOSED_LOST }
+enum OpportunityStage { 
+    DISCOVERY, 
+    NEGOTIATION, 
+    CLOSED_WON, 
+    CLOSED_LOST 
+}
 
 struct QuoteLineItemInput {
-    product_id: uuid;
-    quantity: int;
-    unit_price: decimal;
+    product_id: uuid;
+    quantity: int;
+    unit_price: decimal;
 }
 
 @table("crm_campaigns")
 entity Campaign {
-    id: uuid @primary;
-    name: string;
-    type: string;
-    status: string;
-    budget: decimal;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    name: string;
+    type: string;
+    status: string;
+    budget: decimal;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_leads")
 entity Lead {
-    id: uuid @primary;
-    first_name: string;
-    last_name: string;
-    company: string;
-    email: string;
-    phone: string;
-    status: string;
-    score: int;
-    source: string;
-    campaign_id: uuid @optional @reference(Campaign.id);
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    first_name: string;
+    last_name: string;
+    company: string;
+    email: string;
+    phone: string;
+    status: string;
+    score: int;
+    source: string;
+    campaign_id: uuid @optional @reference(Campaign.id);
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_opportunities")
 entity Opportunity {
-    id: uuid @primary;
-    customer_id: uuid @reference(CustomerProfile.id);
-    title: string;
-    value: decimal;
-    status: string;
-    stage: OpportunityStage;
-    probability: decimal;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    customer_id: uuid;
+    title: string;
+    value: decimal;
+    status: string;
+    stage: OpportunityStage;
+    probability: decimal;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_customer_interactions")
 entity CustomerInteraction {
-    id: uuid @primary;
-    customer_id: uuid @reference(CustomerProfile.id);
-    type: string;
-    subject: string;
-    description: string;
-    interaction_date: timestamp;
-    created_by: string;
-    created_at: timestamp;
+    id: uuid @primary;
+    customer_id: uuid;
+    type: string;
+    subject: string;
+    description: string;
+    interaction_date: timestamp;
+    created_by: string;
+    created_at: timestamp;
 }
 
 @table("crm_service_tickets")
 entity ServiceTicket {
-    id: uuid @primary;
-    customer_id: uuid @reference(CustomerProfile.id);
-    title: string;
-    description: string;
-    status: string;
-    priority: string;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    customer_id: uuid;
+    title: string;
+    description: string;
+    status: string;
+    priority: string;
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_quotes")
 entity Quote {
-    id: uuid @primary;
-    customer_id: uuid @reference(CustomerProfile.id);
-    title: string;
-    valid_until: timestamp;
-    status: string;
-    total_amount: decimal;
-    opportunity_id: uuid @optional @reference(Opportunity.id);
-    created_at: timestamp;
-    updated_at: timestamp;
+    id: uuid @primary;
+    customer_id: uuid;
+    title: string;
+    valid_until: timestamp;
+    status: string;
+    total_amount: decimal;
+    opportunity_id: uuid @optional @reference(Opportunity.id);
+    created_at: timestamp;
+    updated_at: timestamp;
 }
 
 @table("crm_quote_line_items")
 entity QuoteLineItem {
-    id: uuid @primary;
-    quote_id: uuid @reference(Quote.id);
-    product_id: uuid;                             // Primitive Ref -> PLM.MaterialMaster
-    quantity: int;
-    unit_price: decimal;
+    id: uuid @primary;
+    quote_id: uuid @reference(Quote.id);
+    product_id: uuid;
+    quantity: int;
+    unit_price: decimal;
 }
 
 interface CampaignService {
-    Campaign createCampaign(ctx: context, name: string, type: string, budget: decimal);
-    Campaign getCampaign(ctx: context, id: uuid);
-    List<Campaign> listCampaigns(ctx: context);
-    Campaign updateCampaign(ctx: context, id: uuid, status: string, budget: decimal);
-    void deleteCampaign(ctx: context, id: uuid);
+    Campaign createCampaign(ctx: context, name: string, type: string, budget: decimal);
+    Campaign getCampaign(ctx: context, id: uuid);
+    List<Campaign> listCampaigns(ctx: context);
+    Campaign updateCampaign(ctx: context, id: uuid, status: string, budget: decimal);
+    void deleteCampaign(ctx: context, id: uuid);
 }
 
 interface LeadService {
-    Lead createLead(ctx: context, firstName: string, lastName: string, company: string, email: string, phone: string, source: string, campaignId: uuid);
-    Lead getLead(ctx: context, id: uuid);
-    List<Lead> listLeads(ctx: context);
-    Lead updateLead(ctx: context, id: uuid, status: string, score: int);
-    void deleteLead(ctx: context, id: uuid);
-    void convertLead(ctx: context, id: uuid);     // Emits downstream profile registration signals
+    Lead createLead(ctx: context, firstName: string, lastName: string, company: string, email: string, phone: string, source: string, campaignId: uuid);
+    Lead getLead(ctx: context, id: uuid);
+    List<Lead> listLeads(ctx: context);
+    Lead updateLead(ctx: context, id: uuid, status: string, score: int);
+    void deleteLead(ctx: context, id: uuid);
+    void convertLead(ctx: context, id: uuid);
 }
 
 interface OpportunityService {
-    Opportunity createOpportunity(ctx: context, customerId: uuid, title: string, value: decimal);
-    Opportunity getOpportunity(ctx: context, id: uuid);
-    List<Opportunity> listOpportunities(ctx: context);
-    Opportunity updateOpportunity(ctx: context, id: uuid, status: string, stage: OpportunityStage, probability: decimal);
-    void deleteOpportunity(ctx: context, id: uuid);
+    Opportunity createOpportunity(ctx: context, customerId: uuid, title: string, value: decimal);
+    Opportunity getOpportunity(ctx: context, id: uuid);
+    List<Opportunity> listOpportunities(ctx: context);
+    Opportunity updateOpportunity(ctx: context, id: uuid, status: string, stage: OpportunityStage, probability: decimal);
+    void deleteOpportunity(ctx: context, id: uuid);
 }
 
 interface QuoteService {
-    Quote createQuote(ctx: context, customerId: uuid, title: string, validUntil: timestamp, items: List<QuoteLineItemInput>);
-    Quote getQuote(ctx: context, id: uuid);
-    List<Quote> listQuotes(ctx: context);
-    Quote updateQuote(ctx: context, id: uuid, status: string);
-    void deleteQuote(ctx: context, id: uuid);
-    Quote sendQuote(ctx: context, id: uuid);
+    Quote createQuote(ctx: context, customerId: uuid, title: string, validUntil: timestamp, items: List<QuoteLineItemInput>);
+    Quote getQuote(ctx: context, id: uuid);
+    List<Quote> listQuotes(ctx: context);
+    Quote updateQuote(ctx: context, id: uuid, status: string);
+    void deleteQuote(ctx: context, id: uuid);
+    Quote sendQuote(ctx: context, id: uuid);
 }
 
 interface TicketService {
-    ServiceTicket createTicket(ctx: context, customerId: uuid, title: string, description: string, priority: string);
-    ServiceTicket getTicket(ctx: context, id: uuid);
-    List<ServiceTicket> listTickets(ctx: context);
-    ServiceTicket updateTicket(ctx: context, id: uuid, status: string, priority: string);
-    void deleteTicket(ctx: context, id: uuid);
+    ServiceTicket createTicket(ctx: context, customerId: uuid, title: string, description: string, priority: string);
+    ServiceTicket getTicket(ctx: context, id: uuid);
+    List<ServiceTicket> listTickets(ctx: context);
+    ServiceTicket updateTicket(ctx: context, id: uuid, status: string, priority: string);
+    void deleteTicket(ctx: context, id: uuid);
 }
 
 interface CustomerInteractionService {
-    CustomerInteraction createInteraction(ctx: context, customerId: uuid, type: string, subject: string, description: string, createdBy: string);
-    CustomerInteraction getInteraction(ctx: context, id: uuid);
-    List<CustomerInteraction> listInteractions(ctx: context);
-    void deleteInteraction(ctx: context, id: uuid);
+    CustomerInteraction createInteraction(ctx: context, customerId: uuid, type: string, subject: string, description: string, createdBy: string);
+    CustomerInteraction getInteraction(ctx: context, id: uuid);
+    List<CustomerInteraction> listInteractions(ctx: context);
+    void deleteInteraction(ctx: context, id: uuid);
 }
 
 events OperationsHub {
-    producer_events {
-        crm.order.confirmed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, line_items: List<OrderLinePayload>, timestamp: timestamp }
-        crm.order.cancelled: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, timestamp: timestamp }
-        crm.billing.accrued: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, billing_trigger_id: uuid, accounts_receivable_value: decimal, tax_value: decimal, currency: string, timestamp: timestamp }
-        crm.customer.created: { event_id: uuid, customer_id: uuid, timestamp: timestamp }
-        crm.customer.updated: { event_id: uuid, customer_id: uuid, timestamp: timestamp }
-        crm.customer.activated: { event_id: uuid, customer_id: uuid, timestamp: timestamp }
-        crm.customer.deactivated: { event_id: uuid, customer_id: uuid, timestamp: timestamp }
-        crm.lead.created: { event_id: uuid, lead_id: uuid, timestamp: timestamp }
-        crm.lead.qualified: { event_id: uuid, lead_id: uuid, timestamp: timestamp }
-        crm.lead.converted: { event_id: uuid, lead_id: uuid, timestamp: timestamp }
-        crm.lead.lost: { event_id: uuid, lead_id: uuid, timestamp: timestamp }
-        crm.opportunity.created: { event_id: uuid, opportunity_id: uuid, timestamp: timestamp }
-        crm.opportunity.updated: { event_id: uuid, opportunity_id: uuid, timestamp: timestamp }
-        crm.opportunity.won: { event_id: uuid, opportunity_id: uuid, timestamp: timestamp }
-        crm.opportunity.lost: { event_id: uuid, opportunity_id: uuid, timestamp: timestamp }
-        crm.sales.order.created: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.sales.order.updated: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.sales.order.confirmed: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.sales.order.cancelled: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.sales.order.shipped: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.sales.order.delivered: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.service.ticket.created: { event_id: uuid, ticket_id: uuid, timestamp: timestamp }
-        crm.service.ticket.updated: { event_id: uuid, ticket_id: uuid, timestamp: timestamp }
-        crm.service.ticket.resolved: { event_id: uuid, ticket_id: uuid, timestamp: timestamp }
-        crm.service.ticket.escalated: { event_id: uuid, ticket_id: uuid, timestamp: timestamp }
-        crm.campaign.launched: { event_id: uuid, campaign_id: uuid, timestamp: timestamp }
-        crm.campaign.completed: { event_id: uuid, campaign_id: uuid, timestamp: timestamp }
-        crm.email.sent: { event_id: uuid, timestamp: timestamp }
-        crm.email.opened: { event_id: uuid, timestamp: timestamp }
-        crm.email.clicked: { event_id: uuid, timestamp: timestamp }
-        crm.sales.order.received: { event_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        crm.customer.interaction.logged: { event_id: uuid, interaction_id: uuid, timestamp: timestamp }
-    }
-    consumer_events {
-        plm.material.released: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, sku: string, description: string, timestamp: timestamp }
-        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, delivery_document_id: uuid, total_cogs_value: decimal, items: jsonb, timestamp: timestamp }
-        prj.milestone.achieved: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, wbs_node_id: uuid, revenue_amount: decimal, timestamp: timestamp }
-        scm.inventory.available: { event_id: uuid, timestamp: timestamp }
-        scm.shipment.delivered: { event_id: uuid, timestamp: timestamp }
-        fm.payment.received: { event_id: uuid, timestamp: timestamp }
-        fm.credit.check.completed: { event_id: uuid, timestamp: timestamp }
-        mfg.production.completed: { event_id: uuid, timestamp: timestamp }
-        prj.project.completed: { event_id: uuid, timestamp: timestamp }
-        hr.employee.performance: { event_id: uuid, timestamp: timestamp }
-        crm.core.customer.registered: { event_id: uuid, customer_id: uuid, customer_code: string, legal_entity_id: uuid, timestamp: timestamp }
-        crm.core.customer.status_changed: { event_id: uuid, customer_id: uuid, status: string, timestamp: timestamp }
-    }
+    consumer_events {
+        crm.core.customer.registered: { event_id: uuid, customer_id: uuid, customer_code: string, legal_entity_id: uuid, timestamp: timestamp }
+        crm.core.customer.status_changed: { event_id: uuid, customer_id: uuid, status: string, timestamp: timestamp }
+    }
 }

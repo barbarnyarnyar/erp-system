@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
     account_number VARCHAR(255) NOT NULL,
     currency VARCHAR(255) NOT NULL,
     liquid_balance NUMERIC(15, 4) NOT NULL,
+    version VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -160,6 +161,7 @@ CREATE TABLE IF NOT EXISTS customer_credits (
     credit_limit NUMERIC(15, 4) NOT NULL,
     current_balance NUMERIC(15, 4) NOT NULL,
     is_on_hold BOOLEAN NOT NULL,
+    version VARCHAR(255) NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
 
@@ -177,7 +179,6 @@ CREATE TABLE IF NOT EXISTS kafka_event_inboxs (
     event_type VARCHAR(255) NOT NULL,
     processed_at TIMESTAMP NOT NULL,
     processing_status VARCHAR(255) NOT NULL,
-    payload VARCHAR(255) NOT NULL,
-    attempt_count VARCHAR(255) NOT NULL
+    payload VARCHAR(255) NOT NULL
 );
 

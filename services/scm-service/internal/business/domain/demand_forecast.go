@@ -8,11 +8,11 @@ import (
 
 type DemandForecast struct {
 	ID               string          `json:"id"`
-	ProductID        string          `json:"product_id"`
+	LegalEntityID    string          `json:"legal_entity_id"`
+	MaterialID       string          `json:"material_id"`
 	ForecastDate     time.Time       `json:"forecast_date"`
-	ForecastQuantity int             `json:"forecast_quantity"`
+	ForecastQuantity decimal.Decimal `json:"forecast_quantity"`
 	ConfidenceLevel  decimal.Decimal `json:"confidence_level"`
-	Notes            string          `json:"notes"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
 }

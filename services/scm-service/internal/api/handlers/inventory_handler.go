@@ -11,13 +11,13 @@ import (
 )
 
 type InventoryHandler struct {
-	svc *service.InventoryService
+	svc      *service.InventoryService
 	response *utils.ResponseHelper
 }
 
 func NewInventoryHandler(svc *service.InventoryService, response *utils.ResponseHelper) *InventoryHandler {
 	return &InventoryHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }
@@ -33,12 +33,10 @@ func (h *InventoryHandler) GetInventoryItems(c *gin.Context) {
 
 func (h *InventoryHandler) CreateInventoryItem(c *gin.Context) {
 	var req struct {
+		MaterialID     string `json:"material_id"`
 		ProductID      string `json:"product_id"`
 		LocationID     string `json:"location_id"`
-		QuantityOnHand int    `json:"quantity_on_hand"`
-		ReorderPoint   int    `json:"reorder_point"`
-		MaximumStock   int    `json:"maximum_stock"`
-		UnitCost       string `json:"unit_cost"`
+		QuantityOnHand string `json:"quantity_on_hand"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -46,38 +44,40 @@ func (h *InventoryHandler) CreateInventoryItem(c *gin.Context) {
 		return
 	}
 
-	costDec, err := decimal.NewFromString(req.UnitCost)
-	if err != nil {
-		costDec = decimal.Zero
+	matID := req.MaterialID
+	if matID == "" {
+		matID = req.ProductID
 	}
 
-	ii, err := h.svc.CreateInventoryItem(c.Request.Context(), req.ProductID, req.LocationID, req.QuantityOnHand, req.ReorderPoint, req.MaximumStock, costDec)
+	qtyDec, err := decimal.NewFromString(req.QuantityOnHand)
+	if err != nil {
+		qtyDec = decimal.Zero
+	}
+
+	sb, err := h.svc.CreateStockBalance(c.Request.Context(), matID, req.LocationID, qtyDec)
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": ii})
+	c.JSON(http.StatusCreated, gin.H{"data": sb})
 }
 
 func (h *InventoryHandler) GetInventoryItem(c *gin.Context) {
 	id := c.Param("id")
-	ii, err := h.svc.GetInventoryItem(c.Request.Context(), id)
+	sb, err := h.svc.GetStockBalance(c.Request.Context(), id)
 	if err != nil {
-		h.response.NotFound(c, "inventory item not found")
+		h.response.NotFound(c, "stock balance not found")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": ii})
+	c.JSON(http.StatusOK, gin.H{"data": sb})
 }
 
 func (h *InventoryHandler) UpdateInventoryItem(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
-		QuantityOnHand   int    `json:"quantity_on_hand"`
-		QuantityReserved int    `json:"quantity_reserved"`
-		ReorderPoint     int    `json:"reorder_point"`
-		MaximumStock     int    `json:"maximum_stock"`
-		UnitCost         string `json:"unit_cost"`
+		QuantityOnHand   string `json:"quantity_on_hand"`
+		QuantityReserved string `json:"quantity_reserved"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -85,14 +85,18 @@ func (h *InventoryHandler) UpdateInventoryItem(c *gin.Context) {
 		return
 	}
 
-	costDec, err := decimal.NewFromString(req.UnitCost)
+	qtyOnHandDec, err := decimal.NewFromString(req.QuantityOnHand)
 	if err != nil {
-		costDec = decimal.Zero
+		qtyOnHandDec = decimal.Zero
+	}
+	qtyReservedDec, err := decimal.NewFromString(req.QuantityReserved)
+	if err != nil {
+		qtyReservedDec = decimal.Zero
 	}
 
-	var ii *domain.InventoryItem
+	var sb *domain.StockBalance
 	for i := 0; i < 5; i++ {
-		ii, err = h.svc.UpdateInventoryItem(c.Request.Context(), id, req.QuantityOnHand, req.QuantityReserved, req.ReorderPoint, req.MaximumStock, costDec)
+		sb, err = h.svc.UpdateStockBalance(c.Request.Context(), id, qtyOnHandDec, qtyReservedDec)
 		if err != domain.ErrOptimisticLock {
 			break
 		}
@@ -102,23 +106,20 @@ func (h *InventoryHandler) UpdateInventoryItem(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": ii})
+	c.JSON(http.StatusOK, gin.H{"data": sb})
 }
 
 func (h *InventoryHandler) DeleteInventoryItem(c *gin.Context) {
-	// Simple deletion endpoint (effectively deletes physical inventory item tracking)
-	// Usually adjustments are preferred, but we support CRUD deletion
 	id := c.Param("id")
-	// For simplicity, we expose a delete on inventory tracker
-	// In-memory repositories support CRUD, so this is fully functional
 	c.JSON(http.StatusOK, gin.H{"message": "inventory tracker deleted successfully. ID: " + id})
 }
 
 func (h *InventoryHandler) ReserveStock(c *gin.Context) {
 	var req struct {
+		MaterialID  string `json:"material_id"`
 		ProductID   string `json:"product_id"`
 		LocationID  string `json:"location_id"`
-		Quantity    int    `json:"quantity"`
+		Quantity    string `json:"quantity"`
 		ReferenceID string `json:"reference_id"`
 	}
 
@@ -127,9 +128,18 @@ func (h *InventoryHandler) ReserveStock(c *gin.Context) {
 		return
 	}
 
-	var err error
+	matID := req.MaterialID
+	if matID == "" {
+		matID = req.ProductID
+	}
+
+	qtyDec, err := decimal.NewFromString(req.Quantity)
+	if err != nil {
+		qtyDec = decimal.Zero
+	}
+
 	for i := 0; i < 5; i++ {
-		err = h.svc.ReserveStock(c.Request.Context(), req.ProductID, req.LocationID, req.Quantity, req.ReferenceID)
+		err = h.svc.ReserveStock(c.Request.Context(), matID, req.LocationID, qtyDec, req.ReferenceID)
 		if err != domain.ErrOptimisticLock {
 			break
 		}

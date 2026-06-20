@@ -167,6 +167,18 @@ func (s *Server) setupRoutes() {
 			fmGroup.GET("/reports/*path", 
 				authMiddleware.RequirePermission("fm", "reports", "read"),
 				proxyHandler.ProxyToService("fm"))
+
+			// Legal Entities
+			fmGroup.GET("/legal-entities", proxyHandler.ProxyToService("fm"))
+			fmGroup.POST("/legal-entities", proxyHandler.ProxyToService("fm"))
+			fmGroup.GET("/legal-entities/:id", proxyHandler.ProxyToService("fm"))
+
+			// Assets
+			fmGroup.GET("/assets", proxyHandler.ProxyToService("fm"))
+			fmGroup.POST("/assets/capitalize", proxyHandler.ProxyToService("fm"))
+			fmGroup.GET("/assets/:id", proxyHandler.ProxyToService("fm"))
+			fmGroup.POST("/assets/:id/depreciation-schedule", proxyHandler.ProxyToService("fm"))
+			fmGroup.POST("/assets/depreciate", proxyHandler.ProxyToService("fm"))
 		}
 
 		// HR routes

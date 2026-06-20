@@ -9,14 +9,14 @@ import (
 type SalesOrderLine struct {
 	ID                     string          `json:"id"`
 	SalesOrderID           string          `json:"sales_order_id"`
-	MaterialID             string          `json:"material_id"` // Primitive Ref -> PLM.MaterialMaster
+	MaterialID             string          `json:"material_id"`
 	LineSequence           int             `json:"line_sequence"`
 	QuantityOrdered        decimal.Decimal `json:"quantity_ordered"`
 	QuantityShipped        decimal.Decimal `json:"quantity_shipped"`
 	UnitSellPrice          decimal.Decimal `json:"unit_sell_price"`
 	DiscountApplied        decimal.Decimal `json:"discount_applied"`
 	NetLineAmount          decimal.Decimal `json:"net_line_amount"`
-	AppliedStrategyVersion *int            `json:"applied_strategy_version,omitempty"` // Links exact calculation lineage
+	AppliedStrategyVersion *int            `json:"applied_strategy_version,omitempty"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
 }

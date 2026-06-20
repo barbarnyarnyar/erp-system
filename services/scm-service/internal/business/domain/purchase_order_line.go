@@ -9,11 +9,10 @@ import (
 type PurchaseOrderLine struct {
 	ID               string          `json:"id"`
 	PurchaseOrderID  string          `json:"purchase_order_id"`
-	ProductID        string          `json:"product_id"`
-	QuantityOrdered  int             `json:"quantity_ordered"`
-	QuantityReceived int             `json:"quantity_received"`
+	MaterialID       string          `json:"material_id"`
+	QuantityOrdered  decimal.Decimal `json:"quantity_ordered"`
+	QuantityReceived decimal.Decimal `json:"quantity_received"`
 	UnitPrice        decimal.Decimal `json:"unit_price"`
 	LineTotal        decimal.Decimal `json:"line_total"`
-	Description      string          `json:"description"`
 	CreatedAt        time.Time       `json:"created_at"`
 }

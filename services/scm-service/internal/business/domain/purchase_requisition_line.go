@@ -8,8 +8,8 @@ import (
 type PurchaseRequisitionLine struct {
 	ID                    string          `json:"id"`
 	PurchaseRequisitionID string          `json:"purchase_requisition_id"`
-	ProductID             string          `json:"product_id"`
-	QuantityRequested     int             `json:"quantity_requested"`
+	MaterialID            string          `json:"material_id"`
+	QuantityRequested     decimal.Decimal `json:"quantity_requested"`
 	EstimatedUnitPrice    decimal.Decimal `json:"estimated_unit_price"`
 	LineTotal             decimal.Decimal `json:"line_total"`
 }

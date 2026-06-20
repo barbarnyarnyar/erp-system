@@ -12,5 +12,6 @@ type CustomerCredit struct {
 	CreditLimit    decimal.Decimal `json:"credit_limit"`
 	CurrentBalance decimal.Decimal `json:"current_balance"`
 	IsOnHold       bool            `json:"is_on_hold"`
+	Version        int             `json:"version"` // ADDED: Protects against simultaneous deductions
 	UpdatedAt      time.Time       `json:"updated_at"`
 }

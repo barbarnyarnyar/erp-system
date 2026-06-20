@@ -276,8 +276,7 @@ func TestSalesOrderEndpoints(t *testing.T) {
 	env := setupTestEnv()
 
 	// Seed customer
-	emailVal := "a@b.com"
-	cust := &domain.CustomerProfile{ID: "cust-1", CompanyName: "ACME", Email: &emailVal, Status: domain.CustomerStatusACTIVE}
+	cust := &domain.CustomerProfile{ID: "cust-1", CompanyName: "ACME", Status: domain.CustomerStatusACTIVE}
 	_ = env.custRepo.Create(context.Background(), cust)
 
 	body, _ := json.Marshal(map[string]interface{}{

@@ -7,13 +7,14 @@ import (
 )
 
 type PurchaseRequisition struct {
-	ID          string          `json:"id"`
-	ReqNumber   string          `json:"req_number"`
-	RequesterID string          `json:"requester_id"`
-	RequestDate time.Time       `json:"request_date"`
-	Status      string          `json:"status"`
-	TotalAmount decimal.Decimal `json:"total_amount"`
-	Notes       string          `json:"notes"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ID            string          `json:"id"`
+	LegalEntityID string          `json:"legal_entity_id"`
+	ReqNumber     string          `json:"req_number"`
+	RequesterID   string          `json:"requester_id"` // Primitive Ref -> HR.Employee
+	RequestDate   time.Time       `json:"request_date"`
+	Status        string          `json:"status"`
+	TotalAmount   decimal.Decimal `json:"total_amount"`
+	Notes         string          `json:"notes"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }

@@ -9,7 +9,7 @@ import (
 type PriceBookEntry struct {
 	ID                   string          `json:"id"`
 	PriceBookID          string          `json:"price_book_id"`
-	MaterialID           string          `json:"material_id"` // Primitive Ref -> PLM.MaterialMaster
+	MaterialID           string          `json:"material_id"`
 	UnitListPrice        decimal.Decimal `json:"unit_list_price"`
 	MinQuantityThreshold decimal.Decimal `json:"min_quantity_threshold"`
 	CreatedAt            time.Time       `json:"created_at"`

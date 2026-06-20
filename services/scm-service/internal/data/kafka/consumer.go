@@ -194,7 +194,7 @@ func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []
 			return err
 		}
 		log.Printf("[SCM-CONSUMER] Processing Customer Demand Forecast: Product %s, forecast date: %s, quantity: %d", ev.ProductID, ev.ForecastDate.String(), ev.ForecastQuantity)
-		_, err := c.demandSvc.CreateForecast(ctx, ev.ProductID, ev.ForecastDate, ev.ForecastQuantity, ev.ConfidenceLevel, "Auto-created from customer demand forecast event")
+		_, err := c.demandSvc.CreateForecast(ctx, ev.ProductID, ev.ForecastDate, decimal.NewFromInt(int64(ev.ForecastQuantity)), ev.ConfidenceLevel, "Auto-created from customer demand forecast event")
 		return err
 
 	case domain.TopicMfgMaterialRequired:
@@ -205,8 +205,8 @@ func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []
 		log.Printf("[SCM-CONSUMER] Processing Manufacturing Material Required: Product %s, required qty: %d", ev.MaterialID, ev.Quantity)
 		// Generate auto purchase requisition
 		line := service.RequisitionLineInput{
-			ProductID:          ev.MaterialID,
-			QuantityRequested:  ev.Quantity,
+			MaterialID:         ev.MaterialID,
+			QuantityRequested:  decimal.NewFromInt(int64(ev.Quantity)),
 			EstimatedUnitPrice: decimal.NewFromFloat(50.00),
 		}
 		_, err := c.poSvc.CreatePurchaseRequisition(ctx, "mfg-system", ev.RequiredBy, "Auto-generated from mfg.material.required event", []service.RequisitionLineInput{line})
@@ -218,11 +218,7 @@ func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []
 			return err
 		}
 		log.Printf("[SCM-CONSUMER] Processing Material Consumed (WIP issue): Product %s, quantity consumed: %s", ev.ProductID, ev.Quantity.String())
-		qtyInt := int(ev.Quantity.IntPart())
-		if qtyInt == 0 && !ev.Quantity.IsZero() {
-			qtyInt = 1
-		}
-		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", qtyInt, "ISSUE", "Raw material issued for manufacturing production order "+ev.ProductionOrderID)
+		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", ev.Quantity, "ISSUE", "Raw material issued for manufacturing production order "+ev.ProductionOrderID)
 		return err
 
 	case domain.TopicMfgProductionCompleted:
@@ -232,7 +228,7 @@ func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []
 		}
 		log.Printf("[SCM-CONSUMER] Processing Production Completed: Product %s, quantity produced: %d", ev.ProductID, ev.QuantityProduced)
 		// Receive finished goods into inventory (default location loc_default)
-		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", ev.QuantityProduced, "RECEIPT", "Finished goods receipt from manufacturing completed")
+		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", decimal.NewFromInt(int64(ev.QuantityProduced)), "RECEIPT", "Finished goods receipt from manufacturing completed")
 		return err
 
 	case domain.TopicFinVendorPaymentProcessed:
@@ -250,7 +246,7 @@ func (c *KafkaConsumer) processEvent(ctx context.Context, topic string, value []
 		}
 		log.Printf("[SCM-CONSUMER] Processing Project Material Requested: Project %s, Task %s, Product %s, qty: %d", ev.ProjectID, ev.TaskID, ev.ProductID, ev.QtyRequired)
 		// Reserve/deduct materials for project request
-		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", ev.QtyRequired, "ISSUE", "Reserve project materials")
+		_, err := c.invSvc.AdjustInventory(ctx, ev.ProductID, "loc_default", decimal.NewFromInt(int64(ev.QtyRequired)), "ISSUE", "Reserve project materials")
 		return err
 	}
 

@@ -50,7 +50,7 @@ func main() {
 	locRepo := sql.NewSQLLocationRepo(db)
 	supRepo := sql.NewSQLSupplierRepo(db)
 	contRepo := sql.NewSQLVendorContractRepo(db)
-	invRepo := sql.NewSQLInventoryItemRepo(db)
+	invRepo := sql.NewSQLStockBalanceRepo(db)
 	moveRepo := sql.NewSQLInventoryMovementRepo(db)
 	poRepo := sql.NewSQLPurchaseOrderRepo(db)
 	lineRepo := sql.NewSQLPurchaseOrderLineRepo(db)

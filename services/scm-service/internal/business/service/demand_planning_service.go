@@ -21,16 +21,16 @@ func (s *DemandPlanningService) ListForecasts(ctx context.Context) ([]domain.Dem
 	return s.repo.List(ctx)
 }
 
-func (s *DemandPlanningService) CreateForecast(ctx context.Context, productID string, forecastDate time.Time, qty int, confidence decimal.Decimal, notes string) (*domain.DemandForecast, error) {
+func (s *DemandPlanningService) CreateForecast(ctx context.Context, materialID string, forecastDate time.Time, qty decimal.Decimal, confidence decimal.Decimal, notes string) (*domain.DemandForecast, error) {
 	id := utils.NewID("fore")
 
 	df := &domain.DemandForecast{
 		ID:               id,
-		ProductID:        productID,
+		LegalEntityID:    "00000000-0000-0000-0000-000000000000",
+		MaterialID:       materialID,
 		ForecastDate:     forecastDate,
 		ForecastQuantity: qty,
 		ConfidenceLevel:  confidence,
-		Notes:            notes,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -47,7 +47,7 @@ func (s *DemandPlanningService) GetForecast(ctx context.Context, id string) (*do
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *DemandPlanningService) UpdateForecast(ctx context.Context, id string, forecastDate time.Time, qty int, confidence decimal.Decimal, notes string) (*domain.DemandForecast, error) {
+func (s *DemandPlanningService) UpdateForecast(ctx context.Context, id string, forecastDate time.Time, qty decimal.Decimal, confidence decimal.Decimal, notes string) (*domain.DemandForecast, error) {
 	df, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,6 @@ func (s *DemandPlanningService) UpdateForecast(ctx context.Context, id string, f
 	df.ForecastDate = forecastDate
 	df.ForecastQuantity = qty
 	df.ConfidenceLevel = confidence
-	df.Notes = notes
 	df.UpdatedAt = time.Now()
 
 	err = s.repo.Update(ctx, df)

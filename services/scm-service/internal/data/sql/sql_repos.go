@@ -276,66 +276,63 @@ func (r *SQLVendorContractRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// SQLInventoryItemRepo implements domain.InventoryItemRepository with OCC version check
-type SQLInventoryItemRepo struct {
+// SQLStockBalanceRepo implements domain.StockBalanceRepository with OCC version check
+type SQLStockBalanceRepo struct {
 	db *gorm.DB
 }
 
-func NewSQLInventoryItemRepo(db *gorm.DB) *SQLInventoryItemRepo {
-	return &SQLInventoryItemRepo{db: db}
+func NewSQLStockBalanceRepo(db *gorm.DB) *SQLStockBalanceRepo {
+	return &SQLStockBalanceRepo{db: db}
 }
 
-func (r *SQLInventoryItemRepo) Create(ctx context.Context, ii *domain.InventoryItem) error {
-	dbModel := FromDomainInventoryItem(ii)
+func (r *SQLStockBalanceRepo) Create(ctx context.Context, sb *domain.StockBalance) error {
+	dbModel := FromDomainStockBalance(sb)
 	dbModel.Version = 0
 	if err := GetDB(ctx, r.db).Create(dbModel).Error; err != nil {
 		return err
 	}
-	ii.CreatedAt = dbModel.CreatedAt
-	ii.UpdatedAt = dbModel.UpdatedAt
+	sb.CreatedAt = dbModel.CreatedAt
+	sb.UpdatedAt = dbModel.UpdatedAt
 	return nil
 }
 
-func (r *SQLInventoryItemRepo) GetByID(ctx context.Context, id string) (*domain.InventoryItem, error) {
-	var dbModel InventoryItem
+func (r *SQLStockBalanceRepo) GetByID(ctx context.Context, id string) (*domain.StockBalance, error) {
+	var dbModel StockBalance
 	if err := GetDB(ctx, r.db).First(&dbModel, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	return ToDomainInventoryItem(&dbModel), nil
+	return ToDomainStockBalance(&dbModel), nil
 }
 
-func (r *SQLInventoryItemRepo) List(ctx context.Context) ([]domain.InventoryItem, error) {
-	var dbModels []InventoryItem
+func (r *SQLStockBalanceRepo) List(ctx context.Context) ([]domain.StockBalance, error) {
+	var dbModels []StockBalance
 	if err := GetDB(ctx, r.db).Find(&dbModels).Error; err != nil {
 		return nil, err
 	}
-	res := make([]domain.InventoryItem, len(dbModels))
+	res := make([]domain.StockBalance, len(dbModels))
 	for i, m := range dbModels {
-		res[i] = *ToDomainInventoryItem(&m)
+		res[i] = *ToDomainStockBalance(&m)
 	}
 	return res, nil
 }
 
-func (r *SQLInventoryItemRepo) Update(ctx context.Context, ii *domain.InventoryItem) error {
+func (r *SQLStockBalanceRepo) Update(ctx context.Context, sb *domain.StockBalance) error {
 	tx := GetDB(ctx, r.db)
 
-	var dbModel InventoryItem
-	if err := tx.First(&dbModel, "id = ?", ii.ID).Error; err != nil {
+	var dbModel StockBalance
+	if err := tx.First(&dbModel, "id = ?", sb.ID).Error; err != nil {
 		return err
 	}
 
 	expectedVersion := dbModel.Version
 	newVersion := expectedVersion + 1
 
-	res := tx.Model(&InventoryItem{}).
-		Where("id = ? AND version = ?", ii.ID, expectedVersion).
+	res := tx.Model(&StockBalance{}).
+		Where("id = ? AND version = ?", sb.ID, expectedVersion).
 		Updates(map[string]interface{}{
-			"quantity_on_hand":   ii.QuantityOnHand,
-			"quantity_reserved":  ii.QuantityReserved,
-			"quantity_available": ii.QuantityAvailable,
-			"reorder_point":      ii.ReorderPoint,
-			"maximum_stock":      ii.MaximumStock,
-			"unit_cost":          ii.UnitCost,
+			"quantity_on_hand":   sb.QuantityOnHand,
+			"quantity_reserved":  sb.QuantityReserved,
+			"quantity_available": sb.QuantityAvailable,
 			"updated_at":         time.Now(),
 			"version":            newVersion,
 		})
@@ -351,12 +348,12 @@ func (r *SQLInventoryItemRepo) Update(ctx context.Context, ii *domain.InventoryI
 	return nil
 }
 
-func (r *SQLInventoryItemRepo) GetByProductAndLocation(ctx context.Context, productID string, locationID string) (*domain.InventoryItem, error) {
-	var dbModel InventoryItem
-	if err := GetDB(ctx, r.db).First(&dbModel, "product_id = ? AND location_id = ?", productID, locationID).Error; err != nil {
+func (r *SQLStockBalanceRepo) GetByMaterialAndLocation(ctx context.Context, materialID string, locationID string) (*domain.StockBalance, error) {
+	var dbModel StockBalance
+	if err := GetDB(ctx, r.db).First(&dbModel, "material_id = ? AND location_id = ?", materialID, locationID).Error; err != nil {
 		return nil, err
 	}
-	return ToDomainInventoryItem(&dbModel), nil
+	return ToDomainStockBalance(&dbModel), nil
 }
 
 // SQLInventoryMovementRepo implements domain.InventoryMovementRepository
@@ -437,10 +434,34 @@ func (r *SQLStockTransferRepo) List(ctx context.Context) ([]domain.StockTransfer
 }
 
 func (r *SQLStockTransferRepo) Update(ctx context.Context, st *domain.StockTransfer) error {
-	dbModel := FromDomainStockTransfer(st)
-	if err := GetDB(ctx, r.db).Save(dbModel).Error; err != nil {
+	tx := GetDB(ctx, r.db)
+
+	var dbModel StockTransfer
+	if err := tx.First(&dbModel, "id = ?", st.ID).Error; err != nil {
 		return err
 	}
+
+	expectedVersion := dbModel.Version
+	newVersion := expectedVersion + 1
+
+	res := tx.Model(&StockTransfer{}).
+		Where("id = ? AND version = ?", st.ID, expectedVersion).
+		Updates(map[string]interface{}{
+			"status":         st.Status,
+			"transferred_at": st.TransferredAt,
+			"updated_at":     time.Now(),
+			"version":        newVersion,
+		})
+
+	if res.Error != nil {
+		return res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		return domain.ErrOptimisticLock
+	}
+
+	st.Version = newVersion
 	return nil
 }
 
@@ -858,9 +879,9 @@ func (r *SQLDemandForecastRepo) Update(ctx context.Context, df *domain.DemandFor
 	return nil
 }
 
-func (r *SQLDemandForecastRepo) ListByProductID(ctx context.Context, productID string) ([]domain.DemandForecast, error) {
+func (r *SQLDemandForecastRepo) ListByMaterialID(ctx context.Context, materialID string) ([]domain.DemandForecast, error) {
 	var dbModels []DemandForecast
-	if err := GetDB(ctx, r.db).Where("product_id = ?", productID).Find(&dbModels).Error; err != nil {
+	if err := GetDB(ctx, r.db).Where("material_id = ?", materialID).Find(&dbModels).Error; err != nil {
 		return nil, err
 	}
 	res := make([]domain.DemandForecast, len(dbModels))

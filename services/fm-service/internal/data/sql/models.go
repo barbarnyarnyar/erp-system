@@ -265,6 +265,7 @@ type BankAccount struct {
 	AccountNumber string `gorm:"uniqueIndex"`
 	Currency      string
 	LiquidBalance decimal.Decimal `gorm:"type:numeric(18,4)"`
+	Version       int
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 
@@ -281,6 +282,7 @@ func FromDomainBankAccount(d *domain.BankAccount) *BankAccount {
 		AccountNumber: d.AccountNumber,
 		Currency:      d.Currency,
 		LiquidBalance: d.LiquidBalance,
+		Version:       d.Version,
 		CreatedAt:     d.CreatedAt,
 		UpdatedAt:     d.UpdatedAt,
 	}
@@ -296,6 +298,7 @@ func ToDomainBankAccount(dbModel *BankAccount) *domain.BankAccount {
 		AccountNumber: dbModel.AccountNumber,
 		Currency:      dbModel.Currency,
 		LiquidBalance: dbModel.LiquidBalance,
+		Version:       dbModel.Version,
 		CreatedAt:     dbModel.CreatedAt,
 		UpdatedAt:     dbModel.UpdatedAt,
 	}
@@ -308,6 +311,7 @@ type CustomerCredit struct {
 	CreditLimit    decimal.Decimal `gorm:"type:numeric(18,4)"`
 	CurrentBalance decimal.Decimal `gorm:"type:numeric(18,4)"`
 	IsOnHold       bool
+	Version        int
 	UpdatedAt      time.Time
 }
 
@@ -321,6 +325,7 @@ func FromDomainCustomerCredit(d *domain.CustomerCredit) *CustomerCredit {
 		CreditLimit:    d.CreditLimit,
 		CurrentBalance: d.CurrentBalance,
 		IsOnHold:       d.IsOnHold,
+		Version:        d.Version,
 		UpdatedAt:      d.UpdatedAt,
 	}
 }
@@ -335,6 +340,7 @@ func ToDomainCustomerCredit(dbModel *CustomerCredit) *domain.CustomerCredit {
 		CreditLimit:    dbModel.CreditLimit,
 		CurrentBalance: dbModel.CurrentBalance,
 		IsOnHold:       dbModel.IsOnHold,
+		Version:        dbModel.Version,
 		UpdatedAt:      dbModel.UpdatedAt,
 	}
 }
@@ -718,7 +724,7 @@ func FromDomainKafkaEventInbox(d *domain.KafkaEventInbox) *KafkaEventInbox {
 	}
 	pBytes, _ := json.Marshal(d.Payload)
 	return &KafkaEventInbox{
-		AttemptCount:     d.AttemptCount,
+		AttemptCount:     0,
 		EventID:          d.EventID,
 		EventType:        d.EventType,
 		ProcessedAt:      d.ProcessedAt,
@@ -736,7 +742,6 @@ func ToDomainKafkaEventInbox(dbModel *KafkaEventInbox) *domain.KafkaEventInbox {
 		_ = json.Unmarshal(dbModel.Payload, &p)
 	}
 	return &domain.KafkaEventInbox{
-		AttemptCount:     dbModel.AttemptCount,
 		EventID:          dbModel.EventID,
 		EventType:        dbModel.EventType,
 		ProcessedAt:      dbModel.ProcessedAt,

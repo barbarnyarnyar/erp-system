@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/erp-system/scm-service/internal/business/domain"
+	"github.com/shopspring/decimal"
 )
 
 type WarehouseService struct {
@@ -84,12 +85,11 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 		ReceiptNumber: recNum,
 		ReceivedDate:  time.Now(),
 		Status:        "RECEIVED",
-		Notes:         notes,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 	if poID != "" {
-		rec.PurchaseOrderID = &poID
+		rec.PurchaseOrderID = poID
 	}
 
 	var savedLines []domain.ReceiptLine
@@ -124,8 +124,8 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 			// Increment PO received quantity if matching
 			if poID != "" {
 				for _, pol := range poLines {
-					if pol.ProductID == l.ProductID {
-						pol.QuantityReceived += l.QuantityReceived
+					if pol.MaterialID == l.ProductID {
+						pol.QuantityReceived = pol.QuantityReceived.Add(decimal.NewFromInt(int64(l.QuantityReceived)))
 						_ = s.poLRepo.Create(txCtx, &pol) // Save back/update line
 						break
 					}
@@ -137,7 +137,7 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 			if locationID == "" {
 				locationID = "loc_default" // default warehouse
 			}
-			_, err = s.invService.AdjustInventory(txCtx, l.ProductID, locationID, l.QuantityReceived, "RECEIPT", "Received stock via "+recNum)
+			_, err = s.invService.AdjustInventory(txCtx, l.ProductID, locationID, decimal.NewFromInt(int64(l.QuantityReceived)), "RECEIPT", "Received stock via "+recNum)
 			if err != nil {
 				return err
 			}
@@ -150,7 +150,7 @@ func (s *WarehouseService) CreateReceipt(ctx context.Context, poID string, notes
 				updatedPOLines, _ := s.poLRepo.ListByPOID(txCtx, poID)
 				allReceived := true
 				for _, pol := range updatedPOLines {
-					if pol.QuantityReceived < pol.QuantityOrdered {
+					if pol.QuantityReceived.LessThan(pol.QuantityOrdered) {
 						allReceived = false
 						break
 					}
@@ -215,7 +215,6 @@ func (s *WarehouseService) UpdateReceipt(ctx context.Context, id, status, notes 
 	}
 
 	rec.Status = status
-	rec.Notes = notes
 	rec.UpdatedAt = time.Now()
 
 	err = s.recRepo.Update(ctx, rec)
@@ -239,16 +238,14 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 	shipNum := fmt.Sprintf("SHP-%d", time.Now().Unix())
 
 	ship := &domain.Shipment{
-		ID:                shipID,
-		ShipmentNumber:    shipNum,
-		Carrier:           carrier,
-		TrackingNumber:    trackingNum,
-		ShippedDate:       time.Now(),
-		EstimatedDelivery: estDelivery,
-		Status:            "SHIPPED",
-		Notes:             notes,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		ID:             shipID,
+		ShipmentNumber: shipNum,
+		Carrier:        carrier,
+		TrackingNumber: trackingNum,
+		ShippedDate:    time.Now(),
+		Status:         "SHIPPED",
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	var savedLines []domain.ShipmentLine
@@ -279,7 +276,7 @@ func (s *WarehouseService) CreateShipment(ctx context.Context, carrier, tracking
 			if locationID == "" {
 				locationID = "loc_default"
 			}
-			_, err = s.invService.AdjustInventory(txCtx, l.ProductID, locationID, l.QuantityShipped, "ISSUE", "Shipped stock out via "+shipNum)
+			_, err = s.invService.AdjustInventory(txCtx, l.ProductID, locationID, decimal.NewFromInt(int64(l.QuantityShipped)), "ISSUE", "Shipped stock out via "+shipNum)
 			if err != nil {
 				return err
 			}
@@ -341,7 +338,6 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 
 	oldStatus := ship.Status
 	ship.Status = status
-	ship.Notes = notes
 	ship.UpdatedAt = time.Now()
 
 	err = s.shipRepo.Update(ctx, ship)
@@ -362,7 +358,7 @@ func (s *WarehouseService) UpdateShipment(ctx context.Context, id, status, notes
 	if status == "DELAYED" && oldStatus != "DELAYED" {
 		if err := s.publisher.Publish(ctx, domain.TopicScmShipmentDelayed, ship.ID, domain.ShipmentDelayedEvent{
 			ShipmentID:        ship.ID,
-			NewEstimatedDeliv: ship.EstimatedDelivery.AddDate(0, 0, 2), // estimate 2 days delay
+			NewEstimatedDeliv: time.Now().AddDate(0, 0, 2), // estimate 2 days delay
 			Reason:            notes,
 			Timestamp:         time.Now(),
 		}); err != nil {

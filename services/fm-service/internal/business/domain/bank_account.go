@@ -12,6 +12,7 @@ type BankAccount struct {
 	AccountNumber string          `json:"account_number"`
 	Currency      string          `json:"currency"` // Local currency of the physical bank branch
 	LiquidBalance decimal.Decimal `json:"liquid_balance"`
+	Version       int             `json:"version"` // ADDED: Protects against double-spend
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }

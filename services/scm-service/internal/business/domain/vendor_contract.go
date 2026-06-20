@@ -7,11 +7,11 @@ import (
 
 type VendorContract struct {
 	ID             string    `json:"id"`
+	LegalEntityID  string    `json:"legal_entity_id"`
 	ContractNumber string    `json:"contract_number"`
 	SupplierID     string    `json:"supplier_id"`
 	StartDate      time.Time `json:"start_date"`
 	EndDate        time.Time `json:"end_date"`
-	Terms          string    `json:"terms"`
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

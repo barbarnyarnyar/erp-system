@@ -31,12 +31,12 @@ type SupplierRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type InventoryItemRepository interface {
-	Create(ctx context.Context, ii *InventoryItem) error
-	GetByID(ctx context.Context, id string) (*InventoryItem, error)
-	List(ctx context.Context) ([]InventoryItem, error)
-	Update(ctx context.Context, ii *InventoryItem) error
-	GetByProductAndLocation(ctx context.Context, productID string, locationID string) (*InventoryItem, error)
+type StockBalanceRepository interface {
+	Create(ctx context.Context, sb *StockBalance) error
+	GetByID(ctx context.Context, id string) (*StockBalance, error)
+	List(ctx context.Context) ([]StockBalance, error)
+	Update(ctx context.Context, sb *StockBalance) error
+	GetByMaterialAndLocation(ctx context.Context, materialID string, locationID string) (*StockBalance, error)
 }
 
 type InventoryMovementRepository interface {
@@ -91,7 +91,7 @@ type DemandForecastRepository interface {
 	GetByID(ctx context.Context, id string) (*DemandForecast, error)
 	List(ctx context.Context) ([]DemandForecast, error)
 	Update(ctx context.Context, df *DemandForecast) error
-	ListByProductID(ctx context.Context, productID string) ([]DemandForecast, error)
+	ListByMaterialID(ctx context.Context, materialID string) ([]DemandForecast, error)
 }
 
 type ProductCategoryRepository interface {

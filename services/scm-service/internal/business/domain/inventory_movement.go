@@ -8,13 +8,12 @@ import (
 
 type InventoryMovement struct {
 	ID            string          `json:"id"`
-	ProductID     string          `json:"product_id"`
+	LegalEntityID string          `json:"legal_entity_id"`
 	LocationID    string          `json:"location_id"`
+	MaterialID    string          `json:"material_id"`
 	MovementType  string          `json:"movement_type"`
-	Quantity      int             `json:"quantity"`
-	UnitCost      decimal.Decimal `json:"unit_cost"`
+	Quantity      decimal.Decimal `json:"quantity"`
 	ReferenceType string          `json:"reference_type"`
 	ReferenceID   string          `json:"reference_id"`
-	Notes         string          `json:"notes"`
 	CreatedAt     time.Time       `json:"created_at"`
 }

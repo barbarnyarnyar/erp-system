@@ -2,17 +2,20 @@
 package domain
 
 import (
+	"github.com/shopspring/decimal"
 	"time"
 )
 
 type StockTransfer struct {
-	ID             string     `json:"id"`
-	FromLocationID string     `json:"from_location_id"`
-	ToLocationID   string     `json:"to_location_id"`
-	ProductID      string     `json:"product_id"`
-	Quantity       int        `json:"quantity"`
-	Status         string     `json:"status"`
-	TransferredAt  *time.Time `json:"transferred_at,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID             string          `json:"id"`
+	LegalEntityID  string          `json:"legal_entity_id"`
+	FromLocationID string          `json:"from_location_id"`
+	ToLocationID   string          `json:"to_location_id"`
+	MaterialID     string          `json:"material_id"`
+	Quantity       decimal.Decimal `json:"quantity"`
+	Status         string          `json:"status"`
+	Version        int             `json:"version"`
+	TransferredAt  *time.Time      `json:"transferred_at,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }

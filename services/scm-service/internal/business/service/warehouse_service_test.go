@@ -117,7 +117,7 @@ func TestWarehouseService_Receipts(t *testing.T) {
 		shipLRepo := memory.NewMemoryShipmentLineRepo()
 		poRepo := memory.NewMemoryPurchaseOrderRepo()
 		poLRepo := memory.NewMemoryPurchaseOrderLineRepo()
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		invMovRepo := memory.NewMemoryInventoryMovementRepo()
 		stRepo := memory.NewMemoryStockTransferRepo()
 		tm := memory.NewMemoryTransactionManager()
@@ -133,7 +133,7 @@ func TestWarehouseService_Receipts(t *testing.T) {
 		ws, _, _, poRepo, poLRepo, invSvc := setupService()
 
 		// Setup Inventory Item
-		iiCreated, _ := invSvc.CreateInventoryItem(ctx, "prod-1", "loc-1", 10, 0, 100, decimal.NewFromFloat(5.0))
+		iiCreated, _ := invSvc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
 
 		// Setup PO
 		po := &domain.PurchaseOrder{
@@ -146,9 +146,9 @@ func TestWarehouseService_Receipts(t *testing.T) {
 		pol := &domain.PurchaseOrderLine{
 			ID:               "pol-1",
 			PurchaseOrderID:  "po-1",
-			ProductID:        "prod-1",
-			QuantityOrdered:  50,
-			QuantityReceived: 0,
+			MaterialID:       "prod-1",
+			QuantityOrdered:  decimal.NewFromInt(50),
+			QuantityReceived: decimal.NewFromInt(0),
 		}
 		_ = poLRepo.Create(ctx, pol)
 
@@ -171,9 +171,9 @@ func TestWarehouseService_Receipts(t *testing.T) {
 		}
 
 		// Verify inventory incremented (10 original + 20 received = 30)
-		ii, _ := invSvc.GetInventoryItem(ctx, iiCreated.ID)
-		if ii.QuantityOnHand != 30 {
-			t.Errorf("expected 30 on hand, got %d", ii.QuantityOnHand)
+		ii, _ := invSvc.GetStockBalance(ctx, iiCreated.ID)
+		if !ii.QuantityOnHand.Equal(decimal.NewFromInt(30)) {
+			t.Errorf("expected 30 on hand, got %s", ii.QuantityOnHand)
 		}
 
 		// 2. Full delivery
@@ -197,7 +197,7 @@ func TestWarehouseService_Receipts(t *testing.T) {
 	t.Run("CreateReceipt without PO and Default Location", func(t *testing.T) {
 		ws, _, _, _, _, invSvc := setupService()
 		// Setup inventory for default location
-		iiCreated, _ := invSvc.CreateInventoryItem(ctx, "prod-1", "loc_default", 5, 0, 100, decimal.NewFromFloat(5.0))
+		iiCreated, _ := invSvc.CreateStockBalance(ctx, "prod-1", "loc_default", decimal.NewFromInt(5))
 
 		input := []ReceiptLineInput{
 			{ProductID: "prod-1", QuantityReceived: 10, LocationID: ""},
@@ -207,13 +207,13 @@ func TestWarehouseService_Receipts(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if res.PurchaseOrderID != nil {
-			t.Errorf("expected nil PO ID, got %s", *res.PurchaseOrderID)
+		if res.PurchaseOrderID != "" {
+			t.Errorf("expected empty PO ID, got %s", res.PurchaseOrderID)
 		}
 
-		ii, _ := invSvc.GetInventoryItem(ctx, iiCreated.ID)
-		if ii.QuantityOnHand != 15 {
-			t.Errorf("expected 15 on hand, got %d", ii.QuantityOnHand)
+		ii, _ := invSvc.GetStockBalance(ctx, iiCreated.ID)
+		if !ii.QuantityOnHand.Equal(decimal.NewFromInt(15)) {
+			t.Errorf("expected 15 on hand, got %s", ii.QuantityOnHand)
 		}
 	})
 
@@ -253,10 +253,9 @@ func TestWarehouseService_Receipts(t *testing.T) {
 
 	t.Run("CreateReceipt - inventory adjustment fails", func(t *testing.T) {
 		ws, _, _, _, _, _ := setupService()
-		// We didn't seed inventory item "prod-not-found" in "loc-1", and let's mock inventory adjustment failure by using a mock repo that fails
-		mockInvRepo := &MockInventoryItemRepo{
-			InventoryItemRepository: memory.NewMemoryInventoryItemRepo(),
-			createErr:               errors.New("adjust failed"),
+		mockInvRepo := &MockStockBalanceRepo{
+			StockBalanceRepository: memory.NewMemoryStockBalanceRepo(),
+			createErr:              errors.New("adjust failed"),
 		}
 		ws.invService = NewInventoryService(mockInvRepo, memory.NewMemoryInventoryMovementRepo(), memory.NewMemoryStockTransferRepo(), &MockPublisher{}, memory.NewMemoryTransactionManager())
 
@@ -271,7 +270,7 @@ func TestWarehouseService_Receipts(t *testing.T) {
 
 	t.Run("List and Get Receipts", func(t *testing.T) {
 		ws, _, _, _, _, invSvc := setupService()
-		_, _ = invSvc.CreateInventoryItem(ctx, "prod-1", "loc-default", 0, 0, 100, decimal.Zero)
+		_, _ = invSvc.CreateStockBalance(ctx, "prod-1", "loc-default", decimal.Zero)
 		input := []ReceiptLineInput{
 			{ProductID: "prod-1", QuantityReceived: 5, LocationID: "loc-default"},
 		}
@@ -325,7 +324,7 @@ func TestWarehouseService_Receipts(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if updated.Status != "APPROVED" || updated.Notes != "updated notes" {
+		if updated.Status != "APPROVED" {
 			t.Errorf("unexpected updated receipt: %+v", updated)
 		}
 
@@ -348,16 +347,26 @@ func TestWarehouseService_Receipts(t *testing.T) {
 	})
 }
 
-type MockInventoryItemRepo struct {
-	domain.InventoryItemRepository
-	createErr error
+type MockStockBalanceRepo struct {
+	domain.StockBalanceRepository
+	createErr           error
+	getErr              error
+	updateErr           error
+	getByMaterialLocErr error
 }
 
-func (m *MockInventoryItemRepo) Create(ctx context.Context, ii *domain.InventoryItem) error {
+func (m *MockStockBalanceRepo) Create(ctx context.Context, sb *domain.StockBalance) error {
 	if m.createErr != nil {
 		return m.createErr
 	}
-	return m.InventoryItemRepository.Create(ctx, ii)
+	return m.StockBalanceRepository.Create(ctx, sb)
+}
+
+func (m *MockStockBalanceRepo) Update(ctx context.Context, sb *domain.StockBalance) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
+	return m.StockBalanceRepository.Update(ctx, sb)
 }
 
 func TestWarehouseService_Shipments(t *testing.T) {
@@ -370,7 +379,7 @@ func TestWarehouseService_Shipments(t *testing.T) {
 		shipLRepo := memory.NewMemoryShipmentLineRepo()
 		poRepo := memory.NewMemoryPurchaseOrderRepo()
 		poLRepo := memory.NewMemoryPurchaseOrderLineRepo()
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		invMovRepo := memory.NewMemoryInventoryMovementRepo()
 		stRepo := memory.NewMemoryStockTransferRepo()
 		tm := memory.NewMemoryTransactionManager()
@@ -386,7 +395,7 @@ func TestWarehouseService_Shipments(t *testing.T) {
 		ws, _, _, invSvc := setupService()
 
 		// Setup Inventory
-		iiCreated, _ := invSvc.CreateInventoryItem(ctx, "prod-1", "loc-1", 50, 0, 100, decimal.NewFromFloat(5.0))
+		iiCreated, _ := invSvc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(50))
 
 		lines := []ShipmentLineInput{
 			{ProductID: "prod-1", QuantityShipped: 20, LocationID: "loc-1"},
@@ -402,15 +411,15 @@ func TestWarehouseService_Shipments(t *testing.T) {
 		}
 
 		// Verify stock deducted (50 - 20 = 30)
-		ii, _ := invSvc.GetInventoryItem(ctx, iiCreated.ID)
-		if ii.QuantityOnHand != 30 {
-			t.Errorf("expected 30 on hand, got %d", ii.QuantityOnHand)
+		ii, _ := invSvc.GetStockBalance(ctx, iiCreated.ID)
+		if !ii.QuantityOnHand.Equal(decimal.NewFromInt(30)) {
+			t.Errorf("expected 30 on hand, got %s", ii.QuantityOnHand)
 		}
 	})
 
 	t.Run("CreateShipment Default Location", func(t *testing.T) {
 		ws, _, _, invSvc := setupService()
-		iiCreated, _ := invSvc.CreateInventoryItem(ctx, "prod-1", "loc_default", 50, 0, 100, decimal.NewFromFloat(5.0))
+		iiCreated, _ := invSvc.CreateStockBalance(ctx, "prod-1", "loc_default", decimal.NewFromInt(50))
 
 		lines := []ShipmentLineInput{
 			{ProductID: "prod-1", QuantityShipped: 20, LocationID: ""},
@@ -421,9 +430,9 @@ func TestWarehouseService_Shipments(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		ii, _ := invSvc.GetInventoryItem(ctx, iiCreated.ID)
-		if ii.QuantityOnHand != 30 {
-			t.Errorf("expected 30 on hand, got %d", ii.QuantityOnHand)
+		ii, _ := invSvc.GetStockBalance(ctx, iiCreated.ID)
+		if !ii.QuantityOnHand.Equal(decimal.NewFromInt(30)) {
+			t.Errorf("expected 30 on hand, got %s", ii.QuantityOnHand)
 		}
 	})
 
@@ -461,7 +470,6 @@ func TestWarehouseService_Shipments(t *testing.T) {
 
 	t.Run("CreateShipment - inventory adjustment fails", func(t *testing.T) {
 		ws, _, _, _ := setupService()
-		// No inventory seeded, so adjustment will fail
 		lines := []ShipmentLineInput{
 			{ProductID: "prod-not-found", QuantityShipped: 20, LocationID: "loc-1"},
 		}
@@ -473,7 +481,7 @@ func TestWarehouseService_Shipments(t *testing.T) {
 
 	t.Run("List and Get Shipments", func(t *testing.T) {
 		ws, _, _, invSvc := setupService()
-		_, _ = invSvc.CreateInventoryItem(ctx, "prod-1", "loc-1", 50, 0, 100, decimal.NewFromFloat(5.0))
+		_, _ = invSvc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(50))
 		lines := []ShipmentLineInput{
 			{ProductID: "prod-1", QuantityShipped: 10, LocationID: "loc-1"},
 		}
@@ -518,7 +526,7 @@ func TestWarehouseService_Shipments(t *testing.T) {
 
 	t.Run("Update Shipment - Status Transitions", func(t *testing.T) {
 		ws, _, _, invSvc := setupService()
-		_, _ = invSvc.CreateInventoryItem(ctx, "prod-1", "loc-1", 50, 0, 100, decimal.NewFromFloat(5.0))
+		_, _ = invSvc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(50))
 		lines := []ShipmentLineInput{
 			{ProductID: "prod-1", QuantityShipped: 10, LocationID: "loc-1"},
 		}

@@ -770,6 +770,7 @@ func NewMemoryBankAccountRepo() *MemoryBankAccountRepo {
 func (r *MemoryBankAccountRepo) Create(ctx context.Context, ba *domain.BankAccount) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	ba.Version = 0
 	r.data[ba.ID] = *ba
 	return nil
 }
@@ -787,6 +788,14 @@ func (r *MemoryBankAccountRepo) GetByID(ctx context.Context, id string) (*domain
 func (r *MemoryBankAccountRepo) Update(ctx context.Context, ba *domain.BankAccount) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	current, ok := r.data[ba.ID]
+	if !ok {
+		return errors.New("bank account not found")
+	}
+	if ba.Version != current.Version {
+		return domain.ErrOptimisticLock
+	}
+	ba.Version++
 	r.data[ba.ID] = *ba
 	return nil
 }
@@ -816,6 +825,7 @@ func NewMemoryCustomerCreditRepo() *MemoryCustomerCreditRepo {
 func (r *MemoryCustomerCreditRepo) Create(ctx context.Context, cc *domain.CustomerCredit) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	cc.Version = 0
 	r.data[cc.ID] = *cc
 	return nil
 }
@@ -833,6 +843,14 @@ func (r *MemoryCustomerCreditRepo) GetByID(ctx context.Context, id string) (*dom
 func (r *MemoryCustomerCreditRepo) Update(ctx context.Context, cc *domain.CustomerCredit) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	current, ok := r.data[cc.ID]
+	if !ok {
+		return errors.New("customer credit not found")
+	}
+	if cc.Version != current.Version {
+		return domain.ErrOptimisticLock
+	}
+	cc.Version++
 	r.data[cc.ID] = *cc
 	return nil
 }

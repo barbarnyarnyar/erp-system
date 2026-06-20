@@ -10,10 +10,10 @@ type BillingTrigger struct {
 	ID                       string               `json:"id"`
 	LegalEntityID            string               `json:"legal_entity_id"`
 	SalesOrderID             string               `json:"sales_order_id"`
-	SourceDeliveryDocumentID string               `json:"source_delivery_document_id"` // Primitive Ref -> SCM or PRJ
+	SourceDeliveryDocumentID string               `json:"source_delivery_document_id"`
 	BillableAmount           decimal.Decimal      `json:"billable_amount"`
 	TaxAmount                decimal.Decimal      `json:"tax_amount"`
 	Status                   BillingTriggerStatus `json:"status"`
-	TriggeredAt              time.Time            `json:"triggered_at"` // Partition Coordinate
+	TriggeredAt              time.Time            `json:"triggered_at"`
 	ProcessedAt              *time.Time           `json:"processed_at,omitempty"`
 }

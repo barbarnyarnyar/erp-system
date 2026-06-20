@@ -8,19 +8,14 @@ import (
 
 type CustomerProfile struct {
 	ID                 string          `json:"id"`
-	LegalEntityID      string          `json:"legal_entity_id"` // Primitive Ref -> FM.LegalEntity
-	CustomerCode       string          `json:"customer_code"`   // Unique business key per tenant
+	LegalEntityID      string          `json:"legal_entity_id"`
+	CustomerCode       string          `json:"customer_code"`
 	CompanyName        string          `json:"company_name"`
-	AccountManagerHrID string          `json:"account_manager_hr_id"` // Primitive Ref -> HR.Employee
+	AccountManagerHrID string          `json:"account_manager_hr_id"`
 	Status             CustomerStatus  `json:"status"`
 	CreditLimit        decimal.Decimal `json:"credit_limit"`
-	Currency           string          `json:"currency"` // ISO 4217 code
-	ContactName        *string         `json:"contact_name,omitempty"`
-	Email              *string         `json:"email,omitempty"`
-	Phone              *string         `json:"phone,omitempty"`
-	Category           *string         `json:"category,omitempty"`
-	ParentCustomerID   *string         `json:"parent_customer_id,omitempty"`
-	Version            int             `json:"version"` // Optimistic Locking Shield
+	Currency           string          `json:"currency"`
+	Version            int             `json:"version"`
 	CreatedAt          time.Time       `json:"created_at"`
 	UpdatedAt          time.Time       `json:"updated_at"`
 	DeletedAt          *time.Time      `json:"deleted_at,omitempty"`

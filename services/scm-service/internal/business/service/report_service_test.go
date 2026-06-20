@@ -31,15 +31,15 @@ func (m *MockReportProductRepo) List(ctx context.Context) ([]domain.Product, err
 }
 
 type MockReportInventoryRepo struct {
-	domain.InventoryItemRepository
+	domain.StockBalanceRepository
 	err error
 }
 
-func (m *MockReportInventoryRepo) List(ctx context.Context) ([]domain.InventoryItem, error) {
+func (m *MockReportInventoryRepo) List(ctx context.Context) ([]domain.StockBalance, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.InventoryItemRepository.List(ctx)
+	return m.StockBalanceRepository.List(ctx)
 }
 
 type MockReportSupplierRepo struct {
@@ -68,14 +68,14 @@ func (m *MockReportPORepo) List(ctx context.Context) ([]domain.PurchaseOrder, er
 
 type MockReportForecastRepo struct {
 	domain.DemandForecastRepository
-	listByProductErr error
+	listByMaterialErr error
 }
 
-func (m *MockReportForecastRepo) ListByProductID(ctx context.Context, productID string) ([]domain.DemandForecast, error) {
-	if m.listByProductErr != nil {
-		return nil, m.listByProductErr
+func (m *MockReportForecastRepo) ListByMaterialID(ctx context.Context, materialID string) ([]domain.DemandForecast, error) {
+	if m.listByMaterialErr != nil {
+		return nil, m.listByMaterialErr
 	}
-	return m.DemandForecastRepository.ListByProductID(ctx, productID)
+	return m.DemandForecastRepository.ListByMaterialID(ctx, materialID)
 }
 
 func TestReportService_GetInventoryLevelsReport(t *testing.T) {
@@ -83,12 +83,12 @@ func TestReportService_GetInventoryLevelsReport(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		prodRepo := memory.NewMemoryProductRepo()
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		svc := NewReportService(prodRepo, invRepo, nil, nil, nil, nil)
 
-		_ = prodRepo.Create(ctx, &domain.Product{ID: "p-1", ProductCode: "P1", ProductName: "Prod 1"})
-		_ = invRepo.Create(ctx, &domain.InventoryItem{ID: "inv-1", ProductID: "p-1", LocationID: "loc-1", QuantityOnHand: 10, ReorderPoint: 5, UnitCost: decimal.NewFromFloat(12.5)})
-		_ = invRepo.Create(ctx, &domain.InventoryItem{ID: "inv-2", ProductID: "p-nonexistent", LocationID: "loc-1"})
+		_ = prodRepo.Create(ctx, &domain.Product{ID: "p-1", ProductCode: "P1", ProductName: "Prod 1", StandardCost: decimal.NewFromFloat(12.5)})
+		_ = invRepo.Create(ctx, &domain.StockBalance{ID: "sb-1", MaterialID: "p-1", LocationID: "loc-1", QuantityOnHand: decimal.NewFromInt(10)})
+		_ = invRepo.Create(ctx, &domain.StockBalance{ID: "sb-2", MaterialID: "p-nonexistent", LocationID: "loc-1"})
 
 		report, err := svc.GetInventoryLevelsReport(ctx)
 		if err != nil {
@@ -245,7 +245,7 @@ func TestReportService_GetSafetyStockReport(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		prodRepo := memory.NewMemoryProductRepo()
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		forecastRepo := memory.NewMemoryDemandForecastRepo()
 		svc := NewReportService(prodRepo, invRepo, nil, nil, nil, forecastRepo)
 
@@ -254,15 +254,15 @@ func TestReportService_GetSafetyStockReport(t *testing.T) {
 		_ = prodRepo.Create(ctx, &domain.Product{ID: "p-3", ProductCode: "P3", ProductName: "Product 3"})
 
 		// P1: StockLevel = OK
-		_ = invRepo.Create(ctx, &domain.InventoryItem{ID: "inv-1", ProductID: "p-1", QuantityOnHand: 100, ReorderPoint: 10})
+		_ = invRepo.Create(ctx, &domain.StockBalance{ID: "sb-1", MaterialID: "p-1", QuantityOnHand: decimal.NewFromInt(100)})
 		// P2: StockLevel = RESTOCK_SOON
-		_ = invRepo.Create(ctx, &domain.InventoryItem{ID: "inv-2", ProductID: "p-2", QuantityOnHand: 25, ReorderPoint: 10})
-		// P3: StockLevel = REORDER_IMMEDIATELY (no inventory seeded, qtyOnHand=0)
+		_ = invRepo.Create(ctx, &domain.StockBalance{ID: "sb-2", MaterialID: "p-2", QuantityOnHand: decimal.NewFromInt(25)})
+		// P3: StockLevel = REORDER_IMMEDIATELY
 
 		// Seed Forecasts
-		_ = forecastRepo.Create(ctx, &domain.DemandForecast{ID: "f-1", ProductID: "p-1", ForecastQuantity: 10})
-		_ = forecastRepo.Create(ctx, &domain.DemandForecast{ID: "f-2", ProductID: "p-1", ForecastQuantity: 20})
-		_ = forecastRepo.Create(ctx, &domain.DemandForecast{ID: "f-3", ProductID: "p-2", ForecastQuantity: 10})
+		_ = forecastRepo.Create(ctx, &domain.DemandForecast{ID: "f-1", MaterialID: "p-1", ForecastQuantity: decimal.NewFromInt(10)})
+		_ = forecastRepo.Create(ctx, &domain.DemandForecast{ID: "f-2", MaterialID: "p-1", ForecastQuantity: decimal.NewFromInt(20)})
+		_ = forecastRepo.Create(ctx, &domain.DemandForecast{ID: "f-3", MaterialID: "p-2", ForecastQuantity: decimal.NewFromInt(10)})
 
 		report, err := svc.GetSafetyStockReport(ctx)
 		if err != nil {
@@ -296,9 +296,9 @@ func TestReportService_GetSafetyStockReport(t *testing.T) {
 
 	t.Run("forecast list error (falls back to nil forecasts)", func(t *testing.T) {
 		prodRepo := memory.NewMemoryProductRepo()
-		invRepo := memory.NewMemoryInventoryItemRepo()
+		invRepo := memory.NewMemoryStockBalanceRepo()
 		forecastRepo := &MockReportForecastRepo{
-			listByProductErr: errors.New("forecast fetch error"),
+			listByMaterialErr: errors.New("forecast fetch error"),
 		}
 		svc := NewReportService(prodRepo, invRepo, nil, nil, nil, forecastRepo)
 
@@ -311,7 +311,6 @@ func TestReportService_GetSafetyStockReport(t *testing.T) {
 		if len(report) != 1 {
 			t.Errorf("expected 1 item, got %d", len(report))
 		}
-		// avgForecast should be 0, calculated safety stock should be 10, qty=0, so REORDER_IMMEDIATELY
 		if report[0].Recommendation != "REORDER_IMMEDIATELY" {
 			t.Errorf("expected REORDER_IMMEDIATELY, got %s", report[0].Recommendation)
 		}

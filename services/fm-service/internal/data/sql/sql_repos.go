@@ -2,6 +2,7 @@ package sql
 
 import (
 	"context"
+	"time"
 
 	"github.com/erp-system/fm-service/internal/business/domain"
 	"gorm.io/gorm"
@@ -583,10 +584,33 @@ func (r *SQLBankAccountRepo) GetByID(ctx context.Context, id string) (*domain.Ba
 }
 
 func (r *SQLBankAccountRepo) Update(ctx context.Context, ba *domain.BankAccount) error {
-	dbModel := FromDomainBankAccount(ba)
-	if err := GetDB(ctx, r.db).Save(dbModel).Error; err != nil {
+	tx := GetDB(ctx, r.db)
+
+	var dbModel BankAccount
+	if err := tx.First(&dbModel, "id = ?", ba.ID).Error; err != nil {
 		return err
 	}
+
+	expectedVersion := dbModel.Version
+	newVersion := expectedVersion + 1
+
+	res := tx.Model(&BankAccount{}).
+		Where("id = ? AND version = ?", ba.ID, expectedVersion).
+		Updates(map[string]interface{}{
+			"liquid_balance": ba.LiquidBalance,
+			"updated_at":     time.Now(),
+			"version":        newVersion,
+		})
+
+	if res.Error != nil {
+		return res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		return domain.ErrOptimisticLock
+	}
+
+	ba.Version = newVersion
 	return nil
 }
 
@@ -628,10 +652,35 @@ func (r *SQLCustomerCreditRepo) GetByID(ctx context.Context, id string) (*domain
 }
 
 func (r *SQLCustomerCreditRepo) Update(ctx context.Context, cc *domain.CustomerCredit) error {
-	dbModel := FromDomainCustomerCredit(cc)
-	if err := GetDB(ctx, r.db).Save(dbModel).Error; err != nil {
+	tx := GetDB(ctx, r.db)
+
+	var dbModel CustomerCredit
+	if err := tx.First(&dbModel, "id = ?", cc.ID).Error; err != nil {
 		return err
 	}
+
+	expectedVersion := dbModel.Version
+	newVersion := expectedVersion + 1
+
+	res := tx.Model(&CustomerCredit{}).
+		Where("id = ? AND version = ?", cc.ID, expectedVersion).
+		Updates(map[string]interface{}{
+			"credit_limit":    cc.CreditLimit,
+			"current_balance": cc.CurrentBalance,
+			"is_on_hold":       cc.IsOnHold,
+			"updated_at":      time.Now(),
+			"version":         newVersion,
+		})
+
+	if res.Error != nil {
+		return res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		return domain.ErrOptimisticLock
+	}
+
+	cc.Version = newVersion
 	return nil
 }
 

@@ -34,9 +34,6 @@ func (s *SupplierManagementService) CreateSupplier(ctx context.Context, code, na
 		ID:           id,
 		SupplierCode: code,
 		SupplierName: name,
-		ContactName:  contact,
-		Email:        email,
-		Phone:        phone,
 		IsActive:     true,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
@@ -71,9 +68,6 @@ func (s *SupplierManagementService) UpdateSupplier(ctx context.Context, id, code
 
 	sup.SupplierCode = code
 	sup.SupplierName = name
-	sup.ContactName = contact
-	sup.Email = email
-	sup.Phone = phone
 	sup.IsActive = isActive
 	sup.UpdatedAt = time.Now()
 
@@ -126,7 +120,6 @@ func (s *SupplierManagementService) CreateContract(ctx context.Context, contract
 		SupplierID:     supplierID,
 		StartDate:      startDate,
 		EndDate:        endDate,
-		Terms:          terms,
 		Status:         "ACTIVE",
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -153,7 +146,6 @@ func (s *SupplierManagementService) UpdateContract(ctx context.Context, id, cont
 	vc.SupplierID = supplierID
 	vc.StartDate = startDate
 	vc.EndDate = endDate
-	vc.Terms = terms
 	vc.Status = status
 	vc.UpdatedAt = time.Now()
 

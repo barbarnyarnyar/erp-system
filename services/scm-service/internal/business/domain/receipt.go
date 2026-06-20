@@ -7,11 +7,11 @@ import (
 
 type Receipt struct {
 	ID              string    `json:"id"`
+	LegalEntityID   string    `json:"legal_entity_id"`
 	ReceiptNumber   string    `json:"receipt_number"`
-	PurchaseOrderID *string   `json:"purchase_order_id,omitempty"`
+	PurchaseOrderID string    `json:"purchase_order_id"`
 	ReceivedDate    time.Time `json:"received_date"`
 	Status          string    `json:"status"`
-	Notes           string    `json:"notes"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

@@ -7,14 +7,14 @@ import (
 )
 
 type PurchaseOrder struct {
-	ID               string          `json:"id"`
-	PoNumber         string          `json:"po_number"`
-	SupplierID       string          `json:"supplier_id"`
-	OrderDate        time.Time       `json:"order_date"`
-	ExpectedDelivery time.Time       `json:"expected_delivery"`
-	Status           string          `json:"status"`
-	TotalAmount      decimal.Decimal `json:"total_amount"`
-	Notes            string          `json:"notes"`
-	CreatedAt        time.Time       `json:"created_at"`
-	UpdatedAt        time.Time       `json:"updated_at"`
+	ID               string              `json:"id"`
+	LegalEntityID    string              `json:"legal_entity_id"`
+	PoNumber         string              `json:"po_number"`
+	SupplierID       string              `json:"supplier_id"`
+	OrderDate        time.Time           `json:"order_date"`
+	ExpectedDelivery time.Time           `json:"expected_delivery"`
+	Status           PurchaseOrderStatus `json:"status"`
+	TotalAmount      decimal.Decimal     `json:"total_amount"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
 }

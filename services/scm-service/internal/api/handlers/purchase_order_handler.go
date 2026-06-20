@@ -37,10 +37,9 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c *gin.Context) {
 		ExpectedDelivery string `json:"expected_delivery"`
 		Notes            string `json:"notes"`
 		Lines            []struct {
-			ProductID       string `json:"product_id"`
-			QuantityOrdered int    `json:"quantity_ordered"`
-			UnitPrice       string `json:"unit_price"`
-			Description     string `json:"description"`
+			MaterialID      string          `json:"material_id"`
+			QuantityOrdered decimal.Decimal `json:"quantity_ordered"`
+			UnitPrice       string          `json:"unit_price"`
 		} `json:"lines"`
 	}
 
@@ -61,10 +60,9 @@ func (h *PurchaseOrderHandler) CreatePurchaseOrder(c *gin.Context) {
 			priceDec = decimal.Zero
 		}
 		linesInput = append(linesInput, service.POLineInput{
-			ProductID:       l.ProductID,
+			MaterialID:      l.MaterialID,
 			QuantityOrdered: l.QuantityOrdered,
 			UnitPrice:       priceDec,
-			Description:     l.Description,
 		})
 	}
 
@@ -151,9 +149,9 @@ func (h *PurchaseOrderHandler) CreatePurchaseRequisition(c *gin.Context) {
 		RequestDate string `json:"request_date"` // YYYY-MM-DD
 		Notes       string `json:"notes"`
 		Lines       []struct {
-			ProductID          string `json:"product_id"`
-			QuantityRequested  int    `json:"quantity_requested"`
-			EstimatedUnitPrice string `json:"estimated_unit_price"`
+			MaterialID         string          `json:"material_id"`
+			QuantityRequested  decimal.Decimal `json:"quantity_requested"`
+			EstimatedUnitPrice string          `json:"estimated_unit_price"`
 		} `json:"lines"`
 	}
 
@@ -174,7 +172,7 @@ func (h *PurchaseOrderHandler) CreatePurchaseRequisition(c *gin.Context) {
 			priceDec = decimal.Zero
 		}
 		linesInput = append(linesInput, service.RequisitionLineInput{
-			ProductID:          l.ProductID,
+			MaterialID:         l.MaterialID,
 			QuantityRequested:  l.QuantityRequested,
 			EstimatedUnitPrice: priceDec,
 		})

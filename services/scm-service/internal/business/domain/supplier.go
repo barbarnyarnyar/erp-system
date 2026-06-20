@@ -6,13 +6,11 @@ import (
 )
 
 type Supplier struct {
-	ID           string    `json:"id"`
-	SupplierCode string    `json:"supplier_code"`
-	SupplierName string    `json:"supplier_name"`
-	ContactName  string    `json:"contact_name"`
-	Email        string    `json:"email"`
-	Phone        string    `json:"phone"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	LegalEntityID string    `json:"legal_entity_id"`
+	SupplierCode  string    `json:"supplier_code"`
+	SupplierName  string    `json:"supplier_name"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

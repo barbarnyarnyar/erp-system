@@ -49,7 +49,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		&sql.Location{},
 		&sql.Supplier{},
 		&sql.VendorContract{},
-		&sql.InventoryItem{},
+		&sql.StockBalance{},
 		&sql.InventoryMovement{},
 		&sql.StockTransfer{},
 		&sql.PurchaseRequisition{},
@@ -74,7 +74,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	locRepo := sql.NewSQLLocationRepo(db)
 	supRepo := sql.NewSQLSupplierRepo(db)
 	contRepo := sql.NewSQLVendorContractRepo(db)
-	invRepo := sql.NewSQLInventoryItemRepo(db)
+	invRepo := sql.NewSQLStockBalanceRepo(db)
 	moveRepo := sql.NewSQLInventoryMovementRepo(db)
 	poRepo := sql.NewSQLPurchaseOrderRepo(db)
 	lineRepo := sql.NewSQLPurchaseOrderLineRepo(db)
@@ -586,12 +586,12 @@ func TestInventoryAndTransferEndpoints(t *testing.T) {
 
 	// Create Item
 	body, _ := json.Marshal(map[string]interface{}{
-		"product_id":     "prod-123",
-		"location_id":    "loc_default",
-		"quantity_on_hand": 100,
-		"reorder_point":  10,
-		"maximum_stock":  500,
-		"unit_cost":      "5.00",
+		"product_id":       "prod-123",
+		"location_id":      "loc_default",
+		"quantity_on_hand": "100",
+		"reorder_point":    10,
+		"maximum_stock":    500,
+		"unit_cost":        "5.00",
 	})
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/inventory", bytes.NewBuffer(body))
@@ -602,7 +602,7 @@ func TestInventoryAndTransferEndpoints(t *testing.T) {
 	}
 
 	var invRes struct {
-		Data domain.InventoryItem `json:"data"`
+		Data domain.StockBalance `json:"data"`
 	}
 	_ = json.Unmarshal(w.Body.Bytes(), &invRes)
 	invID := invRes.Data.ID
@@ -617,9 +617,10 @@ func TestInventoryAndTransferEndpoints(t *testing.T) {
 
 	// Reserve Stock
 	resBody, _ := json.Marshal(map[string]interface{}{
-		"product_id":  "prod-123",
-		"location_id": "loc_default",
-		"quantity":    15,
+		"product_id":   "prod-123",
+		"location_id":  "loc_default",
+		"quantity":     "15",
+		"reference_id": "ref-123",
 	})
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodPost, "/api/v1/inventory/reserve", bytes.NewBuffer(resBody))
@@ -631,9 +632,7 @@ func TestInventoryAndTransferEndpoints(t *testing.T) {
 
 	// Release Reservation
 	relBody, _ := json.Marshal(map[string]interface{}{
-		"product_id":  "prod-123",
-		"location_id": "loc_default",
-		"quantity":    10,
+		"reference_id": "ref-123",
 	})
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodPost, "/api/v1/inventory/release", bytes.NewBuffer(relBody))
@@ -1037,15 +1036,14 @@ func TestRemainingScmEndpoints(t *testing.T) {
 	}
 	_ = env.db.Create(product).Error
 
-	// Seed InventoryItem
-	invItem := &sql.InventoryItem{
+	// Seed StockBalance
+	invItem := &sql.StockBalance{
 		ID:                "inv-123",
-		ProductID:         "prod-123",
+		MaterialID:        "prod-123",
 		LocationID:        "loc_default",
-		QuantityOnHand:    100,
-		QuantityReserved:  0,
-		QuantityAvailable: 100,
-		MaximumStock:      1000,
+		QuantityOnHand:    decimal.NewFromInt(100),
+		QuantityReserved:  decimal.NewFromInt(0),
+		QuantityAvailable: decimal.NewFromInt(100),
 	}
 	_ = env.db.Create(invItem).Error
 
@@ -1059,10 +1057,8 @@ func TestRemainingScmEndpoints(t *testing.T) {
 
 	// Update Inventory Item
 	updateInvBody, _ := json.Marshal(map[string]interface{}{
-		"quantity_on_hand": 120,
-		"reorder_point":    20,
-		"maximum_stock":    1100,
-		"unit_cost":        "5.50",
+		"quantity_on_hand":  "120",
+		"quantity_reserved": "0",
 	})
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodPut, "/api/v1/inventory/inv-123", bytes.NewBuffer(updateInvBody))
@@ -1075,9 +1071,9 @@ func TestRemainingScmEndpoints(t *testing.T) {
 	// Seed Demand Forecast
 	fc := &sql.DemandForecast{
 		ID:               "fc-123",
-		ProductID:        "prod-123",
+		MaterialID:       "prod-123",
 		ForecastDate:     time.Now(),
-		ForecastQuantity: 300,
+		ForecastQuantity: decimal.NewFromInt(300),
 		ConfidenceLevel:  decimal.NewFromFloat(0.90),
 	}
 	_ = env.db.Create(fc).Error
@@ -1100,10 +1096,10 @@ func TestRemainingScmEndpoints(t *testing.T) {
 	// Stock Transfers
 	st := &sql.StockTransfer{
 		ID:             "st-123",
-		ProductID:      "prod-123",
+		MaterialID:     "prod-123",
 		FromLocationID: "loc_default",
 		ToLocationID:   "loc_default",
-		Quantity:       10,
+		Quantity:       decimal.NewFromInt(10),
 		Status:         "PENDING",
 	}
 	_ = env.db.Create(st).Error
@@ -1126,7 +1122,7 @@ func TestRemainingScmEndpoints(t *testing.T) {
 	resStBody, _ := json.Marshal(map[string]interface{}{
 		"product_id":   "prod-123",
 		"location_id":  "loc_default",
-		"quantity":     10,
+		"quantity":     "10",
 		"reference_id": "st-123",
 	})
 	w = httptest.NewRecorder()

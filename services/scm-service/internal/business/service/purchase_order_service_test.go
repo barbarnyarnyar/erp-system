@@ -158,8 +158,8 @@ func TestPurchaseOrderService_PurchaseOrders(t *testing.T) {
 		svc, _, _ := setupService()
 
 		lines := []POLineInput{
-			{ProductID: "prod-1", QuantityOrdered: 10, UnitPrice: decimal.NewFromFloat(15.0), Description: "Line 1"},
-			{ProductID: "prod-2", QuantityOrdered: 5, UnitPrice: decimal.NewFromFloat(20.0), Description: "Line 2"},
+			{MaterialID: "prod-1", QuantityOrdered: decimal.NewFromInt(10), UnitPrice: decimal.NewFromFloat(15.0)},
+			{MaterialID: "prod-2", QuantityOrdered: decimal.NewFromInt(5), UnitPrice: decimal.NewFromFloat(20.0)},
 		}
 
 		po, err := svc.CreatePurchaseOrder(ctx, "supp-1", time.Now().Add(24*time.Hour), "notes", lines)
@@ -194,7 +194,7 @@ func TestPurchaseOrderService_PurchaseOrders(t *testing.T) {
 			createErr:               errors.New("db create error"),
 		}
 
-		lines := []POLineInput{{ProductID: "prod-1", QuantityOrdered: 10, UnitPrice: decimal.NewFromFloat(10.0)}}
+		lines := []POLineInput{{MaterialID: "prod-1", QuantityOrdered: decimal.NewFromInt(10), UnitPrice: decimal.NewFromFloat(10.0)}}
 		_, err := svc.CreatePurchaseOrder(ctx, "supp-1", time.Now(), "", lines)
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -208,7 +208,7 @@ func TestPurchaseOrderService_PurchaseOrders(t *testing.T) {
 			createErr:                   errors.New("db line error"),
 		}
 
-		lines := []POLineInput{{ProductID: "prod-1", QuantityOrdered: 10, UnitPrice: decimal.NewFromFloat(10.0)}}
+		lines := []POLineInput{{MaterialID: "prod-1", QuantityOrdered: decimal.NewFromInt(10), UnitPrice: decimal.NewFromFloat(10.0)}}
 		_, err := svc.CreatePurchaseOrder(ctx, "supp-1", time.Now(), "", lines)
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -217,7 +217,7 @@ func TestPurchaseOrderService_PurchaseOrders(t *testing.T) {
 
 	t.Run("Get PO", func(t *testing.T) {
 		svc, _, _ := setupService()
-		lines := []POLineInput{{ProductID: "p-1", QuantityOrdered: 2, UnitPrice: decimal.NewFromFloat(5.0)}}
+		lines := []POLineInput{{MaterialID: "p-1", QuantityOrdered: decimal.NewFromInt(2), UnitPrice: decimal.NewFromFloat(5.0)}}
 		res, _ := svc.CreatePurchaseOrder(ctx, "supp-1", time.Now(), "", lines)
 
 		got, err := svc.GetPurchaseOrder(ctx, res.ID)
@@ -382,7 +382,7 @@ func TestPurchaseOrderService_PurchaseRequisitions(t *testing.T) {
 		svc, _, _ := setupService()
 
 		lines := []RequisitionLineInput{
-			{ProductID: "prod-1", QuantityRequested: 10, EstimatedUnitPrice: decimal.NewFromFloat(15.0)},
+			{MaterialID: "prod-1", QuantityRequested: decimal.NewFromInt(10), EstimatedUnitPrice: decimal.NewFromFloat(15.0)},
 		}
 
 		pr, err := svc.CreatePurchaseRequisition(ctx, "req-1", time.Now(), "notes", lines)
@@ -413,7 +413,7 @@ func TestPurchaseOrderService_PurchaseRequisitions(t *testing.T) {
 			createErr:                     errors.New("db error"),
 		}
 
-		lines := []RequisitionLineInput{{ProductID: "prod-1", QuantityRequested: 10}}
+		lines := []RequisitionLineInput{{MaterialID: "prod-1", QuantityRequested: decimal.NewFromInt(10)}}
 		_, err := svc.CreatePurchaseRequisition(ctx, "req-1", time.Now(), "", lines)
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -427,7 +427,7 @@ func TestPurchaseOrderService_PurchaseRequisitions(t *testing.T) {
 			createErr:                         errors.New("db line error"),
 		}
 
-		lines := []RequisitionLineInput{{ProductID: "prod-1", QuantityRequested: 10}}
+		lines := []RequisitionLineInput{{MaterialID: "prod-1", QuantityRequested: decimal.NewFromInt(10)}}
 		_, err := svc.CreatePurchaseRequisition(ctx, "req-1", time.Now(), "", lines)
 		if err == nil {
 			t.Error("expected error, got nil")

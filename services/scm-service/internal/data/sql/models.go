@@ -167,9 +167,9 @@ func FromDomainSupplier(d *domain.Supplier) *Supplier {
 		LegalEntityID: DefaultLegalEntityID,
 		SupplierCode:  d.SupplierCode,
 		SupplierName:  d.SupplierName,
-		ContactName:   d.ContactName,
-		Email:         d.Email,
-		Phone:         d.Phone,
+		ContactName:   "",
+		Email:         "",
+		Phone:         "",
 		IsActive:      d.IsActive,
 		CreatedAt:     d.CreatedAt,
 		UpdatedAt:     d.UpdatedAt,
@@ -181,15 +181,13 @@ func ToDomainSupplier(dbModel *Supplier) *domain.Supplier {
 		return nil
 	}
 	return &domain.Supplier{
-		ID:           dbModel.ID,
-		SupplierCode: dbModel.SupplierCode,
-		SupplierName: dbModel.SupplierName,
-		ContactName:  dbModel.ContactName,
-		Email:        dbModel.Email,
-		Phone:        dbModel.Phone,
-		IsActive:     dbModel.IsActive,
-		CreatedAt:    dbModel.CreatedAt,
-		UpdatedAt:    dbModel.UpdatedAt,
+		ID:            dbModel.ID,
+		LegalEntityID: dbModel.LegalEntityID,
+		SupplierCode:  dbModel.SupplierCode,
+		SupplierName:  dbModel.SupplierName,
+		IsActive:      dbModel.IsActive,
+		CreatedAt:     dbModel.CreatedAt,
+		UpdatedAt:     dbModel.UpdatedAt,
 	}
 }
 
@@ -218,7 +216,7 @@ func FromDomainVendorContract(d *domain.VendorContract) *VendorContract {
 		SupplierID:     d.SupplierID,
 		StartDate:      d.StartDate,
 		EndDate:        d.EndDate,
-		Terms:          d.Terms,
+		Terms:          "",
 		Status:         d.Status,
 		CreatedAt:      d.CreatedAt,
 		UpdatedAt:      d.UpdatedAt,
@@ -231,72 +229,68 @@ func ToDomainVendorContract(dbModel *VendorContract) *domain.VendorContract {
 	}
 	return &domain.VendorContract{
 		ID:             dbModel.ID,
+		LegalEntityID:  DefaultLegalEntityID,
 		ContractNumber: dbModel.ContractNumber,
 		SupplierID:     dbModel.SupplierID,
 		StartDate:      dbModel.StartDate,
 		EndDate:        dbModel.EndDate,
-		Terms:          dbModel.Terms,
 		Status:         dbModel.Status,
 		CreatedAt:      dbModel.CreatedAt,
 		UpdatedAt:      dbModel.UpdatedAt,
 	}
 }
 
-// InventoryItem GORM struct
-type InventoryItem struct {
+// StockBalance GORM struct
+type StockBalance struct {
 	ID                string          `gorm:"primaryKey"`
-	LegalEntityID     string          `gorm:"type:uuid;not null;index:idx_tenant_wh_mat,unique;default:'00000000-0000-0000-0000-000000000000'"`
-	ProductID         string          `gorm:"index:idx_tenant_wh_mat,unique"`
-	LocationID        string          `gorm:"index:idx_tenant_wh_mat,unique"`
-	QuantityOnHand    int
-	QuantityReserved  int
-	QuantityAvailable int
-	ReorderPoint      int
-	MaximumStock      int
-	UnitCost          decimal.Decimal `gorm:"type:numeric(18,4)"`
+	LegalEntityID     string          `gorm:"type:uuid;not null;index:idx_tenant_sb_loc_mat,unique;default:'00000000-0000-0000-0000-000000000000'"`
+	MaterialID        string          `gorm:"index:idx_tenant_sb_loc_mat,unique"`
+	LocationID        string          `gorm:"index:idx_tenant_sb_loc_mat,unique"`
+	QuantityOnHand    decimal.Decimal `gorm:"type:numeric(18,4)"`
+	QuantityReserved  decimal.Decimal `gorm:"type:numeric(18,4)"`
+	QuantityAvailable decimal.Decimal `gorm:"type:numeric(18,4)"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	Version           int32           `gorm:"type:integer;not null;default:0"` // OCC concurrency shield
+	Version           int             `gorm:"type:integer;not null;default:0"` // OCC concurrency shield
 
-	Product  Product  `gorm:"foreignKey:ProductID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	Location Location `gorm:"foreignKey:LocationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
-func FromDomainInventoryItem(d *domain.InventoryItem) *InventoryItem {
+func (StockBalance) TableName() string {
+	return "scm_stock_balances"
+}
+
+func FromDomainStockBalance(d *domain.StockBalance) *StockBalance {
 	if d == nil {
 		return nil
 	}
-	return &InventoryItem{
+	return &StockBalance{
 		ID:                d.ID,
-		LegalEntityID:     DefaultLegalEntityID,
-		ProductID:         d.ProductID,
+		LegalEntityID:     d.LegalEntityID,
+		MaterialID:        d.MaterialID,
 		LocationID:        d.LocationID,
 		QuantityOnHand:    d.QuantityOnHand,
 		QuantityReserved:  d.QuantityReserved,
 		QuantityAvailable: d.QuantityAvailable,
-		ReorderPoint:      d.ReorderPoint,
-		MaximumStock:      d.MaximumStock,
-		UnitCost:          d.UnitCost,
 		CreatedAt:         d.CreatedAt,
 		UpdatedAt:         d.UpdatedAt,
-		Version:           0,
+		Version:           d.Version,
 	}
 }
 
-func ToDomainInventoryItem(dbModel *InventoryItem) *domain.InventoryItem {
+func ToDomainStockBalance(dbModel *StockBalance) *domain.StockBalance {
 	if dbModel == nil {
 		return nil
 	}
-	return &domain.InventoryItem{
+	return &domain.StockBalance{
 		ID:                dbModel.ID,
-		ProductID:         dbModel.ProductID,
+		LegalEntityID:     dbModel.LegalEntityID,
 		LocationID:        dbModel.LocationID,
+		MaterialID:        dbModel.MaterialID,
 		QuantityOnHand:    dbModel.QuantityOnHand,
 		QuantityReserved:  dbModel.QuantityReserved,
 		QuantityAvailable: dbModel.QuantityAvailable,
-		ReorderPoint:      dbModel.ReorderPoint,
-		MaximumStock:      dbModel.MaximumStock,
-		UnitCost:          dbModel.UnitCost,
+		Version:           dbModel.Version,
 		CreatedAt:         dbModel.CreatedAt,
 		UpdatedAt:         dbModel.UpdatedAt,
 	}
@@ -306,17 +300,16 @@ func ToDomainInventoryItem(dbModel *InventoryItem) *domain.InventoryItem {
 type InventoryMovement struct {
 	ID            string          `gorm:"primaryKey"`
 	LegalEntityID string          `gorm:"type:uuid;not null;index;default:'00000000-0000-0000-0000-000000000000'"`
-	ProductID     string          `gorm:"index"`
+	MaterialID    string          `gorm:"index"`
 	LocationID    string          `gorm:"index"`
 	MovementType  string          // e.g. RECEIPT, ISSUE, TRANSFER, ADJUSTMENT
-	Quantity      int
+	Quantity      decimal.Decimal `gorm:"type:numeric(18,4)"`
 	UnitCost      decimal.Decimal `gorm:"type:numeric(18,4)"`
 	ReferenceType string          // e.g. MANUAL_ADJUSTMENT, PO_RECEIPT, STOCK_TRANSFER, SHIPMENT
 	ReferenceID   string
 	Notes         string
 	CreatedAt     time.Time
 
-	Product  Product  `gorm:"foreignKey:ProductID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	Location Location `gorm:"foreignKey:LocationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
@@ -326,15 +319,15 @@ func FromDomainInventoryMovement(d *domain.InventoryMovement) *InventoryMovement
 	}
 	return &InventoryMovement{
 		ID:            d.ID,
-		LegalEntityID: DefaultLegalEntityID,
-		ProductID:     d.ProductID,
+		LegalEntityID: d.LegalEntityID,
+		MaterialID:    d.MaterialID,
 		LocationID:    d.LocationID,
 		MovementType:  d.MovementType,
 		Quantity:      d.Quantity,
-		UnitCost:      d.UnitCost,
+		UnitCost:      decimal.Zero, // no longer in domain
 		ReferenceType: d.ReferenceType,
 		ReferenceID:   d.ReferenceID,
-		Notes:         d.Notes,
+		Notes:         "", // no longer in domain
 		CreatedAt:     d.CreatedAt,
 	}
 }
@@ -345,14 +338,13 @@ func ToDomainInventoryMovement(dbModel *InventoryMovement) *domain.InventoryMove
 	}
 	return &domain.InventoryMovement{
 		ID:            dbModel.ID,
-		ProductID:     dbModel.ProductID,
+		LegalEntityID: dbModel.LegalEntityID,
 		LocationID:    dbModel.LocationID,
+		MaterialID:    dbModel.MaterialID,
 		MovementType:  dbModel.MovementType,
 		Quantity:      dbModel.Quantity,
-		UnitCost:      dbModel.UnitCost,
 		ReferenceType: dbModel.ReferenceType,
 		ReferenceID:   dbModel.ReferenceID,
-		Notes:         dbModel.Notes,
 		CreatedAt:     dbModel.CreatedAt,
 	}
 }
@@ -362,16 +354,17 @@ type StockTransfer struct {
 	ID             string     `gorm:"primaryKey"`
 	FromLocationID string     `gorm:"index"`
 	ToLocationID   string     `gorm:"index"`
-	ProductID      string     `gorm:"index"`
-	Quantity       int
+	MaterialID     string     `gorm:"index"`
+	Quantity       decimal.Decimal `gorm:"type:numeric(18,4)"`
 	Status         string // e.g. PENDING, TRANSFERRED, CANCELLED
+	Version        int             `gorm:"type:integer;not null;default:0"` // OCC concurrency shield
 	TransferredAt  *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 
 	FromLocation Location `gorm:"foreignKey:FromLocationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	ToLocation   Location `gorm:"foreignKey:ToLocationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	Product      Product  `gorm:"foreignKey:ProductID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Product      Product  `gorm:"foreignKey:MaterialID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
 func FromDomainStockTransfer(d *domain.StockTransfer) *StockTransfer {
@@ -382,9 +375,10 @@ func FromDomainStockTransfer(d *domain.StockTransfer) *StockTransfer {
 		ID:             d.ID,
 		FromLocationID: d.FromLocationID,
 		ToLocationID:   d.ToLocationID,
-		ProductID:      d.ProductID,
+		MaterialID:     d.MaterialID,
 		Quantity:       d.Quantity,
 		Status:         d.Status,
+		Version:        d.Version,
 		TransferredAt:  d.TransferredAt,
 		CreatedAt:      d.CreatedAt,
 		UpdatedAt:      d.UpdatedAt,
@@ -399,9 +393,10 @@ func ToDomainStockTransfer(dbModel *StockTransfer) *domain.StockTransfer {
 		ID:             dbModel.ID,
 		FromLocationID: dbModel.FromLocationID,
 		ToLocationID:   dbModel.ToLocationID,
-		ProductID:      dbModel.ProductID,
+		MaterialID:     dbModel.MaterialID,
 		Quantity:       dbModel.Quantity,
 		Status:         dbModel.Status,
+		Version:        dbModel.Version,
 		TransferredAt:  dbModel.TransferredAt,
 		CreatedAt:      dbModel.CreatedAt,
 		UpdatedAt:      dbModel.UpdatedAt,
@@ -459,13 +454,13 @@ func ToDomainPurchaseRequisition(dbModel *PurchaseRequisition) *domain.PurchaseR
 type PurchaseRequisitionLine struct {
 	ID                    string `gorm:"primaryKey"`
 	PurchaseRequisitionID string `gorm:"index"`
-	ProductID             string `gorm:"index"`
-	QuantityRequested     int
+	MaterialID            string `gorm:"index"`
+	QuantityRequested     decimal.Decimal `gorm:"type:numeric(18,4)"`
 	EstimatedUnitPrice    decimal.Decimal `gorm:"type:numeric(18,4)"`
 	LineTotal             decimal.Decimal `gorm:"type:numeric(18,4)"`
 
 	PurchaseRequisition PurchaseRequisition `gorm:"foreignKey:PurchaseRequisitionID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Product             Product             `gorm:"foreignKey:ProductID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Product             Product             `gorm:"foreignKey:MaterialID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
 func FromDomainPurchaseRequisitionLine(d *domain.PurchaseRequisitionLine) *PurchaseRequisitionLine {
@@ -475,7 +470,7 @@ func FromDomainPurchaseRequisitionLine(d *domain.PurchaseRequisitionLine) *Purch
 	return &PurchaseRequisitionLine{
 		ID:                    d.ID,
 		PurchaseRequisitionID: d.PurchaseRequisitionID,
-		ProductID:             d.ProductID,
+		MaterialID:            d.MaterialID,
 		QuantityRequested:     d.QuantityRequested,
 		EstimatedUnitPrice:    d.EstimatedUnitPrice,
 		LineTotal:             d.LineTotal,
@@ -489,7 +484,7 @@ func ToDomainPurchaseRequisitionLine(dbModel *PurchaseRequisitionLine) *domain.P
 	return &domain.PurchaseRequisitionLine{
 		ID:                    dbModel.ID,
 		PurchaseRequisitionID: dbModel.PurchaseRequisitionID,
-		ProductID:             dbModel.ProductID,
+		MaterialID:            dbModel.MaterialID,
 		QuantityRequested:     dbModel.QuantityRequested,
 		EstimatedUnitPrice:    dbModel.EstimatedUnitPrice,
 		LineTotal:             dbModel.LineTotal,
@@ -524,9 +519,9 @@ func FromDomainPurchaseOrder(d *domain.PurchaseOrder) *PurchaseOrder {
 		SupplierID:       d.SupplierID,
 		OrderDate:        d.OrderDate,
 		ExpectedDelivery: d.ExpectedDelivery,
-		Status:           d.Status,
+		Status:           string(d.Status),
 		TotalAmount:      d.TotalAmount,
-		Notes:            d.Notes,
+		Notes:            "",
 		CreatedAt:        d.CreatedAt,
 		UpdatedAt:        d.UpdatedAt,
 	}
@@ -542,9 +537,8 @@ func ToDomainPurchaseOrder(dbModel *PurchaseOrder) *domain.PurchaseOrder {
 		SupplierID:       dbModel.SupplierID,
 		OrderDate:        dbModel.OrderDate,
 		ExpectedDelivery: dbModel.ExpectedDelivery,
-		Status:           dbModel.Status,
+		Status:           domain.PurchaseOrderStatus(dbModel.Status),
 		TotalAmount:      dbModel.TotalAmount,
-		Notes:            dbModel.Notes,
 		CreatedAt:        dbModel.CreatedAt,
 		UpdatedAt:        dbModel.UpdatedAt,
 	}
@@ -554,16 +548,16 @@ func ToDomainPurchaseOrder(dbModel *PurchaseOrder) *domain.PurchaseOrder {
 type PurchaseOrderLine struct {
 	ID               string `gorm:"primaryKey"`
 	PurchaseOrderID  string `gorm:"index"`
-	ProductID        string `gorm:"index"`
-	QuantityOrdered  int
-	QuantityReceived int
+	MaterialID       string `gorm:"index"`
+	QuantityOrdered  decimal.Decimal `gorm:"type:numeric(18,4)"`
+	QuantityReceived decimal.Decimal `gorm:"type:numeric(18,4)"`
 	UnitPrice        decimal.Decimal `gorm:"type:numeric(18,4)"`
 	LineTotal        decimal.Decimal `gorm:"type:numeric(18,4)"`
 	Description      string
 	CreatedAt        time.Time
 
 	PurchaseOrder PurchaseOrder `gorm:"foreignKey:PurchaseOrderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Product       Product       `gorm:"foreignKey:ProductID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Product       Product       `gorm:"foreignKey:MaterialID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
 func FromDomainPurchaseOrderLine(d *domain.PurchaseOrderLine) *PurchaseOrderLine {
@@ -573,12 +567,12 @@ func FromDomainPurchaseOrderLine(d *domain.PurchaseOrderLine) *PurchaseOrderLine
 	return &PurchaseOrderLine{
 		ID:               d.ID,
 		PurchaseOrderID:  d.PurchaseOrderID,
-		ProductID:        d.ProductID,
+		MaterialID:       d.MaterialID,
 		QuantityOrdered:  d.QuantityOrdered,
 		QuantityReceived: d.QuantityReceived,
 		UnitPrice:        d.UnitPrice,
 		LineTotal:        d.LineTotal,
-		Description:      d.Description,
+		Description:      "",
 		CreatedAt:        d.CreatedAt,
 	}
 }
@@ -590,12 +584,11 @@ func ToDomainPurchaseOrderLine(dbModel *PurchaseOrderLine) *domain.PurchaseOrder
 	return &domain.PurchaseOrderLine{
 		ID:               dbModel.ID,
 		PurchaseOrderID:  dbModel.PurchaseOrderID,
-		ProductID:        dbModel.ProductID,
+		MaterialID:       dbModel.MaterialID,
 		QuantityOrdered:  dbModel.QuantityOrdered,
 		QuantityReceived: dbModel.QuantityReceived,
 		UnitPrice:        dbModel.UnitPrice,
 		LineTotal:        dbModel.LineTotal,
-		Description:      dbModel.Description,
 		CreatedAt:        dbModel.CreatedAt,
 	}
 }
@@ -618,13 +611,17 @@ func FromDomainReceipt(d *domain.Receipt) *Receipt {
 	if d == nil {
 		return nil
 	}
+	var poID *string
+	if d.PurchaseOrderID != "" {
+		poID = &d.PurchaseOrderID
+	}
 	return &Receipt{
 		ID:              d.ID,
 		ReceiptNumber:   d.ReceiptNumber,
-		PurchaseOrderID: d.PurchaseOrderID,
+		PurchaseOrderID: poID,
 		ReceivedDate:    d.ReceivedDate,
 		Status:          d.Status,
-		Notes:           d.Notes,
+		Notes:           "",
 		CreatedAt:       d.CreatedAt,
 		UpdatedAt:       d.UpdatedAt,
 	}
@@ -634,13 +631,16 @@ func ToDomainReceipt(dbModel *Receipt) *domain.Receipt {
 	if dbModel == nil {
 		return nil
 	}
+	var poID string
+	if dbModel.PurchaseOrderID != nil {
+		poID = *dbModel.PurchaseOrderID
+	}
 	return &domain.Receipt{
 		ID:              dbModel.ID,
 		ReceiptNumber:   dbModel.ReceiptNumber,
-		PurchaseOrderID: dbModel.PurchaseOrderID,
+		PurchaseOrderID: poID,
 		ReceivedDate:    dbModel.ReceivedDate,
 		Status:          dbModel.Status,
-		Notes:           dbModel.Notes,
 		CreatedAt:       dbModel.CreatedAt,
 		UpdatedAt:       dbModel.UpdatedAt,
 	}
@@ -706,16 +706,20 @@ func FromDomainShipment(d *domain.Shipment) *Shipment {
 	if d == nil {
 		return nil
 	}
+	var soID *string
+	if d.SalesOrderID != "" {
+		soID = &d.SalesOrderID
+	}
 	return &Shipment{
 		ID:                d.ID,
 		ShipmentNumber:    d.ShipmentNumber,
-		SalesOrderID:      d.SalesOrderID,
+		SalesOrderID:      soID,
 		Carrier:           d.Carrier,
 		TrackingNumber:    d.TrackingNumber,
 		ShippedDate:       d.ShippedDate,
-		EstimatedDelivery: d.EstimatedDelivery,
+		EstimatedDelivery: time.Time{},
 		Status:            d.Status,
-		Notes:             d.Notes,
+		Notes:             "",
 		CreatedAt:         d.CreatedAt,
 		UpdatedAt:         d.UpdatedAt,
 	}
@@ -725,18 +729,20 @@ func ToDomainShipment(dbModel *Shipment) *domain.Shipment {
 	if dbModel == nil {
 		return nil
 	}
+	var soID string
+	if dbModel.SalesOrderID != nil {
+		soID = *dbModel.SalesOrderID
+	}
 	return &domain.Shipment{
-		ID:                dbModel.ID,
-		ShipmentNumber:    dbModel.ShipmentNumber,
-		SalesOrderID:      dbModel.SalesOrderID,
-		Carrier:           dbModel.Carrier,
-		TrackingNumber:    dbModel.TrackingNumber,
-		ShippedDate:       dbModel.ShippedDate,
-		EstimatedDelivery: dbModel.EstimatedDelivery,
-		Status:            dbModel.Status,
-		Notes:             dbModel.Notes,
-		CreatedAt:         dbModel.CreatedAt,
-		UpdatedAt:         dbModel.UpdatedAt,
+		ID:             dbModel.ID,
+		ShipmentNumber: dbModel.ShipmentNumber,
+		SalesOrderID:   soID,
+		Carrier:        dbModel.Carrier,
+		TrackingNumber: dbModel.TrackingNumber,
+		ShippedDate:    dbModel.ShippedDate,
+		Status:         dbModel.Status,
+		CreatedAt:      dbModel.CreatedAt,
+		UpdatedAt:      dbModel.UpdatedAt,
 	}
 }
 
@@ -780,16 +786,14 @@ func ToDomainShipmentLine(dbModel *ShipmentLine) *domain.ShipmentLine {
 
 // DemandForecast GORM struct
 type DemandForecast struct {
-	ID               string `gorm:"primaryKey"`
-	ProductID        string `gorm:"index"`
+	ID               string          `gorm:"primaryKey"`
+	MaterialID       string          `gorm:"index"`
 	ForecastDate     time.Time
-	ForecastQuantity int
+	ForecastQuantity decimal.Decimal `gorm:"type:numeric(18,4)"`
 	ConfidenceLevel  decimal.Decimal `gorm:"type:numeric(18,4)"`
 	Notes            string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
-
-	Product Product `gorm:"foreignKey:ProductID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
 func FromDomainDemandForecast(d *domain.DemandForecast) *DemandForecast {
@@ -798,11 +802,11 @@ func FromDomainDemandForecast(d *domain.DemandForecast) *DemandForecast {
 	}
 	return &DemandForecast{
 		ID:               d.ID,
-		ProductID:        d.ProductID,
+		MaterialID:       d.MaterialID,
 		ForecastDate:     d.ForecastDate,
 		ForecastQuantity: d.ForecastQuantity,
 		ConfidenceLevel:  d.ConfidenceLevel,
-		Notes:            d.Notes,
+		Notes:            "",
 		CreatedAt:        d.CreatedAt,
 		UpdatedAt:        d.UpdatedAt,
 	}
@@ -814,11 +818,11 @@ func ToDomainDemandForecast(dbModel *DemandForecast) *domain.DemandForecast {
 	}
 	return &domain.DemandForecast{
 		ID:               dbModel.ID,
-		ProductID:        dbModel.ProductID,
+		LegalEntityID:    DefaultLegalEntityID,
+		MaterialID:       dbModel.MaterialID,
 		ForecastDate:     dbModel.ForecastDate,
 		ForecastQuantity: dbModel.ForecastQuantity,
 		ConfidenceLevel:  dbModel.ConfidenceLevel,
-		Notes:            dbModel.Notes,
 		CreatedAt:        dbModel.CreatedAt,
 		UpdatedAt:        dbModel.UpdatedAt,
 	}
@@ -838,13 +842,22 @@ func FromDomainKafkaEventInbox(d *domain.KafkaEventInbox) *KafkaEventInbox {
 	if d == nil {
 		return nil
 	}
+	var payloadStr string
+	if d.Payload != nil {
+		if s, ok := d.Payload.(string); ok {
+			payloadStr = s
+		} else {
+			bytes, _ := json.Marshal(d.Payload)
+			payloadStr = string(bytes)
+		}
+	}
 	return &KafkaEventInbox{
-		AttemptCount:     d.AttemptCount,
+		AttemptCount:     0,
 		EventID:          d.EventID,
 		EventType:        d.EventType,
 		ProcessedAt:      d.ProcessedAt,
 		ProcessingStatus: d.ProcessingStatus,
-		Payload:          d.Payload,
+		Payload:          payloadStr,
 	}
 }
 
@@ -853,7 +866,6 @@ func ToDomainKafkaEventInbox(dbModel *KafkaEventInbox) *domain.KafkaEventInbox {
 		return nil
 	}
 	return &domain.KafkaEventInbox{
-		AttemptCount:     dbModel.AttemptCount,
 		EventID:          dbModel.EventID,
 		EventType:        dbModel.EventType,
 		ProcessedAt:      dbModel.ProcessedAt,

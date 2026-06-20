@@ -2829,7 +2829,7 @@ paths:
           description: Successful operation
   /api/v1/unknown/convert-lead:
     post:
-      summary: Emits downstream profile registration signals
+      summary: convertLead interface method
       tags:
         - erp.crm.operations
       requestBody:
@@ -9245,164 +9245,6 @@ paths:
       responses:
         '200':
           description: Successful operation
-  /api/v1/unknown/product-categorys:
-    get:
-      summary: List ProductCategory
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ProductCategory'
-    post:
-      summary: Create ProductCategory
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductCategory'
-      responses:
-        '201':
-          description: Created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductCategory'
-  /api/v1/unknown/product-categorys/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get ProductCategory by ID
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductCategory'
-    put:
-      summary: Update ProductCategory
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductCategory'
-      responses:
-        '200':
-          description: Updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductCategory'
-    delete:
-      summary: Delete ProductCategory
-      tags:
-        - erp.logistics
-      responses:
-        '204':
-          description: Deleted successfully
-  /api/v1/unknown/products:
-    get:
-      summary: List Product
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Product'
-    post:
-      summary: Create Product
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Product'
-      responses:
-        '201':
-          description: Created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-  /api/v1/unknown/products/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get Product by ID
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-    put:
-      summary: Update Product
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Product'
-      responses:
-        '200':
-          description: Updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-    delete:
-      summary: Delete Product
-      tags:
-        - erp.logistics
-      responses:
-        '204':
-          description: Deleted successfully
   /api/v1/unknown/locations:
     get:
       summary: List Location
@@ -9640,9 +9482,9 @@ paths:
       responses:
         '204':
           description: Deleted successfully
-  /api/v1/unknown/inventory:
+  /api/v1/unknown/stock-balances:
     get:
-      summary: List InventoryItem
+      summary: List StockBalance
       tags:
         - erp.logistics
       responses:
@@ -9658,9 +9500,9 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/InventoryItem'
+                      $ref: '#/components/schemas/StockBalance'
     post:
-      summary: Create InventoryItem
+      summary: Create StockBalance
       tags:
         - erp.logistics
       requestBody:
@@ -9668,15 +9510,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InventoryItem'
+              $ref: '#/components/schemas/StockBalance'
       responses:
         '201':
           description: Created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InventoryItem'
-  /api/v1/unknown/inventory/{id}:
+                $ref: '#/components/schemas/StockBalance'
+  /api/v1/unknown/stock-balances/{id}:
     parameters:
       - name: id
         in: path
@@ -9685,7 +9527,7 @@ paths:
           type: string
           format: uuid
     get:
-      summary: Get InventoryItem by ID
+      summary: Get StockBalance by ID
       tags:
         - erp.logistics
       responses:
@@ -9694,9 +9536,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InventoryItem'
+                $ref: '#/components/schemas/StockBalance'
     put:
-      summary: Update InventoryItem
+      summary: Update StockBalance
       tags:
         - erp.logistics
       requestBody:
@@ -9704,16 +9546,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InventoryItem'
+              $ref: '#/components/schemas/StockBalance'
       responses:
         '200':
           description: Updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InventoryItem'
+                $ref: '#/components/schemas/StockBalance'
     delete:
-      summary: Delete InventoryItem
+      summary: Delete StockBalance
       tags:
         - erp.logistics
       responses:
@@ -9798,9 +9640,9 @@ paths:
       responses:
         '204':
           description: Deleted successfully
-  /api/v1/unknown/stock-transfers:
+  /api/v1/unknown/demand-forecasts:
     get:
-      summary: List StockTransfer
+      summary: List DemandForecast
       tags:
         - erp.logistics
       responses:
@@ -9816,9 +9658,9 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/StockTransfer'
+                      $ref: '#/components/schemas/DemandForecast'
     post:
-      summary: Create StockTransfer
+      summary: Create DemandForecast
       tags:
         - erp.logistics
       requestBody:
@@ -9826,15 +9668,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StockTransfer'
+              $ref: '#/components/schemas/DemandForecast'
       responses:
         '201':
           description: Created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StockTransfer'
-  /api/v1/unknown/stock-transfers/{id}:
+                $ref: '#/components/schemas/DemandForecast'
+  /api/v1/unknown/demand-forecasts/{id}:
     parameters:
       - name: id
         in: path
@@ -9843,7 +9685,7 @@ paths:
           type: string
           format: uuid
     get:
-      summary: Get StockTransfer by ID
+      summary: Get DemandForecast by ID
       tags:
         - erp.logistics
       responses:
@@ -9852,9 +9694,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StockTransfer'
+                $ref: '#/components/schemas/DemandForecast'
     put:
-      summary: Update StockTransfer
+      summary: Update DemandForecast
       tags:
         - erp.logistics
       requestBody:
@@ -9862,16 +9704,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StockTransfer'
+              $ref: '#/components/schemas/DemandForecast'
       responses:
         '200':
           description: Updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StockTransfer'
+                $ref: '#/components/schemas/DemandForecast'
     delete:
-      summary: Delete StockTransfer
+      summary: Delete DemandForecast
       tags:
         - erp.logistics
       responses:
@@ -10030,6 +9872,85 @@ paths:
                 $ref: '#/components/schemas/PurchaseRequisitionLine'
     delete:
       summary: Delete PurchaseRequisitionLine
+      tags:
+        - erp.logistics
+      responses:
+        '204':
+          description: Deleted successfully
+  /api/v1/unknown/stock-transfers:
+    get:
+      summary: List StockTransfer
+      tags:
+        - erp.logistics
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockTransfer'
+    post:
+      summary: Create StockTransfer
+      tags:
+        - erp.logistics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockTransfer'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+  /api/v1/unknown/stock-transfers/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get StockTransfer by ID
+      tags:
+        - erp.logistics
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+    put:
+      summary: Update StockTransfer
+      tags:
+        - erp.logistics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockTransfer'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+    delete:
+      summary: Delete StockTransfer
       tags:
         - erp.logistics
       responses:
@@ -10272,85 +10193,6 @@ paths:
       responses:
         '204':
           description: Deleted successfully
-  /api/v1/unknown/receipt-lines:
-    get:
-      summary: List ReceiptLine
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ReceiptLine'
-    post:
-      summary: Create ReceiptLine
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReceiptLine'
-      responses:
-        '201':
-          description: Created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReceiptLine'
-  /api/v1/unknown/receipt-lines/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get ReceiptLine by ID
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReceiptLine'
-    put:
-      summary: Update ReceiptLine
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReceiptLine'
-      responses:
-        '200':
-          description: Updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReceiptLine'
-    delete:
-      summary: Delete ReceiptLine
-      tags:
-        - erp.logistics
-      responses:
-        '204':
-          description: Deleted successfully
   /api/v1/unknown/shipments:
     get:
       summary: List Shipment
@@ -10430,27 +10272,9 @@ paths:
       responses:
         '204':
           description: Deleted successfully
-  /api/v1/unknown/shipment-lines:
-    get:
-      summary: List ShipmentLine
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ShipmentLine'
+  /api/v1/unknown/initiate-purchase-requisition:
     post:
-      summary: Create ShipmentLine
+      summary: initiatePurchaseRequisition interface method
       tags:
         - erp.logistics
       requestBody:
@@ -10458,78 +10282,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShipmentLine'
-      responses:
-        '201':
-          description: Created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShipmentLine'
-  /api/v1/unknown/shipment-lines/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get ShipmentLine by ID
-      tags:
-        - erp.logistics
+              type: object
+              properties:
+                requester_id:
+                  type: string
+                  format: uuid
+                lines:
+                  type: array
+                notes:
+                  type: string
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ShipmentLine'
-    put:
-      summary: Update ShipmentLine
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ShipmentLine'
-      responses:
-        '200':
-          description: Updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShipmentLine'
-    delete:
-      summary: Delete ShipmentLine
-      tags:
-        - erp.logistics
-      responses:
-        '204':
-          description: Deleted successfully
-  /api/v1/unknown/demand-forecasts:
-    get:
-      summary: List DemandForecast
-      tags:
-        - erp.logistics
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/DemandForecast'
+                $ref: '#/components/schemas/PurchaseRequisition'
+  /api/v1/unknown/process-requisition-approval:
     post:
-      summary: Create DemandForecast
+      summary: processRequisitionApproval interface method
       tags:
         - erp.logistics
       requestBody:
@@ -10537,57 +10308,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DemandForecast'
-      responses:
-        '201':
-          description: Created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DemandForecast'
-  /api/v1/unknown/demand-forecasts/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get DemandForecast by ID
-      tags:
-        - erp.logistics
+              type: object
+              properties:
+                req_id:
+                  type: string
+                  format: uuid
+                action:
+                  type: string
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DemandForecast'
-    put:
-      summary: Update DemandForecast
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DemandForecast'
-      responses:
-        '200':
-          description: Updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DemandForecast'
-    delete:
-      summary: Delete DemandForecast
-      tags:
-        - erp.logistics
-      responses:
-        '204':
-          description: Deleted successfully
+                $ref: '#/components/schemas/PurchaseRequisition'
   /api/v1/unknown/initiate-purchase-order:
     post:
       summary: initiatePurchaseOrder interface method
@@ -10639,80 +10373,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOrder'
-  /api/v1/unknown/fetch-outstanding-orders:
-    post:
-      summary: fetchOutstandingOrders interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                legal_entity_id:
-                  type: string
-                  format: uuid
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PurchaseOrder'
-  /api/v1/unknown/initiate-purchase-requisition:
-    post:
-      summary: initiatePurchaseRequisition interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                requester_id:
-                  type: string
-                  format: uuid
-                lines:
-                  type: array
-                notes:
-                  type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseRequisition'
-  /api/v1/unknown/process-requisition-approval:
-    post:
-      summary: processRequisitionApproval interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                req_id:
-                  type: string
-                  format: uuid
-                action:
-                  type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseRequisition'
   /api/v1/unknown/process-goods-receipt:
     post:
       summary: processGoodsReceipt interface method
@@ -10728,7 +10388,7 @@ paths:
                 purchase_order_id:
                   type: string
                   format: uuid
-                warehouse_id:
+                location_id:
                   type: string
                   format: uuid
                 items_received:
@@ -10783,62 +10443,6 @@ paths:
       responses:
         '200':
           description: Successful operation
-  /api/v1/unknown/process-outbound-shipment:
-    post:
-      summary: processOutboundShipment interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                sales_order_id:
-                  type: string
-                  format: uuid
-                warehouse_id:
-                  type: string
-                  format: uuid
-                items_shipped:
-                  type: array
-                operator_hr_id:
-                  type: string
-                  format: uuid
-      responses:
-        '200':
-          description: Successful operation
-  /api/v1/unknown/execute-cycle-count-adjustment:
-    post:
-      summary: executeCycleCountAdjustment interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                legal_entity_id:
-                  type: string
-                  format: uuid
-                warehouse_id:
-                  type: string
-                  format: uuid
-                material_id:
-                  type: string
-                  format: uuid
-                adjustment_quantity:
-                  type: number
-                  format: float
-                operator_hr_id:
-                  type: string
-                  format: uuid
-      responses:
-        '200':
-          description: Successful operation
   /api/v1/unknown/request-stock-transfer:
     post:
       summary: requestStockTransfer interface method
@@ -10851,18 +10455,21 @@ paths:
             schema:
               type: object
               properties:
+                legal_entity_id:
+                  type: string
+                  format: uuid
                 from_location_id:
                   type: string
                   format: uuid
                 to_location_id:
                   type: string
                   format: uuid
-                product_id:
+                material_id:
                   type: string
                   format: uuid
                 quantity:
-                  type: integer
-                  format: int64
+                  type: number
+                  format: float
       responses:
         '200':
           description: Successful operation
@@ -10892,139 +10499,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StockTransfer'
-  /api/v1/unknown/get-unsent-messages:
-    post:
-      summary: getUnsentMessages interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                limit:
-                  type: integer
-                  format: int64
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TransactionalOutbox'
-  /api/v1/unknown/log-processing-attempt:
-    post:
-      summary: logProcessingAttempt interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                outbox_id:
-                  type: string
-                  format: uuid
-                current_retries:
-                  type: integer
-                  format: int64
-                error_notes:
-                  type: string
-      responses:
-        '200':
-          description: Successful operation
-  /api/v1/unknown/update-outbox-status:
-    post:
-      summary: updateOutboxStatus interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                outbox_id:
-                  type: string
-                  format: uuid
-                status:
-                  type: object
-      responses:
-        '200':
-          description: Successful operation
-  /api/v1/unknown/is-event-processed:
-    post:
-      summary: isEventProcessed interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                event_id:
-                  type: string
-                  format: uuid
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: boolean
-  /api/v1/unknown/commit-inbound-event:
-    post:
-      summary: commitInboundEvent interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                event_id:
-                  type: string
-                  format: uuid
-                event_type:
-                  type: string
-                payload:
-                  type: object
-      responses:
-        '200':
-          description: Successful operation
-  /api/v1/unknown/push-to-outbox:
-    post:
-      summary: pushToOutbox interface method
-      tags:
-        - erp.logistics
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                event_type:
-                  type: string
-                aggregate_id:
-                  type: string
-                  format: uuid
-                payload:
-                  type: object
-      responses:
-        '200':
-          description: Successful operation
 components:
   schemas:
     User:
@@ -11251,16 +10725,13 @@ components:
           type: string
           format: uuid
         legal_entity_id:
-          description: Primitive Ref -> FM.LegalEntity
           type: string
           format: uuid
         customer_code:
-          description: Unique business key per tenant
           type: string
         company_name:
           type: string
         account_manager_hr_id:
-          description: Primitive Ref -> HR.Employee
           type: string
           format: uuid
         status:
@@ -11269,21 +10740,8 @@ components:
           type: number
           format: float
         currency:
-          description: ISO 4217 code
           type: string
-        contact_name:
-          type: string
-        email:
-          type: string
-        phone:
-          type: string
-        category:
-          type: string
-        parent_customer_id:
-          type: string
-          format: uuid
         version:
-          description: Optimistic Locking Shield
           type: integer
           format: int64
         created_at:
@@ -11334,7 +10792,6 @@ components:
           type: string
           format: uuid
         material_id:
-          description: Primitive Ref -> PLM.MaterialMaster
           type: string
           format: uuid
         unit_list_price:
@@ -11361,14 +10818,12 @@ components:
         evaluation_rule:
           $ref: '#/components/schemas/StrategyEvaluationRule'
         strategy_version:
-          description: Zero-drift historical audit tracker
           type: integer
           format: int64
         modifier_percentage:
           type: number
           format: float
         configuration_matrix:
-          description: Dynamic volume breaks/tier structures
           type: object
         is_active:
           type: boolean
@@ -11404,7 +10859,6 @@ components:
           type: number
           format: float
         version:
-          description: Optimistic Locking Shield
           type: integer
           format: int64
         created_at:
@@ -11423,7 +10877,6 @@ components:
           type: string
           format: uuid
         material_id:
-          description: Primitive Ref -> PLM.MaterialMaster
           type: string
           format: uuid
         line_sequence:
@@ -11445,7 +10898,6 @@ components:
           type: number
           format: float
         applied_strategy_version:
-          description: Links exact calculation lineage
           type: integer
           format: int64
         created_at:
@@ -11467,7 +10919,6 @@ components:
           type: string
           format: uuid
         source_delivery_document_id:
-          description: Primitive Ref -> SCM or PRJ
           type: string
           format: uuid
         billable_amount:
@@ -11479,7 +10930,6 @@ components:
         status:
           $ref: '#/components/schemas/BillingTriggerStatus'
         triggered_at:
-          description: Partition Coordinate
           type: string
           format: date-time
         processed_at:
@@ -11649,7 +11099,6 @@ components:
           type: string
           format: uuid
         product_id:
-          description: Primitive Ref -> PLM.MaterialMaster
           type: string
           format: uuid
         quantity:
@@ -12130,6 +11579,10 @@ components:
         liquid_balance:
           type: number
           format: float
+        version:
+          description: ADDED: Protects against double-spend
+          type: integer
+          format: int64
         created_at:
           type: string
           format: date-time
@@ -12253,6 +11706,10 @@ components:
           format: float
         is_on_hold:
           type: boolean
+        version:
+          description: ADDED: Protects against simultaneous deductions
+          type: integer
+          format: int64
         updated_at:
           type: string
           format: date-time
@@ -13150,55 +12607,13 @@ components:
           format: float
         was_compliant:
           type: boolean
-    ProductCategory:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-    Product:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        product_code:
-          type: string
-        product_name:
-          type: string
-        description:
-          type: string
-        product_type:
-          type: string
-        category_id:
-          type: string
-          format: uuid
-        unit_of_measure:
-          type: string
-        standard_cost:
-          type: number
-          format: float
-        list_price:
-          type: number
-          format: float
-        is_active:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
     Location:
       type: object
       properties:
         id:
+          type: string
+          format: uuid
+        legal_entity_id:
           type: string
           format: uuid
         location_code:
@@ -13221,15 +12636,12 @@ components:
         id:
           type: string
           format: uuid
+        legal_entity_id:
+          type: string
+          format: uuid
         supplier_code:
           type: string
         supplier_name:
-          type: string
-        contact_name:
-          type: string
-        email:
-          type: string
-        phone:
           type: string
         is_active:
           type: boolean
@@ -13245,6 +12657,9 @@ components:
         id:
           type: string
           format: uuid
+        legal_entity_id:
+          type: string
+          format: uuid
         contract_number:
           type: string
         supplier_id:
@@ -13256,8 +12671,6 @@ components:
         end_date:
           type: string
           format: date-time
-        terms:
-          type: string
         status:
           type: string
         created_at:
@@ -13266,36 +12679,33 @@ components:
         updated_at:
           type: string
           format: date-time
-    InventoryItem:
+    StockBalance:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        product_id:
+        legal_entity_id:
           type: string
           format: uuid
         location_id:
           type: string
           format: uuid
+        material_id:
+          type: string
+          format: uuid
         quantity_on_hand:
-          type: integer
-          format: int64
-        quantity_reserved:
-          type: integer
-          format: int64
-        quantity_available:
-          type: integer
-          format: int64
-        reorder_point:
-          type: integer
-          format: int64
-        maximum_stock:
-          type: integer
-          format: int64
-        unit_cost:
           type: number
           format: float
+        quantity_reserved:
+          type: number
+          format: float
+        quantity_available:
+          type: number
+          format: float
+        version:
+          type: integer
+          format: int64
         created_at:
           type: string
           format: date-time
@@ -13308,52 +12718,49 @@ components:
         id:
           type: string
           format: uuid
-        product_id:
+        legal_entity_id:
           type: string
           format: uuid
         location_id:
           type: string
           format: uuid
+        material_id:
+          type: string
+          format: uuid
         movement_type:
           type: string
         quantity:
-          type: integer
-          format: int64
-        unit_cost:
           type: number
           format: float
         reference_type:
           type: string
         reference_id:
           type: string
-        notes:
-          type: string
+          format: uuid
         created_at:
           type: string
           format: date-time
-    StockTransfer:
+    DemandForecast:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        from_location_id:
+        legal_entity_id:
           type: string
           format: uuid
-        to_location_id:
+        material_id:
           type: string
           format: uuid
-        product_id:
-          type: string
-          format: uuid
-        quantity:
-          type: integer
-          format: int64
-        status:
-          type: string
-        transferred_at:
+        forecast_date:
           type: string
           format: date-time
+        forecast_quantity:
+          type: number
+          format: float
+        confidence_level:
+          type: number
+          format: float
         created_at:
           type: string
           format: date-time
@@ -13366,10 +12773,15 @@ components:
         id:
           type: string
           format: uuid
+        legal_entity_id:
+          type: string
+          format: uuid
         req_number:
           type: string
         requester_id:
+          description: Primitive Ref -> HR.Employee
           type: string
+          format: uuid
         request_date:
           type: string
           format: date-time
@@ -13395,22 +12807,60 @@ components:
         purchase_requisition_id:
           type: string
           format: uuid
-        product_id:
+        material_id:
           type: string
           format: uuid
         quantity_requested:
-          type: integer
-          format: int64
+          type: number
+          format: float
         estimated_unit_price:
           type: number
           format: float
         line_total:
           type: number
           format: float
+    StockTransfer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        legal_entity_id:
+          type: string
+          format: uuid
+        from_location_id:
+          type: string
+          format: uuid
+        to_location_id:
+          type: string
+          format: uuid
+        material_id:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          format: float
+        status:
+          type: string
+        version:
+          type: integer
+          format: int64
+        transferred_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     PurchaseOrder:
       type: object
       properties:
         id:
+          type: string
+          format: uuid
+        legal_entity_id:
           type: string
           format: uuid
         po_number:
@@ -13425,12 +12875,10 @@ components:
           type: string
           format: date-time
         status:
-          type: string
+          $ref: '#/components/schemas/PurchaseOrderStatus'
         total_amount:
           type: number
           format: float
-        notes:
-          type: string
         created_at:
           type: string
           format: date-time
@@ -13446,23 +12894,21 @@ components:
         purchase_order_id:
           type: string
           format: uuid
-        product_id:
+        material_id:
           type: string
           format: uuid
         quantity_ordered:
-          type: integer
-          format: int64
+          type: number
+          format: float
         quantity_received:
-          type: integer
-          format: int64
+          type: number
+          format: float
         unit_price:
           type: number
           format: float
         line_total:
           type: number
           format: float
-        description:
-          type: string
         created_at:
           type: string
           format: date-time
@@ -13470,6 +12916,9 @@ components:
       type: object
       properties:
         id:
+          type: string
+          format: uuid
+        legal_entity_id:
           type: string
           format: uuid
         receipt_number:
@@ -13482,39 +12931,19 @@ components:
           format: date-time
         status:
           type: string
-        notes:
-          type: string
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-    ReceiptLine:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        receipt_id:
-          type: string
-          format: uuid
-        product_id:
-          type: string
-          format: uuid
-        quantity_received:
-          type: integer
-          format: int64
-        unit_cost:
-          type: number
-          format: float
-        created_at:
-          type: string
-          format: date-time
     Shipment:
       type: object
       properties:
         id:
+          type: string
+          format: uuid
+        legal_entity_id:
           type: string
           format: uuid
         shipment_number:
@@ -13529,56 +12958,7 @@ components:
         shipped_date:
           type: string
           format: date-time
-        estimated_delivery:
-          type: string
-          format: date-time
         status:
-          type: string
-        notes:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    ShipmentLine:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        shipment_id:
-          type: string
-          format: uuid
-        product_id:
-          type: string
-          format: uuid
-        quantity_shipped:
-          type: integer
-          format: int64
-        created_at:
-          type: string
-          format: date-time
-    DemandForecast:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        product_id:
-          type: string
-          format: uuid
-        forecast_date:
-          type: string
-          format: date-time
-        forecast_quantity:
-          type: integer
-          format: int64
-        confidence_level:
-          type: number
-          format: float
-        notes:
           type: string
         created_at:
           type: string
@@ -13589,12 +12969,12 @@ components:
     RequisitionLineInput:
       type: object
       properties:
-        product_id:
+        material_id:
           type: string
           format: uuid
         quantity_requested:
-          type: integer
-          format: int64
+          type: number
+          format: float
         estimated_unit_price:
           type: number
           format: float

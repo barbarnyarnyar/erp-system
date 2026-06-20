@@ -161,59 +161,59 @@ func (r *MemorySupplierRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// MemoryInventoryItemRepo implements domain.InventoryItemRepository
-type MemoryInventoryItemRepo struct {
+// MemoryStockBalanceRepo implements domain.StockBalanceRepository
+type MemoryStockBalanceRepo struct {
 	mu   sync.RWMutex
-	data map[string]domain.InventoryItem
+	data map[string]domain.StockBalance
 }
 
-func NewMemoryInventoryItemRepo() *MemoryInventoryItemRepo {
-	return &MemoryInventoryItemRepo{data: make(map[string]domain.InventoryItem)}
+func NewMemoryStockBalanceRepo() *MemoryStockBalanceRepo {
+	return &MemoryStockBalanceRepo{data: make(map[string]domain.StockBalance)}
 }
 
-func (r *MemoryInventoryItemRepo) Create(ctx context.Context, ii *domain.InventoryItem) error {
+func (r *MemoryStockBalanceRepo) Create(ctx context.Context, sb *domain.StockBalance) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.data[ii.ID] = *ii
+	r.data[sb.ID] = *sb
 	return nil
 }
 
-func (r *MemoryInventoryItemRepo) GetByID(ctx context.Context, id string) (*domain.InventoryItem, error) {
+func (r *MemoryStockBalanceRepo) GetByID(ctx context.Context, id string) (*domain.StockBalance, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	ii, ok := r.data[id]
+	sb, ok := r.data[id]
 	if !ok {
-		return nil, errors.New("inventory item not found")
+		return nil, errors.New("stock balance not found")
 	}
-	return &ii, nil
+	return &sb, nil
 }
 
-func (r *MemoryInventoryItemRepo) List(ctx context.Context) ([]domain.InventoryItem, error) {
+func (r *MemoryStockBalanceRepo) List(ctx context.Context) ([]domain.StockBalance, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	list := make([]domain.InventoryItem, 0, len(r.data))
-	for _, ii := range r.data {
-		list = append(list, ii)
+	list := make([]domain.StockBalance, 0, len(r.data))
+	for _, sb := range r.data {
+		list = append(list, sb)
 	}
 	return list, nil
 }
 
-func (r *MemoryInventoryItemRepo) Update(ctx context.Context, ii *domain.InventoryItem) error {
+func (r *MemoryStockBalanceRepo) Update(ctx context.Context, sb *domain.StockBalance) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.data[ii.ID] = *ii
+	r.data[sb.ID] = *sb
 	return nil
 }
 
-func (r *MemoryInventoryItemRepo) GetByProductAndLocation(ctx context.Context, productID string, locationID string) (*domain.InventoryItem, error) {
+func (r *MemoryStockBalanceRepo) GetByMaterialAndLocation(ctx context.Context, materialID string, locationID string) (*domain.StockBalance, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	for _, ii := range r.data {
-		if ii.ProductID == productID && ii.LocationID == locationID {
-			return &ii, nil
+	for _, sb := range r.data {
+		if sb.MaterialID == materialID && sb.LocationID == locationID {
+			return &sb, nil
 		}
 	}
-	return nil, errors.New("inventory item not found for product/location combination")
+	return nil, errors.New("stock balance not found for material/location combination")
 }
 
 // MemoryInventoryMovementRepo implements domain.InventoryMovementRepository
@@ -564,12 +564,12 @@ func (r *MemoryDemandForecastRepo) Update(ctx context.Context, df *domain.Demand
 	return nil
 }
 
-func (r *MemoryDemandForecastRepo) ListByProductID(ctx context.Context, productID string) ([]domain.DemandForecast, error) {
+func (r *MemoryDemandForecastRepo) ListByMaterialID(ctx context.Context, materialID string) ([]domain.DemandForecast, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var list []domain.DemandForecast
 	for _, df := range r.data {
-		if df.ProductID == productID {
+		if df.MaterialID == materialID {
 			list = append(list, df)
 		}
 	}
@@ -792,6 +792,7 @@ func NewMemoryStockTransferRepo() *MemoryStockTransferRepo {
 func (r *MemoryStockTransferRepo) Create(ctx context.Context, st *domain.StockTransfer) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	st.Version = 0
 	r.data[st.ID] = *st
 	return nil
 }
@@ -819,6 +820,14 @@ func (r *MemoryStockTransferRepo) List(ctx context.Context) ([]domain.StockTrans
 func (r *MemoryStockTransferRepo) Update(ctx context.Context, st *domain.StockTransfer) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	current, ok := r.data[st.ID]
+	if !ok {
+		return errors.New("stock transfer not found")
+	}
+	if st.Version != current.Version {
+		return domain.ErrOptimisticLock
+	}
+	st.Version++
 	r.data[st.ID] = *st
 	return nil
 }

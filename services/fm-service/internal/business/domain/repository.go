@@ -2,7 +2,10 @@ package domain
 
 import (
 	"context"
+	"errors"
 )
+
+var ErrOptimisticLock = errors.New("optimistic lock conflict")
 
 // ChartOfAccountsRepository defines operations for chart of accounts
 type ChartOfAccountsRepository interface {

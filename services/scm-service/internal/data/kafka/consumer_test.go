@@ -51,7 +51,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		&sql.Location{},
 		&sql.Supplier{},
 		&sql.VendorContract{},
-		&sql.InventoryItem{},
+		&sql.StockBalance{},
 		&sql.InventoryMovement{},
 		&sql.StockTransfer{},
 		&sql.PurchaseRequisition{},
@@ -73,7 +73,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// SQL Repositories
 	prodRepo := sql.NewSQLProductRepo(db)
 	locRepo := sql.NewSQLLocationRepo(db)
-	invRepo := sql.NewSQLInventoryItemRepo(db)
+	invRepo := sql.NewSQLStockBalanceRepo(db)
 	moveRepo := sql.NewSQLInventoryMovementRepo(db)
 	poRepo := sql.NewSQLPurchaseOrderRepo(db)
 	lineRepo := sql.NewSQLPurchaseOrderLineRepo(db)

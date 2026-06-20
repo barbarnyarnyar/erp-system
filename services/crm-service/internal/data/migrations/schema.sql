@@ -10,11 +10,6 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
     status VARCHAR(255) NOT NULL,
     credit_limit NUMERIC(15, 4) NOT NULL,
     currency VARCHAR(255) NOT NULL,
-    contact_name VARCHAR(255),
-    email VARCHAR(255),
-    phone VARCHAR(255),
-    category VARCHAR(255),
-    parent_customer_id UUID,
     version VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
@@ -112,8 +107,7 @@ CREATE TABLE IF NOT EXISTS kafka_event_inboxs (
     event_type VARCHAR(255) NOT NULL,
     processed_at TIMESTAMP NOT NULL,
     processing_status VARCHAR(255) NOT NULL,
-    payload VARCHAR(255) NOT NULL,
-    attempt_count VARCHAR(255) NOT NULL
+    payload VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS campaigns (
@@ -143,7 +137,7 @@ CREATE TABLE IF NOT EXISTS leads (
 
 CREATE TABLE IF NOT EXISTS opportunities (
     id UUID PRIMARY KEY NOT NULL,
-    customer_id UUID NOT NULL REFERENCES customer_profiles(id),
+    customer_id UUID NOT NULL,
     title VARCHAR(255) NOT NULL,
     value NUMERIC(15, 4) NOT NULL,
     status VARCHAR(255) NOT NULL,
@@ -155,7 +149,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
 
 CREATE TABLE IF NOT EXISTS customer_interactions (
     id UUID PRIMARY KEY NOT NULL,
-    customer_id UUID NOT NULL REFERENCES customer_profiles(id),
+    customer_id UUID NOT NULL,
     type VARCHAR(255) NOT NULL,
     subject VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
@@ -166,7 +160,7 @@ CREATE TABLE IF NOT EXISTS customer_interactions (
 
 CREATE TABLE IF NOT EXISTS service_tickets (
     id UUID PRIMARY KEY NOT NULL,
-    customer_id UUID NOT NULL REFERENCES customer_profiles(id),
+    customer_id UUID NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     status VARCHAR(255) NOT NULL,
@@ -177,7 +171,7 @@ CREATE TABLE IF NOT EXISTS service_tickets (
 
 CREATE TABLE IF NOT EXISTS quotes (
     id UUID PRIMARY KEY NOT NULL,
-    customer_id UUID NOT NULL REFERENCES customer_profiles(id),
+    customer_id UUID NOT NULL,
     title VARCHAR(255) NOT NULL,
     valid_until TIMESTAMP NOT NULL,
     status VARCHAR(255) NOT NULL,

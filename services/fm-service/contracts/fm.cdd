@@ -19,7 +19,7 @@ entity LegalEntity {
     id: uuid @primary;
     company_code: string @unique;                 // e.g., "CORP_DE", "SUBS_US"
     company_name: string;
-    functional_currency: string;                  // Strictly enforces ISO 4217 (e.g., "EUR", "USD")
+    functional_currency: string;                 // Strictly enforces ISO 4217 (e.g., "EUR", "USD")
     tax_registration_number: string;
     created_at: timestamp;
     updated_at: timestamp;
@@ -30,7 +30,7 @@ entity LegalEntity {
 entity ChartOfAccounts {
     id: uuid @primary;
     legal_entity_id: uuid @reference(LegalEntity.id);
-    account_code: string;                         // Unique combination with legal_entity_id
+    account_code: string;                        // Unique combination with legal_entity_id
     account_name: string;
     type: AccountType;
     is_active: boolean;
@@ -62,7 +62,7 @@ entity UniversalJournalLine {
     currency_transactional: string;               // ISO 4217 code of origin transaction
     
     // ACDOCA-Style Dynamic Operational Tagging (Regulated by GIN Index)
-    tracking_dimensions: jsonb;                   
+    tracking_dimensions: jsonb;
 }
 
 @table("fm_ar_invoices")
@@ -129,6 +129,7 @@ entity BankAccount {
     account_number: string;
     currency: string;                             // Local currency of the physical bank branch
     liquid_balance: decimal @digits(18, 4);
+    version: int @concurrency_shield;              // ADDED: Protects against double-spend
     created_at: timestamp;
     updated_at: timestamp;
 }
@@ -192,13 +193,15 @@ entity CustomerCredit {
     credit_limit: decimal @digits(18, 4);
     current_balance: decimal @digits(18, 4);
     is_on_hold: boolean;
+    version: int @concurrency_shield;              // ADDED: Protects against simultaneous deductions
     updated_at: timestamp;
 }
 
 @table("fm_transactional_outbox")
+@index_composite(status, created_at)               // ADDED: Required for Relay Worker performance
 entity TransactionalOutbox {
     id: uuid @primary;
-    event_type: string;                           
+    event_type: string;
     aggregate_id: uuid;                           
     payload: jsonb;                               
     status: OutboxStatus;                         
@@ -208,11 +211,10 @@ entity TransactionalOutbox {
 @table("fm_kafka_event_inbox")
 entity KafkaEventInbox {
     event_id: uuid @primary;                      
-    event_type: string;                           
+    event_type: string;
     processed_at: timestamp;
     processing_status: EventProcessingStatus;
     payload: jsonb;                               
-    attempt_count: int;
 }
 
 interface UniversalLedgerService {
@@ -243,22 +245,10 @@ interface ReliableMessagingService {
 
 events Emitters {
     producer_events {
-        fm.invoice.created: { event_id: uuid, invoice_id: uuid, timestamp: timestamp }
-        fm.invoice.updated: { event_id: uuid, invoice_id: uuid, timestamp: timestamp }
-        fm.invoice.sent: { event_id: uuid, invoice_id: uuid, timestamp: timestamp }
         fm.invoice.paid: { event_id: uuid, invoice_id: uuid, legal_entity_id: uuid, customer_id: uuid, total_amount: decimal, timestamp: timestamp }
-        fm.invoice.overdue: { event_id: uuid, invoice_id: uuid, timestamp: timestamp }
-        fm.payment.received: { event_id: uuid, payment_id: uuid, timestamp: timestamp }
-        fm.payment.processed: { event_id: uuid, payment_id: uuid, timestamp: timestamp }
-        fm.payment.failed: { event_id: uuid, payment_id: uuid, timestamp: timestamp }
-        fm.vendor.payment.due: { event_id: uuid, bill_id: uuid, timestamp: timestamp }
         fm.vendor.paid: { event_id: uuid, bill_id: uuid, legal_entity_id: uuid, vendor_id: uuid, timestamp: timestamp }
         fm.customer.credit_status.updated: { event_id: uuid, customer_id: uuid, credit_limit: decimal, current_balance: decimal, is_on_hold: boolean, timestamp: timestamp }
-        fm.budget.created: { event_id: uuid, budget_id: uuid, timestamp: timestamp }
-        fm.budget.updated: { event_id: uuid, budget_id: uuid, timestamp: timestamp }
         fm.budget.exceeded: { event_id: uuid, budget_id: uuid, timestamp: timestamp }
-        fm.account.created: { event_id: uuid, account_id: uuid, timestamp: timestamp }
-        fm.account.updated: { event_id: uuid, account_id: uuid, timestamp: timestamp }
         fm.account.balance.changed: { event_id: uuid, account_id: uuid, timestamp: timestamp }
         fm.budget.approved: { event_id: uuid, project_id: uuid, timestamp: timestamp }
     }
@@ -269,16 +259,5 @@ events Emitters {
         hr.payroll.processed: { event_id: uuid, legal_entity_id: uuid, payroll_run_id: uuid, period_number: int, total_gross_pay: decimal, timestamp: timestamp }
         mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, total_material_cost: decimal, timestamp: timestamp }
         prj.milestone.achieved: { event_id: uuid, legal_entity_id: uuid, project_id: uuid, customer_id: uuid, milestone_billable_amount: decimal, timestamp: timestamp }
-        hr.employee.created: { event_id: uuid, timestamp: timestamp }
-        hr.expense.submitted: { event_id: uuid, timestamp: timestamp }
-        scm.purchase.order.created: { event_id: uuid, timestamp: timestamp }
-        scm.invoice.received: { event_id: uuid, timestamp: timestamp }
-        scm.inventory.valued: { event_id: uuid, timestamp: timestamp }
-        crm.customer.created: { event_id: uuid, timestamp: timestamp }
-        mfg.production.completed: { event_id: uuid, timestamp: timestamp }
-        mfg.material.consumed: { event_id: uuid, timestamp: timestamp }
-        prj.project.created: { event_id: uuid, timestamp: timestamp }
-        prj.time.logged: { event_id: uuid, timestamp: timestamp }
-        prj.expense.incurred: { event_id: uuid, timestamp: timestamp }
     }
 }

@@ -112,6 +112,10 @@ test: ## Test Hello World APIs
 	echo "=== Projects Service (Projects) ===" && \
 	curl -s -H "Authorization: Bearer $$TOKEN" http://localhost:8080/api/v1/projects | jq '.' || echo "❌ Failed"
 
+seed: ## Run the database seeder CLI tool
+	@echo "🌱 Seeding ERP database data..."
+	cd tools/seeder && go run main.go
+
 test-direct: ## Test services directly (bypass gateway)
 	@echo "🧪 Testing services directly..."
 	@echo ""

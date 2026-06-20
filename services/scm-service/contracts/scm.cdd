@@ -1,8 +1,8 @@
 // ============================================================================
 // MODULE BOUNDARY: SUPPLY CHAIN MANAGEMENT (SCM)
 // Architectural Pattern: Multi-Tenant Event-Driven Logistics Core (10/10 Certified)
-// Runtime Target: Go (Golang) / Gin HTTP / GORM (PostgreSQL)
-// Domain Coverage: Product Categories, Products, Locations, Suppliers, Purchase Requisitions/Orders, Receipts/Shipments, Inventory Items/Movements, Concurrency Shield
+// Runtime Target: Go (Golang) / Gin HTTP / PostgreSQL / Kafka Fabric
+// PRD Alignment: PRD-2026-06-13-0238, PRD-2026-06-12-1005, PRD-2026-06-07-0215
 // ============================================================================
 
 namespace erp.logistics;
@@ -28,318 +28,256 @@ enum EventProcessingStatus {
 }
 
 struct RequisitionLineInput {
-    product_id: uuid;
-    quantity_requested: int;
+    material_id: uuid;
+    quantity_requested: decimal;
     estimated_unit_price: decimal;
 }
 
-@table("product_categories")
-entity ProductCategory {
-    id: uuid @primary;
-    code: string @unique;
-    name: string;
-    description: string;
-}
+// --- 1.0 STATIC DEFINITION LAYERS ---
 
-@table("products")
-entity Product {
-    id: uuid @primary;
-    product_code: string @unique;
-    product_name: string;
-    description: string;
-    product_type: string;
-    category_id: uuid @optional @reference(ProductCategory.id);
-    unit_of_measure: string;
-    standard_cost: decimal;
-    list_price: decimal;
-    is_active: boolean;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("locations")
+@table("scm_locations")
 @unique_composite(legal_entity_id, location_code)
 entity Location {
-    id: uuid @primary;
-    location_code: string;
-    location_name: string;
-    location_type: string;
-    is_active: boolean;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    location_code:      string    @length(64);
+    location_name:      string    @length(255);
+    location_type:      string    @length(32);
+    is_active:          boolean;
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
 }
 
-@table("suppliers")
+@table("scm_suppliers")
 @unique_composite(legal_entity_id, supplier_code)
 entity Supplier {
-    id: uuid @primary;
-    supplier_code: string;
-    supplier_name: string;
-    contact_name: string;
-    email: string;
-    phone: string;
-    is_active: boolean;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    supplier_code:      string    @length(64);
+    supplier_name:      string    @length(255);
+    is_active:          boolean;
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
 }
 
-@table("vendor_contracts")
+@table("scm_vendor_contracts")
+@unique_composite(legal_entity_id, contract_number)
 entity VendorContract {
-    id: uuid @primary;
-    contract_number: string @unique;
-    supplier_id: uuid @reference(Supplier.id);
-    start_date: timestamp;
-    end_date: timestamp;
-    terms: string;
-    status: string;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    contract_number:    string    @length(64);
+    supplier_id:        uuid      @fk(Supplier.id);
+    start_date:         timestamp;
+    end_date:           timestamp;
+    status:             string    @length(32);
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
 }
 
-@table("inventory_items")
-@unique_composite(legal_entity_id, location_id, product_id)
-entity InventoryItem {
-    id: uuid @primary;
-    product_id: uuid @reference(Product.id);
-    location_id: uuid @reference(Location.id);
-    quantity_on_hand: int;
-    quantity_reserved: int;
-    quantity_available: int;
-    reorder_point: int;
-    maximum_stock: int;
-    unit_cost: decimal;
-    created_at: timestamp;
-    updated_at: timestamp;
+// --- 1.1 VOLATILE STATE MACHINERY (SCOREBOARD) ---
+
+// RESOLUTION A: Restored StockBalance nomenclature
+@table("scm_stock_balances")
+@unique_composite(legal_entity_id, location_id, material_id)
+@index_composite(location_id, material_id)
+entity StockBalance {
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    location_id:        uuid      @fk(Location.id);
+    material_id:        uuid      @primitive;          
+
+    quantity_on_hand:   decimal   @precision(14, 4);
+    quantity_reserved:  decimal   @precision(14, 4);
+    quantity_available: decimal   @precision(14, 4);
+    
+    version:            int       @concurrency_shield; 
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
 }
 
-@table("inventory_movements")
+// --- 1.2 IMMUTABLE TIME-SERIES LEDGER ---
+
+@table("scm_inventory_movements")
+@index_composite(legal_entity_id, material_id, created_at)
 entity InventoryMovement {
-    id: uuid @primary;
-    product_id: uuid @reference(Product.id);
-    location_id: uuid @reference(Location.id);
-    movement_type: string;
-    quantity: int;
-    unit_cost: decimal;
-    reference_type: string;
-    reference_id: string;
-    notes: string;
-    created_at: timestamp;
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    location_id:        uuid      @fk(Location.id);
+    material_id:        uuid      @primitive;
+    
+    movement_type:      string    @length(64);
+    quantity:           decimal   @precision(14, 4);
+    reference_type:     string    @length(64);
+    reference_id:       uuid      @primitive;
+    created_at:         timestamp @auto_create;        
 }
 
-@table("stock_transfers")
-entity StockTransfer {
-    id: uuid @primary;
-    from_location_id: uuid @reference(Location.id);
-    to_location_id: uuid @reference(Location.id);
-    product_id: uuid @reference(Product.id);
-    quantity: int;
-    status: string;
-    transferred_at: timestamp @optional;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
+// --- 1.3 RUNTIME PROCUREMENT & LOGISTICS DOCUMENTS ---
 
-@table("purchase_requisitions")
-entity PurchaseRequisition {
-    id: uuid @primary;
-    req_number: string @unique;
-    requester_id: string;
-    request_date: timestamp;
-    status: string;
-    total_amount: decimal;
-    notes: string;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("purchase_requisition_lines")
-entity PurchaseRequisitionLine {
-    id: uuid @primary;
-    purchase_requisition_id: uuid @reference(PurchaseRequisition.id);
-    product_id: uuid @reference(Product.id);
-    quantity_requested: int;
-    estimated_unit_price: decimal;
-    line_total: decimal;
-}
-
-@table("purchase_orders")
-entity PurchaseOrder {
-    id: uuid @primary;
-    po_number: string @unique;
-    supplier_id: uuid @reference(Supplier.id);
-    order_date: timestamp;
-    expected_delivery: timestamp;
-    status: string;
-    total_amount: decimal;
-    notes: string;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("purchase_order_lines")
-entity PurchaseOrderLine {
-    id: uuid @primary;
-    purchase_order_id: uuid @reference(PurchaseOrder.id);
-    product_id: uuid @reference(Product.id);
-    quantity_ordered: int;
-    quantity_received: int;
-    unit_price: decimal;
-    line_total: decimal;
-    description: string;
-    created_at: timestamp;
-}
-
-@table("receipts")
-entity Receipt {
-    id: uuid @primary;
-    receipt_number: string @unique;
-    purchase_order_id: uuid @optional @reference(PurchaseOrder.id);
-    received_date: timestamp;
-    status: string;
-    notes: string;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("receipt_lines")
-entity ReceiptLine {
-    id: uuid @primary;
-    receipt_id: uuid @reference(Receipt.id);
-    product_id: uuid @reference(Product.id);
-    quantity_received: int;
-    unit_cost: decimal;
-    created_at: timestamp;
-}
-
-@table("shipments")
-entity Shipment {
-    id: uuid @primary;
-    shipment_number: string @unique;
-    sales_order_id: uuid @optional;
-    carrier: string;
-    tracking_number: string;
-    shipped_date: timestamp;
-    estimated_delivery: timestamp;
-    status: string;
-    notes: string;
-    created_at: timestamp;
-    updated_at: timestamp;
-}
-
-@table("shipment_lines")
-entity ShipmentLine {
-    id: uuid @primary;
-    shipment_id: uuid @reference(Shipment.id);
-    product_id: uuid @reference(Product.id);
-    quantity_shipped: int;
-    created_at: timestamp;
-}
-
-@table("demand_forecasts")
+// RESOLUTION B: Re-injected missing PRD entities
+@table("scm_demand_forecasts")
+@index_composite(legal_entity_id, material_id)
 entity DemandForecast {
-    id: uuid @primary;
-    product_id: uuid @reference(Product.id);
-    forecast_date: timestamp;
-    forecast_quantity: int;
-    confidence_level: decimal;
-    notes: string;
-    created_at: timestamp;
-    updated_at: timestamp;
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    material_id:        uuid      @primitive;
+    forecast_date:      timestamp;
+    forecast_quantity:  decimal   @precision(14, 4);
+    confidence_level:   decimal   @precision(5, 4);
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
 }
 
-@table("transactional_outboxes")
+@table("scm_purchase_requisitions")
+@unique_composite(legal_entity_id, req_number)
+entity PurchaseRequisition {
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    req_number:         string    @length(64);
+    requester_id:       uuid      @primitive;          // Primitive Ref -> HR.Employee
+    request_date:       timestamp;
+    status:             string    @length(32);
+    total_amount:       decimal   @precision(18, 4);
+    notes:              string    @length(500);
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
+}
+
+@table("scm_purchase_requisition_lines")
+entity PurchaseRequisitionLine {
+    id:                      uuid      @primary;
+    purchase_requisition_id: uuid      @fk(PurchaseRequisition.id);
+    material_id:             uuid      @primitive;
+    quantity_requested:      decimal   @precision(14, 4);
+    estimated_unit_price:    decimal   @precision(18, 4);
+    line_total:              decimal   @precision(18, 4);
+}
+
+@table("scm_stock_transfers")
+entity StockTransfer {
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    from_location_id:   uuid      @fk(Location.id);
+    to_location_id:     uuid      @fk(Location.id);
+    material_id:        uuid      @primitive;
+    quantity:           decimal   @precision(14, 4);
+    status:             string    @length(32);
+    version:            int       @concurrency_shield; 
+    transferred_at:     timestamp @optional;
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
+}
+
+@table("scm_purchase_orders")
+@unique_composite(legal_entity_id, po_number)
+entity PurchaseOrder {
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    po_number:          string    @length(64);
+    supplier_id:        uuid      @fk(Supplier.id);
+    order_date:         timestamp;
+    expected_delivery:  timestamp;
+    status:             PurchaseOrderStatus;
+    total_amount:       decimal   @precision(18, 4);
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
+}
+
+@table("scm_purchase_order_lines")
+entity PurchaseOrderLine {
+    id:                 uuid      @primary;
+    purchase_order_id:  uuid      @fk(PurchaseOrder.id);
+    material_id:        uuid      @primitive;
+    quantity_ordered:   decimal   @precision(14, 4);
+    quantity_received:  decimal   @precision(14, 4);
+    unit_price:         decimal   @precision(18, 4);
+    line_total:         decimal   @precision(18, 4);
+    created_at:         timestamp @auto_create;
+}
+
+@table("scm_receipts")
+@unique_composite(legal_entity_id, receipt_number)
+entity Receipt {
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    receipt_number:     string    @length(64);
+    purchase_order_id:  uuid      @fk(PurchaseOrder.id);
+    received_date:      timestamp;
+    status:             string    @length(32);
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
+}
+
+@table("scm_shipments")
+@unique_composite(legal_entity_id, shipment_number)
+entity Shipment {
+    id:                 uuid      @primary;
+    legal_entity_id:    uuid      @tenant;
+    shipment_number:    string    @length(64);
+    sales_order_id:     uuid      @primitive;          
+    carrier:            string    @length(64);
+    tracking_number:    string    @length(128);
+    shipped_date:       timestamp;
+    status:             string    @length(32);
+    created_at:         timestamp @auto_create;
+    updated_at:         timestamp @auto_update;
+}
+
+// --- 1.4 ATOMIC INFRASTRUCTURE RESILIENCE LAYER ---
+
+@table("scm_transactional_outboxes")
+@index_composite(status, created_at)
 entity TransactionalOutbox {
-    id: uuid @primary;
-    event_type: string;
-    aggregate_id: uuid;
-    payload: jsonb;
-    status: OutboxStatus;
-    retry_count: int;
-    created_at: timestamp;
+    id:                 uuid      @primary;
+    event_type:         string    @length(128);
+    aggregate_id:       uuid      @primitive;
+    payload:            jsonb;
+    status:             OutboxStatus;
+    retry_count:        int       @default(0);
+    created_at:         timestamp @auto_create;
 }
 
-@table("kafka_event_inboxes")
+@table("scm_kafka_event_inboxes")
 entity KafkaEventInbox {
-    event_id: uuid @primary;
-    event_type: string;
-    processed_at: timestamp;
-    processing_status: EventProcessingStatus;
-    payload: string;
-    attempt_count: int;
+    event_id:           uuid      @primary;
+    event_type:         string    @length(128);
+    processed_at:       timestamp @auto_create;
+    processing_status:  EventProcessingStatus;
+    payload:            jsonb;
 }
+
+// --- 2.0 PURE DOMAIN INTERFACES ---
 
 interface ProcurementService {
-    PurchaseOrder initiatePurchaseOrder(ctx: context, legalEntityId: uuid, supplierId: uuid, lines: List<PurchaseOrderLineInput>);
-    PurchaseOrder transitionOrderStatus(ctx: context, purchaseOrderId: uuid, newStatus: PurchaseOrderStatus);
-    List<PurchaseOrder> fetchOutstandingOrders(ctx: context, legalEntityId: uuid);
     PurchaseRequisition initiatePurchaseRequisition(ctx: context, requesterId: uuid, lines: List<RequisitionLineInput>, notes: string);
     PurchaseRequisition processRequisitionApproval(ctx: context, reqId: uuid, action: string);
+    PurchaseOrder initiatePurchaseOrder(ctx: context, legalEntityId: uuid, supplierId: uuid, lines: List<RequisitionLineInput>);
+    PurchaseOrder transitionOrderStatus(ctx: context, purchaseOrderId: uuid, newStatus: PurchaseOrderStatus);
 }
 
 interface InventoryService {
-    void processGoodsReceipt(ctx: context, purchaseOrderId: uuid, warehouseId: uuid, itemsReceived: List<ReceiptItemInput>, operatorHrId: uuid);
-    void reserveInventoryStock(ctx: context, legalEntityId: uuid, salesOrderId: uuid, itemsToReserve: List<ReservationItemInput>);
+    void processGoodsReceipt(ctx: context, purchaseOrderId: uuid, locationId: uuid, itemsReceived: List<RequisitionLineInput>, operatorHrId: uuid);
+    void reserveInventoryStock(ctx: context, legalEntityId: uuid, salesOrderId: uuid, itemsToReserve: List<RequisitionLineInput>);
     void releaseInventoryReservation(ctx: context, legalEntityId: uuid, salesOrderId: uuid);
-    void processOutboundShipment(ctx: context, salesOrderId: uuid, warehouseId: uuid, itemsShipped: List<ShipmentItemInput>, operatorHrId: uuid);
-    void executeCycleCountAdjustment(ctx: context, legalEntityId: uuid, warehouseId: uuid, materialId: uuid, adjustmentQuantity: decimal, operatorHrId: uuid);
-    StockTransfer requestStockTransfer(ctx: context, fromLocationId: uuid, toLocationId: uuid, productId: uuid, quantity: int);
+    StockTransfer requestStockTransfer(ctx: context, legalEntityId: uuid, fromLocationId: uuid, toLocationId: uuid, materialId: uuid, quantity: decimal);
     StockTransfer executeStockTransfer(ctx: context, transferId: uuid);
 }
 
-interface OutboxRelayWorker {
-    List<TransactionalOutbox> getUnsentMessages(ctx: context, limit: int);
-    void logProcessingAttempt(ctx: context, outboxId: uuid, currentRetries: int, errorNotes: string);
-    void updateOutboxStatus(ctx: context, outboxId: uuid, status: OutboxStatus);
-}
-
-interface ReliableMessagingService {
-    boolean isEventProcessed(ctx: context, eventId: uuid);
-    void commitInboundEvent(ctx: context, eventId: uuid, eventType: string, payload: jsonb);
-    void pushToOutbox(ctx: context, eventType: string, aggregateId: uuid, payload: jsonb); 
-}
+// --- 3.0 EVENT MATRIX STREAM ---
 
 events Emitters {
     producer_events {
-        scm.product.created: { event_id: uuid, product_id: uuid }
-        scm.product.updated: { event_id: uuid, product_id: uuid }
-        scm.product.discontinued: { event_id: uuid, product_id: uuid }
-        scm.inventory.received: { event_id: uuid }
-        scm.inventory.shipped: { event_id: uuid }
-        scm.inventory.adjusted: { event_id: uuid }
-        scm.inventory.low.stock: { event_id: uuid }
-        scm.inventory.out.of.stock: { event_id: uuid }
-        scm.inventory.valued: { event_id: uuid }
-        scm.purchase.order.created: { event_id: uuid }
-        scm.purchase.order.sent: { event_id: uuid }
-        scm.purchase.order.received: { event_id: uuid }
-        scm.purchase.order.cancelled: { event_id: uuid }
-        scm.vendor.created: { event_id: uuid }
-        scm.vendor.updated: { event_id: uuid }
-        scm.vendor.performance.evaluated: { event_id: uuid }
-        scm.shipment.created: { event_id: uuid }
-        scm.shipment.dispatched: { event_id: uuid }
-        scm.shipment.delivered: { event_id: uuid }
-        scm.shipment.delayed: { event_id: uuid }
-        scm.training.required: { event_id: uuid }
-        scm.material.delivered: { event_id: uuid }
-        scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, purchase_order_id: uuid, vendor_id: uuid, receipt_value: decimal, items: jsonb, timestamp: timestamp }
-        scm.inventory.reservation.completed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        scm.inventory.reservation.failed: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, reason: string, timestamp: timestamp }
-        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, total_cogs_value: decimal, items: jsonb, timestamp: timestamp }
-        scm.asset.received: { event_id: uuid, legal_entity_id: uuid, purchase_order_line_id: uuid, serial_number: string, manufacturer: string, capital_cost: decimal, timestamp: timestamp }
+        // RESOLUTION D: Realigned payload topic strings for downstream ingress
+        scm.receipt.staged: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, timestamp: timestamp }
+        scm.order.shipped: { event_id: uuid, legal_entity_id: uuid, material_id: uuid, timestamp: timestamp }
+        scm.purchase.order.created: { event_id: uuid, legal_entity_id: uuid, po_id: uuid, timestamp: timestamp }
+        scm.shipment.dispatched: { event_id: uuid, legal_entity_id: uuid, shipment_id: uuid, timestamp: timestamp }
     }
     consumer_events {
-        plm.material.released: { event_id: uuid, material_id: uuid, sku: string, description: string, procurement_type: string, timestamp: timestamp }
-        crm.sales.order.reservation_requested: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, customer_id: uuid, line_items: jsonb, timestamp: timestamp }
-        crm.sales.order.cancelled: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, timestamp: timestamp }
-        mfg.material.consumed: { event_id: uuid, legal_entity_id: uuid, work_order_id: uuid, material_id: uuid, quantity: decimal, timestamp: timestamp }
-        mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, warehouse_id: uuid, material_id: uuid, quantity: decimal, unit_cost: decimal, timestamp: timestamp }
-        fm.vendor.paid: { event_id: uuid, bill_id: uuid, legal_entity_id: uuid, vendor_id: uuid, timestamp: timestamp }
-        crm.sales.order.created: { event_id: uuid }
-        crm.customer.demand.forecast: { event_id: uuid }
-        mfg.material.required: { event_id: uuid }
-        mfg.production.completed: { event_id: uuid }
-        fin.vendor.payment.processed: { event_id: uuid }
-        prj.material.requested: { event_id: uuid }
+        plm.material.released: { event_id: uuid, material_id: uuid, sku: string, timestamp: timestamp }
+        crm.sales.order.reservation_requested: { event_id: uuid, legal_entity_id: uuid, sales_order_id: uuid, line_items: jsonb, timestamp: timestamp }
+        mfg.yield.produced: { event_id: uuid, legal_entity_id: uuid, location_id: uuid, material_id: uuid, quantity: decimal, timestamp: timestamp }
+        // RESOLUTION C: Ingest FM payment confirmations to unlock fulfillment blocks
+        fin.vendor.payment.processed: { event_id: uuid, legal_entity_id: uuid, po_id: uuid, timestamp: timestamp }
     }
 }

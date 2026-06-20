@@ -15,7 +15,7 @@ type SalesOrder struct {
 	Status          SalesOrderState `json:"status"`
 	TotalGrossValue decimal.Decimal `json:"total_gross_value"`
 	TotalTaxValue   decimal.Decimal `json:"total_tax_value"`
-	Version         int             `json:"version"` // Optimistic Locking Shield
+	Version         int             `json:"version"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 }

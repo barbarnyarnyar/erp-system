@@ -9,7 +9,7 @@ import (
 
 type ReportService struct {
 	prodRepo     domain.ProductRepository
-	invRepo      domain.InventoryItemRepository
+	invRepo      domain.StockBalanceRepository
 	supRepo      domain.SupplierRepository
 	poRepo       domain.PurchaseOrderRepository
 	moveRepo     domain.InventoryMovementRepository
@@ -18,7 +18,7 @@ type ReportService struct {
 
 func NewReportService(
 	prodRepo domain.ProductRepository,
-	invRepo domain.InventoryItemRepository,
+	invRepo domain.StockBalanceRepository,
 	supRepo domain.SupplierRepository,
 	poRepo domain.PurchaseOrderRepository,
 	moveRepo domain.InventoryMovementRepository,
@@ -39,8 +39,8 @@ type StockLevel struct {
 	ProductCode    string          `json:"product_code"`
 	ProductName    string          `json:"product_name"`
 	LocationID     string          `json:"location_id"`
-	QuantityOnHand int             `json:"quantity_on_hand"`
-	ReorderPoint   int             `json:"reorder_point"`
+	QuantityOnHand decimal.Decimal `json:"quantity_on_hand"`
+	ReorderPoint   decimal.Decimal `json:"reorder_point"`
 	IsCritical     bool            `json:"is_critical"`
 	Valuation      decimal.Decimal `json:"valuation"`
 }
@@ -64,21 +64,21 @@ func (s *ReportService) GetInventoryLevelsReport(ctx context.Context) ([]StockLe
 	report := make([]StockLevel, 0, len(items))
 
 	for _, item := range items {
-		p, ok := prodMap[item.ProductID]
+		p, ok := prodMap[item.MaterialID]
 		if !ok {
 			continue
 		}
 
-		isCritical := item.QuantityOnHand <= item.ReorderPoint
-		val := item.UnitCost.Mul(decimal.NewFromInt(int64(item.QuantityOnHand)))
+		isCritical := item.QuantityOnHand.IsZero()
+		val := p.StandardCost.Mul(item.QuantityOnHand)
 
 		report = append(report, StockLevel{
-			ProductID:      item.ProductID,
+			ProductID:      item.MaterialID,
 			ProductCode:    p.ProductCode,
 			ProductName:    p.ProductName,
 			LocationID:     item.LocationID,
 			QuantityOnHand: item.QuantityOnHand,
-			ReorderPoint:   item.ReorderPoint,
+			ReorderPoint:   decimal.Zero,
 			IsCritical:     isCritical,
 			Valuation:      val,
 		})
@@ -106,11 +106,6 @@ func (s *ReportService) GetVendorPerformanceReport(ctx context.Context) ([]Suppl
 	orders, err := s.poRepo.List(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	supMap := make(map[string]domain.Supplier)
-	for _, sup := range suppliers {
-		supMap[sup.ID] = sup
 	}
 
 	performanceMap := make(map[string]*SupplierPerformance)
@@ -169,7 +164,7 @@ func (s *ReportService) GetProcurementMetricsReport(ctx context.Context) (*Procu
 
 	for _, po := range orders {
 		metrics.TotalProcurementSpend = metrics.TotalProcurementSpend.Add(po.TotalAmount)
-		metrics.OrdersCountByStatus[po.Status]++
+		metrics.OrdersCountByStatus[string(po.Status)]++
 	}
 
 	if len(orders) > 0 {
@@ -183,11 +178,11 @@ type SafetyStockRecommendation struct {
 	ProductID             string          `json:"product_id"`
 	ProductCode           string          `json:"product_code"`
 	ProductName           string          `json:"product_name"`
-	QuantityOnHand        int             `json:"quantity_on_hand"`
+	QuantityOnHand        decimal.Decimal `json:"quantity_on_hand"`
 	AverageForecastDemand decimal.Decimal `json:"average_forecast_demand"`
-	CalculatedSafetyStock int             `json:"calculated_safety_stock"`
-	CurrentReorderPoint   int             `json:"current_reorder_point"`
-	Recommendation        string          `json:"recommendation"` // "STOCK_LEVEL_OK", "RESTOCK_SOON", "REORDER_IMMEDIATELY"
+	CalculatedSafetyStock decimal.Decimal `json:"calculated_safety_stock"`
+	CurrentReorderPoint   decimal.Decimal `json:"current_reorder_point"`
+	Recommendation        string          `json:"recommendation"`
 }
 
 func (s *ReportService) GetSafetyStockReport(ctx context.Context) ([]SafetyStockRecommendation, error) {
@@ -201,23 +196,21 @@ func (s *ReportService) GetSafetyStockReport(ctx context.Context) ([]SafetyStock
 		return nil, err
 	}
 
-	itemMap := make(map[string]domain.InventoryItem)
+	itemMap := make(map[string]domain.StockBalance)
 	for _, item := range items {
-		itemMap[item.ProductID] = item
+		itemMap[item.MaterialID] = item
 	}
 
 	report := make([]SafetyStockRecommendation, 0, len(products))
 
 	for _, p := range products {
 		item, hasItem := itemMap[p.ID]
-		qtyOnHand := 0
-		reorderPt := 0
+		qtyOnHand := decimal.Zero
 		if hasItem {
 			qtyOnHand = item.QuantityOnHand
-			reorderPt = item.ReorderPoint
 		}
 
-		forecasts, err := s.forecastRepo.ListByProductID(ctx, p.ID)
+		forecasts, err := s.forecastRepo.ListByMaterialID(ctx, p.ID)
 		if err != nil {
 			forecasts = nil
 		}
@@ -226,18 +219,18 @@ func (s *ReportService) GetSafetyStockReport(ctx context.Context) ([]SafetyStock
 		if len(forecasts) > 0 {
 			totalForecast := decimal.Zero
 			for _, f := range forecasts {
-				totalForecast = totalForecast.Add(decimal.NewFromInt(int64(f.ForecastQuantity)))
+				totalForecast = totalForecast.Add(f.ForecastQuantity)
 			}
 			avgForecast = totalForecast.Div(decimal.NewFromInt(int64(len(forecasts))))
 		}
 
 		// Simple calculated safety stock formula
-		calcSafetyStock := int(avgForecast.Mul(decimal.NewFromFloat(1.25)).IntPart()) + 10
+		calcSafetyStock := avgForecast.Mul(decimal.NewFromFloat(1.25)).Add(decimal.NewFromInt(10))
 
 		rec := "STOCK_LEVEL_OK"
-		if qtyOnHand < calcSafetyStock {
+		if qtyOnHand.LessThan(calcSafetyStock) {
 			rec = "REORDER_IMMEDIATELY"
-		} else if qtyOnHand < calcSafetyStock+15 {
+		} else if qtyOnHand.LessThan(calcSafetyStock.Add(decimal.NewFromInt(15))) {
 			rec = "RESTOCK_SOON"
 		}
 
@@ -248,7 +241,7 @@ func (s *ReportService) GetSafetyStockReport(ctx context.Context) ([]SafetyStock
 			QuantityOnHand:        qtyOnHand,
 			AverageForecastDemand: avgForecast,
 			CalculatedSafetyStock: calcSafetyStock,
-			CurrentReorderPoint:   reorderPt,
+			CurrentReorderPoint:   decimal.Zero,
 			Recommendation:        rec,
 		})
 	}

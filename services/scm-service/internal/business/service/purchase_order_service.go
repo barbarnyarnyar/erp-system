@@ -38,10 +38,9 @@ func NewPurchaseOrderService(
 }
 
 type POLineInput struct {
-	ProductID       string          `json:"product_id"`
-	QuantityOrdered int             `json:"quantity_ordered"`
+	MaterialID      string          `json:"material_id"`
+	QuantityOrdered decimal.Decimal `json:"quantity_ordered"`
 	UnitPrice       decimal.Decimal `json:"unit_price"`
-	Description     string          `json:"description"`
 }
 
 type PurchaseOrderDetails struct {
@@ -62,18 +61,17 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(ctx context.Context, supplier
 
 	// Create lines
 	for _, l := range lines {
-		lineTotal := l.UnitPrice.Mul(decimal.NewFromInt(int64(l.QuantityOrdered)))
+		lineTotal := l.UnitPrice.Mul(l.QuantityOrdered)
 		totalAmount = totalAmount.Add(lineTotal)
 
 		line := domain.PurchaseOrderLine{
 			ID:               utils.NewID("po-line"),
 			PurchaseOrderID:  poID,
-			ProductID:        l.ProductID,
+			MaterialID:       l.MaterialID,
 			QuantityOrdered:  l.QuantityOrdered,
-			QuantityReceived: 0,
+			QuantityReceived: decimal.Zero,
 			UnitPrice:        l.UnitPrice,
 			LineTotal:        lineTotal,
-			Description:      l.Description,
 			CreatedAt:        time.Now(),
 		}
 
@@ -82,13 +80,13 @@ func (s *PurchaseOrderService) CreatePurchaseOrder(ctx context.Context, supplier
 
 	po := &domain.PurchaseOrder{
 		ID:               poID,
+		LegalEntityID:    "00000000-0000-0000-0000-000000000000",
 		PoNumber:         poNum,
 		SupplierID:       supplierID,
 		OrderDate:        time.Now(),
 		ExpectedDelivery: expectedDelivery,
-		Status:           "DRAFT",
+		Status:           domain.PurchaseOrderStatusDRAFT,
 		TotalAmount:      totalAmount,
-		Notes:            notes,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -143,8 +141,7 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 
 	oldStatus := po.Status
 	po.ExpectedDelivery = expectedDelivery
-	po.Status = status
-	po.Notes = notes
+	po.Status = domain.PurchaseOrderStatus(status)
 	po.UpdatedAt = time.Now()
 
 	err = s.poRepo.Update(ctx, po)
@@ -152,7 +149,8 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 		return nil, err
 	}
 
-	if (status == "DELIVERED" || status == "RECEIVED") && oldStatus != "DELIVERED" && oldStatus != "RECEIVED" {
+	oldStatusStr := string(oldStatus)
+	if (status == "DELIVERED" || status == "RECEIVED") && oldStatusStr != "DELIVERED" && oldStatusStr != "RECEIVED" {
 		if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderReceived, po.ID, domain.PurchaseOrderReceivedEvent{
 			PurchaseOrderID: po.ID,
 			PONumber:        po.PoNumber,
@@ -163,7 +161,7 @@ func (s *PurchaseOrderService) UpdatePurchaseOrder(ctx context.Context, id strin
 		}
 	}
 
-	if status == "CANCELLED" && oldStatus != "CANCELLED" {
+	if status == "CANCELLED" && oldStatus != domain.PurchaseOrderStatusCANCELLED {
 		if err := s.publisher.Publish(ctx, domain.TopicScmPurchaseOrderCancelled, po.ID, domain.PurchaseOrderCancelledEvent{
 			PurchaseOrderID: po.ID,
 			PONumber:        po.PoNumber,
@@ -192,7 +190,7 @@ func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string)
 		return nil, err
 	}
 
-	po.Status = "SUBMITTED"
+	po.Status = domain.PurchaseOrderStatus("SUBMITTED")
 	po.UpdatedAt = time.Now()
 
 	err = s.poRepo.Update(ctx, po)
@@ -224,8 +222,8 @@ func (s *PurchaseOrderService) SendPurchaseOrder(ctx context.Context, id string)
 }
 
 type RequisitionLineInput struct {
-	ProductID          string          `json:"product_id"`
-	QuantityRequested  int             `json:"quantity_requested"`
+	MaterialID         string          `json:"material_id"`
+	QuantityRequested  decimal.Decimal `json:"quantity_requested"`
 	EstimatedUnitPrice decimal.Decimal `json:"estimated_unit_price"`
 }
 
@@ -246,13 +244,13 @@ func (s *PurchaseOrderService) CreatePurchaseRequisition(ctx context.Context, re
 	reqLines := make([]domain.PurchaseRequisitionLine, 0, len(lines))
 
 	for _, l := range lines {
-		lineTotal := l.EstimatedUnitPrice.Mul(decimal.NewFromInt(int64(l.QuantityRequested)))
+		lineTotal := l.EstimatedUnitPrice.Mul(l.QuantityRequested)
 		totalAmount = totalAmount.Add(lineTotal)
 
 		line := domain.PurchaseRequisitionLine{
 			ID:                    utils.NewID("req-line"),
 			PurchaseRequisitionID: reqID,
-			ProductID:             l.ProductID,
+			MaterialID:            l.MaterialID,
 			QuantityRequested:     l.QuantityRequested,
 			EstimatedUnitPrice:    l.EstimatedUnitPrice,
 			LineTotal:             lineTotal,
@@ -261,15 +259,16 @@ func (s *PurchaseOrderService) CreatePurchaseRequisition(ctx context.Context, re
 	}
 
 	pr := &domain.PurchaseRequisition{
-		ID:          reqID,
-		ReqNumber:   reqNum,
-		RequesterID: requesterID,
-		RequestDate: requestDate,
-		Status:      "DRAFT",
-		TotalAmount: totalAmount,
-		Notes:       notes,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:            reqID,
+		LegalEntityID: "00000000-0000-0000-0000-000000000000",
+		ReqNumber:     reqNum,
+		RequesterID:   requesterID,
+		RequestDate:   requestDate,
+		Status:        "DRAFT",
+		TotalAmount:   totalAmount,
+		Notes:         notes,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	err := s.tm.WithinTransaction(ctx, func(txCtx context.Context) error {

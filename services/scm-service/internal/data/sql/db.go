@@ -68,7 +68,7 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		&Location{},
 		&Supplier{},
 		&VendorContract{},
-		&InventoryItem{},
+		&StockBalance{},
 		&InventoryMovement{},
 		&StockTransfer{},
 		&PurchaseRequisition{},

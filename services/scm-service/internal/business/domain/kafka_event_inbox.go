@@ -10,6 +10,5 @@ type KafkaEventInbox struct {
 	EventType        string                `json:"event_type"`
 	ProcessedAt      time.Time             `json:"processed_at"`
 	ProcessingStatus EventProcessingStatus `json:"processing_status"`
-	Payload          string                `json:"payload"`
-	AttemptCount     int                   `json:"attempt_count"`
+	Payload          interface{}           `json:"payload"`
 }

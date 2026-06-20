@@ -49,11 +49,6 @@ func ToCustomerProfileDomain(c *CustomerProfile) *domain.CustomerProfile {
 		Status:             domain.CustomerStatus(c.Status),
 		CreditLimit:        c.CreditLimit,
 		Currency:           c.Currency,
-		ContactName:        c.ContactName,
-		Email:              c.Email,
-		Phone:              c.Phone,
-		Category:           c.Category,
-		ParentCustomerID:   c.ParentCustomerID,
 		Version:            c.Version,
 		CreatedAt:          c.CreatedAt,
 		UpdatedAt:          c.UpdatedAt,
@@ -78,11 +73,11 @@ func FromCustomerProfileDomain(c *domain.CustomerProfile) *CustomerProfile {
 		Status:             string(c.Status),
 		CreditLimit:        c.CreditLimit,
 		Currency:           c.Currency,
-		ContactName:        c.ContactName,
-		Email:              c.Email,
-		Phone:              c.Phone,
-		Category:           c.Category,
-		ParentCustomerID:   c.ParentCustomerID,
+		ContactName:        nil,
+		Email:              nil,
+		Phone:              nil,
+		Category:           nil,
+		ParentCustomerID:   nil,
 		Version:            c.Version,
 		CreatedAt:          c.CreatedAt,
 		UpdatedAt:          c.UpdatedAt,
@@ -849,7 +844,6 @@ func ToInboxDomain(i *KafkaEventInbox) *domain.KafkaEventInbox {
 		return nil
 	}
 	return &domain.KafkaEventInbox{
-		AttemptCount:     i.AttemptCount,
 		EventID:          i.EventID,
 		EventType:        i.EventType,
 		ProcessedAt:      i.ProcessedAt,
@@ -869,7 +863,7 @@ func FromInboxDomain(i *domain.KafkaEventInbox) *KafkaEventInbox {
 		}
 	}
 	return &KafkaEventInbox{
-		AttemptCount:     i.AttemptCount,
+		AttemptCount:     0,
 		EventID:          i.EventID,
 		EventType:        i.EventType,
 		ProcessedAt:      i.ProcessedAt,

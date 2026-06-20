@@ -37,21 +37,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, companyName, conta
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
 	}
-	if contactName != "" {
-		cust.ContactName = &contactName
-	}
-	if email != "" {
-		cust.Email = &email
-	}
-	if phone != "" {
-		cust.Phone = &phone
-	}
-	if category != "" {
-		cust.Category = &category
-	}
-	if parentCustomerID != "" {
-		cust.ParentCustomerID = &parentCustomerID
-	}
+
 
 	err := s.customerRepo.Create(ctx, cust)
 	if err != nil {
@@ -99,27 +85,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id string, company
 
 	oldStatus := cust.Status
 	cust.CompanyName = companyName
-	if contactName != "" {
-		cust.ContactName = &contactName
-	} else {
-		cust.ContactName = nil
-	}
-	if email != "" {
-		cust.Email = &email
-	} else {
-		cust.Email = nil
-	}
-	if phone != "" {
-		cust.Phone = &phone
-	} else {
-		cust.Phone = nil
-	}
 	cust.Status = statusEnum
-	if category != "" {
-		cust.Category = &category
-	} else {
-		cust.Category = nil
-	}
 	cust.UpdatedAt = time.Now()
 
 	err = s.customerRepo.Update(ctx, cust)

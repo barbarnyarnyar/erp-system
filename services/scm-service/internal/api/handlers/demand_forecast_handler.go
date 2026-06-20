@@ -55,7 +55,7 @@ func (h *DemandForecastHandler) CreateForecast(c *gin.Context) {
 		confDec = decimal.NewFromFloat(0.8) // default to 80% confidence
 	}
 
-	df, err := h.svc.CreateForecast(c.Request.Context(), req.ProductID, fDate, req.ForecastQuantity, confDec, req.Notes)
+	df, err := h.svc.CreateForecast(c.Request.Context(), req.ProductID, fDate, decimal.NewFromInt(int64(req.ForecastQuantity)), confDec, req.Notes)
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return
@@ -98,7 +98,7 @@ func (h *DemandForecastHandler) UpdateForecast(c *gin.Context) {
 		confDec = decimal.NewFromFloat(0.8)
 	}
 
-	df, err := h.svc.UpdateForecast(c.Request.Context(), id, fDate, req.ForecastQuantity, confDec, req.Notes)
+	df, err := h.svc.UpdateForecast(c.Request.Context(), id, fDate, decimal.NewFromInt(int64(req.ForecastQuantity)), confDec, req.Notes)
 	if err != nil {
 		h.response.BadRequest(c, err.Error())
 		return

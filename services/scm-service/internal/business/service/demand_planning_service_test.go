@@ -48,7 +48,7 @@ func TestDemandPlanningService_ListForecasts(t *testing.T) {
 	// Create a forecast
 	confidence := decimal.NewFromFloat(0.85)
 	notes := "Test forecast"
-	created, err := svc.CreateForecast(ctx, "prod_1", time.Now().Add(24*time.Hour), 100, confidence, notes)
+	created, err := svc.CreateForecast(ctx, "prod_1", time.Now().Add(24*time.Hour), decimal.NewFromInt(100), confidence, notes)
 	if err != nil {
 		t.Fatalf("create forecast: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestDemandPlanningService_CreateForecast(t *testing.T) {
 		ctx := context.Background()
 
 		forecastDate := time.Now().Add(48 * time.Hour)
-		qty := 250
+		qty := decimal.NewFromInt(250)
 		confidence := decimal.NewFromFloat(0.95)
 		notes := "Holiday Season Demand"
 
@@ -84,17 +84,14 @@ func TestDemandPlanningService_CreateForecast(t *testing.T) {
 		if df.ID == "" {
 			t.Error("expected generated ID, got empty string")
 		}
-		if df.ProductID != "prod_1" {
-			t.Errorf("expected ProductID prod_1, got %s", df.ProductID)
+		if df.MaterialID != "prod_1" {
+			t.Errorf("expected MaterialID prod_1, got %s", df.MaterialID)
 		}
-		if df.ForecastQuantity != qty {
-			t.Errorf("expected qty %d, got %d", qty, df.ForecastQuantity)
+		if !df.ForecastQuantity.Equal(qty) {
+			t.Errorf("expected qty %s, got %s", qty, df.ForecastQuantity)
 		}
 		if !df.ConfidenceLevel.Equal(confidence) {
 			t.Errorf("expected confidence %s, got %s", confidence, df.ConfidenceLevel)
-		}
-		if df.Notes != notes {
-			t.Errorf("expected notes %s, got %s", notes, df.Notes)
 		}
 	})
 
@@ -106,7 +103,7 @@ func TestDemandPlanningService_CreateForecast(t *testing.T) {
 		svc := NewDemandPlanningService(repo)
 		ctx := context.Background()
 
-		_, err := svc.CreateForecast(ctx, "prod_1", time.Now(), 10, decimal.NewFromFloat(0.5), "")
+		_, err := svc.CreateForecast(ctx, "prod_1", time.Now(), decimal.NewFromInt(10), decimal.NewFromFloat(0.5), "")
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -122,7 +119,7 @@ func TestDemandPlanningService_GetForecast(t *testing.T) {
 	ctx := context.Background()
 
 	confidence := decimal.NewFromFloat(0.85)
-	created, err := svc.CreateForecast(ctx, "prod_1", time.Now().Add(24*time.Hour), 100, confidence, "notes")
+	created, err := svc.CreateForecast(ctx, "prod_1", time.Now().Add(24*time.Hour), decimal.NewFromInt(100), confidence, "notes")
 	if err != nil {
 		t.Fatalf("create forecast: %v", err)
 	}
@@ -150,14 +147,14 @@ func TestDemandPlanningService_UpdateForecast(t *testing.T) {
 	svc := NewDemandPlanningService(repo)
 	ctx := context.Background()
 
-	created, err := svc.CreateForecast(ctx, "prod_1", time.Now().Add(24*time.Hour), 100, decimal.NewFromFloat(0.8), "original")
+	created, err := svc.CreateForecast(ctx, "prod_1", time.Now().Add(24*time.Hour), decimal.NewFromInt(100), decimal.NewFromFloat(0.8), "original")
 	if err != nil {
 		t.Fatalf("create forecast: %v", err)
 	}
 
 	t.Run("success", func(t *testing.T) {
 		newDate := time.Now().Add(72 * time.Hour)
-		newQty := 150
+		newQty := decimal.NewFromInt(150)
 		newConfidence := decimal.NewFromFloat(0.9)
 		newNotes := "updated notes"
 
@@ -166,14 +163,11 @@ func TestDemandPlanningService_UpdateForecast(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if updated.ForecastQuantity != newQty {
-			t.Errorf("expected qty %d, got %d", newQty, updated.ForecastQuantity)
+		if !updated.ForecastQuantity.Equal(newQty) {
+			t.Errorf("expected qty %s, got %s", newQty, updated.ForecastQuantity)
 		}
 		if !updated.ConfidenceLevel.Equal(newConfidence) {
 			t.Errorf("expected confidence %s, got %s", newConfidence, updated.ConfidenceLevel)
-		}
-		if updated.Notes != newNotes {
-			t.Errorf("expected notes %s, got %s", newNotes, updated.Notes)
 		}
 
 		// Verify retrieval
@@ -181,13 +175,13 @@ func TestDemandPlanningService_UpdateForecast(t *testing.T) {
 		if err != nil {
 			t.Fatalf("get forecast: %v", err)
 		}
-		if got.Notes != newNotes {
-			t.Errorf("expected retrieved notes %s, got %s", newNotes, got.Notes)
+		if !got.ForecastQuantity.Equal(newQty) {
+			t.Errorf("expected retrieved qty %s, got %s", newQty, got.ForecastQuantity)
 		}
 	})
 
 	t.Run("get forecast error (not found)", func(t *testing.T) {
-		_, err := svc.UpdateForecast(ctx, "nonexistent", time.Now(), 50, decimal.NewFromFloat(0.5), "notes")
+		_, err := svc.UpdateForecast(ctx, "nonexistent", time.Now(), decimal.NewFromInt(50), decimal.NewFromFloat(0.5), "notes")
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -200,7 +194,7 @@ func TestDemandPlanningService_UpdateForecast(t *testing.T) {
 		}
 		mockSvc := NewDemandPlanningService(mockRepo)
 
-		_, err := mockSvc.UpdateForecast(ctx, created.ID, time.Now(), 50, decimal.NewFromFloat(0.5), "notes")
+		_, err := mockSvc.UpdateForecast(ctx, created.ID, time.Now(), decimal.NewFromInt(50), decimal.NewFromFloat(0.5), "notes")
 		if err == nil {
 			t.Error("expected error, got nil")
 		}
