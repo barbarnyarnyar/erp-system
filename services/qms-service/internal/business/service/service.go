@@ -188,12 +188,7 @@ func (s *InspectionExecutionService) RecordBulkMeasurements(ctx context.Context,
 			return err
 		}
 
-		triggerTypeStr := ""
-		if t, ok := qi.TriggerSource.(domain.InspectionTriggerType); ok {
-			triggerTypeStr = string(t)
-		} else if t, ok := qi.TriggerSource.(string); ok {
-			triggerTypeStr = t
-		}
+		triggerTypeStr := string(qi.TriggerSource)
 
 		if allPassed {
 			err = s.reliableSvc.PushToOutbox(txCtx, tx, domain.TopicQmsInspectionPassed, qi.ID, map[string]interface{}{
@@ -297,7 +292,7 @@ func (s *NonConformanceService) ExecuteDisposition(ctx context.Context, ncLogId 
 			return err
 		}
 
-		var actionVal interface{} = action
+		actionVal := action
 		ncl.Disposition = &actionVal
 		ncl.DispositionNotes = &notes
 		ncl.ResolvedByHrID = &resolverHrId

@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS kafka_event_inboxs (
     event_type VARCHAR(255) NOT NULL,
     processed_at TIMESTAMP NOT NULL,
     processing_status VARCHAR(255) NOT NULL,
-    payload VARCHAR(255) NOT NULL
+    payload VARCHAR(255) NOT NULL,
+    attempt_count VARCHAR(255) NOT NULL
 );
 

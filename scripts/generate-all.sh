@@ -19,8 +19,11 @@ SERVICES=(
     "fm-service:fm"
     "hr-service:hr"
     "mfg-service:mfg"
-    "pm-service:pm"
+    "prj-service:prj"
     "scm-service:scm"
+    "eam-service:eam"
+    "plm-service:plm"
+    "qms-service:qms"
 )
 
 echo "🚀 Starting contract-driven code generation..."
@@ -46,5 +49,11 @@ for item in "${SERVICES[@]}"; do
         echo "⚠️  Warning: Contract file not found for ${service} at ${cdd_file}"
     fi
 done
+
+echo "=========================================="
+echo "📝 Generating Unified OpenAPI Specification"
+echo "=========================================="
+"$CDD_CLI" -openapi-out "${BASE_DIR}/api-gateway/openapi.yaml"
+echo ""
 
 echo "✅ Code generation complete!"

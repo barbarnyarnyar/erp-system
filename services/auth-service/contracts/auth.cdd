@@ -181,6 +181,7 @@ entity KafkaEventInbox {
     processed_at:       timestamp;
     processing_status:  EventProcessingStatus;
     payload:            jsonb;                    // Inbound event payload archived for audit replay
+    attempt_count: int;
 }
 
 // ============================================================================

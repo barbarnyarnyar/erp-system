@@ -94,12 +94,7 @@ func FromInspectionMetricDefinitionDomain(d *domain.InspectionMetricDefinition) 
 	if d == nil {
 		return nil
 	}
-	dataTypeStr := ""
-	if dt, ok := d.DataType.(domain.MetricDataType); ok {
-		dataTypeStr = string(dt)
-	} else if dt, ok := d.DataType.(string); ok {
-		dataTypeStr = dt
-	}
+	dataTypeStr := string(d.DataType)
 	return &InspectionMetricDefinition{
 		ID:                d.ID,
 		InspectionPlanID:  d.InspectionPlanID,
@@ -155,18 +150,8 @@ func FromQualityInspectionDomain(i *domain.QualityInspection) *QualityInspection
 	if i == nil {
 		return nil
 	}
-	triggerStr := ""
-	if t, ok := i.TriggerSource.(domain.InspectionTriggerType); ok {
-		triggerStr = string(t)
-	} else if t, ok := i.TriggerSource.(string); ok {
-		triggerStr = t
-	}
-	statusStr := ""
-	if s, ok := i.Status.(domain.InspectionStatus); ok {
-		statusStr = string(s)
-	} else if s, ok := i.Status.(string); ok {
-		statusStr = s
-	}
+	triggerStr := string(i.TriggerSource)
+	statusStr := string(i.Status)
 	return &QualityInspection{
 		ID:               i.ID,
 		LegalEntityID:    i.LegalEntityID,
@@ -257,9 +242,10 @@ func ToNonConformanceLogDomain(n *NonConformanceLog) *domain.NonConformanceLog {
 	if n == nil {
 		return nil
 	}
-	var disp interface{}
+	var disp *domain.DispositionAction
 	if n.Disposition != nil {
-		disp = domain.DispositionAction(*n.Disposition)
+		dVal := domain.DispositionAction(*n.Disposition)
+		disp = &dVal
 	}
 	return &domain.NonConformanceLog{
 		ID:                n.ID,
@@ -270,7 +256,7 @@ func ToNonConformanceLogDomain(n *NonConformanceLog) *domain.NonConformanceLog {
 		DefectDescription: n.DefectDescription,
 		QuantityDefective: n.QuantityDefective,
 		IsQuarantined:     n.IsQuarantined,
-		Disposition:       &disp,
+		Disposition:       disp,
 		DispositionNotes:  n.DispositionNotes,
 		ResolvedByHrID:    n.ResolvedByHrID,
 		ResolvedAt:        n.ResolvedAt,
@@ -285,13 +271,9 @@ func FromNonConformanceLogDomain(n *domain.NonConformanceLog) *NonConformanceLog
 		return nil
 	}
 	var dispStr *string
-	if n.Disposition != nil && *n.Disposition != nil {
-		if val, ok := (*n.Disposition).(domain.DispositionAction); ok {
-			str := string(val)
-			dispStr = &str
-		} else if val, ok := (*n.Disposition).(string); ok {
-			dispStr = &val
-		}
+	if n.Disposition != nil {
+		str := string(*n.Disposition)
+		dispStr = &str
 	}
 	return &NonConformanceLog{
 		ID:                n.ID,
@@ -349,12 +331,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 		return nil
 	}
 	payloadBytes, _ := json.Marshal(o.Payload)
-	statusStr := "PENDING"
-	if s, ok := o.Status.(domain.OutboxStatus); ok {
-		statusStr = string(s)
-	} else if s, ok := o.Status.(string); ok {
-		statusStr = s
-	}
+	statusStr := string(o.Status)
 	return &TransactionalOutbox{
 		ID:          o.ID,
 		EventType:   o.EventType,
@@ -402,12 +379,7 @@ func FromKafkaEventInboxDomain(i *domain.KafkaEventInbox) *KafkaEventInbox {
 		return nil
 	}
 	payloadBytes, _ := json.Marshal(i.Payload)
-	statusStr := "SUCCESS"
-	if s, ok := i.ProcessingStatus.(domain.EventProcessingStatus); ok {
-		statusStr = string(s)
-	} else if s, ok := i.ProcessingStatus.(string); ok {
-		statusStr = s
-	}
+	statusStr := string(i.ProcessingStatus)
 	return &KafkaEventInbox{
 		AttemptCount:     i.AttemptCount,
 		EventID:          i.EventID,

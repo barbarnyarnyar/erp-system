@@ -15,8 +15,11 @@ const (
 func (e EquipmentStatus) IsValid() bool {
 	switch e {
 	case EquipmentStatusONLINE:
+		return true
 	case EquipmentStatusOFFLINE_BROKEN:
+		return true
 	case EquipmentStatusIN_MAINTENANCE:
+		return true
 	case EquipmentStatusDECOMMISSIONED:
 		return true
 	}
@@ -37,8 +40,11 @@ const (
 func (e WorkOrderPriority) IsValid() bool {
 	switch e {
 	case WorkOrderPriorityLOW:
+		return true
 	case WorkOrderPriorityMEDIUM:
+		return true
 	case WorkOrderPriorityHIGH:
+		return true
 	case WorkOrderPriorityCRITICAL:
 		return true
 	}
@@ -60,9 +66,13 @@ const (
 func (e WorkOrderStatus) IsValid() bool {
 	switch e {
 	case WorkOrderStatusOPEN:
+		return true
 	case WorkOrderStatusASSIGNED:
+		return true
 	case WorkOrderStatusIN_PROGRESS:
+		return true
 	case WorkOrderStatusRESOLVED:
+		return true
 	case WorkOrderStatusCLOSED:
 		return true
 	}
@@ -81,6 +91,7 @@ const (
 func (e MaintenanceCategory) IsValid() bool {
 	switch e {
 	case MaintenanceCategoryREACTIVE:
+		return true
 	case MaintenanceCategoryPREVENTATIVE:
 		return true
 	}
@@ -100,7 +111,9 @@ const (
 func (e OutboxStatus) IsValid() bool {
 	switch e {
 	case OutboxStatusPENDING:
+		return true
 	case OutboxStatusSENT:
+		return true
 	case OutboxStatusFAILED:
 		return true
 	}
@@ -119,6 +132,7 @@ const (
 func (e EventProcessingStatus) IsValid() bool {
 	switch e {
 	case EventProcessingStatusSUCCESS:
+		return true
 	case EventProcessingStatusFAILED:
 		return true
 	}

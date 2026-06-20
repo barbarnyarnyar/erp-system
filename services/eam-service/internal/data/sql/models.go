@@ -115,12 +115,7 @@ func FromEquipmentDomain(e *domain.Equipment) *Equipment {
 	if e.DeletedAt != nil {
 		delAt = gorm.DeletedAt{Time: *e.DeletedAt, Valid: true}
 	}
-	statusStr := ""
-	if s, ok := e.Status.(domain.EquipmentStatus); ok {
-		statusStr = string(s)
-	} else if s, ok := e.Status.(string); ok {
-		statusStr = s
-	}
+	statusStr := string(e.Status)
 	return &Equipment{
 		ID:                      e.ID,
 		LegalEntityID:           e.LegalEntityID,
@@ -193,30 +188,9 @@ func FromMaintenanceWorkOrderDomain(w *domain.MaintenanceWorkOrder) *Maintenance
 	if w == nil {
 		return nil
 	}
-	category := "REACTIVE"
-	if w.Category != nil {
-		if catStr, ok := w.Category.(domain.MaintenanceCategory); ok {
-			category = string(catStr)
-		} else if catStr, ok := w.Category.(string); ok {
-			category = catStr
-		}
-	}
-	priority := "MEDIUM"
-	if w.Priority != nil {
-		if priStr, ok := w.Priority.(domain.WorkOrderPriority); ok {
-			priority = string(priStr)
-		} else if priStr, ok := w.Priority.(string); ok {
-			priority = priStr
-		}
-	}
-	status := "OPEN"
-	if w.Status != nil {
-		if statStr, ok := w.Status.(domain.WorkOrderStatus); ok {
-			status = string(statStr)
-		} else if statStr, ok := w.Status.(string); ok {
-			status = statStr
-		}
-	}
+	category := string(w.Category)
+	priority := string(w.Priority)
+	status := string(w.Status)
 	return &MaintenanceWorkOrder{
 		ID:               w.ID,
 		LegalEntityID:    w.LegalEntityID,
@@ -374,12 +348,7 @@ func FromTransactionalOutboxDomain(o *domain.TransactionalOutbox) *Transactional
 		return nil
 	}
 	payloadBytes, _ := json.Marshal(o.Payload)
-	statusStr := "PENDING"
-	if s, ok := o.Status.(domain.OutboxStatus); ok {
-		statusStr = string(s)
-	} else if s, ok := o.Status.(string); ok {
-		statusStr = s
-	}
+	statusStr := string(o.Status)
 	return &TransactionalOutbox{
 		ID:          o.ID,
 		EventType:   o.EventType,
@@ -427,12 +396,7 @@ func FromKafkaEventInboxDomain(i *domain.KafkaEventInbox) *KafkaEventInbox {
 		return nil
 	}
 	payloadBytes, _ := json.Marshal(i.Payload)
-	statusStr := "SUCCESS"
-	if s, ok := i.ProcessingStatus.(domain.EventProcessingStatus); ok {
-		statusStr = string(s)
-	} else if s, ok := i.ProcessingStatus.(string); ok {
-		statusStr = s
-	}
+	statusStr := string(i.ProcessingStatus)
 	return &KafkaEventInbox{
 		AttemptCount:     i.AttemptCount,
 		EventID:          i.EventID,

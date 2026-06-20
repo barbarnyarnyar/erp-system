@@ -6,10 +6,10 @@ import (
 )
 
 type TransactionalOutbox struct {
-	ID          string      `json:"id"`
-	EventType   string      `json:"event_type"`   // e.g., "eam.machine.offline"
-	AggregateID string      `json:"aggregate_id"` // Equipment ID or Work Order ID context
-	Payload     interface{} `json:"payload"`      // Fully serialized outbound message
-	Status      interface{} `json:"status"`       // Polled and tail-processed by OutboxRelayWorker
-	CreatedAt   time.Time   `json:"created_at"`
+	ID          string       `json:"id"`
+	EventType   string       `json:"event_type"`   // e.g., "eam.machine.offline"
+	AggregateID string       `json:"aggregate_id"` // Equipment ID or Work Order ID context
+	Payload     interface{}  `json:"payload"`      // Fully serialized outbound message
+	Status      OutboxStatus `json:"status"`       // Polled and tail-processed by OutboxRelayWorker
+	CreatedAt   time.Time    `json:"created_at"`
 }

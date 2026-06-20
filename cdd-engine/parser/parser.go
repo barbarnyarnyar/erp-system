@@ -320,9 +320,63 @@ func ParseCDD(filePath string) (*Service, error) {
 		}
 
 		// Parse component functions
-		if inComponent && strings.HasPrefix(line, "func ") {
-			// TODO: Parse function signatures
-			continue
+		if inComponent {
+			// We need to parse function signatures
+			// Example: EmployeeMaster hireEmployee(ctx: context, legalEntityId: uuid, ...);
+			// Match a return type, name, and parameters
+			funcRegex := regexp.MustCompile(`^([\w<>\[\]\.]+)\s+(\w+)\s*\(([^)]*)\)\s*;?`)
+			if matches := funcRegex.FindStringSubmatch(line); len(matches) > 3 {
+				retType := matches[1]
+				funcName := matches[2]
+				paramsStr := matches[3]
+
+				var params []Field
+				if strings.TrimSpace(paramsStr) != "" {
+					paramParts := strings.Split(paramsStr, ",")
+					for _, part := range paramParts {
+						part = strings.TrimSpace(part)
+						if part == "" {
+							continue
+						}
+						// Split by ":"
+						pParts := strings.SplitN(part, ":", 2)
+						if len(pParts) != 2 {
+							continue
+						}
+						pName := strings.TrimSpace(pParts[0])
+						pTypeWithAnnotations := strings.TrimSpace(pParts[1])
+
+						// Parse type and annotations
+						// E.g. "string @optional"
+						pTypeParts := strings.Fields(pTypeWithAnnotations)
+						pType := ""
+						isOptional := false
+						if len(pTypeParts) > 0 {
+							pType = pTypeParts[0]
+							// Check for annotations on parameter
+							for _, chunk := range pTypeParts[1:] {
+								if chunk == "@optional" {
+									isOptional = true
+								}
+							}
+						}
+
+						params = append(params, Field{
+							Name:       pName,
+							Type:       pType,
+							IsOptional: isOptional,
+						})
+					}
+				}
+
+				currentComponent.Functions = append(currentComponent.Functions, ComponentFunction{
+					Name:        funcName,
+					Parameters:  params,
+					ReturnType:  retType,
+					Description: inlineComment,
+				})
+				continue
+			}
 		}
 
 		// Parse fields (entities and event payloads)

@@ -6,18 +6,18 @@ import (
 )
 
 type Equipment struct {
-	ID                      string      `json:"id"`
-	LegalEntityID           string      `json:"legal_entity_id"` // Strict multi-tenant data isolation shield
-	FacilityID              string      `json:"facility_id"`
-	AssetTag                string      `json:"asset_tag"` // Human-readable asset identifier
-	Name                    string      `json:"name"`
-	Manufacturer            string      `json:"manufacturer"`
-	SerialNumber            string      `json:"serial_number"`
-	FinancialAssetID        *string     `json:"financial_asset_id,omitempty"` // Primitive Ref -> FM.CapitalAsset
-	Status                  interface{} `json:"status"`
-	InstallationDate        time.Time   `json:"installation_date"`
-	TechnicalSpecifications interface{} `json:"technical_specifications"` // Technical static specifications
-	CreatedAt               time.Time   `json:"created_at"`
-	UpdatedAt               time.Time   `json:"updated_at"`
-	DeletedAt               *time.Time  `json:"deleted_at,omitempty"` // GORM Native Soft Delete Support
+	ID                      string          `json:"id"`
+	LegalEntityID           string          `json:"legal_entity_id"` // Strict multi-tenant data isolation shield
+	FacilityID              string          `json:"facility_id"`
+	AssetTag                string          `json:"asset_tag"` // Human-readable asset identifier
+	Name                    string          `json:"name"`
+	Manufacturer            string          `json:"manufacturer"`
+	SerialNumber            string          `json:"serial_number"`
+	FinancialAssetID        *string         `json:"financial_asset_id,omitempty"` // Primitive Ref -> FM.CapitalAsset
+	Status                  EquipmentStatus `json:"status"`
+	InstallationDate        time.Time       `json:"installation_date"`
+	TechnicalSpecifications interface{}     `json:"technical_specifications"` // Technical static specifications
+	CreatedAt               time.Time       `json:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+	DeletedAt               *time.Time      `json:"deleted_at,omitempty"` // GORM Native Soft Delete Support
 }

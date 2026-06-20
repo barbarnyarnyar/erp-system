@@ -153,6 +153,7 @@ entity KafkaEventInbox {
     processed_at: timestamp;
     processing_status: EventProcessingStatus;
     payload: jsonb;                               // Inbound historic tracking configuration dump
+    attempt_count: int;
 }
 
 interface EquipmentService {

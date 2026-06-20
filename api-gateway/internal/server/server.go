@@ -72,6 +72,15 @@ func (s *Server) setupRoutes() {
 	// Auth service health passthrough
 	s.router.GET("/health/auth", proxyHandler.ProxyToService("auth"))
 
+	// Swagger UI and API Docs
+	s.router.GET("/api/docs", func(c *gin.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(200, swaggerHTML)
+	})
+	s.router.GET("/api/docs/openapi.yaml", func(c *gin.Context) {
+		c.File("openapi.yaml")
+	})
+
 	// Public routes (no authentication required)
 	public := s.router.Group("/api/v1")
 	{
@@ -268,3 +277,30 @@ func (s *Server) getServicesStatus(c *gin.Context) {
 
 	c.JSON(200, gin.H{"services": status})
 }
+
+const swaggerHTML = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="SwaggerUI" />
+    <title>ERP System API Documentation</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" charset="UTF-8"></script>
+    <script>
+      window.onload = () => {
+        window.ui = SwaggerUIBundle({
+          url: '/api/docs/openapi.yaml',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [
+            SwaggerUIBundle.presets.apis,
+          ],
+        });
+      };
+    </script>
+  </body>
+</html>`

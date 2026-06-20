@@ -137,6 +137,7 @@ entity KafkaEventInbox {
     processed_at: timestamp;
     processing_status: EventProcessingStatus;
     payload: jsonb;                               
+    attempt_count: int;
 }
 
 interface ProjectTrackingService {

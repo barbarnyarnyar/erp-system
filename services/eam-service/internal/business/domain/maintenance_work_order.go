@@ -6,21 +6,21 @@ import (
 )
 
 type MaintenanceWorkOrder struct {
-	ID               string      `json:"id"`
-	LegalEntityID    string      `json:"legal_entity_id"` // Guard against cross-tenant execution leaks
-	EquipmentID      string      `json:"equipment_id"`
-	TicketNumber     string      `json:"ticket_number"`
-	Title            string      `json:"title"`
-	Description      string      `json:"description"`
-	Category         interface{} `json:"category"`
-	Priority         interface{} `json:"priority"`
-	Status           interface{} `json:"status"`
-	ReportedByHrID   string      `json:"reported_by_hr_id"`             // Primitive Ref -> HR.Employee
-	AssignedTechHrID *string     `json:"assigned_tech_hr_id,omitempty"` // Primitive Ref -> HR.Employee
-	ReportedAt       time.Time   `json:"reported_at"`
-	StartedAt        *time.Time  `json:"started_at,omitempty"`
-	ResolvedAt       *time.Time  `json:"resolved_at,omitempty"` // Delta reported and resolved = Machine Downtime
-	ResolutionNotes  *string     `json:"resolution_notes,omitempty"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
+	ID               string              `json:"id"`
+	LegalEntityID    string              `json:"legal_entity_id"` // Guard against cross-tenant execution leaks
+	EquipmentID      string              `json:"equipment_id"`
+	TicketNumber     string              `json:"ticket_number"`
+	Title            string              `json:"title"`
+	Description      string              `json:"description"`
+	Category         MaintenanceCategory `json:"category"`
+	Priority         WorkOrderPriority   `json:"priority"`
+	Status           WorkOrderStatus     `json:"status"`
+	ReportedByHrID   string              `json:"reported_by_hr_id"`             // Primitive Ref -> HR.Employee
+	AssignedTechHrID *string             `json:"assigned_tech_hr_id,omitempty"` // Primitive Ref -> HR.Employee
+	ReportedAt       time.Time           `json:"reported_at"`
+	StartedAt        *time.Time          `json:"started_at,omitempty"`
+	ResolvedAt       *time.Time          `json:"resolved_at,omitempty"` // Delta reported and resolved = Machine Downtime
+	ResolutionNotes  *string             `json:"resolution_notes,omitempty"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
 }

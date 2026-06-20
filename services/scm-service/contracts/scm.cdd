@@ -265,6 +265,7 @@ entity KafkaEventInbox {
     processed_at: timestamp;
     processing_status: EventProcessingStatus;
     payload: string;
+    attempt_count: int;
 }
 
 interface ProcurementService {

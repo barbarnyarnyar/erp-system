@@ -14,7 +14,9 @@ const (
 func (e InspectionTriggerType) IsValid() bool {
 	switch e {
 	case InspectionTriggerTypeINBOUND_RECEIPT:
+		return true
 	case InspectionTriggerTypePRODUCTION_YIELD:
+		return true
 	case InspectionTriggerTypeCUSTOMER_RETURN:
 		return true
 	}
@@ -35,8 +37,11 @@ const (
 func (e InspectionStatus) IsValid() bool {
 	switch e {
 	case InspectionStatusPENDING:
+		return true
 	case InspectionStatusIN_PROGRESS:
+		return true
 	case InspectionStatusPASSED:
+		return true
 	case InspectionStatusFAILED:
 		return true
 	}
@@ -55,6 +60,7 @@ const (
 func (e MetricDataType) IsValid() bool {
 	switch e {
 	case MetricDataTypeNUMERIC:
+		return true
 	case MetricDataTypeBOOLEAN:
 		return true
 	}
@@ -75,8 +81,11 @@ const (
 func (e DispositionAction) IsValid() bool {
 	switch e {
 	case DispositionActionRELEASE:
+		return true
 	case DispositionActionREWORK:
+		return true
 	case DispositionActionSCRAP:
+		return true
 	case DispositionActionRETURN_TO_VENDOR:
 		return true
 	}
@@ -96,7 +105,9 @@ const (
 func (e OutboxStatus) IsValid() bool {
 	switch e {
 	case OutboxStatusPENDING:
+		return true
 	case OutboxStatusSENT:
+		return true
 	case OutboxStatusFAILED:
 		return true
 	}
@@ -115,6 +126,7 @@ const (
 func (e EventProcessingStatus) IsValid() bool {
 	switch e {
 	case EventProcessingStatusSUCCESS:
+		return true
 	case EventProcessingStatusFAILED:
 		return true
 	}

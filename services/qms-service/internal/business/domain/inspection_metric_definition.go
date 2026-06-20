@@ -11,7 +11,7 @@ type InspectionMetricDefinition struct {
 	InspectionPlanID  string           `json:"inspection_plan_id"`
 	MetricKey         string           `json:"metric_key"`
 	DisplayName       string           `json:"display_name"`
-	DataType          interface{}      `json:"data_type"`
+	DataType          MetricDataType   `json:"data_type"`
 	MinToleranceLimit *decimal.Decimal `json:"min_tolerance_limit,omitempty"`
 	MaxToleranceLimit *decimal.Decimal `json:"max_tolerance_limit,omitempty"`
 	CreatedAt         time.Time        `json:"created_at"`
