@@ -124,3 +124,15 @@ func (h *InvoiceHandler) GetInvoiceLines(c *gin.Context) {
 		"data": []string{},
 	})
 }
+
+func (h *InvoiceHandler) GetCustomerCredit(c *gin.Context) {
+	customerID := c.Param("id")
+	cc, err := h.svc.GetCustomerCredit(c.Request.Context(), customerID)
+	if err != nil {
+		h.response.NotFound(c, "customer credit not found")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": cc,
+	})
+}

@@ -12,17 +12,20 @@ import (
 
 type AccountsReceivableService struct {
 	invoices domain.ArInvoiceRepository
+	credits  domain.CustomerCreditRepository
 	outbox   domain.TransactionalOutboxRepository
 	tm       domain.TransactionManager
 }
 
 func NewAccountsReceivableService(
 	invoices domain.ArInvoiceRepository,
+	credits domain.CustomerCreditRepository,
 	outbox domain.TransactionalOutboxRepository,
 	tm domain.TransactionManager,
 ) *AccountsReceivableService {
 	return &AccountsReceivableService{
 		invoices: invoices,
+		credits:  credits,
 		outbox:   outbox,
 		tm:       tm,
 	}
@@ -216,4 +219,8 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 		}
 		return s.outbox.Create(txCtx, outboxRec)
 	})
+}
+
+func (s *AccountsReceivableService) GetCustomerCredit(ctx context.Context, customerID string) (*domain.CustomerCredit, error) {
+	return s.credits.GetByCustomerID(ctx, customerID)
 }

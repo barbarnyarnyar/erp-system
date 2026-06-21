@@ -68,6 +68,23 @@ services:
       - auth-service
     restart: unless-stopped
 
+  api-gateway-bff:
+    build:
+      context: .
+      dockerfile: api-gateway-bff/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      - PORT=8085
+      - CRM_SERVICE_URL=http://crm-service:8002
+      - SCM_SERVICE_URL=http://scm-service:8006
+      - FM_SERVICE_URL=http://fm-service:8001
+    depends_on:
+      - crm-service
+      - scm-service
+      - fm-service
+    restart: unless-stopped
+
   auth-service:
     build:
       context: .

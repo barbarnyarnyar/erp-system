@@ -1,8 +1,8 @@
 package service
 
 import (
-	sharedtesting "erp-system/shared/testing"
 	"context"
+	sharedtesting "erp-system/shared/testing"
 	"testing"
 
 	"github.com/erp-system/scm-service/internal/business/domain"

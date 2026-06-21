@@ -54,10 +54,11 @@ func TestGeneralLedgerService_CreateAccount_PublishesEvent(t *testing.T) {
 
 func TestAccountsReceivableService_CreateInvoice_PublishesEvent(t *testing.T) {
 	invoices := memory.NewMemoryArInvoiceRepo()
+	credits := memory.NewMemoryCustomerCreditRepo()
 	outbox := memory.NewMemoryTransactionalOutboxRepo()
 	tm := memory.NewMemoryTransactionManager(invoices, outbox)
 
-	svc := service.NewAccountsReceivableService(invoices, outbox, tm)
+	svc := service.NewAccountsReceivableService(invoices, credits, outbox, tm)
 
 	inv, err := svc.CreateInvoice(context.Background(), "legal_123", "cust_123", "so_123", decimal.NewFromInt(750), decimal.NewFromInt(50), time.Now().AddDate(0, 0, 30))
 	if err != nil {

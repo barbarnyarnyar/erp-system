@@ -224,10 +224,11 @@ func TestAccountsPayableService_All(t *testing.T) {
 
 func TestAccountsReceivableService_All(t *testing.T) {
 	invoices := memory.NewMemoryArInvoiceRepo()
+	credits := memory.NewMemoryCustomerCreditRepo()
 	outbox := memory.NewMemoryTransactionalOutboxRepo()
 	tm := memory.NewMemoryTransactionManager(invoices, outbox)
 
-	svc := service.NewAccountsReceivableService(invoices, outbox, tm)
+	svc := service.NewAccountsReceivableService(invoices, credits, outbox, tm)
 	ctx := context.Background()
 
 	// CheckCustomerCredit
@@ -342,7 +343,8 @@ func TestCashManagementService_All(t *testing.T) {
 
 	// RecordPayment - Successful with InvoiceID
 	invRepo := memory.NewMemoryArInvoiceRepo()
-	invSvc := service.NewAccountsReceivableService(invRepo, outbox, tm)
+	credits := memory.NewMemoryCustomerCreditRepo()
+	invSvc := service.NewAccountsReceivableService(invRepo, credits, outbox, tm)
 	inv, _ := invSvc.CreateInvoice(ctx, "legal_123", "cust_1", "so_123", decimal.NewFromInt(100), decimal.Zero, time.Now().AddDate(0, 0, 10))
 
 	// Update svc with the same invoice repo

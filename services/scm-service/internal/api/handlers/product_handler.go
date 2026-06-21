@@ -10,13 +10,13 @@ import (
 )
 
 type ProductHandler struct {
-	svc *service.ProductManagementService
+	svc      *service.ProductManagementService
 	response *utils.ResponseHelper
 }
 
 func NewProductHandler(svc *service.ProductManagementService, response *utils.ResponseHelper) *ProductHandler {
 	return &ProductHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

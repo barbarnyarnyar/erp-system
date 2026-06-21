@@ -93,6 +93,7 @@ func main() {
 	)
 	accountsReceivableSvc := service.NewAccountsReceivableService(
 		invoiceRepo,
+		customerCreditRepo,
 		outboxRepo,
 		tm,
 	)

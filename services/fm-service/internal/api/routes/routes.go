@@ -55,6 +55,7 @@ func SetupRoutes(
 		{
 			invoices.GET("", invHandler.GetInvoices)
 			invoices.POST("", invHandler.CreateInvoice)
+			v1.GET("/customers/:id/credit", invHandler.GetCustomerCredit)
 			invoices.GET("/:id", invHandler.GetInvoice)
 			invoices.PUT("/:id", invHandler.UpdateInvoice)
 			invoices.DELETE("/:id", invHandler.DeleteInvoice)

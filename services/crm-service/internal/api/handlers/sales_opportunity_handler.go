@@ -165,6 +165,17 @@ func (h *SalesOpportunityHandler) GetSalesOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, order)
 }
 
+func (h *SalesOpportunityHandler) GetSalesOrderLines(c *gin.Context) {
+	id := c.Param("id")
+	lines, err := h.orderSvc.GetSalesOrderLines(c.Request.Context(), id)
+	if err != nil {
+		h.response.InternalErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, lines)
+}
+
+
 func (h *SalesOpportunityHandler) ListSalesOrders(c *gin.Context) {
 	list, err := h.orderSvc.ListSalesOrders(c.Request.Context())
 	if err != nil {

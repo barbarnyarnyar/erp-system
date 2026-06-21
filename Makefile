@@ -35,6 +35,7 @@ run: ## Start all services
 	@echo "  EAM:          http://localhost:8007"
 	@echo "  PLM:          http://localhost:8008"
 	@echo "  QMS:          http://localhost:8009"
+	@echo "  API Gateway BFF: http://localhost:8085"
 
 stop: ## Stop all services
 	@echo "🛑 Stopping ERP Microservices..."
@@ -52,6 +53,9 @@ health: ## Check health of all services
 	@echo ""
 	@echo "API Gateway:"
 	@curl -s http://localhost:8080/health || echo "❌ Not responding"
+	@echo ""
+	@echo "API Gateway BFF:"
+	@curl -s http://localhost:8085/health || echo "❌ Not responding"
 	@echo ""
 	@echo "Finance Service:"
 	@curl -s http://localhost:8001/health || echo "❌ Not responding"

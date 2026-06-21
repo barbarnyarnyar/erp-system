@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a microservices-based ERP system built with Go, featuring:
 
 - **API Gateway** (port 8080) - Request routing, authentication, rate limiting
+- **API Gateway BFF** (port 8085) - Backend-for-Frontend service for UI data aggregation
 - **6 Core Services**: Financial Management (FM), Human Resources (HR), Supply Chain Management (SCM), Manufacturing (M), Customer Relationship Management (CRM), Project Management (PM)
 - **Event-driven architecture** using Kafka for asynchronous communication
 - **Docker containerization** for all services
@@ -145,6 +146,7 @@ go build -o bin/main cmd/main.go
 - m-service: http://localhost:8004
 - crm-service: http://localhost:8002
 - pm-service: http://localhost:8005
+- api-gateway-bff: http://localhost:8085
 
 ## Configuration
 

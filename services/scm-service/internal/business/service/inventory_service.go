@@ -157,10 +157,10 @@ func (s *InventoryService) AdjustInventory(ctx context.Context, materialID, loca
 		default:
 			return fmt.Errorf("unknown inventory movement type: %s", movementType)
 		}
-		
+
 		sb.QuantityAvailable = sb.QuantityOnHand.Sub(sb.QuantityReserved)
 		sb.UpdatedAt = time.Now()
-		
+
 		if err := assertInventoryInvariant(sb); err != nil {
 			return err
 		}
@@ -274,7 +274,7 @@ func (s *InventoryService) ReserveStock(ctx context.Context, materialID, locatio
 
 	s.mu.Lock()
 	s.reservations[referenceID] = stockReservation{
-		materialID:  materialID,
+		materialID: materialID,
 		locationID: locationID,
 		quantity:   quantity,
 	}

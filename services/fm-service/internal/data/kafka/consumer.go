@@ -14,7 +14,8 @@ import (
 	"github.com/shopspring/decimal"
 
 	sharedkafka "erp-system/shared/kafka"
-	"erp-system/shared/utils")
+	"erp-system/shared/utils"
+)
 
 type DeadLetterMessage struct {
 	OriginalTopic string      `json:"original_topic"`

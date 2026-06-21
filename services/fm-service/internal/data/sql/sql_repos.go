@@ -651,6 +651,14 @@ func (r *SQLCustomerCreditRepo) GetByID(ctx context.Context, id string) (*domain
 	return ToDomainCustomerCredit(&dbModel), nil
 }
 
+func (r *SQLCustomerCreditRepo) GetByCustomerID(ctx context.Context, customerID string) (*domain.CustomerCredit, error) {
+	var dbModel CustomerCredit
+	if err := GetDB(ctx, r.db).First(&dbModel, "customer_id = ?", customerID).Error; err != nil {
+		return nil, err
+	}
+	return ToDomainCustomerCredit(&dbModel), nil
+}
+
 func (r *SQLCustomerCreditRepo) Update(ctx context.Context, cc *domain.CustomerCredit) error {
 	tx := GetDB(ctx, r.db)
 
@@ -667,7 +675,7 @@ func (r *SQLCustomerCreditRepo) Update(ctx context.Context, cc *domain.CustomerC
 		Updates(map[string]interface{}{
 			"credit_limit":    cc.CreditLimit,
 			"current_balance": cc.CurrentBalance,
-			"is_on_hold":       cc.IsOnHold,
+			"is_on_hold":      cc.IsOnHold,
 			"updated_at":      time.Now(),
 			"version":         newVersion,
 		})

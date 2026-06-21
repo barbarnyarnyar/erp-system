@@ -10,13 +10,13 @@ import (
 )
 
 type VendorHandler struct {
-	svc *service.SupplierManagementService
+	svc      *service.SupplierManagementService
 	response *utils.ResponseHelper
 }
 
 func NewVendorHandler(svc *service.SupplierManagementService, response *utils.ResponseHelper) *VendorHandler {
 	return &VendorHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

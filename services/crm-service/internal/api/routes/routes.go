@@ -46,6 +46,9 @@ func SetupCRMRoutes(
 		v1.GET("/sales-orders", salesOppHandler.ListSalesOrders)
 		v1.POST("/sales-orders", salesOppHandler.CreateSalesOrder)
 		v1.GET("/sales-orders/:id", salesOppHandler.GetSalesOrder)
+		v1.GET("/orders/:id", salesOppHandler.GetSalesOrder)
+		v1.GET("/sales-orders/:id/lines", salesOppHandler.GetSalesOrderLines)
+		v1.GET("/orders/:id/lines", salesOppHandler.GetSalesOrderLines)
 		v1.PUT("/sales-orders/:id", salesOppHandler.UpdateSalesOrder)
 		v1.DELETE("/sales-orders/:id", salesOppHandler.DeleteSalesOrder)
 

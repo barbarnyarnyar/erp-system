@@ -710,7 +710,7 @@ func ToDomainCapitalAsset(dbModel *CapitalAsset) *domain.CapitalAsset {
 
 // KafkaEventInbox GORM struct
 type KafkaEventInbox struct {
-	AttemptCount     int       `gorm:"type:integer;default:0;not null"`
+	AttemptCount     int    `gorm:"type:integer;default:0;not null"`
 	EventID          string `gorm:"primaryKey"`
 	EventType        string
 	ProcessedAt      time.Time

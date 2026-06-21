@@ -706,8 +706,8 @@ func TestWarehouseAndForecastEndpoints(t *testing.T) {
 	// Create Shipment
 	shipBody, _ := json.Marshal(map[string]interface{}{
 		"sales_order_id": "so-123",
-		"shipped_by":      "emp-001",
-		"shipped_date":    time.Now().Format(time.RFC3339),
+		"shipped_by":     "emp-001",
+		"shipped_date":   time.Now().Format(time.RFC3339),
 		"lines": []map[string]interface{}{
 			{
 				"sales_order_line_id": "sol-123",
@@ -739,10 +739,10 @@ func TestWarehouseAndForecastEndpoints(t *testing.T) {
 
 	// Create Forecast
 	fcBody, _ := json.Marshal(map[string]interface{}{
-		"product_id":       "prod-123",
-		"forecast_period":  "2026-06",
+		"product_id":        "prod-123",
+		"forecast_period":   "2026-06",
 		"forecast_quantity": 250,
-		"confidence_level": "0.85",
+		"confidence_level":  "0.85",
 	})
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest(http.MethodPost, "/api/v1/demand-forecasts", bytes.NewBuffer(fcBody))
@@ -1308,4 +1308,3 @@ func TestRemainingScmEndpoints(t *testing.T) {
 		t.Errorf("expected 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 }
-

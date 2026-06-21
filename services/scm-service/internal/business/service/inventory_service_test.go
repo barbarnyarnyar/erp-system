@@ -181,7 +181,7 @@ func TestInventoryService_AdjustInventory_Branches(t *testing.T) {
 	t.Run("db error inside transaction", func(t *testing.T) {
 		invRepo := &MockStockBalanceRepoEx{
 			StockBalanceRepository: memory.NewMemoryStockBalanceRepo(),
-			updateErr:               errors.New("db update failed"),
+			updateErr:              errors.New("db update failed"),
 		}
 		svc := NewInventoryService(invRepo, memory.NewMemoryInventoryMovementRepo(), memory.NewMemoryStockTransferRepo(), &MockPublisher{}, memory.NewMemoryTransactionManager())
 		_, _ = svc.CreateStockBalance(ctx, "prod-1", "loc-1", decimal.NewFromInt(10))
@@ -233,9 +233,9 @@ func TestInventoryService_ReleaseReservation_Errors(t *testing.T) {
 		// Create reservation manually to bypass checks
 		svc.mu.Lock()
 		svc.reservations["ref-invalid"] = stockReservation{
-			materialID:  "prod-1",
-			locationID:  "loc-1",
-			quantity:    decimal.NewFromInt(5),
+			materialID: "prod-1",
+			locationID: "loc-1",
+			quantity:   decimal.NewFromInt(5),
 		}
 		svc.mu.Unlock()
 

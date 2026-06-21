@@ -11,13 +11,13 @@ import (
 )
 
 type DemandForecastHandler struct {
-	svc *service.DemandPlanningService
+	svc      *service.DemandPlanningService
 	response *utils.ResponseHelper
 }
 
 func NewDemandForecastHandler(svc *service.DemandPlanningService, response *utils.ResponseHelper) *DemandForecastHandler {
 	return &DemandForecastHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

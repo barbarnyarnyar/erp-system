@@ -840,6 +840,17 @@ func (r *MemoryCustomerCreditRepo) GetByID(ctx context.Context, id string) (*dom
 	return &cc, nil
 }
 
+func (r *MemoryCustomerCreditRepo) GetByCustomerID(ctx context.Context, customerID string) (*domain.CustomerCredit, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, cc := range r.data {
+		if cc.CustomerID == customerID {
+			return &cc, nil
+		}
+	}
+	return nil, errors.New("customer credit not found")
+}
+
 func (r *MemoryCustomerCreditRepo) Update(ctx context.Context, cc *domain.CustomerCredit) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

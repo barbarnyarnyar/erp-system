@@ -220,6 +220,11 @@ func (s *SalesOrderService) DeleteSalesOrder(ctx context.Context, id string) err
 	return s.orderRepo.Delete(ctx, id)
 }
 
+func (s *SalesOrderService) GetSalesOrderLines(ctx context.Context, orderID string) ([]domain.SalesOrderLine, error) {
+	return s.orderItemRepo.ListByOrderID(ctx, orderID)
+}
+
+
 func (s *SalesOrderService) ReceiveSalesOrder(ctx context.Context, salesOrderID, customerID string, totalAmount decimal.Decimal) error {
 	if err := s.publisher.Publish(ctx, domain.TopicCrmSalesOrderReceived, salesOrderID, domain.SalesOrderReceivedEvent{
 		SalesOrderID: salesOrderID,

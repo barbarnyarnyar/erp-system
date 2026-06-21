@@ -22,6 +22,7 @@ type ServiceConfig struct {
 	EAMService  string
 	PLMService  string
 	QMSService  string
+	BFFService  string
 }
 
 func Load() (*Config, error) {
@@ -39,6 +40,7 @@ func Load() (*Config, error) {
 			EAMService:  getEnv("EAM_SERVICE_URL", "http://eam-service:8007"),
 			PLMService:  getEnv("PLM_SERVICE_URL", "http://plm-service:8008"),
 			QMSService:  getEnv("QMS_SERVICE_URL", "http://qms-service:8009"),
+			BFFService:  getEnv("BFF_SERVICE_URL", "http://api-gateway-bff:8085"),
 		},
 	}, nil
 }

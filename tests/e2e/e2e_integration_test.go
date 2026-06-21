@@ -34,7 +34,7 @@ type locationResponse struct {
 type inventoryResponse struct {
 	Data struct {
 		ID             string `json:"id"`
-		QuantityOnHand int    `json:"quantity_on_hand"`
+		QuantityOnHand string `json:"quantity_on_hand"`
 	} `json:"data"`
 }
 
@@ -305,12 +305,12 @@ func createLocation(t *testing.T, token string) string {
 
 func createInventoryItem(t *testing.T, token string, productID, locationID string, qty int) string {
 	req := newRequest(t, "POST", "/api/v1/scm/inventory", map[string]interface{}{
-		"product_id":        productID,
-		"location_id":       locationID,
-		"quantity_on_hand":  qty,
-		"reorder_point":     5,
-		"maximum_stock":     100,
-		"unit_cost":         "100.00",
+		"product_id":       productID,
+		"location_id":      locationID,
+		"quantity_on_hand": fmt.Sprintf("%d", qty),
+		"reorder_point":    5,
+		"maximum_stock":    100,
+		"unit_cost":        "100.00",
 	}, token)
 
 	resp := doRequest(t, req)
@@ -410,7 +410,7 @@ func tryReserveStockFails(t *testing.T, token string, productID, locationID, sal
 	req := newRequest(t, "POST", "/api/v1/scm/inventory/reserve", map[string]interface{}{
 		"product_id":   productID,
 		"location_id":  locationID,
-		"quantity":     qty,
+		"quantity":     fmt.Sprintf("%d", qty),
 		"reference_id": salesOrderID,
 	}, token)
 
@@ -447,10 +447,10 @@ func establishWorkCenter(t *testing.T, token string) string {
 
 func appendStation(t *testing.T, token string, wcID string) string {
 	req := newRequest(t, "POST", fmt.Sprintf("/api/v1/manufacturing/mfg/work-centers/%s/stations", wcID), map[string]interface{}{
-		"routing_code":              "ROUT-E2E",
-		"station_type":              "ASSEMBLY",
-		"standard_setup_time_mins":  10,
-		"standard_run_time_mins":    20,
+		"routing_code":             "ROUT-E2E",
+		"station_type":             "ASSEMBLY",
+		"standard_setup_time_mins": 10,
+		"standard_run_time_mins":   20,
 	}, token)
 
 	resp := doRequest(t, req)
@@ -530,8 +530,8 @@ func commitYield(t *testing.T, token string, woID string, stationID string, qtyG
 
 func updateInventoryOnHand(t *testing.T, token string, invItemID string, qty int) {
 	req := newRequest(t, "PUT", fmt.Sprintf("/api/v1/scm/inventory/%s", invItemID), map[string]interface{}{
-		"quantity_on_hand":  qty,
-		"quantity_reserved": 0,
+		"quantity_on_hand":  fmt.Sprintf("%d", qty),
+		"quantity_reserved": "0",
 		"reorder_point":     5,
 		"maximum_stock":     100,
 		"unit_cost":         "100.00",
@@ -564,7 +564,7 @@ func reserveStockSucceeds(t *testing.T, token string, productID, locationID, sal
 	req := newRequest(t, "POST", "/api/v1/scm/inventory/reserve", map[string]interface{}{
 		"product_id":   productID,
 		"location_id":  locationID,
-		"quantity":     qty,
+		"quantity":     fmt.Sprintf("%d", qty),
 		"reference_id": salesOrderID,
 	}, token)
 

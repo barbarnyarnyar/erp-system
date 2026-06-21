@@ -10,13 +10,13 @@ import (
 )
 
 type WarehouseHandler struct {
-	svc *service.WarehouseService
+	svc      *service.WarehouseService
 	response *utils.ResponseHelper
 }
 
 func NewWarehouseHandler(svc *service.WarehouseService, response *utils.ResponseHelper) *WarehouseHandler {
 	return &WarehouseHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

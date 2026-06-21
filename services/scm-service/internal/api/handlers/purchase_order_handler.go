@@ -11,13 +11,13 @@ import (
 )
 
 type PurchaseOrderHandler struct {
-	svc *service.PurchaseOrderService
+	svc      *service.PurchaseOrderService
 	response *utils.ResponseHelper
 }
 
 func NewPurchaseOrderHandler(svc *service.PurchaseOrderService, response *utils.ResponseHelper) *PurchaseOrderHandler {
 	return &PurchaseOrderHandler{
-		svc: svc,
+		svc:      svc,
 		response: response,
 	}
 }

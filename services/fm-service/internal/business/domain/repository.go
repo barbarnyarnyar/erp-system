@@ -106,6 +106,7 @@ type BankAccountRepository interface {
 type CustomerCreditRepository interface {
 	Create(ctx context.Context, cc *CustomerCredit) error
 	GetByID(ctx context.Context, id string) (*CustomerCredit, error)
+	GetByCustomerID(ctx context.Context, customerID string) (*CustomerCredit, error)
 	Update(ctx context.Context, cc *CustomerCredit) error
 	List(ctx context.Context) ([]CustomerCredit, error)
 }

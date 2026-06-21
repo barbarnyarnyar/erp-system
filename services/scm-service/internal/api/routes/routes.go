@@ -28,6 +28,7 @@ func RegisterRoutes(
 		v1.GET("/products", prodHandler.GetProducts)
 		v1.POST("/products", prodHandler.CreateProduct)
 		v1.GET("/products/:id", prodHandler.GetProduct)
+		v1.GET("/materials/:id", prodHandler.GetProduct)
 		v1.PUT("/products/:id", prodHandler.UpdateProduct)
 		v1.DELETE("/products/:id", prodHandler.DeleteProduct)
 

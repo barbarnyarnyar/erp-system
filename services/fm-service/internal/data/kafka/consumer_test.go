@@ -31,8 +31,9 @@ func TestKafkaConsumer_Idempotency(t *testing.T) {
 	tmGL := memory.NewMemoryTransactionManager(accounts, entries, outbox)
 	glSvc := service.NewGeneralLedgerService(accounts, entries, outbox, tmGL)
 
+	credits := memory.NewMemoryCustomerCreditRepo()
 	tmAR := memory.NewMemoryTransactionManager(invoices, outbox)
-	arSvc := service.NewAccountsReceivableService(invoices, outbox, tmAR)
+	arSvc := service.NewAccountsReceivableService(invoices, credits, outbox, tmAR)
 
 	tmAP := memory.NewMemoryTransactionManager(bills, outbox)
 	apSvc := service.NewAccountsPayableService(bills, outbox, tmAP)

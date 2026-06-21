@@ -103,9 +103,9 @@ func ToDomainProduct(dbModel *Product) *domain.Product {
 
 // Location GORM struct
 type Location struct {
-	ID            string    `gorm:"primaryKey"`
-	LegalEntityID string    `gorm:"type:uuid;not null;index:idx_tenant_wh_code,unique;default:'00000000-0000-0000-0000-000000000000'"`
-	LocationCode  string    `gorm:"index:idx_tenant_wh_code,unique"`
+	ID            string `gorm:"primaryKey"`
+	LegalEntityID string `gorm:"type:uuid;not null;index:idx_tenant_wh_code,unique;default:'00000000-0000-0000-0000-000000000000'"`
+	LocationCode  string `gorm:"index:idx_tenant_wh_code,unique"`
 	LocationName  string
 	LocationType  string
 	IsActive      bool
@@ -146,9 +146,9 @@ func ToDomainLocation(dbModel *Location) *domain.Location {
 
 // Supplier GORM struct
 type Supplier struct {
-	ID            string    `gorm:"primaryKey"`
-	LegalEntityID string    `gorm:"type:uuid;not null;index:idx_tenant_sup_code,unique;default:'00000000-0000-0000-0000-000000000000'"`
-	SupplierCode  string    `gorm:"index:idx_tenant_sup_code,unique"`
+	ID            string `gorm:"primaryKey"`
+	LegalEntityID string `gorm:"type:uuid;not null;index:idx_tenant_sup_code,unique;default:'00000000-0000-0000-0000-000000000000'"`
+	SupplierCode  string `gorm:"index:idx_tenant_sup_code,unique"`
 	SupplierName  string
 	ContactName   string
 	Email         string
@@ -193,9 +193,9 @@ func ToDomainSupplier(dbModel *Supplier) *domain.Supplier {
 
 // VendorContract GORM struct
 type VendorContract struct {
-	ID             string    `gorm:"primaryKey"`
-	ContractNumber string    `gorm:"uniqueIndex"`
-	SupplierID     string    `gorm:"index"`
+	ID             string `gorm:"primaryKey"`
+	ContractNumber string `gorm:"uniqueIndex"`
+	SupplierID     string `gorm:"index"`
 	StartDate      time.Time
 	EndDate        time.Time
 	Terms          string
@@ -251,7 +251,7 @@ type StockBalance struct {
 	QuantityAvailable decimal.Decimal `gorm:"type:numeric(18,4)"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	Version           int             `gorm:"type:integer;not null;default:0"` // OCC concurrency shield
+	Version           int `gorm:"type:integer;not null;default:0"` // OCC concurrency shield
 
 	Location Location `gorm:"foreignKey:LocationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
@@ -351,12 +351,12 @@ func ToDomainInventoryMovement(dbModel *InventoryMovement) *domain.InventoryMove
 
 // StockTransfer GORM struct
 type StockTransfer struct {
-	ID             string     `gorm:"primaryKey"`
-	FromLocationID string     `gorm:"index"`
-	ToLocationID   string     `gorm:"index"`
-	MaterialID     string     `gorm:"index"`
+	ID             string          `gorm:"primaryKey"`
+	FromLocationID string          `gorm:"index"`
+	ToLocationID   string          `gorm:"index"`
+	MaterialID     string          `gorm:"index"`
 	Quantity       decimal.Decimal `gorm:"type:numeric(18,4)"`
-	Status         string // e.g. PENDING, TRANSFERRED, CANCELLED
+	Status         string          // e.g. PENDING, TRANSFERRED, CANCELLED
 	Version        int             `gorm:"type:integer;not null;default:0"` // OCC concurrency shield
 	TransferredAt  *time.Time
 	CreatedAt      time.Time
@@ -452,9 +452,9 @@ func ToDomainPurchaseRequisition(dbModel *PurchaseRequisition) *domain.PurchaseR
 
 // PurchaseRequisitionLine GORM struct
 type PurchaseRequisitionLine struct {
-	ID                    string `gorm:"primaryKey"`
-	PurchaseRequisitionID string `gorm:"index"`
-	MaterialID            string `gorm:"index"`
+	ID                    string          `gorm:"primaryKey"`
+	PurchaseRequisitionID string          `gorm:"index"`
+	MaterialID            string          `gorm:"index"`
 	QuantityRequested     decimal.Decimal `gorm:"type:numeric(18,4)"`
 	EstimatedUnitPrice    decimal.Decimal `gorm:"type:numeric(18,4)"`
 	LineTotal             decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -493,10 +493,10 @@ func ToDomainPurchaseRequisitionLine(dbModel *PurchaseRequisitionLine) *domain.P
 
 // PurchaseOrder GORM struct
 type PurchaseOrder struct {
-	ID               string    `gorm:"primaryKey"`
-	LegalEntityID    string    `gorm:"type:uuid;not null;index;default:'00000000-0000-0000-0000-000000000000'"`
-	PoNumber         string    `gorm:"uniqueIndex"`
-	SupplierID       string    `gorm:"index"`
+	ID               string `gorm:"primaryKey"`
+	LegalEntityID    string `gorm:"type:uuid;not null;index;default:'00000000-0000-0000-0000-000000000000'"`
+	PoNumber         string `gorm:"uniqueIndex"`
+	SupplierID       string `gorm:"index"`
 	OrderDate        time.Time
 	ExpectedDelivery time.Time
 	Status           string
@@ -546,9 +546,9 @@ func ToDomainPurchaseOrder(dbModel *PurchaseOrder) *domain.PurchaseOrder {
 
 // PurchaseOrderLine GORM struct
 type PurchaseOrderLine struct {
-	ID               string `gorm:"primaryKey"`
-	PurchaseOrderID  string `gorm:"index"`
-	MaterialID       string `gorm:"index"`
+	ID               string          `gorm:"primaryKey"`
+	PurchaseOrderID  string          `gorm:"index"`
+	MaterialID       string          `gorm:"index"`
 	QuantityOrdered  decimal.Decimal `gorm:"type:numeric(18,4)"`
 	QuantityReceived decimal.Decimal `gorm:"type:numeric(18,4)"`
 	UnitPrice        decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -595,9 +595,9 @@ func ToDomainPurchaseOrderLine(dbModel *PurchaseOrderLine) *domain.PurchaseOrder
 
 // Receipt GORM struct
 type Receipt struct {
-	ID              string    `gorm:"primaryKey"`
-	ReceiptNumber   string    `gorm:"uniqueIndex"`
-	PurchaseOrderID *string   `gorm:"index"`
+	ID              string  `gorm:"primaryKey"`
+	ReceiptNumber   string  `gorm:"uniqueIndex"`
+	PurchaseOrderID *string `gorm:"index"`
 	ReceivedDate    time.Time
 	Status          string
 	Notes           string
@@ -689,9 +689,9 @@ func ToDomainReceiptLine(dbModel *ReceiptLine) *domain.ReceiptLine {
 
 // Shipment GORM struct
 type Shipment struct {
-	ID                string    `gorm:"primaryKey"`
-	ShipmentNumber    string    `gorm:"uniqueIndex"`
-	SalesOrderID      *string   `gorm:"index"`
+	ID                string  `gorm:"primaryKey"`
+	ShipmentNumber    string  `gorm:"uniqueIndex"`
+	SalesOrderID      *string `gorm:"index"`
 	Carrier           string
 	TrackingNumber    string
 	ShippedDate       time.Time
@@ -786,8 +786,8 @@ func ToDomainShipmentLine(dbModel *ShipmentLine) *domain.ShipmentLine {
 
 // DemandForecast GORM struct
 type DemandForecast struct {
-	ID               string          `gorm:"primaryKey"`
-	MaterialID       string          `gorm:"index"`
+	ID               string `gorm:"primaryKey"`
+	MaterialID       string `gorm:"index"`
 	ForecastDate     time.Time
 	ForecastQuantity decimal.Decimal `gorm:"type:numeric(18,4)"`
 	ConfidenceLevel  decimal.Decimal `gorm:"type:numeric(18,4)"`
@@ -830,7 +830,7 @@ func ToDomainDemandForecast(dbModel *DemandForecast) *domain.DemandForecast {
 
 // KafkaEventInbox GORM struct
 type KafkaEventInbox struct {
-	AttemptCount     int       `gorm:"type:integer;default:0;not null"`
+	AttemptCount     int    `gorm:"type:integer;default:0;not null"`
 	EventID          string `gorm:"primaryKey"`
 	EventType        string
 	ProcessedAt      time.Time

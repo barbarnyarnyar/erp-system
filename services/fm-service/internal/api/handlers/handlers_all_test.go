@@ -52,12 +52,13 @@ func setupTestEnv() *testEnv {
 	assets := memory.NewMemoryCapitalAssetRepo()
 	scheduleLines := memory.NewMemoryDepreciationScheduleLineRepo()
 	inbox := memory.NewMemoryKafkaEventInboxRepo()
+	credits := memory.NewMemoryCustomerCreditRepo()
 
 	tmGL := memory.NewMemoryTransactionManager(accounts, entries, outbox)
 	glSvc := service.NewGeneralLedgerService(accounts, entries, outbox, tmGL)
 
 	tmAR := memory.NewMemoryTransactionManager(invoices, outbox)
-	arSvc := service.NewAccountsReceivableService(invoices, outbox, tmAR)
+	arSvc := service.NewAccountsReceivableService(invoices, credits, outbox, tmAR)
 
 	tmAP := memory.NewMemoryTransactionManager(bills, outbox)
 	apSvc := service.NewAccountsPayableService(bills, outbox, tmAP)

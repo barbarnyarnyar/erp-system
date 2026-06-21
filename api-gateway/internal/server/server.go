@@ -59,6 +59,7 @@ func (s *Server) setupRoutes() {
 		"eam":  s.config.Services.EAMService,
 		"plm":  s.config.Services.PLMService,
 		"qms":  s.config.Services.QMSService,
+		"ui":   s.config.Services.BFFService,
 	})
 
 	// API Gateway health check
@@ -243,6 +244,13 @@ func (s *Server) setupRoutes() {
 		{
 			pmGroup.Any("", proxyHandler.ProxyToService("pm"))
 			pmGroup.Any("/*path", proxyHandler.ProxyToService("pm"))
+		}
+
+		// UI / BFF routes (protected)
+		uiGroup := protected.Group("/ui")
+		{
+			uiGroup.Any("", proxyHandler.ProxyToService("ui"))
+			uiGroup.Any("/*path", proxyHandler.ProxyToService("ui"))
 		}
 
 		// Admin routes (require admin role)
