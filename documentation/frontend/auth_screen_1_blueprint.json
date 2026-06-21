@@ -1,0 +1,178 @@
+{
+  "screen_metadata": {
+    "module_id": "AUTH",
+    "screen_index": 1,
+    "screen_id": "AUTH_SCR_001",
+    "name": "Multi-Tenant Access Governance & Role-Based Security Hub",
+    "route": "/auth/governance"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dense security control console interface layout)",
+    "main_layout_template": "Three-Pane Matrix Viewport Layout (Left Navigation Sidebar Panel: Filterable Enterprise Corporate Roles Tree and Multi-Tenant Clearance Directories; Center Broad Workspace Panel: High-Density Relational Resource Permissions Grid Matrix mapping individual microservice paths to CRUD privilege toggles; Right Contextual Sidebar Panel: OAuth2 Security Profiles Token Lifetime Settings and Cryptographic Signature Key Rotators)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel structural role directories and full permission matrix worksheets side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left corporate roles tree collapses down into an expandable sliding left track container to preserve horizontal space for dense permissions columns grids maps)"
+    },
+    "key_visible_sections": [
+      { "id": "corporate_roles_directory", "title": "Enterprise System Roles Directory", "type": "Scrollable Interactive Tree View" },
+      { "id": "resource_permissions_matrix", "title": "Resource Paths CRUD Privileges Matrix Grid", "type": "High-Performance Variable Grid Canvas" },
+      { "id": "tenant_security_specifications", "title": "Tenant Identity Provider & Token Rule Configurations", "type": "Sticky Contextual Action Sheet Container" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active system infrastructure architect or security officer super-tokens -> Inherit global multi-tenant localization context codes -> Execute state request payload fetch from SecurityGovernanceService.getSecurityRoles()",
+      "on_role_select": "Asynchronously query internal resource route exceptions maps to fill the center permissions grid sheet with active/inactive state matrices indicators"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active system role modifications action breaks baseline administrative security policies (e.g., attempting to evict all global Root Super-Admins from a tenant partition)",
+        "action": "Intercept updates pipelines instantly, pop up high-priority screen warning 'Security Protocol Invariant Mismatch', lock layout inputs, and freeze save commands triggers"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_generate_signing_key",
+        "trigger": "User strikes action command key rotator selector link 'btn_rotate_cryptographic_keys'",
+        "behavior": "Pop center dialogue security wizard form requesting hardware security token signatures before executing dynamic JWT signature key rotations routines on backends"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_security_hardened", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Teal Solid Fill Gloss", "text": "MFA ENFORCED HARDENED" } },
+      { "id": "badge_security_vulnerable", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Amber Gold Flashing Outlined", "text": "MFA BYPASS ACTIVE" } },
+      { "id": "toggle_permission_switch", "type": "High-Contrast Boolean Slider Switch Component", "props": { "active_color": "royal-blue", "inactive_color": "slate-gray" } },
+      { "id": "btn_rotate_cryptographic_keys", "type": "Functional Core Action Core Button Element", "props": { "variant": "Danger High-Visibility Core Security Action", "icon": "key-round-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "role_directory_node_item",
+        "composition": "Combines system shield authority icon token + unique role code string identifier (e.g., ROLE_FINANCE_CONTROLLER) + scoped multi-tenant allocation metadata tag + inline inherited permission label text"
+      },
+      {
+        "id": "resource_path_privilege_row",
+        "composition": "Combines secure API endpoint path monospace string layout (e.g., /api/v1/finance/ledger/post) + service domain origin badge label + four separate instances of toggle_permission_switch representing CREATE, READ, UPDATE, DELETE rules"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "enterprise_roles_feed_viewport",
+        "composition": "High-density recursive list tree layout streaming active multi-tenant authorization profiles, handling immediate filtering actions and priority level bindings."
+      },
+      {
+        "id": "permissions_orchestration_grid_canvas",
+        "composition": "High-performance virtual scrolling spreadsheet grid canvas nesting rows item elements instances of resource_path_privilege_row molecules structures, complete with select-all-columns master headers overrides buttons."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced fonts stack used strictly on endpoint routes paths strings, role keys tokens, cryptographic hash fields, and timeout numbers rows to verify grid layouts alignments balances flawlessly)",
+      "scales": {
+        "security_workspace_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: tight text-transform regular",
+        "api_route_mono_text": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 500 | color: slate-gray-bright"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "security_anchor_blue": "#2563EB (Royal Blue Access Governance Domain Anchor Primary Focus Hue)",
+      "permissions_active_blue": "#3B82F6 (Corporate Light Blue Active Permission Authorization Switch Token Fill)",
+      "security_breach_crimson": "#EF4444 (Crimson Red Policy Violation Out-Of-Bounds Alert Flash Glow Border)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard system-wide section partition boundary padding unit metrics parameters)",
+      "permissions_row_gap_density": "0.375rem (6px dense spreadsheet format padding layout units dividing configuration tracks)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "resource_path_privilege_row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 80ms execution curves duration curve time parameter" },
+      { "target": "btn_rotate_cryptographic_keys:active", "style_mutation": "transform scale parameters value modifier changes to 0.96 sizing metrics to project critical physical click danger actions feed look context back instantly" }
+    ],
+    "accessibility_aria_roles": {
+      "permissions_orchestration_grid_canvas": "role='grid' housing multi-column secure system resource privilege boundaries mappings spreadsheets arrays",
+      "tenant_security_specifications": "role='region' accompanied by explicit aria-live='assertive' configuration fields monitoring real-time cryptographic tokens lifetime modifications metrics parameters"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_configured_rbac_roles_count": 32,
+      "global_mfa_compliance_rate_pct": 100.0,
+      "reporting_tenant_partition_id": "tenant_corp_global_us_001",
+      "security_roles_directory_collection": [
+        {
+          "role_id": "role_auth_2026_00412",
+          "role_token_string": "ROLE_FINANCE_CONTROLLER",
+          "display_title_label": "Corporate Financial Controller & Ledger Auditor Profile",
+          "tenant_scope_isolation_id": "tenant_corp_global_us_001",
+          "mfa_requirement_enforced": true,
+          "token_validity_duration_seconds": 3600,
+          "assigned_permissions_matrix": [
+            { "resource_route_path": "/api/v1/finance/ledger/post", "domain_service_origin": "FM_LedgerService", "can_create": true, "can_read": true, "can_update": false, "can_delete": false },
+            { "resource_route_path": "/api/v1/finance/trial-balance/compile", "domain_service_origin": "FM_LedgerService", "can_create": true, "can_read": true, "can_update": true, "can_delete": false }
+          ]
+        }
+      ],
+      "active_oauth2_provider_profiles": {
+        "identity_gateway_provider_url": "https://auth.enterprise-cluster.internal/oauth2/v2",
+        "active_signing_algorithm": "RS256",
+        "key_fingerprint_sha256": "SHA256:8849:A321:9942:C004:B012:F149:E088:D044:E125:FA42:1004",
+        "last_key_rotation_timestamp": "2026-06-01T00:00:00Z"
+      }
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_security_role_focus_id": "Tracks currently focused roles tree directory row lookup alphanumeric token string key used to hydrate endpoint spreadsheet lists (string | null default pointer value)",
+      "is_key_rotation_wizard_visible": "Boolean state variable tracking presentation configurations parameters toggling cryptographic key signing authorization wizard forms canvas windows overlays",
+      "permissions_matrix_reactive_collection_buffer": "Reactive array collection caching ongoing switch toggles modifications parameters fields data structures values variations before saving records out to database layers"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared enterprise system global multi-tenant business scope token variable controlling schema isolation domain values cross microservice runtime executions",
+      "auth_global_token_blacklist_cache": "Shared infrastructure cache array capturing revoked session hashes asynchronously across clusters networks to force immediate browser user evictions on access denials flags updates"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous module scripts executing zero compiler dependencies scripts or heavy external configurations arrays mapping scripts packages layers",
+    "performance_benchmarks": "Toggling permission switches arrays models parameters or rendering full list filters switches across a 500 API endpoint resource paths grid sheet table must re-evaluate DOM configurations frames under an execution ceiling threshold boundary value target metric of 11ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "role_directory_node_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.ui.governance.role_selected",
+        "executes_backend_function": "SecurityGovernanceService.getResourcePermissionsByRoleToken(context.role_token_string)",
+        "target_mutation_action": "Bind retrieved endpoints privileges data direct mapping fields records inside local permissions_matrix_reactive_collection_buffer store grids caches, and apply lookup keys values forward into active_security_role_focus_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_rotate_cryptographic_keys",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Flip state tracking variable flag configuration is_key_rotation_wizard_visible parameter modifier value to true to present layout key generation wizard overlays dialogue canvas frames instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_key_wizard_confirm_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.crypto.keys_rotated",
+        "executes_backend_function": "SecurityGovernanceService.rotateTenantSigningKeys(active_security_role_focus_id)",
+        "target_mutation_action": "Publish secure infrastructure transformation processing token packets; update return provider properties metadata details inline inside active_oauth2_provider_profiles view collections local storage data blocks; turn off key wizard overlay flags parameters",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_global_security_auditor_logs",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.ui.navigated.security_logs",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/auth/security-logs (Advances browser web layout router framework spatial navigation coordinates parameters forward into final AUTH sequence Screen AUTH_SCR_002 Global Session Audit Spreadsheet & Brute-Force Monitoring Hub Viewport Frame)"
+      }
+    ]
+  }
+}

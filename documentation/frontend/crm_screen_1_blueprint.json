@@ -1,0 +1,186 @@
+{
+  "screen_metadata": {
+    "module_id": "CRM",
+    "screen_index": 1,
+    "screen_id": "CRM_SCR_001",
+    "name": "B2B Account & Lead Qualification Dashboard",
+    "route": "/sales/accounts"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px corporate account tracking interface split canvas)",
+    "main_layout_template": "Three-Pane Activity Hub Layout (Left Structural Column: Unified Sales Prospect Pipeline and Active Lead Scoring List Tracker; Center Broad Workspace: Core Account Profiles Data Sheet, Interaction Timeline Feed, and Contact Tier Grid; Right Collapsible Panel: Dynamic Predictive Analytics Tracker & Lead Conversion Action Toolbar)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains permanent concurrent pipeline columns and full contact grid mapping visibility)",
+      "tablet_landscape": "1024px - 1279px (The lead pipeline stack collapses into a slide-out drawer tab component, leaving the core account data sheet maximized)"
+    },
+    "key_visible_sections": [
+      { "id": "sales_lead_prospect_stream", "title": "Sales Funnel Prospect List Stream", "type": "Scrollable Interactive Tracking Stack" },
+      { "id": "account_profile_master_sheet", "title": "B2B Enterprise Account Profile Master Sheet", "type": "High-Density Core Data Sheet Workspace" },
+      { "id": "contact_tier_relationship_grid", "title": "Corporate Decision-Maker Hierarchy Grid", "type": "Tabular Operational Grid Component" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Validate user sales role assignments permissions parameters -> Acquire multi-tenant regional assignment strings -> Execute state payload fetch from CustomerRelationshipService.getB2BAccounts()",
+      "on_account_select": "Asynchronously query customer conversion histories to re-hydrate interaction timeline feed modules and map current contact records tables"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active account profile context triggers an internal credit risk or compliance validation failure condition",
+        "action": "Flash an immediate semantic layout alert boundary 'Account Order-Hold State Engaged' and completely block downstream commercial transaction creation button paths"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_qualify_lead_wizard",
+        "trigger": "User strikes action control command element 'btn_convert_lead'",
+        "behavior": "Pop multi-tiered conversion wizard overlay capturing legal tax identities mapping parameters, expected commercial bounds, and initializing account ownership parameters"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_tier_decision_maker", "type": "Semantic Authority UI Badge Tag", "props": { "variant": "Purple Solid Fill", "text": "TIER-1 DECISION MAKER" } },
+      { "id": "badge_lead_hot", "type": "Semantic Scoring Pill Component", "props": { "style": "crimson-glow-pulse", "text": "HOT LEAD [90+]" } },
+      { "id": "input_lead_score_override", "type": "Numeric Threshold Range Slider Input Box", "props": { "min": "1", "max": "100", "step": "1" } },
+      { "id": "btn_convert_lead", "type": "Functional Primary Core Action Core Button", "props": { "variant": "Primary Revenue Success Emerald", "icon": "trending-up-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "lead_prospect_tracking_card_item",
+        "composition": "Combines prospect corporate metadata name string + reactive scoring numeric metric indicator + industry vertical tag indicator + chronological last-touch timestamp line elements"
+      },
+      {
+        "id": "timeline_interaction_activity_node",
+        "composition": "Combines log interaction type vector emblem + customer communication brief details block + operational owner label badge + attachment file link components"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "b2b_accounts_prospecting_feed_viewport",
+        "composition": "High-density list layout streaming active sales leads, handling immediate filtering actions, priority ranking computations, and selected row active focus index bindings."
+      },
+      {
+        "id": "account_relationship_management_canvas",
+        "composition": "Unified container layout grouping multiple sub-module layouts fields including general company metrics tables, nested lists instances of timeline_interaction_activity_node arrays, and transactional opportunity tracking panels."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Precision sizing models maps applied strictly to numeric metrics scales to ensure dense text alignment preservation parameters)",
+      "scales": {
+        "lead_metric_giant_score": "font-size: 2.0rem (32px) | font-weight: 800 | tracking: letter-spacing tight mono-numerals alignment",
+        "account_title_heading": "font-size: 1.25rem (20px) | font-weight: 700 | line-height: 1.6rem"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer)",
+      "lead_score_hot_pulse": "#EF4444 (Crimson Red Hot Priority Scoring Indicator Hue Accent)",
+      "conversion_action_emerald": "#10B981 (Emerald Green Lead Progression Functional Action Trigger Fill)",
+      "timeline_border_slate": "#334155 (Slate Charcoal Chronological Feed Tracking Vector Separation Line)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px component-wide separation layout boundaries metrics parameters)",
+      "timeline_node_vertical_gap": "0.75rem (12px visual gap partitions between continuous customer log items)",
+      "border_radius_tokens": "0.5rem (8px standard organic geometric soft corner specifications layout designs)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "lead_prospect_tracking_card_item:hover", "style_mutation": "background-color properties transform focus setting map to value #334155 utilizing a smooth 100ms calculation ease curve duration" },
+      { "target": "btn_convert_lead:active", "style_mutation": "transform scale parameters value modifier changes to 0.98 sizing metrics to ensure proper feedback clicks registration profiles" }
+    ],
+    "accessibility_aria_roles": {
+      "b2b_accounts_prospecting_feed_viewport": "role='listbox' housing accessible individual multi-tier custom prospect selection list elements",
+      "account_relationship_management_canvas": "role='main' parsing enterprise operations customer information monitoring views sheets templates layouts"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_active_pipeline_leads_count": 310,
+      "estimated_pipeline_revenue_valuation_functional": 8459000.00,
+      "reporting_currency_code": "USD",
+      "b2b_accounts_prospects_collection": [
+        {
+          "account_id": "cust_amer_902",
+          "corporate_legal_name": "Acme North American Distribution Corp",
+          "industry_vertical_classification": "Logistics Industrial Systems",
+          "lead_qualification_score": 92,
+          "account_owner_sales_agent_id": "user_sales_rep_08",
+          "interaction_timeline_history": [
+            { "activity_id": "act_crm_99341", "timestamp": "2026-06-19T11:00:00Z", "activity_type": "Onsite_Discovery_Meeting", "summary_notes_string": "Completed initial validation architectural specs session with VP of Engineering operations. Client expressed clear alignment on volume requirements criteria constraints.", "recorded_by_user": "user_sales_rep_08" }
+          ],
+          "associated_contacts_hierarchy": [
+            { "contact_id": "con_acme_01", "full_name": "Sarah Jenkins", "corporate_role_title": "Vice President of Supply Chain Automation Infrastructure", "contact_tier_level": "Tier-1 Decision Maker", "email_address": "s.jenkins@acmedistribution.net", "phone_direct_line": "+1-555-884-9021" }
+          ]
+        },
+        {
+          "account_id": "cust_apac_410",
+          "corporate_legal_name": "Nippon Advanced Heavy Machinery Fabrication Ltd",
+          "industry_vertical_classification": "Automated Robotics Manufacturing",
+          "lead_qualification_score": 64,
+          "account_owner_sales_agent_id": "user_sales_rep_11",
+          "interaction_timeline_history": [
+            { "activity_id": "act_crm_99104", "timestamp": "2026-06-15T04:20:00Z", "activity_type": "Inbound_RF_Submission", "summary_notes_string": "Received baseline technical request files structure sheets from procurement division. Evaluating manufacturing capabilities fit constraints parameters.", "recorded_by_user": "user_system_gateway" }
+          ],
+          "associated_contacts_hierarchy": [
+            { "contact_id": "con_nippon_04", "full_name": "Kenji Takahashi", "corporate_role_title": "Lead Engineering Procurement Manager", "contact_tier_level": "Tier-2 Influencer Evaluation", "email_address": "takahashi.k@nipponmachinery.co.jp", "phone_direct_line": "+81-3-5551-9942" }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_b2b_account_pointer_id": "Tracks target active enterprise profile index matching account entity used to hydrate database profiles view templates (string | null default pointer value)",
+      "is_lead_wizard_visible": "Boolean state variable tracking presentation boundary tolerances toggling the lead qualification/conversion dialog forms wizard layers overlays",
+      "prospect_search_string_query": "String tracking search characters inputs running reactive filters matching across name strings or vertical categories arrays instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared systems global tenant parameter routing cross-module microservices business operations contexts boundaries settings across runtime engine environments",
+      "crm_sales_opportunity_pipeline_cache": "Global datastore cache saving active multi-million valuation sales deal states to maintain instant interface rendering consistency between screen changes"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document markup structures connected straight to standard Tailwind CSS grid style class sets running zero compilation environments scripts natively inside modular asynchronous ES6 execution classes using simple pattern arrays definitions",
+    "performance_benchmarks": "Filtering 1,000 lead card components list layout matrices entries using key search evaluation strings matches must update local interface DOM element structures within a target runtime boundary limit threshold of 10ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "lead_prospect_tracking_card_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.ui.accounts.prospect_selected",
+        "executes_backend_function": "CustomerRelationshipService.getAccountTimeline(context.account_id)",
+        "target_mutation_action": "Inject retrieved log timeline nodes metrics straight inside local interaction_timeline_history store tracking arrays caches, then pass index key straight to selected_b2b_account_pointer_id flag variable",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_convert_lead",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Set local state tracking flag tracker is_lead_wizard_visible modifier to true to display lead conversion overlay canvas templates blocks instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_qualify_wizard_confirm_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.lead.qualified",
+        "executes_backend_function": "CustomerRelationshipService.qualifySalesLeadProsp(payload_conversion_wizard_fields_data)",
+        "target_mutation_action": "Transmit operational confirmation payload packages; modify internal ranking indices metrics inline within records data cache vectors; drop wizard dialog canvas visibility layer flags configurations parameters",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_switch_to_commercial_quoting_view",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.ui.navigated.quoting_workspace",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/sales/quotes (Advances web router framework coordinate metrics tracking positions ahead into next sequential Screen CRM_SCR_002 Estimation Core Viewport Layout)"
+      }
+    ]
+  }
+}

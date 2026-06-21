@@ -1,0 +1,203 @@
+{
+  "screen_metadata": {
+    "module_id": "FM",
+    "screen_index": 2,
+    "screen_id": "FM_SCR_002",
+    "name": "Universal Journal Entry & Posting Ledger",
+    "route": "/finance/journal-entries"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px grid canvas with horizontal data stretching configuration)",
+    "main_layout_template": "Split Layout Split-Pane Splitter (Top Row: Balanced Ledger Filter Controls & Financial Period Toggle Matrix; Bottom-Left: Double-Entry Transaction Data Stream Table; Bottom-Right: High-Precision Transaction Creation Worksheet Panel & JSON Dimensional Payload Validator Workspace)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains double-entry worksheet open on right side while parsing ledger rows on left side)",
+      "tablet_landscape": "1024px - 1279px (Worksheet panel transitions to full overlay drawer toggled via dedicated creation buttons)"
+    },
+    "key_visible_sections": [
+      {
+        "id": "ledger_filter_header",
+        "title": "Accounting Period & Scope Controls",
+        "type": "Static Top Strip Row"
+      },
+      {
+        "id": "journal_entry_stream_table",
+        "title": "Unified ACDOCA Transaction History Feed",
+        "type": "Scrollable Variable-Width Data Table"
+      },
+      {
+        "id": "journal_creation_worksheet",
+        "title": "Double-Entry Matrix Balancing Worksheet Panel",
+        "type": "Sticky Action Work Control Panel"
+      }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify valid financial period token -> Extract current tracking dimensions state mapping schemas -> Execute state fetch from UniversalLedgerService.getJournalEntries()",
+      "on_submit_success": "Emit journal validation token event -> Auto-refresh transaction history tables -> Clear balanced workspace input rows back to standard defaults"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If ledger financial period context parameter evaluates to locked or closed state",
+        "action": "Disable transactional inputs across worksheet container layer completely and show inline banner alert with status 'Read-Only Period Profile Active'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "drawer_json_dimension_inspector",
+        "trigger": "User hits elements 'btn_inspect_tracking_dimensions'",
+        "behavior": "Slide out explicit 500px wide code visualization module layout pane containing high-contrast key-value fields mapping operational tracking dimensions metadata context strings"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "input_amount_debit", "type": "Tabular Numeric Entry Input Component Box", "props": { "placeholder": "0.00", "align": "right", "font": "monospace" } },
+      { "id": "input_amount_credit", "type": "Tabular Numeric Entry Input Component Box", "props": { "placeholder": "0.00", "align": "right", "font": "monospace" } },
+      { "id": "select_source_module_badge", "type": "Data Selection Drop-Down Input Trigger", "options": ["CRM", "SCM", "HR", "PRJ", "MANUAL"] },
+      { "id": "indicator_balancing_status_dot", "type": "Conditional Color Element Token Status Node", "props": { "balanced": "emerald-green", "unbalanced": "crimson-red" } }
+    ],
+    "molecules": [
+      {
+        "id": "journal_entry_balanced_row_item",
+        "composition": "Combines account code drop-down picker selector + high-precision numeric debit input box + high-precision numeric credit input box + tracking tag text field input array configuration grouping components",
+        "events": [ "onChange: trigger calculations analyzing worksheet row debit and credit value differentials" ]
+      },
+      {
+        "id": "ledger_balancing_summary_bar",
+        "composition": "Combines total calculated debit label + total calculated credit label + calculated variance delta numeric value text box + conditional tracking status indicator node element"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "double_entry_transactional_creation_canvas",
+        "composition": "Dynamically adding row arrays item elements tracking multiple matching balanced journal line vectors, complete with interactive line deletion commands and ledger validation mechanism."
+      },
+      {
+        "id": "universal_acdoca_flat_log_data_grid",
+        "composition": "High-density multi-column row listing tracking operational metrics including unique entry id tokens, source modules tracking parameters, functional balances, tracking tags JSON blobs, and chronological timestamp data strings."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "'JetBrains Mono', 'Fira Code', monospace (Strictly enforced font engine configuration across accounting tables to secure structural vertical decimal row alignment markers)",
+      "scales": {
+        "summary_total_values": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: tight numeric spacing",
+        "table_row_metadata_tags": "font-size: 0.75rem (12px) | font-weight: 400 | color: slate muted tones"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Dark Mode Environment Base Frame Layout Grid)",
+      "worksheet_surface_elevation": "#111827 (Dark Charcoal Control Layer Element Sheet Background Panel)",
+      "debit_positive_glint": "#10B981 (Emerald Green Balanced Metric Highlight Border Text Tone)",
+      "credit_negative_neutral": "#64748B (Slate Gray Standard Typography Base Allocation Line Content)",
+      "error_imbalance_glow": "#EF4444 (Crimson Red Mismatch Indicator Tracking State Accent Glow Outline)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "0.75rem (12px compact spacing patterns for transaction layout structures)",
+      "worksheet_row_gap": "0.5rem (8px grid spacing boundaries dividing consecutive line entry rows)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "input_amount_debit:focus", "style_mutation": "border-color transition changes to #3B82F6 using 100ms timing window; auto-select internal string components contents instantly on user entry action" },
+      { "target": "journal_entry_balanced_row_item:invalid", "style_mutation": "border outline border-color updates to #EF4444 signaling broken arithmetic rules inside matching components layers" }
+    ],
+    "accessibility_aria_roles": {
+      "double_entry_transactional_creation_canvas": "role='form' parsing accounting inputs validation structures",
+      "ledger_balancing_summary_bar": "role='status' wrapping live updates analyzing debit credit balancing variance math variables using explicit aria-live='polite' configuration properties"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "active_financial_period_token": "2026-Q2",
+      "worksheet_live_variance_delta": 0.00,
+      "universal_posted_journal_records": [
+        {
+          "entry_id": "je_flat_2026_98231",
+          "source_module": "CRM",
+          "posting_date": "2026-06-14T15:30:00Z",
+          "financial_period": "2026-06",
+          "lines": [
+            {
+              "line_id": "line_98231_1",
+              "account_code": "1101",
+              "account_name": "Operating Liquidity Holding Bank Vault",
+              "amount_functional": 50000.00,
+              "currency_transactional": "USD",
+              "entry_direction": "DEBIT"
+            },
+            {
+              "line_id": "line_98231_2",
+              "account_code": "4001",
+              "account_name": "Deferred Product Sales Revenue Line",
+              "amount_functional": 50000.00,
+              "currency_transactional": "USD",
+              "entry_direction": "CREDIT"
+            }
+          ],
+          "tracking_dimensions": {
+            "sales_order_id": "so_crm_84920",
+            "customer_id": "cust_amer_902",
+            "cost_center": "cc_us_sales_01",
+            "project_id": "prj_cloud_mig_2026"
+          }
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "worksheet_active_rows_collection": "Reactive array layer parsing operational balance input line configurations currently active in user views [array of objects matching accounting inputs parameters structures]",
+      "calculated_running_debit_total": "High-precision internal calculation variable tracking added value properties across active debit entry input structures (numeric value initialized to 0.00)",
+      "calculated_running_credit_total": "High-precision internal calculation variable tracking added value properties across active credit entry input structures (numeric value initialized to 0.00)",
+      "selected_inspect_entry_pointer": "Tracks single nested object reference pointer for targeting full structured tracking dimensions data payload inside sidebar inspect drawers [object reference | null]"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared enterprise system operational scope parameter configuring active transactional tenant domains tracking filters (string layout initialization parameter)",
+      "system_active_currency_token": "Global functional currency configuration identifier default context tracking values ('USD')"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 execution scope coupled to standard Tailwind CSS class definitions with responsive positioning parameters logic engines written in modular modern ES6 functional syntax structures featuring explicit BigInt/Decimal conversion abstractions to safeguard calculations against primitive floating-point rounding errors",
+    "performance_benchmarks": "Calculated balancing summary matrix bar rows values metrics must trigger updates instantly matching typing interaction input updates without micro-stuttering typing experiences or blocking runtime thread operations arrays"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "btn_inspect_tracking_dimensions",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.journal.inspect_dimensions",
+        "executes_backend_function": null,
+        "target_mutation_action": "Set state tracking variable selected_inspect_entry_pointer values to target row record elements payload metadata context configurations, then open drawer_json_dimension_inspector workspace canvas overlays",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_add_worksheet_row_trigger",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Append empty row allocation node template element into worksheet_active_rows_collection state arrays to generate supplementary matrix input forms fields dynamically",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_submit_post_ledger_entry",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.journal.posted",
+        "executes_backend_function": "UniversalLedgerService.postManualJournalEntry(worksheet_active_rows_collection)",
+        "target_mutation_action": "Perform arithmetic evaluation confirming validation parameters state metric equals zero; append posted record matrix return structures back into tracking logs universal_posted_journal_records data state arrays cache layers; flush entry worksheets collections elements parameters clean",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_return_to_ledger_dashboard",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.navigated.ledger_core",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/finance/ledger (Triggers transition routing back to Screen 1 Workspace Command Center Canvas View)"
+      }
+    ]
+  }
+}

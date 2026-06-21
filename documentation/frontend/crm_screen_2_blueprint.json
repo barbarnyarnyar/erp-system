@@ -1,0 +1,174 @@
+{
+  "screen_metadata": {
+    "module_id": "CRM",
+    "screen_index": 2,
+    "screen_id": "CRM_SCR_002",
+    "name": "High-Precision Commercial Quoting Workspace",
+    "route": "/sales/quotes"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px corporate quoting workspace split canvas framework)",
+    "main_layout_template": "Split Row Sheet Workspace (Left Side Panel: Historical Customer Quotations Stream Grid & Performance Metrics; Right Main Workspace Panel: Live Line-Item Pricing Estimator Grid, Variable Margin/Markup Calculators, and Rich-Text Commercial Terms Builder Panel)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders simultaneous quotation logs feed and active itemization pricing matrix worksheets side-by-side)",
+      "tablet_landscape": "1024px - 1279px (The left historical grid collapses down into a left sidebar drawer tab, prioritizing structural spacing for extensive multi-line matrix rows data sets)"
+    },
+    "key_visible_sections": [
+      { "id": "quotes_stream_sidebar", "title": "Historical Quotations Log Feed", "type": "Scrollable Interactive Navigation List" },
+      { "id": "pricing_estimation_matrix", "title": "Commercial Pricing Worksheet Matrix Grid", "type": "Dynamic Virtualized Calculating Spreadsheet" },
+      { "id": "quote_aggregates_dock", "title": "Gross Margin & Financial Yield Validation Bar", "type": "Sticky Action Control Sub-Panel" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active sales agent identity keys -> Pull pricing books models matching client localization contexts -> Execute state payload fetch from CustomerRelationshipService.getQuotes()",
+      "on_line_item_mutate": "Recalculate intermediate item aggregates inline, evaluate gross profitability ratios, and display reactive compliance alerts inside the quote_aggregates_dock grid"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active quotation's aggregated discount threshold flag overrides maximum company parameters tolerance bounds (> 25.0%)",
+        "action": "Deactivate external dispatch button triggers instantly, flag state parameters inline to 'Imbalance - Awaiting Executive Approval Override', and reveal structural secure token authorization fields panels"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "drawer_plm_parts_lookup",
+        "trigger": "User strikes action element click trigger 'btn_add_catalog_item'",
+        "behavior": "Slide out 500px wide vertical parts catalog lookup matrix drawer container from left side, enabling rapid item selection hooks synchronized directly with backend MaterialMaster tracking parameters definitions"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_quote_draft", "type": "Semantic Progress Pill Label", "props": { "variant": "Slate Gray Gray", "text": "DRAFT" } },
+      { "id": "badge_quote_approved", "type": "Semantic Progress Pill Label", "props": { "variant": "Emerald Green Solid", "text": "APPROVED CLIENT READY" } },
+      { "id": "input_line_discount_pct", "type": "Tabular Numeric Entry Input Component Box", "props": { "placeholder": "0.00", "align": "right", "max": "100.00" } },
+      { "id": "indicator_profitability_halo", "type": "Conditional Color Element Token Status Border", "props": { "healthy": "border-indigo-500", "compromised": "border-red-500" } }
+    ],
+    "molecules": [
+      {
+        "id": "pricing_matrix_row_item",
+        "composition": "Combines monospaced part lookup selector ID + baseline catalog unit cost label + markup percent entry input box + custom line quantity input box + custom discount input box + computed target gross value display text node component"
+      },
+      {
+        "id": "margin_yield_statistics_card",
+        "composition": "Combines metric title label context text + high-precision macro numeric percentage value block + conditional vector trend element graphics"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "commercial_pricing_estimation_engine_canvas",
+        "composition": "Dynamic calculating spreadsheet canvas nesting multiple row item elements instances of pricing_matrix_row_item grouping models, complete with tax schedule multipliers arrays widgets blocks."
+      },
+      {
+        "id": "quote_proposals_historical_log_viewport",
+        "composition": "High-density column listing displaying searchable properties: internal sequence numbers keys, related client identity tags, aggregate quote contract values totals, effective lifespans, and lifecycle stage tracking indicators pills."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Tabular monospace styling patterns enforced across calculations grids to keep decimal alignments locked verticals lines structures layout frames)",
+      "scales": {
+        "workspace_header_large_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: letter-spacing tight",
+        "calculating_grid_mono_digits": "font-size: 0.875rem (14px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer)",
+      "revenue_healthy_indigo": "#6366F1 (Indigo Blue Target Performance Profit Margin Yield Highlight)",
+      "discount_alert_crimson": "#EF4444 (Crimson Red Maximum Margin Boundary Violation Glow Accent)",
+      "catalog_text_muted_slate": "#64748B (Slate Gray Subdued Subledger Metadata Typography Accent Row Labels)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px workspace container block margin boundary parameters layouts grids)",
+      "calculating_spreadsheet_row_gap": "0.5rem (8px compact dense rows layout spaces formatting metrics patterns)",
+      "border_style_token": "1px solid #334155 (Slate Charcoal Clean Hard Geometric Framework Separator Lines)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "pricing_matrix_row_item:focus-within", "style_mutation": "border-color properties modify context setting map value to #3B82F6 over an immediate 90ms duration curves execution window framework" },
+      { "target": "input_line_discount_pct:change", "style_mutation": "Fires mathematical re-evaluation loops inside calculations script grids, flashing updated sub-totals rows borders configurations inline with an instantaneous tint color glint filter" }
+    ],
+    "accessibility_aria_roles": {
+      "commercial_pricing_estimation_engine_canvas": "role='form' parsing transaction items layout inputs validations controls",
+      "quote_aggregates_dock": "role='status' accompanied by explicit aria-live='polite' configurations fields monitoring live pricing aggregate balance changes metric vectors"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "active_total_quotes_count": 42,
+      "estimated_proposals_margin_average_pct": 34.8,
+      "reporting_currency_code": "USD",
+      "quotations_historical_records_collection": [
+        {
+          "quote_id": "qte_crm_2026_00492",
+          "quote_number": "QTE-2026-99381",
+          "customer_id": "cust_amer_902",
+          "customer_corporate_name": "Acme North American Distribution Corp",
+          "total_gross_amount_functional": 425000.00,
+          "total_discount_amount_functional": 25000.00,
+          "computed_gross_margin_percentage": 38.2,
+          "quote_stage_status": "DRAFT",
+          "expiration_date": "2026-07-21T23:59:59Z",
+          "quote_line_items": [
+            { "line_id": "qline_99381_1", "part_number_id": "part_structural_plate_09", "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12", "catalog_unit_cost": 300.00, "markup_applied_pct": 50.00, "final_unit_price": 450.00, "quantity_ordered": 1000, "discount_applied_pct": 5.88, "total_calculated_line_yield": 425000.00 }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_quote_record_focus_id": "Tracks target focused quotation index entry string lookup key used to inflate calculation blocks (string | null default pointer value)",
+      "is_parts_lookup_drawer_open": "Boolean state toggling layout space vertical margins visibility boundaries parsing component selection catalog layers overlays",
+      "quote_lines_reactive_collection_buffer": "Reactive array collection caching ongoing line additions, pricing parameters formulas updates, and custom row deletion methods before saving mutations out to database states"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application session multi-tenant corporate grouping framework context configuration data mapping code parameters settings",
+      "plm_material_master_shared_buffer": "Global storage data cache allocating versioned part recipes specifications data blocks locally to prevent repeated catalog asset pipeline queries"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing variables logic code natively via ES6 modern asynchronous modules scripts deploying precise calculation string abstractions to eliminate floating-point pricing anomalies across spreadsheets",
+    "performance_benchmarks": "Recalculating macro percentage yield blocks metrics over a 100-row line-item quote proposal estimation canvas following quick cell inputs updates must execute computation cycles frames under a target threshold limit of 8ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "quotes_stream_sidebar_data_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.ui.quoting.quote_selected",
+        "executes_backend_function": "CustomerRelationshipService.getQuoteLinesDetails(context.quote_id)",
+        "target_mutation_action": "Bind fetched structural pricing lines items parameter records directly inside local quote_lines_reactive_collection_buffer tracking arrays caches and pass lookup reference values straight into selected_quote_record_focus_id flag variable",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_add_catalog_item",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local state flag configuration is_parts_lookup_drawer_open modifier value parameter to true to illuminate parts selection sidebar panels canvas instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_submit_save_proposal_record",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.quote.updated",
+        "executes_backend_function": "CustomerRelationshipService.updateQuotationProposal(quote_id, quote_lines_reactive_collection_buffer)",
+        "target_mutation_action": "Perform mathematical clearance logic testing margin boundaries limits specifications parameters; append successfully processed row parameters updates back inside internal database caches maps arrays layers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_switch_to_sales_order_pipeline_viewport",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.ui.navigated.sales_orders_dashboard",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/sales/orders (Advances browser web layout router framework spatial navigation coordinates tracker ahead into final sequence CRM Screen CRM_SCR_003 Fulfillment Pipeline Viewport Layout)"
+      }
+    ]
+  }
+}

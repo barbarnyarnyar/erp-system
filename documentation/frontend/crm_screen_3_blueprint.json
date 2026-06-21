@@ -1,0 +1,170 @@
+{
+  "screen_metadata": {
+    "module_id": "CRM",
+    "screen_index": 3,
+    "screen_id": "CRM_SCR_003",
+    "name": "Customer Sales Order Pipeline Core",
+    "route": "/sales/orders"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px corporate fulfillment pipeline interface split canvas)",
+    "main_layout_template": "Kanban Board Split Layout (Left Navigation: Multi-Tenant Tenant Filter & Document Flow Status Tree; Center Board Canvas: Sales Order State Board tracking columns [Staged -> Credit Approved -> Staged for Pick -> Invoiced -> Fulfilled]; Right Sliding Side Drawer Panel: Real-Time Event Dispatch Logs & Cross-Domain Outbox Message Monitor)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders full Kanban processing lanes alongside active asynchronous system dispatch details)",
+      "tablet_landscape": "1024px - 1279px (The Kanban board switches to an interactive dense row list matrix grid layout with dynamic state dropdown indicators)"
+    },
+    "key_visible_sections": [
+      { "id": "sales_order_kanban_board", "title": "Sales Order Staging Fulfillment Board", "type": "Dynamic Drag-and-Drop Column Lane Stack" },
+      { "id": "order_fulfillment_status_summary", "title": "Pipeline Backlog Status Metrics Strip", "type": "Static Top Ribbon Bar Panel" },
+      { "id": "event_outbox_telemetry_drawer", "title": "Asynchronous Event Mesh Outbox Telemetry Console", "type": "Collapsible Sliding Panel Frame Layout" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active sales or finance processing clearance tokens -> Clear local state message variables caches -> Execute data payload fetch from CustomerRelationshipService.getSalesOrders()",
+      "on_order_stage_move": "Evaluate target workflow rule constraints, evaluate credit threshold indicators, and auto-dispatch mutation logs packets to backends"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active order's transaction value breaks customer multi-tenant credit limit constraints maps",
+        "action": "Force intercept order movement steps, transition card visual layout wraps instantly into a dark crimson highlight pattern, and route layout flag variables parameters locally to 'Credit Review Hold Active'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_confirm_order_issuance",
+        "trigger": "User drops order card container element into 'Credit Approved' column lane or hits action command 'btn_confirm_sales_order'",
+        "behavior": "Pop confirmation alert modal asking user to sign the submission context, which fires the backend outbox publisher routine emitting global event signals"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_order_staged", "type": "Semantic Progress Pill Label", "props": { "variant": "Slate Gray Gray", "text": "STAGED DRAFT" } },
+      { "id": "badge_order_confirmed", "type": "Semantic Progress Pill Label", "props": { "variant": "Indigo Solid Blue", "text": "CONFIRMED DISPATCHED" } },
+      { "id": "badge_credit_hold", "type": "Semantic Progress Pill Label", "props": { "variant": "Crimson Flash Outlined", "text": "CREDIT LIMIT BLOCK" } },
+      { "id": "btn_confirm_sales_order", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Revenue Success Blue Green Accent", "icon": "package-check-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "sales_order_kanban_card",
+        "composition": "Combines sales order serial sequence identifier key + customer account corporate name label + total aggregated quote value text box + priority tracking pill + execution action button triggers"
+      },
+      {
+        "id": "outbox_message_trace_node",
+        "composition": "Combines micro message topic status dot indicator + tracking transaction event payload name row string (e.g., crm.sales.order.confirmed) + transactional outbox balance status badge"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "sales_orders_fulfillment_kanban_board_viewport",
+        "composition": "Horizontal flex pane system organizing multiple state columns lanes container blocks, looping elements, and managing individual interactive sales_order_kanban_card instances drag events hooks."
+      },
+      {
+        "id": "event_mesh_telemetry_activity_feed",
+        "composition": "Dense scrolling log container listing consecutive items collections data arrays instances of outbox_message_trace_node tracking blocks mapping transaction outbox synchronization metrics rules definitions."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Precision monospaced fonts stack used strictly on sequence reference numbers and monetary balances blocks to verify horizontal grids alignments)",
+      "scales": {
+        "board_column_header_title": "font-size: 1.0rem (16px) | font-weight: 700 | text-transform: uppercase",
+        "kanban_card_numeric_value": "font-size: 0.875rem (14px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer)",
+      "order_confirmed_blue": "#3B82F6 (Corporate Royal Blue Order Flow Management Core Accent Focus)",
+      "credit_hold_crimson": "#EF4444 (Crimson Red Financial Overdraft/Risk Hold Status Variable Line Glow)",
+      "telemetry_log_dark": "#111827 (Charcoal Dark Interface Console Box Layout Background Panel Fill)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px workspace block partition column boundaries default spacing margins)",
+      "kanban_card_inner_gap": "0.75rem (12px internal padding padding metrics inside board asset cards layouts)",
+      "border_radius_tokens": "0.375rem (6px modern industrial clean hard corner cuts design metrics framing)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "sales_order_kanban_card:hover", "style_mutation": "cursor swapping to 'grab' styling properties parameter; border-color changes to #3B82F6 over an instantaneous 80ms execution curves parameters window framework" },
+      { "target": "sales_order_kanban_card:dragged", "style_mutation": "opacity modifier values parameter drops downward to scale marker 0.50; transform rotation element scale switches to rotate(1deg)" }
+    ],
+    "accessibility_aria_roles": {
+      "sales_orders_fulfillment_kanban_board_viewport": "role='application' parsing interactive tracking board lane matrices coordinates grouping controls maps",
+      "event_outbox_telemetry_drawer": "role='log' accompanied by explicit aria-live='polite' configuration fields monitoring transaction processing logs events pushes asynchronously"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "active_pipeline_backlog_count": 52,
+      "total_pipeline_backlog_valuation_functional": 14293000.00,
+      "reporting_currency_code": "USD",
+      "sales_orders_pipeline_lanes_matrix": {
+        "STAGED_DRAFT": [
+          { "order_id": "so_crm_2026_84920", "order_number": "SO-2026-009941", "customer_id": "cust_amer_902", "customer_corporate_name": "Acme North American Distribution Corp", "gross_valuation_amount": 425000.00, "credit_check_status": "PASSED", "priority_level_pill": "HIGH_TRACK" }
+        ],
+        "CREDIT_HOLD_REVIEW": [
+          { "order_id": "so_crm_2026_84945", "order_number": "SO-2026-009942", "customer_id": "cust_apac_410", "customer_corporate_name": "Nippon Advanced Heavy Machinery Fabrication Ltd", "gross_valuation_amount": 2500000.00, "credit_check_status": "CREDIT_LIMIT_EXCEEDED", "priority_level_pill": "CRITICAL_EXEC" }
+        ],
+        "CONFIRMED_FULFILLING": []
+      },
+      "transactional_outbox_realtime_log_stream": [
+        { "message_id": "msg_trace_2026_0019A", "timestamp": "2026-06-21T00:10:00Z", "event_topic_route": "crm.sales.order.confirmed", "status_flag": "SYNCED_OUTBOX_FLUSHED", "payload_bytes_size": 1420 }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_sales_order_card_id": "Tracks target captured order row entry lookups token string used to inflate operations drawers (string | null default pointer value)",
+      "is_issuance_modal_open": "Boolean state variable tracking rendering state boundaries for layout system modal overlays wrapping outbox confirmation checks workflows",
+      "active_kanban_board_lane_collection": "Reactive layout object split container parsing ongoing card shifts, updating coordinates properties values lists elements parameters instantly before backend callbacks"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared systems global tenant context code routing multi-tenant application operations parameters scopes configurations data sets maps",
+      "asynchronous_kafka_outbox_telemetry_sync": "Global websocket connectivity pipeline allocation handler forcing continuous background updates to logs stream views components when downstream microservices consume transactional events"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 asynchronous module classes implementing native browser drag-and-drop orchestration properties APIs with zero reliance on cumbersome external third-party layout dragging frameworks scripts structures",
+    "performance_benchmarks": "Transitioning elements parameters and cards states inline within column board rows view structures following drag events drops must update layout tracking metrics arrays fields under a target execution runtime threshold boundary limit of 12ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "sales_order_kanban_card",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.ui.pipeline.order_card_selected",
+        "executes_backend_function": "CustomerRelationshipService.getSalesOrderDetails(context.order_id)",
+        "target_mutation_action": "Bind fetched structural fulfillment parameters maps directly inside local state data stores, then map target active key values to selected_sales_order_card_id to reveal telemetry console sections",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_confirm_sales_order",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local state tracking variable flag configuration is_issuance_modal_open value to true to launch global event outbox submission alert dialogue frames instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_issuance_confirm_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.sales.order.confirmed",
+        "executes_backend_function": "CustomerRelationshipService.confirmSalesOrderIssuance(order_id)",
+        "target_mutation_action": "Push workflow command processing packets; append returning messaging telemetry lines logs directly inside transactional_outbox_realtime_log_stream local display states cache views arrays; toggle off issuance modal overlay flags variables parameters",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_professional_services_prj",
+        "trigger_event": "click",
+        "emitted_event_topic": "prj.ui.navigated.project_wbs_dashboard",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/projects/wbs (Advances web router coordinates tracker forward into next enterprise macro domain module workspace: Group 1 Revenue Engine Milestone Project Management starting at PRJ Screen PRJ_SCR_001 Viewport Framework)"
+      }
+    ]
+  }
+}

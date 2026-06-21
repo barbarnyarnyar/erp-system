@@ -222,5 +222,21 @@ func (s *AccountsReceivableService) MarkInvoiceOverdue(ctx context.Context, id s
 }
 
 func (s *AccountsReceivableService) GetCustomerCredit(ctx context.Context, customerID string) (*domain.CustomerCredit, error) {
-	return s.credits.GetByCustomerID(ctx, customerID)
+	cc, err := s.credits.GetByCustomerID(ctx, customerID)
+	if err != nil || cc == nil {
+		cc = &domain.CustomerCredit{
+			ID:             utils.NewID("cc"),
+			CustomerID:     customerID,
+			CreditLimit:    decimal.NewFromFloat(5000.00),
+			CurrentBalance: decimal.Zero,
+			IsOnHold:       false,
+			Version:        1,
+			UpdatedAt:      time.Now(),
+		}
+		if createErr := s.credits.Create(ctx, cc); createErr != nil {
+			return nil, createErr
+		}
+	}
+	return cc, nil
 }
+

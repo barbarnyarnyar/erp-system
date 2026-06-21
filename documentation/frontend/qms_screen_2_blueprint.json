@@ -1,0 +1,186 @@
+{
+  "screen_metadata": {
+    "module_id": "QMS",
+    "screen_index": 2,
+    "screen_id": "QMS_SCR_002",
+    "name": "Compliance Audit Matrix & Calibration Logs Center",
+    "route": "/quality/calibration"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px analytical audit spreadsheet dashboard framework)",
+    "main_layout_template": "Two-Column Split Console Layout (Left Tracking Grid Column: Industrial Equipment & Tooling Calibration Roster; Right Main Panel Workspace: Active Regulatory Standards Checklist Tree, Verification Compliance Matrix, and Historical Metrology Testing Logs Feed; Top Header Section: Real-Time Gauge Deviation Alarms & Upcoming ISO/FDA Audit Banners)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders simultaneous precision equipment tables and nested standard compliance trees side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left metrology roster collapses into a toggleable panel drawer to maximize horizontal row spacing for deep nested standard criteria trees)"
+    },
+    "key_visible_sections": [
+      { "id": "equipment_calibration_roster", "title": "Precision Tooling & Equipment Calibration Log", "type": "Scrollable Interactive List Stack" },
+      { "id": "regulatory_compliance_tree", "title": "ISO / FDA Regulatory Requirement Hierarchy Tree", "type": "High-Density Recursive Data Tree Canvas" },
+      { "id": "metrology_audit_history", "title": "Historical Calibration Testing Certificates Feed", "type": "Dynamic Sortable Tabular Spreadsheet View" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active quality director or regulatory compliance clearance tokens -> Inherit global tenant multi-tenant boundary profiles -> Execute state request payload fetch from QualityManagementService.getCalibrationLogs()",
+      "on_machinery_select": "Asynchronously query EAM database models to populate historical drift charts and verify real-time tolerance bounds updates fields"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active manufacturing tool's calibrated metric drift parameter exceeds max allowable standard tolerance bounds (> 0.05% error margin)",
+        "action": "Flash a blinking crimson context border, toggle machine operational status tags inline to 'Out of Calibration - Production Locked', and dispatch an immediate high-priority asynchronous alarm signal straight over into shop-floor execution networks"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_log_calibration_test",
+        "trigger": "User strikes action control command element 'btn_record_calibration_run'",
+        "behavior": "Pop center dialog validation worksheet wizard form capturing metrology reference standard keys, actual measured instrument outputs, environmental temperature parameters, and structural sign-off approval hashes"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_calibration_valid", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Teal Solid Fill Gloss Accent", "text": "CALIBRATION VERIFIED" } },
+      { "id": "badge_calibration_expired", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Crimson Flashing Glow Outlined", "text": "CALIBRATION EXPIRED" } },
+      { "id": "input_drift_measurement", "type": "Tabular Numeric Precision Decimals Box Form Component", "props": { "placeholder": "0.00000", "align": "right", "font": "monospace" } },
+      { "id": "btn_record_calibration_run", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Brand Royal Blue Accent", "icon": "gauge-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "equipment_metrology_card_item",
+        "composition": "Combines factory tooling identity code + cross-domain machinery tracking key (`eam_equipment_id`) + critical variance deviation parameter line + chronological validation clock timer token component"
+      },
+      {
+        "id": "compliance_standard_node_row",
+        "composition": "Combines nested regulatory section identifier code (e.g., ISO-9001:2015 §7.1.5) + text parameter title description + interactive check marker atom + toggle historical audit sub-log button icon"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "precision_metrology_roster_viewport",
+        "composition": "High-density list layout streaming connected internal factory instruments states, handling immediate parameters filtering routines and active row index selection bindings."
+      },
+      {
+        "id": "regulatory_standards_audit_canvas",
+        "composition": "Dynamic nested grid tree spreadsheet executing recursive row listing matrices tracking compliance parameters fields, complete with column sorting metrics, parent folder fold actions loops, and validation indicator markers."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced font sizes applied strictly to device serial keys, drift numbers, and micro-tolerance levels to lock grid rows structural layout alignments perfectly)",
+      "scales": {
+        "metrology_header_display_title": "font-size: 1.25rem (20px) | font-weight: 700 | letter-spacing: tight tracking",
+        "drift_digits_mono_alignment": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "calibration_optimal_teal": "#10B981 (Emerald Green Compliant Yield Asset Management Core Focus Hue)",
+      "calibration_drift_crimson": "#EF4444 (Crimson Red Precision Mismatch Variance Out-Of-Bounds Alert Line Glow)",
+      "regulatory_text_muted_slate": "#64748B (Slate Gray Subdued Legal Metadata Typography Accent Row Labels)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard workspace structural partition segment outer padding margins parameters)",
+      "recursive_indentation_step_unit": "1.5rem (24px horizontal tracking indentation per standard section level)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "equipment_metrology_card_item:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 100ms execution curves duration window parameter" },
+      { "target": "input_drift_measurement:focus", "style_mutation": "border outline updates framework metrics instantly to color value #3B82F6 highlight tone highlighting selected box container elements layers" }
+    ],
+    "accessibility_aria_roles": {
+      "regulatory_standards_audit_canvas": "role='treegrid' housing hierarchical regulatory compliance check rows tables configurations indices maps with valid expanded booleans",
+      "precision_metrology_roster_viewport": "role='listbox' parsing accessible individual option tool selection stacks rows data rows accompanying proper focus states"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_cataloged_instruments_count": 86,
+      "expired_calibration_holds_count": 1,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "metrology_equipment_roster_dataset": [
+        {
+          "instrument_id": "inst_met_2026_8849",
+          "instrument_serial_tag": "MET-CAL-8849-X2",
+          "eam_equipment_id": "eam_mach_robot_8841",
+          "description": "High-Precision Laser Interferometer Positioning Alignment Sensor (CNC Line 04 Focus)",
+          "last_calibration_timestamp": "2026-05-20T08:00:00Z",
+          "next_calibration_due_date": "2026-06-20T23:59:59Z",
+          "maximum_allowable_drift_error": 0.00500,
+          "latest_recorded_drift_error": 0.00120,
+          "calibration_lifecycle_status": "CALIBRATION_VALID",
+          "historical_runs_collection": [
+            { "run_id": "crun_99341", "timestamp": "2026-05-20T07:45:00Z", "performed_by_user": "user_qms_inspector_02", "drift_offset_calculated": 0.00120, "calibration_certificate_url": "/certs/cal_8849_2026_05.pdf" }
+          ]
+        }
+      ],
+      "regulatory_compliance_requirements_matrix": [
+        {
+          "clause_id": "clause_iso_7_1_5",
+          "clause_code": "ISO-9001:2015 §7.1.5",
+          "title": "Monitoring and Measuring Resources - Calibration Traceability Requirements",
+          "is_compliant_verified": true,
+          "last_audited_timestamp": "2026-06-14T11:00:00Z",
+          "child_clauses": [
+            { "clause_id": "clause_iso_7_1_5_a", "clause_code": "§7.1.5.a", "title": "Equipment verification against international or national metrology measuring reference standards", "is_compliant_verified": true, "last_audited_timestamp": "2026-06-14T10:30:00Z", "child_clauses": [] }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_instrument_row_pointer_id": "Tracks currently focused metrology item row dataset unique lookup token identifier string key (string | null default pointer value)",
+      "is_calibration_wizard_visible": "Boolean state variable tracking presentation configurations parameters toggling new calibration log worksheet form wizard overlays",
+      "compliance_standards_expanded_nodes_set": "Set tracking indices alpha-numeric clauses keys mapping state identifiers tracking which sub-sections folders are uncollapsed in user views"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application core systems multi-tenant regional context tracking parameters scope variables configurations routing cross-domain microservice schemas mappings",
+      "eam_machinery_telemetry_shared_cache": "Global storage context data cache allocating machine run-time tracking counters parameters locally to establish precise synchronization frames updates between quality checking logs and shop-floor repair pipelines"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous recursive loop module scripts deploying precise calculation string model layers to permanently discard floating-point rounding errors across recursive audit compliance check trees",
+    "performance_benchmarks": "Executing full structural list sorting calculations or rendering zone switching loops over a 200-item equipment configuration roster matrix table must refresh workspace DOM element configurations under an execution ceiling constraint parameter limit of 10ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "equipment_metrology_card_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "qms.ui.calibration.instrument_selected",
+        "executes_backend_function": "QualityManagementService.getCalibrationRunHistory(context.instrument_id)",
+        "target_mutation_action": "Bind fetched historical metrology certificate test logs array records directly inside local metrology_audit_history store data sheets views caches, and assign active lookup keys into active_instrument_row_pointer_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_record_calibration_run",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Flip state tracking variable flag configuration is_calibration_wizard_visible parameter status layout modifier logic value to true to launch precision measurement input wizard frames layout canvas overlays instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_calibration_wizard_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "qms.calibration.recorded",
+        "executes_backend_function": "QualityManagementService.createCalibrationRunRecord(active_instrument_row_pointer_id, payload_calibration_wizard_form_data)",
+        "target_mutation_action": "Transmit operational confirmation payload packages; append successfully processed return certificate parameters data values maps straight inside historical_runs_collection nested structures within local metrology_equipment_roster_dataset view models; close choice modals flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_shop_floor_mfg",
+        "trigger_event": "click",
+        "emitted_event_topic": "mfg.ui.navigated.production_queues",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/manufacturing/shop-floor (Complete quality verification loops track; advance router context coordinates tracker forward out of verification core subdomain directly over into heavy machinery execution core subdomain: MFG Screen MFG_SCR_001 Viewport Layout Panel Configuration)"
+      }
+    ]
+  }
+}

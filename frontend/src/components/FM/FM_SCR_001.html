@@ -1,0 +1,170 @@
+<!-- File: /src/components/FM/FM_SCR_001.html -->
+<div id="fm-ledger-container" class="flex flex-col h-full bg-obsidian-base text-slate-100 p-6 overflow-hidden min-h-screen">
+  
+  <!-- Header Control Ribbon -->
+  <header class="flex flex-wrap items-center justify-between gap-4 p-4 mb-6 rounded-md bg-slate-elevated border border-slate-700 glassmorphism">
+    <div class="flex items-center gap-4">
+      <div class="p-2 rounded bg-blue-500/10 text-blue-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight uppercase">Universal Ledger & Chart of Accounts</h1>
+        <p class="text-xs text-slate-400">Legal Entity Context: <span id="active-tenant-id" class="font-mono text-glow-blue text-blue-400">Loading...</span></p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <button id="btn-add-account" class="px-4 py-2 text-xs font-bold uppercase rounded bg-blue-600 hover:bg-blue-500 text-white transition-all-fast flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Add GL Account
+      </button>
+    </div>
+  </header>
+
+  <!-- Split Panel Viewport Grid -->
+  <div class="flex flex-1 gap-6 overflow-hidden">
+    
+    <!-- Left Pane: COA Hierarchical Tree Panel -->
+    <section class="w-96 rounded-md bg-slate-900/60 border border-slate-800 p-4 flex flex-col overflow-hidden">
+      <div class="mb-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Account Hierarchy Directory</h2>
+        <!-- Search Filter Atom -->
+        <div class="relative">
+          <input 
+            type="text" 
+            id="input-search-filter" 
+            placeholder="Search account code or label..." 
+            className="w-full pl-9 pr-4 py-2 bg-[#080c14] border border-slate-700 rounded text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
+          />
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- COA Graph Viewport (role='tree') -->
+      <div 
+        id="coa-tree-viewport" 
+        role="tree" 
+        aria-label="Chart of Accounts Hierarchy" 
+        class="flex-1 overflow-y-auto flex flex-col gap-1 pr-1"
+      >
+        <!-- Recursive tree nodes injected here -->
+      </div>
+    </section>
+
+    <!-- Right Pane: Ledger Transactions Grid -->
+    <section class="flex-1 rounded-md bg-slate-900/60 border border-slate-800 p-4 flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
+        <div>
+          <h2 id="ledger-view-title" class="text-sm font-bold uppercase tracking-wider text-slate-300">Journal Transactions Ledger</h2>
+          <p id="ledger-view-subtitle" class="text-xs text-slate-500 font-mono mt-0.5">Select an account in the directory tree to inspect entries</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <div class="flex flex-col items-end">
+            <span class="text-[10px] text-slate-500 uppercase font-bold">Total Account Balance</span>
+            <span id="ledger-account-balance" class="text-sm font-bold font-mono text-glow-blue text-blue-400">$0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ledger Master Transaction Grid Container (role='grid') -->
+      <div class="flex-1 overflow-y-auto rounded border border-slate-800 bg-[#080c14]/40">
+        <table role="grid" aria-label="General Ledger Entries Matrix" class="w-full border-collapse text-left font-mono text-xs">
+          <thead>
+            <tr class="bg-slate-900 text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800 sticky top-0 z-10">
+              <th class="p-3 font-bold">Date</th>
+              <th class="p-3 font-bold">Reference / ID</th>
+              <th class="p-3 font-bold">Description</th>
+              <th class="p-3 font-bold text-right">Debit</th>
+              <th class="p-3 font-bold text-right">Credit</th>
+              <th class="p-3 font-bold text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-grid-rows">
+            <tr>
+              <td colspan="6" class="p-8 text-center text-slate-500 italic">Select a GL account to load ledger balances</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal overlay: Create Account Form -->
+  <div id="modal-create-account" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 hidden transition-all-normal">
+    <div class="w-full max-w-md p-6 rounded-md bg-slate-elevated border border-slate-700 shadow-2xl glassmorphism">
+      <h3 class="text-md font-bold uppercase tracking-wider mb-4 text-glow-blue text-blue-400">Add New General Ledger Account</h3>
+      
+      <form id="form-create-account" class="flex flex-col gap-4">
+        
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Classification</label>
+          <select 
+            id="input-account-type" 
+            className="w-full bg-[#080c14] border border-slate-700 rounded px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer"
+            required
+          >
+            <option value="ASSET">Asset (1000 - 1999)</option>
+            <option value="LIABILITY">Liability (2000 - 2999)</option>
+            <option value="EQUITY">Equity (3000 - 3999)</option>
+            <option value="REVENUE">Revenue (4000 - 4999)</option>
+            <option value="EXPENSE">Expense (5000 - 5999)</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Code</label>
+          <input 
+            type="text" 
+            id="input-account-code" 
+            placeholder="e.g. 1105" 
+            className="w-full bg-[#080c14] border border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+            required
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Name</label>
+          <input 
+            type="text" 
+            id="input-account-name" 
+            placeholder="e.g. SVB Payroll Account" 
+            className="w-full bg-[#080c14] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            required
+          />
+        </div>
+
+        <div class="flex justify-end gap-3 mt-4">
+          <button 
+            type="button" 
+            id="btn-modal-cancel" 
+            className="px-4 py-2 text-xs font-bold uppercase rounded border border-slate-600 text-slate-300 hover:bg-slate-800 transition-all-fast"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            className="px-4 py-2 text-xs font-bold uppercase rounded bg-blue-600 hover:bg-blue-500 text-white transition-all-fast"
+          >
+            Post Account
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
+
+</div>

@@ -1,0 +1,209 @@
+{
+  "screen_metadata": {
+    "module_id": "PRJ",
+    "screen_index": 1,
+    "screen_id": "PRJ_SCR_001",
+    "name": "Project Master Registry & Work Breakdown Structure (WBS) Canvas",
+    "route": "/projects/wbs"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px multi-column collaborative project tree interface)",
+    "main_layout_template": "Three-Pane Split Viewport Layout (Left Section Pane: Filterable active corporate projects directory; Center Section Canvas: Interactive hierarchical Work Breakdown Structure tree grid mapping parent tasks to child nodes; Right Drawer Component: Dynamic Milestone Progress Meter and Scope Metrics Inspector Sheets)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains permanent concurrent project folders and deep nested task canvas structures side-by-side)",
+      "tablet_landscape": "1024px - 1279px (The project master selection panel shifts into a toggleable top-bar selector menu, dedicating maximum vertical screen space to the WBS rows)"
+    },
+    "key_visible_sections": [
+      { "id": "project_directory_sidebar", "title": "Corporate Active Projects Folder Roster", "type": "Scrollable Interactive List Stack" },
+      { "id": "wbs_interactive_tree_grid", "title": "Hierarchical Task Breakdown Matrix Canvas", "type": "High-Density Recursive Data Tree Sheet" },
+      { "id": "milestone_completion_burn_down", "title": "Project Scope Completion & Velocity Status Blocks", "type": "Contextual Summary Dashboard Ribbon" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active project manager security credentials -> Read regional multi-tenant legal entity identifier codes -> Execute state request payload fetch from ProjectService.getProjects()",
+      "on_task_node_click": "Asynchronously query internal task properties maps to fill resource assignments details tracking widgets panels without blocking layout frames"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a project instance tracking timeline exceeds planned delivery baseline parameters limits by more than a critical boundary variance limit (> 15.0%)",
+        "action": "Inject high-visibility orange warning overlay background wrappers onto active columns rows, and toggle project operational status tags inline to 'Delayed - Variance Audit Required'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_provision_sow_project",
+        "trigger": "User hits action element command click selector 'btn_provision_project'",
+        "behavior": "Pop multi-step dialog onboarding form interface capturing CRM customer identifiers reference codes, total contract budget ceilings, operational statement-of-work (SOW) terms, and initial milestone targets mapping arrays"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_task_complete", "type": "Semantic Status Pill Node UI Element", "props": { "variant": "Teal Solid Fill Gloss Accent", "text": "COMPLETE" } },
+      { "id": "badge_task_staged", "type": "Semantic Status Pill Node UI Element", "props": { "variant": "Slate Gray Muted Border Fill", "text": "STAGED IN BACKLOG" } },
+      { "id": "input_task_weight_pct", "type": "Tabular Numeric Progress Modifier Field Box", "props": { "placeholder": "100%", "align": "center", "max": "100" } },
+      { "id": "btn_add_wbs_child", "type": "Micro Action Interactive Vector Button Button Icon", "props": { "variant": "Secondary Transparent Circular Accent", "icon": "corner-down-right-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "project_roster_folder_card",
+        "composition": "Combines project alphanumeric sequence code tracking key + buyer profile customer company string title + aggregate financial budget balance indicator text box + current lifecycle execution state token badge component"
+      },
+      {
+        "id": "wbs_task_row_item",
+        "composition": "Combines deep indentation node placeholder alignment space + toggle collapse chevron icon atom + monospaced task ID sequence label + descriptive title string field + progress calculation gauge element + child addition command button wrapper element"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "active_projects_catalog_viewport",
+        "composition": "High-density scrolling log grouping active corporate projects scopes, handling rapid multi-parameter searching filters and binding click events to update focus state variables rows pointers maps."
+      },
+      {
+        "id": "work_breakdown_structure_canvas",
+        "composition": "Dynamic nested grid sheet canvas executing recursive row listing matrices tracking task hierarchies fields, complete with column sorting capabilities, parent node fold actions loops, and row modification indicators grids."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospace numbers font used on execution values fields, calendar schedules, and task tracker keys to keep layout rows balanced strictly)",
+      "scales": {
+        "project_header_large_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: letter-spacing tight text-transform regular",
+        "task_id_monospace_tag": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "project_focus_indigo": "#6366F1 (Indigo Blue Project Architecture Domain Primary Accent Focus Hue)",
+      "completion_teal_glow": "#10B981 (Emerald/Teal Green Verified Scope Completion Status Token Indicator Highlight)",
+      "schedule_alert_orange": "#F59E0B (Amber Gold Timeline Delay Slip Risk Visual Element Token Outline)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard workspace structural division block outer padding parameters)",
+      "recursive_node_indent_unit": "1.5rem (24px horizontal tracking indentation shift per structural nesting level)",
+      "border_style_token": "1px solid #334155 (Slate Charcoal Frame Partitions Alignment Separation Lines Layout)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "wbs_task_row_item:hover", "style_mutation": "background-color properties transform settings focus map to value #334155 utilizing a swift ease-out duration curves time frame window of 100ms" },
+      { "target": "btn_add_wbs_child:active", "style_mutation": "transform scale parameters scale reduction adjustments modifier value down to 0.95 sizing bounds to register crisp feedback ticks profile configurations" }
+    ],
+    "accessibility_aria_roles": {
+      "wbs_interactive_tree_grid": "role='treegrid' housing hierarchical multi-tier expandable task rows configurations indices maps accompanied by valid aria-expanded boolean trackers properties",
+      "project_directory_sidebar": "role='navigation' accompanied by an explicit descriptive aria-label tracking active multi-tenant pipeline profiles views fields templates"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_managed_projects_count": 18,
+      "average_portfolio_velocity_percentage": 88.5,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "projects_master_directory_dataset": [
+        {
+          "project_id": "prj_cloud_mig_2026",
+          "project_code": "PRJ-2026-8843",
+          "origin_sales_order_id": "so_crm_2026_84920",
+          "customer_id": "cust_amer_902",
+          "customer_corporate_name": "Acme North American Distribution Corp",
+          "total_budget_allotted_functional": 425000.00,
+          "project_execution_stage": "IN_PROGRESS",
+          "work_breakdown_structure": [
+            {
+              "task_id": "task_root_1",
+              "task_code": "1.0",
+              "title": "Enterprise Cloud Architecture Refactoring & Data Topology Setup",
+              "completion_progress_pct": 100.0,
+              "task_status": "COMPLETE",
+              "assigned_resource_id": "user_pm_lead_02",
+              "child_nodes": [
+                {
+                  "task_id": "task_child_1_1",
+                  "task_code": "1.1",
+                  "title": "PostgreSQL Universal Ledger Database Bootstrap Schema Provisioning",
+                  "completion_progress_pct": 100.0,
+                  "task_status": "COMPLETE",
+                  "assigned_resource_id": "user_db_arch_04",
+                  "child_nodes": []
+                }
+              ]
+            },
+            {
+              "task_id": "task_root_2",
+              "task_code": "2.0",
+              "title": "Asynchronous Event Mesh Orchestration & Idempotent Inbox Integration",
+              "completion_progress_pct": 45.0,
+              "task_status": "IN_PROGRESS",
+              "assigned_resource_id": "user_pm_lead_02",
+              "child_nodes": [
+                {
+                  "task_id": "task_child_2_1",
+                  "task_code": "2.1",
+                  "title": "Kafka Outbox Telemetry Drawer Instrumentation UI Hooks Generation",
+                  "completion_progress_pct": 0.0,
+                  "task_status": "STAGED",
+                  "assigned_resource_id": "user_frontend_dev_09",
+                  "child_nodes": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_project_entity_focus_id": "Tracks target highlighted project index folder row dataset primary lookup token string key used to hydrate task lists trees canvases (string | null default pointer value)",
+      "selected_task_node_focus_pointer": "Tracks single task array node reference used to feed contextual information and resources limits properties inside inspector sheets widgets panels [object reference | null]",
+      "is_provisioning_modal_visible": "Boolean state variable dictating presentation configurations parameters toggling statement-of-work project provisioning wizard dialog fields overlays"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared systems global tenant context code parameters routing multi-tenant application domains boundaries configurations across business modules execution layers",
+      "crm_confirmed_sales_contracts_buffer": "Global storage transaction queue data bus caching incoming stream data packages arriving asynchronously from revenue ops systems blocks to alert project managers of newly structured contract completions blueprints"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 semantic presentation blocks wrapped directly over standard Tailwind CSS class sets, running zero pre-compiler tasks scripts natively inside modular client-side modern ES6 asynchronous scripts structured to handle recursive layout rendering sweeps over deep nested row structures hierarchies patterns flawlessly",
+    "performance_benchmarks": "Toggling parent folder node visibility switches or expanding a 5-level deep hierarchical WBS branch list must evaluate layout structures states calculations fields maps adjustments under an execution target threshold boundary parameter of 14ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "project_roster_folder_card",
+        "trigger_event": "click",
+        "emitted_event_topic": "prj.ui.wbs.project_selected",
+        "executes_backend_function": "ProjectService.getWorkBreakdownStructure(context.project_id)",
+        "target_mutation_action": "Bind retrieved hierarchical task data maps arrays collection directly inside local work_breakdown_structure views cache stores, then apply lookup reference values straight forward into active_project_entity_focus_id parameter flag modifiers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "wbs_task_row_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "prj.ui.wbs.task_node_selected",
+        "executes_backend_function": null,
+        "target_mutation_action": "Pass selected index mapping reference directly to selected_task_node_focus_pointer state local pointer variable to expose milestone specs widgets inside structural side details containers sheets",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_provision_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "prj.project.provisioned",
+        "executes_backend_function": "ProjectService.createProjectMasterRecord(payload_sow_wizard_form_data)",
+        "target_mutation_action": "Broadcast project instantiation packets; append successfully generated record item parameters maps back inside projects_master_directory_dataset local display cache views arrays blocks; drop wizard interface overlays layer flags parameters variables",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_switch_to_resource_planning_matrix",
+        "trigger_event": "click",
+        "emitted_event_topic": "prj.ui.navigated.resource_planning",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/projects/resource-matrix (Advances web browser app router location framework coordinates metrics positions ahead into next sequence Screen PRJ_SCR_002 Human Capital Allocation Workspace Viewport)"
+      }
+    ]
+  }
+}

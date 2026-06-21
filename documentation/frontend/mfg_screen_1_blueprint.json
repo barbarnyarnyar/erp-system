@@ -1,0 +1,171 @@
+{
+  "screen_metadata": {
+    "module_id": "MFG",
+    "screen_index": 1,
+    "screen_id": "MFG_SCR_001",
+    "name": "Shop-Floor Production Dispatch Queue & Work Order Matrix",
+    "route": "/manufacturing/shop-floor"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px high-density assembly execution tracking dashboard)",
+    "main_layout_template": "Three-Pane Operational Matrix (Left Rail Column: Real-time incoming demand queues from CRM/SCM stock triggers; Center Main Panel: Active Work Order (WO) high-density data grid tracking execution timelines; Right Sidebar Panel Drawer: Selected Work Center routing sequences tracking steps, machine resource allocations, and operator assignments sheets)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel tracking lanes and resource availability charts side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left incoming demand queue collapses into an expandable slide panel to preserve wide tracking tables dimensions)"
+    },
+    "key_visible_sections": [
+      { "id": "demand_staged_queue", "title": "Staged Manufacturing Production Triggers Feed", "type": "Scrollable Interactive List Stack" },
+      { "id": "work_order_master_grid", "title": "Work Orders Execution Master Ledger Grid", "type": "High-Performance Virtual Scrolling Data Sheet" },
+      { "id": "work_center_routing_inspector", "title": "Shop-Floor Machine Sequence Routing Inspector", "type": "Sticky Sliding Right Panel Container" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active shop-floor manager or supervisor validation tokens -> Inherit multi-tenant data domain scopes -> Execute state payload request fetch from ManufacturingService.getWorkOrders()",
+      "on_wo_row_select": "Asynchronously query internal routing sequence steps from PLM datasets caches to populate the right work center status logs sidebar without blocking browser UI threads"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a linked machine identifier key triggers a down-time critical breakdown alarm flag from the EAM module broker",
+        "action": "Force visual wrapper boundaries context elements inline to 'Machine Down - Route Suspended' and disable active dispatch control triggers buttons for affected production lanes"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_initialize_work_order",
+        "trigger": "User strikes action command selector link button element 'btn_initialize_production'",
+        "behavior": "Pop center dialog confirmation window forcing multi-tier calculation checks validating raw materials availability metrics against staged parts arrays from SCM before release signatures"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_wo_running", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Indigo Solid Blue Fill Accent", "text": "RUNNING ON FLOOR" } },
+      { "id": "badge_wo_completed", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Teal Solid Fill Gloss", "text": "PRODUCTION FULFILLED" } },
+      { "id": "input_actual_scrap_count", "type": "Signed Whole Integer Form Input Control Component Box", "props": { "placeholder": "0", "align": "center", "font": "monospace" } },
+      { "id": "btn_initialize_production", "type": "Functional Core Action Core Action Button", "props": { "variant": "Success Action Accent Emerald", "icon": "play-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "production_demand_trigger_card",
+        "composition": "Combines origin system tracker code (`crm_sales_order_id` / `scm_reorder_trigger_id`) + material part lookup string text line + required production units counter element + priority milestone tag indicator"
+      },
+      {
+        "id": "mfg_routing_step_progress_node",
+        "composition": "Combines sequence order tracking marker number + target work center identifier badge + assigned operator metadata string + processing execution progress gauge bar"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "staged_demand_feed_viewport",
+        "composition": "High-density vertical scrolling stack mapping incoming manufacturing job triggers, handling quick criteria sorting parameters lists."
+      },
+      {
+        "id": "work_orders_spreadsheet_canvas",
+        "composition": "Virtualized column tracking layout grid parsing extensive production logs database records tracking properties: alphanumeric work order tokens, part IDs, quantities scheduled, target timelines, scrap counts, and inline conditional badges."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced fonts stack used strictly on part indexes, work order serial codes, unit counters, and step timers to shield horizontal layout grid rows alignments perfectly)",
+      "scales": {
+        "work_order_large_heading": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: tight text-transform regular",
+        "spreadsheet_tabular_digits": "font-size: 0.8125rem (13px) | font-family: monospace | font-weight: 500"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "mfg_running_indigo": "#4F46E5 (Indigo Blue Production Line Active Operational Focus Hue Accent)",
+      "mfg_completed_teal": "#10B981 (Emerald Green Fulfilled Production Target Token Indicator Line)",
+      "machine_down_crimson": "#EF4444 (Crimson Red Critical Infrastructure Breakdown Alert Flash Glow Border)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard component layout box margins constraints padding unit metrics)",
+      "matrix_row_vertical_padding": "0.5rem (8px dense layout packaging formatting parameters dividing spreadsheet lines)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Partition Separators Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "work_order_master_grid:row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 100ms execution curves duration window parameter" },
+      { "target": "btn_initialize_production:active", "style_mutation": "transform micro-scale modifier adjustments scale adjustments down to scale 0.98 to yield structural physical haptic click confirmation looks feedback" }
+    ],
+    "accessibility_aria_roles": {
+      "work_orders_spreadsheet_canvas": "role='grid' housing multi-column extensive historical industrial assembly configurations records matrices",
+      "work_center_routing_inspector": "role='complementary' accompanied by explicit aria-live='polite' configuration fields monitoring real-time machine routing sequences adjustments parameters"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_active_floor_work_orders_count": 24,
+      "average_shop_floor_efficiency_pct": 92.8,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "staged_manufacturing_demand_queue": [
+        { "demand_trigger_id": "trig_mfg_2026_9942", "origin_source_type": "CRM_SALES_ORDER", "crm_sales_order_id": "so_crm_2026_84920", "part_id": "part_structural_plate_09", "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12", "units_required_quantity": 200, "priority_level_pill": "HIGH_TRACK" }
+      ],
+      "work_orders_records_collection": [
+        {
+          "work_order_id": "wo_mfg_2026_77491",
+          "work_order_number": "WO-2026-004410",
+          "part_id": "part_structural_plate_09",
+          "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12",
+          "recipe_version_tag": "Rev-B.2",
+          "scheduled_quantity": 200,
+          "completed_good_units": 198,
+          "scrapped_units": 2,
+          "production_lifecycle_status": "RUNNING",
+          "start_timestamp": "2026-06-20T22:00:00Z",
+          "routing_execution_steps": [
+            { "step_index": 10, "work_center_id": "wc_milling_floor_02", "eam_equipment_id": "eam_mach_robot_8841", "operator_user_id": "user_floor_operator_14", "step_progress_pct": 100.0, "step_status": "COMPTI" },
+            { "step_index": 20, "work_center_id": "wc_assembly_floor_01", "eam_equipment_id": "eam_mach_assembler_02", "operator_user_id": "user_floor_operator_09", "step_progress_pct": 45.0, "step_status": "RUNNING" }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_work_order_focus_id": "Tracks target active work order row item lookup code token string key used to inflate routing sequence steps (string | null default pointer value)",
+      "is_initialization_modal_open": "Boolean state variable tracking presentation configurations parameters toggling raw material verification checking wizard form overlays",
+      "mfg_catalog_text_search_query": "String variable tracking character text criteria filtering parameters across work order numbers arrays instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters tracking codes configurations cross microservice runtime execution scopes",
+      "eam_machinery_down_event_bus": "Global background subscription queue catching real-time equipment breakdown logs signals emitted from plant maintenance networks"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous module scripts deploying precise numeric conversion wrappers to shield metrics accuracy calculations tables from rounding fractional losses",
+    "performance_benchmarks": "Appending incoming real-time background demand trigger cards array items models records into staged_manufacturing_demand_queue display layers must refresh interface rows maps under an execution runtime ceiling limit of 5ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "work_orders_spreadsheet_canvas_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "mfg.ui.floor.work_order_selected",
+        "executes_backend_function": "ManufacturingService.getWorkOrderRoutingState(context.work_order_id)",
+        "target_mutation_action": "Bind fetched step tracking data arrays records directly inside local work_center_routing_inspector store data collections cache views, and apply lookup keys values forward into selected_work_order_focus_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_initialize_confirm_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "mfg.workorder.initialized",
+        "executes_backend_function": "ManufacturingService.initializeWorkOrderExecution(demand_trigger_id)",
+        "target_mutation_action": "Transmit operational processing confirmation payload packages; insert generated return work order row parameters record straight inside work_orders_records_collection local cache arrays view stores; close modal layers flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_material_kitting_view",
+        "trigger_event": "click",
+        "emitted_event_topic": "mfg.ui.navigated.material_kitting",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/manufacturing/kitting (Advances browser web layout router framework spatial navigation coordinates parameters forward into final sequence Screen MFG_SCR_002 Material-Staging & Pick Verification Canvas Viewport)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "module_id": "FM",
+  "module_name": "Financial Management",
+  "global_layouts": {
+    "sidebar": ["Nav_UniversalLedger", "Nav_JournalEntries", "Nav_AccountsReceivable", "Nav_AccountsPayable", "Nav_FixedAssets", "Nav_LiquidityDashboard"]
+  },
+  "screens": {
+    "SCREEN_01_UNIVERSAL_LEDGER": {
+      "screen_id": "FM_SCR_001",
+      "title": "Universal Ledger & Chart of Accounts",
+      "route": "/finance/ledger",
+      "purpose": "Manage corporate Chart of Accounts hierarchy tree.",
+      "initial_state_fetch": "UniversalLedgerService.getChartOfAccounts(legal_entity_id)",
+      "interactions": [
+        {
+          "element": "btn_add_account",
+          "label": "Add New Account",
+          "trigger": "click",
+          "action_type": "ui_state_change",
+          "target_ui": "modal_create_account_form",
+          "update_state": { "is_modal_open": true },
+          "emits_event": null,
+          "executes_function": null,
+          "navigates_to": null
+        },
+        {
+          "element": "btn_view_journal_history",
+          "label": "View History",
+          "trigger": "click",
+          "action_type": "navigation",
+          "target_ui": null,
+          "update_state": {},
+          "emits_event": "fm.ui.navigated.journal_entries",
+          "executes_function": null,
+          "navigates_to": "SCREEN_02_JOURNAL_POSTING"
+        }
+      ]
+    },
+    "SCREEN_02_JOURNAL_POSTING": {
+      "screen_id": "FM_SCR_002",
+      "title": "Universal Journal Entry & Posting Ledger",
+      "route": "/finance/journal-entries",
+      "purpose": "View posted balances and manually post unified journal records.",
+      "initial_state_fetch": "UniversalLedgerService.getJournalEntries(financial_period)",
+      "interactions": [
+        {
+          "element": "btn_submit_post",
+          "label": "Post Ledger Entry",
+          "trigger": "click",
+          "action_type": "api_submit",
+          "target_ui": "loading_spinner",
+          "update_state": { "is_submitting": true },
+          "emits_event": "fm.journal.posted",
+          "executes_function": "UniversalLedgerService.postManualJournalEntry(payload)",
+          "navigates_to": "SCREEN_01_UNIVERSAL_LEDGER"
+        },
+        {
+          "element": "btn_cancel_entry",
+          "label": "Cancel",
+          "trigger": "click",
+          "action_type": "navigation",
+          "target_ui": null,
+          "update_state": {},
+          "emits_event": null,
+          "executes_function": null,
+          "navigates_to": "SCREEN_01_UNIVERSAL_LEDGER"
+        }
+      ]
+    },
+    "SCREEN_03_ACCOUNTS_RECEIVABLE": {
+      "screen_id": "FM_SCR_003",
+      "title": "Accounts Receivable (AR) Subsidiary Ledger",
+      "route": "/finance/accounts-receivable",
+      "purpose": "Track outstanding customer invoices and incoming revenue collections.",
+      "initial_state_fetch": "ApArSubledgerService.getArInvoices()",
+      "interactions": [
+        {
+          "element": "row_click_invoice",
+          "label": "Invoice Grid Row",
+          "trigger": "click",
+          "action_type": "ui_state_change",
+          "target_ui": "side_drawer_invoice_details",
+          "update_state": { "selected_invoice_id": "context.invoice_id", "is_drawer_open": true },
+          "emits_event": null,
+          "executes_function": "ApArSubledgerService.getInvoiceDetails(context.invoice_id)",
+          "navigates_to": null
+        }
+      ]
+    }
+  }
+}

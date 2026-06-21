@@ -1,0 +1,165 @@
+{
+  "screen_metadata": {
+    "module_id": "SCM",
+    "screen_index": 4,
+    "screen_id": "SCM_SCR_004",
+    "name": "Inventory Movement & Stock Adjustment Log",
+    "route": "/logistics/inventory-movements"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dynamic tracking console layout)",
+    "main_layout_template": "Split Pane Ledger View (Left Pane Column: Real-Time Staged Material Picking Queues & Handling Status; Right Pane Workspace: Historical Physical Ledger Stock Auditing Spreadsheet & Adjustment Entry Workbench; Top Block Panel: Immediate Stock Discrepancy Alerts & Critical Minimum Threshold Indicator Stream)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders concurrent material handling queues side-by-side with historical spreadsheet audits)",
+      "tablet_landscape": "1024px - 1279px (Active pick queues collapse into a toggleable left navigation slide panel)"
+    },
+    "key_visible_sections": [
+      { "id": "picking_task_queue", "title": "Active Material Handler Picking Tasks Staging Space", "type": "Scrollable Interactive List Stack" },
+      { "id": "stock_movement_ledger_grid", "title": "Physical Stock Adjustments Historic Audit Spreadsheet", "type": "Dynamic Virtualized Filtering Data Table" },
+      { "id": "inventory_threshold_banner", "title": "Critical Stock Exception Status Stream Monitor", "type": "Static Alert Ribbon Block" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active warehouse agent access keys -> Open real-time data frame connection monitoring stock changes logs -> Execute state payload fetch from InventoryService.getInventoryMovements()",
+      "on_pick_complete": "Asynchronously trigger outbox publish event patterns, update local data records, and pop up print layouts hooks for tracking bills/slips"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a manual cycle-count adjustment entry overrides predefined safety balance rules without authorization strings",
+        "action": "Intercept input transaction flows instantly, throw high-priority screen warning 'Supervisor Security Override Required', and lock form confirmation buttons"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_manual_stock_override_form",
+        "trigger": "User strikes action command selector element 'btn_record_manual_adjustment'",
+        "behavior": "Pop center dialogue matrix modal capturing specific part numbers, actual bin location strings, localized adjustment reasons options, and explicit numeric offset metrics"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_movement_type_pick", "type": "Semantic Directional Tag Component", "props": { "style": "blue-outlined-fill", "text": "PICKING TASK" } },
+      { "id": "badge_movement_type_adj", "type": "Semantic Directional Tag Component", "props": { "style": "purple-outlined-fill", "text": "CYCLE COUNT ADJ" } },
+      { "id": "input_quantity_offset", "type": "Signed Whole Integer Form Input Control Component", "props": { "placeholder": "+/- 1", "align": "center" } },
+      { "id": "btn_dispatch_handler_task", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Brand Royal Blue Accent", "icon": "truck-delivery-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "picking_queue_interactive_item_card",
+        "composition": "Combines dynamic task tracking code + warehouse location address link + target part allocation quantity details label + instant execution button element"
+      },
+      {
+        "id": "stock_movement_record_row",
+        "composition": "Combines a monospaced log entry timeline timestamp field + movement classification label token + part ID lookup code + quantity adjustment counter element + target handler metadata label"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "staged_picking_tasks_manager_viewport",
+        "composition": "Vertical list layout wrapping real-time instance components elements of picking_queue_interactive_item_card cards mapping active background warehouse picking jobs hooks."
+      },
+      {
+        "id": "inventory_movements_audit_grid_canvas",
+        "composition": "Virtualized grid table sorting massive historical ledger arrays records featuring keyword matching string filters, export mechanisms, and row selection modifiers arrays."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Monospaced style applied strictly across item numbers and counting offsets labels to protect system density records tables)",
+      "scales": {
+        "critical_alert_text_bold": "font-size: 0.875rem (14px) | font-weight: 700 | line-height: 1.25rem",
+        "spreadsheet_tabular_numerals": "font-size: 0.8125rem (13px) | font-family: monospace | font-weight: 500"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Viewport Layer)",
+      "stock_add_emerald": "#10B981 (Emerald Green Positive Multi-Unit Inbound Inventory Increment Token)",
+      "stock_deduct_crimson": "#EF4444 (Crimson Red Negative Outbound Inventory Adjustment Accent)",
+      "alert_background_amber": "#7E22CE (Deep Purple Specialized Operations SCM Activity Identification Border)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px component box boundary margin formatting rules layouts grids)",
+      "card_stack_row_gap": "0.75rem (12px clean horizontal separation paths dividing interactive cards layers)",
+      "border_style_token": "1px solid #334155 (Slate Charcoal Frame Line Component Partition Separator)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "picking_queue_interactive_item_card:hover", "style_mutation": "transform parameters translate layer upward scale translation matching translateY(-2px) over an 80ms execution curves parameters window" },
+      { "target": "input_quantity_offset:focus", "style_mutation": "border outline updates framework metrics instantly to color value #3B82F6 highlight tone highlighting selected box container elements layers" }
+    ],
+    "accessibility_aria_roles": {
+      "staged_picking_tasks_manager_viewport": "role='log' accompanied by explicit live region configuration variables flags parsing dynamic list additions templates",
+      "inventory_movements_audit_grid_canvas": "role='grid' housing multi-column historical physical inventory tracking assets data lines summaries models"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_historical_movement_logs_count": 45892,
+      "staged_pending_picks_count": 3,
+      "reporting_facility_warehouse_id": "wh_east_complex_01",
+      "active_picking_staged_tasks_queue": [
+        { "task_id": "pick_tsk_2026_88491", "origin_sales_order_id": "so_crm_84920", "part_id": "part_structural_plate_09", "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12", "source_bin_coordinate_id": "bin_loc_wh1_z2_a4_s3_b12", "quantity_to_pick": 40, "handler_assignment_status": "STAGED_AWAITING_DISPATCH" }
+      ],
+      "historical_movements_spreadsheet_matrix": [
+        { "log_id": "mov_log_2026_994203", "timestamp": "2026-06-20T21:14:00Z", "part_id": "part_structural_plate_09", "movement_type": "PICK_Fulfillment", "quantity_delta_signed": -40, "warehouse_bin_address": "ZONE2-AISLE4-SHELF3-BIN12", "operator_user_id": "user_wh_handler_04" },
+        { "log_id": "mov_log_2026_994198", "timestamp": "2026-06-20T18:30:00Z", "part_id": "part_microcontroller_x9", "movement_type": "CYCLE_COUNT_ADJUSTMENT", "quantity_delta_signed": 5, "warehouse_bin_address": "ZONE1-AISLE2-SHELF1-BIN04", "operator_user_id": "user_wh_supervisor_01" }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "focused_movement_row_index_id": "Tracks currently highlight grid entry tracking key string used to pull audit parameters inside detailed layers (string | null default pointer value)",
+      "is_override_form_modal_visible": "Boolean state variable dictating presentation configurations parameters wrapping manual cycle count inventory adjustments entries dialog fields forms",
+      "movements_spreadsheet_filter_query": "String tracking text criteria queries used to recalculate table records arrays inside local caches visibility frames instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant corporate grouping framework scope configuration rules mappings variables settings",
+      "asynchronous_picking_generation_event_stream": "Kafka background consumer subscription allocation socket throwing toast alerts when customer configurations emit downstream picking requests"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document constructs built completely over generic Tailwind CSS class rules classes utilities running zero pre-compilers blocks scripts written inside pure client-side modular asynchronous modern ES6 scripts formatting parameters blocks",
+    "performance_benchmarks": "Appending incoming background streaming pick records components straight inside active_picking_staged_tasks_queue view layers layouts rows cards collections arrays stacks must resolve calculation loops elements within an execution limit boundary of 5ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "btn_dispatch_handler_task",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.picking.dispatched",
+        "executes_backend_function": "InventoryService.dispatchPickingTask(context.task_id)",
+        "target_mutation_action": "Evict targeted active picking card task row context item record structural data block mapping parameters instantly from active_picking_staged_tasks_queue local display states arrays stack arrays",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_record_manual_adjustment",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Flip state tracking variable is_override_form_modal_visible parameter configurations flag value to true to open layout manual cycle count data overlay canvas screens instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_adjustment_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.inventory.adjusted",
+        "executes_backend_function": "InventoryService.adjustStockLevel(payload_override_form_data_fields)",
+        "target_mutation_action": "Transmit clearance data packages; inject return inventory adjusted rows values configurations logs directly straight inside historical_movements_spreadsheet_matrix local view caches arrays blocks; turn off modal rendering parameters values layer flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_pivot_to_demand_engine_crm",
+        "trigger_event": "click",
+        "emitted_event_topic": "crm.ui.navigated.accounts_dashboard",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/sales/accounts (Complete loop transformation switch routing context out of Supply Logistics domain directly over into Revenue Operations domain starting at CRM Screen CRM_SCR_001 Viewport Layout Panel Frame)"
+      }
+    ]
+  }
+}

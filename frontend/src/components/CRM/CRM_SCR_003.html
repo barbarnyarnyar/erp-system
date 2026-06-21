@@ -1,0 +1,117 @@
+<!-- File: /src/components/CRM/CRM_SCR_003.html -->
+<div id="crm-sales-pipeline-container" class="flex flex-col h-full bg-obsidian-base text-slate-100 p-6 overflow-hidden min-h-screen">
+  
+  <!-- Top Section: Pipeline Backlog Status Metrics Strip -->
+  <header class="flex flex-wrap items-center justify-between gap-4 p-4 mb-6 rounded-md bg-slate-elevated border border-slate-700 glassmorphism">
+    <div class="flex items-center gap-4">
+      <div class="p-2 rounded bg-emerald-500/10 text-emerald-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight uppercase">Customer Sales Order Pipeline</h1>
+        <p class="text-xs text-slate-400">Active Tenant ID: <span id="active-tenant-id" class="font-mono text-glow-blue text-blue-400">Loading...</span></p>
+      </div>
+    </div>
+    
+    <div class="flex gap-8">
+      <div class="flex flex-col items-end">
+        <span class="text-xs text-slate-400 uppercase tracking-wider">Active Pipeline Backlog</span>
+        <span id="metric-backlog-count" class="text-xl font-bold font-mono text-glow-blue text-blue-400">0</span>
+      </div>
+      <div class="flex flex-col items-end">
+        <span class="text-xs text-slate-400 uppercase tracking-wider">Pipeline Valuation</span>
+        <span id="metric-pipeline-valuation" class="text-xl font-bold font-mono text-glow-green text-emerald-400">$0.00</span>
+      </div>
+      <div class="flex flex-col items-end">
+        <span class="text-xs text-slate-400 uppercase tracking-wider">Unposted Outbox Tasks</span>
+        <span id="metric-outbox-pending" class="text-xl font-bold font-mono text-glow-crimson text-red-500">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Split Layout -->
+  <div class="flex flex-1 gap-6 overflow-hidden">
+    
+    <!-- Left Workspace: Kanban Board Viewport -->
+    <main role="application" aria-label="Sales Orders Kanban Board" class="flex-1 flex gap-4 overflow-x-auto pb-4">
+      
+      <!-- Column 1: STAGED_DRAFT -->
+      <section class="flex flex-col w-80 min-w-[20rem] rounded-md bg-slate-900/60 border border-slate-800 p-4">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+          <h2 class="text-sm font-bold tracking-wider text-slate-300 uppercase">Staged Draft</h2>
+          <span id="count-staged-draft" class="px-2 py-0.5 text-xs font-mono rounded bg-slate-800 text-slate-400">0</span>
+        </div>
+        <div id="lane-staged-draft" class="flex-1 flex flex-col gap-3 overflow-y-auto min-h-[300px]" data-status="STAGED_DRAFT">
+          <!-- Cards injected dynamically -->
+        </div>
+      </section>
+
+      <!-- Column 2: CREDIT_HOLD_REVIEW -->
+      <section class="flex flex-col w-80 min-w-[20rem] rounded-md bg-slate-900/60 border border-slate-800 p-4">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+          <h2 class="text-sm font-bold tracking-wider text-red-400 uppercase flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            Credit Hold Review
+          </h2>
+          <span id="count-credit-hold" class="px-2 py-0.5 text-xs font-mono rounded bg-red-950/40 text-red-400">0</span>
+        </div>
+        <div id="lane-credit-hold" class="flex-1 flex flex-col gap-3 overflow-y-auto min-h-[300px]" data-status="CREDIT_HOLD_REVIEW">
+          <!-- Cards injected dynamically -->
+        </div>
+      </section>
+
+      <!-- Column 3: CONFIRMED_FULFILLING -->
+      <section class="flex flex-col w-80 min-w-[20rem] rounded-md bg-slate-900/60 border border-slate-800 p-4">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+          <h2 class="text-sm font-bold tracking-wider text-blue-400 uppercase">Confirmed Fulfilling</h2>
+          <span id="count-confirmed-fulfilling" class="px-2 py-0.5 text-xs font-mono rounded bg-blue-950/40 text-blue-400">0</span>
+        </div>
+        <div id="lane-confirmed-fulfilling" class="flex-1 flex flex-col gap-3 overflow-y-auto min-h-[300px]" data-status="CONFIRMED_FULFILLING">
+          <!-- Cards injected dynamically -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Right Sliding Panel: Event Outbox Telemetry Drawer -->
+    <aside id="outbox-telemetry-drawer" role="log" aria-label="Asynchronous Event Outbox" class="w-80 bg-slate-elevated border border-slate-800 rounded-md p-4 flex flex-col glassmorphism hidden lg:flex">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+        <h2 class="text-sm font-bold tracking-wider uppercase text-slate-300">Outbox Telemetry Logs</h2>
+        <button id="btn-clear-synced" class="text-xs text-blue-400 hover:text-blue-300 font-mono transition-all-fast">Clear Synced</button>
+      </div>
+      
+      <!-- Outbox List Viewport -->
+      <div id="outbox-logs-feed" class="flex-1 overflow-y-auto flex flex-col gap-3 pr-1 font-mono text-[11px]">
+        <!-- Dynamic Outbox lines injected here -->
+      </div>
+      
+      <!-- Drawer Footer Info -->
+      <footer class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+        <span>Worker State: <span id="worker-status-indicator" class="text-emerald-400">IDLE</span></span>
+        <button id="btn-force-sync" class="text-blue-400 hover:underline">Force Sync</button>
+      </footer>
+    </aside>
+
+  </div>
+
+  <!-- Modal dialogue: Confirm Order Issuance -->
+  <div id="modal-confirm-order" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 hidden transition-all-normal">
+    <div class="w-full max-w-md p-6 rounded-md bg-slate-elevated border border-slate-700 shadow-2xl glassmorphism">
+      <h3 class="text-md font-bold uppercase tracking-wider mb-2 text-glow-blue text-blue-400">Confirm Order Dispatch</h3>
+      <p class="text-sm text-slate-300 mb-6">You are confirming sales order <span id="modal-order-number" class="font-mono text-white">SO-XXXX</span>. This action signs the invoice, stages shipment, and posts unposted accruals via the outbox.</p>
+      
+      <div class="flex justify-end gap-3">
+        <button id="btn-modal-cancel" class="px-4 py-2 text-xs font-bold uppercase rounded border border-slate-600 text-slate-300 hover:bg-slate-800 transition-all-fast">Cancel</button>
+        <button id="btn-modal-submit" class="px-4 py-2 text-xs font-bold uppercase rounded bg-blue-600 hover:bg-blue-500 text-white transition-all-fast flex items-center gap-2">
+          <span>Sign & Post</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
+
+</div>

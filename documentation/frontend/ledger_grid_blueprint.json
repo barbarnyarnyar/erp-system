@@ -1,0 +1,149 @@
+{
+  "component_metadata": {
+    "component_id": "COM_COMP_001",
+    "name": "UnifiedLedgerCalculationsGrid",
+    "classification": "Common Shared Infrastructure UI Blueprint",
+    "target_files": [
+      "/src/components/common/UnifiedLedgerGrid.js",
+      "/src/components/common/UnifiedLedgerGrid.css"
+    ]
+  },
+  "1_component_definitions": {
+    "rendering_target": "Virtualized Infinite High-Density Viewport Wrapper Matrix",
+    "layout_template": "Dynamic Row/Column Sheet with Fixed Headers and Inline Calculation Cells Hooks",
+    "key_structural_sub_blocks": [
+      { "id": "master_header_toolbar", "title": "Column Search/Sort Actions Bar", "type": "Atom Cluster Toolbar" },
+      { "id": "virtual_rows_canvas", "title": "High-Performance Content Scroll Track", "type": "Virtualized Row Listing Container" },
+      { "id": "aggregates_summary_footer", "title": "Bookkeeping Balance Status Totals Deck", "type": "Sticky High-Precision Footer calculations bar" }
+    ]
+  },
+  "2_component_flow_mapping": {
+    "state_progression_routes": {
+      "on_mount": "Verify active auth token clearance level parameters -> Inherit global multi-tenant localization code -> Hydrate dynamic layout viewport bounds",
+      "on_cell_change": "Intercept standard text strings -> Inject decimal normalization function variables -> Re-evaluate summary footer mathematical aggregates arrays values locally"
+    },
+    "security_isolation_rules": [
+      {
+        "condition": "If row payload object fails to contain a tenant isolation tag matching active_selected_legal_entity_id",
+        "action": "Trigger immediate secure row evict handler script, strip content cells from DOM layout trees, and emit high-priority security trace tracking exceptions log log"
+      }
+    ],
+    "modal_context_links": [
+      {
+        "id": "drawer_override_justification",
+        "trigger": "User inputs data exceeding warning baseline tolerances thresholds (> 15% pricing or hour variances)",
+        "behavior": "Pop dynamic secondary side dialogue module requesting supervisor authorization strings signatures or explicit override comments logs"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "cell_input_numeric", "type": "Monospaced Right-Aligned Form Input Field", "props": { "font": "monospace", "align": "right" } },
+      { "id": "badge_validation_pass", "type": "Semantic Progress Pill Label Component", "props": { "variant": "Teal Solid Fill Gloss", "text": "VERIFIED PASSED" } },
+      { "id": "badge_validation_fail", "type": "Semantic Progress Pill Label Component", "props": { "variant": "Crimson Flashing Glow Outlined", "text": "VARIANCE BREACH" } }
+    ],
+    "molecules": [
+      {
+        "id": "ledger_spreadsheet_header_cell",
+        "composition": "Combines text tag label context + alphanumeric column sort order arrows handles + dynamic column width modification pointer grips elements"
+      },
+      {
+        "id": "ledger_spreadsheet_data_row",
+        "composition": "Combines select checklist checkbox input + monospaced primary lookup tracking index label string + loop instance wrapping cell_input_numeric components elements arrays + conditional validation badge indicators tokens"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "virtual_row_list_scroller",
+        "composition": "High-performance spreadsheet list engine computing viewport slice margins offsets natively, recycling ledger_spreadsheet_data_row instances elements to scale past 10,000 deep dataset rows smoothly without browser frame dropouts latencies."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Tabular monospaced formatting rules stacks applied strictly across currency tokens, hours integers, and measurement attributes to keep digits vertical alignment locked perfectly across layout rows layers frames)",
+      "scales": {
+        "dense_row_numeral_text": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 500",
+        "footer_grand_total_emphasis": "font-size: 1.0rem (16px) | font-family: 'JetBrains Mono', monospace | font-weight: 700"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "cell_focus_glow": "#3B82F6 (Corporate Royal Blue Active Element Selection Highline Border)",
+      "aggregate_pass_teal": "#10B981 (Emerald Green Balanced Ledger Verification Accent Tone Focus)",
+      "aggregate_fail_crimson": "#EF4444 (Crimson Red Exception Overdraft / Tolerance Breach Flash Indicator Line Highlight)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "0.5rem (8px compact padding layouts spacing patterns dividing technical parameter spreadsheet rows fields)",
+      "cell_border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Partition Separators Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "ledger_spreadsheet_data_row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 80ms execution curves duration window parameter" },
+      { "target": "cell_input_numeric:focus", "style_mutation": "outline tracking boundary maps box frame border line parameters properties to 2px solid #3B82F6 over an instantaneous 50ms time window framework" }
+    ],
+    "accessibility_aria_roles": {
+      "virtual_row_list_scroller": "role='grid' accompanied by explicit accessible row grouping index criteria markers strings properties monitoring deep bookkeeping records",
+      "aggregates_summary_footer": "role='status' housing explicit aria-live='polite' tracking modifiers tags parameters monitoring grand aggregates calculations modifications structures"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "reporting_currency_code": "USD",
+      "grid_columns_configuration": [
+        { "key": "line_sequence_id", "label": "Item Serial ID", "width": "120px", "type": "string_mono" },
+        { "key": "attribute_title", "label": "Description Title", "width": "350px", "type": "string_text" },
+        { "key": "unit_quantity_integer", "label": "Quantity Units", "width": "100px", "type": "numeric_input" },
+        { "key": "unit_cost_currency", "label": "Unit Cost Balance", "width": "150px", "type": "numeric_input" },
+        { "key": "calculated_subtotal_yield", "label": "Accumulated Subtotal", "width": "180px", "type": "numeric_computed" }
+      ],
+      "grid_rows_dataset_buffer": [
+        {
+          "line_sequence_id": "item_seq_88491",
+          "attribute_title": "Hardened Grade-A Carbon Steel Base Plate 12x12 (PLM MaterialMaster Anchor Spec Line)",
+          "unit_quantity_integer": 200,
+          "unit_cost_currency": 300.00,
+          "calculated_subtotal_yield": 60000.00,
+          "row_validation_state": "VERIFIED_PASSED"
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_focused_cell_coordinates_id": "Tracks currently highlighted row/column grid pointer location tracking tokens index (string | null default pointer value)",
+      "spreadsheet_rows_collection_buffer": "Reactive array collection caching ongoing spreadsheet line additions, cell input adjustments values transformations, and validation indices states locally before executing global hooks save actions events"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared enterprise system global multi-tenant business scope token variable controlling schema isolation domain values cross microservice runtime executions",
+      "transactional_outbox_event_mesh": "Local message bus allocation layer capturing outbound transaction completion records before transmitting downstream payloads to event streams brokers"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous module scripts deploying precise calculation string abstractions to permanently discard rounding floating-point errors across large calculation entries math branches",
+    "performance_benchmarks": "Executing full mathematical re-evaluations sweeps across a 500-row deep data grid spreadsheet following quick cell numeric adjustments keystrokes changes must recalculate summary rows sub-totals frameworks updates under a target execution ceiling runtime constraint threshold boundary parameter limit of 8ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "ledger_spreadsheet_data_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "common.ui.grid.row_selected",
+        "executes_backend_function": null,
+        "target_mutation_action": "Pass selected index mapping reference directly into local active_focused_cell_coordinates_id state local tracker parameter code pointer variables to illuminate corresponding fields containers inside local view structures",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_save_grid_mutations_payload",
+        "trigger_event": "click",
+        "emitted_event_topic": "common.grid.data_committed",
+        "executes_backend_function": "InfrastructureSharedService.commitDataGridStateToOutbox(spreadsheet_rows_collection_buffer)",
+        "target_mutation_action": "Flush structural live memory buffers variables caches; publish secure outbox transaction data packets forward to background transport workers streams; update matching interface indicators fields properties parameters straight back to baseline unmutated states",
+        "navigates_to_route": null
+      }
+    ]
+  }
+}

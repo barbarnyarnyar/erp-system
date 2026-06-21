@@ -1,0 +1,165 @@
+{
+  "screen_metadata": {
+    "module_id": "PRJ",
+    "screen_index": 2,
+    "screen_id": "PRJ_SCR_002",
+    "name": "Resource Allocation & Capacity Planning Matrix",
+    "route": "/projects/resource-matrix"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dense interactive resource planning layout)",
+    "main_layout_template": "Two-Column Split Matrix Sheet (Left Navigation Sidebar Panel: Unassigned Project Backlog Queue & Available Engineering/Consultant Lists; Main Right Content Workspace: Multi-Tiered Chronological Gantt Matrix Sheet tracking horizontal timeline grid slots; Contextual Panel Overlay: Sliding Bottom Sheet detailing localized capacity allocations, hourly rates, and variance metrics)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains chronological timeline grid canvas side-by-side with active resource list panels)",
+      "tablet_landscape": "1024px - 1279px (The left unassigned queue collapses into a slide-out drawer tab to preserve horizontal text alignment inside scheduling lanes)"
+    },
+    "key_visible_sections": [
+      { "id": "unassigned_tasks_roster", "title": "Unallocated Project Staffing Backlog", "type": "Scrollable Draggable Stack List" },
+      { "id": "chronological_capacity_matrix", "title": "Human Capital Timeline Scheduling Grid Matrix", "type": "High-Performance Multi-Row Linear Gantt Canvas" },
+      { "id": "utilization_aggregates_ribbon", "title": "Team Utilization & Yield Statistics Ribbon", "type": "Static Top Metric Strip" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active portfolio coordinator access keys -> Read global tenant multi-tenant boundary profiles -> Execute state request payload fetch from ProjectService.getResourceCapacity()",
+      "on_allocation_drop": "Recalculate regional utilization totals, calculate timeline allocations overlaps, and push asynchronous state modifications to backend services"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a human capital element's compiled weekly schedule allocation values exceed total limit boundaries (> 100.0% / 40 Hours Over-allocation)",
+        "action": "Flash an immediate vivid crimson highlighting glow overlay context boundary onto the affected scheduling slot grid cell and launch layout alert text 'Critical Over-Allocation Detected'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "bottom_sheet_allocation_editor",
+        "trigger": "User double-clicks an active chronological block row item within a matrix lane",
+        "behavior": "Slide up contextual bottom management panel enabling micro-modifications over billable target rates parameters, direct billing classifications, and manual schedule limits shifts"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "indicator_allocation_safe", "type": "Linear Gantt Chronological Block Node", "props": { "style": "indigo-600-solid-fill", "height": "full" } },
+      { "id": "indicator_allocation_overload", "type": "Linear Gantt Chronological Block Node", "props": { "style": "crimson-500-glow-fill", "animation": "animate-pulse" } },
+      { "id": "badge_skill_tag", "type": "Semantic Micro Skill Indicator Pill Label", "props": { "variant": "Slate Gray Gray", "text": "PostgreSQL" } },
+      { "id": "input_allocation_hours", "type": "Tabular Numeric Core Whole Integer Form Box", "props": { "placeholder": "40", "align": "center" } }
+    ],
+    "molecules": [
+      {
+        "id": "resource_profile_lane_header",
+        "composition": "Combines human capital element avatar image + name string text label + localized core capability skill badge arrays + calculated cumulative weekly utilization percentage row token component"
+      },
+      {
+        "id": "backlog_staffing_requirement_card",
+        "composition": "Combines parent project sequence lookup key + required execution role description title + projected duration hours count + interactive vector grab element handles"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "resource_unallocated_staffing_viewport",
+        "composition": "Vertical tracking column list grouping unassigned resource requirements cards, managing keyword filtering scripts and binding drag events hooks."
+      },
+      {
+        "id": "chronological_gantt_scheduling_matrix_canvas",
+        "composition": "Robust two-dimensional dynamic scheduling table grid linking resource_profile_lane_header elements rows directly to consecutive horizontal cell slot matrices, complete with date intervals sorting bars loops and grid selection listeners frameworks."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Tabular monospaced numerals fonts enforced strictly across calculation grids to maintain tight column text alignment boundaries records)",
+      "scales": {
+        "utilization_large_percentage": "font-size: 1.5rem (24px) | font-weight: 800 | font-family: monospace tabular-numerals scaling",
+        "matrix_grid_date_labels": "font-size: 0.75rem (12px) | font-family: monospace | font-weight: 700"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "allocation_optimal_indigo": "#6366F1 (Indigo Blue Target Healthy Capacity Planning Operations Accent)",
+      "allocation_breach_crimson": "#EF4444 (Crimson Red Resource Scheduling Overload Overdraft Line Indicator)",
+      "timeline_grid_lines": "#334155 (Slate Charcoal Grid Boundary Partition Markers Separator Line)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px workspace component layout section outer margin spacing values)",
+      "matrix_cell_height_density": "3.0rem (48px spatial lane padding heights optimizing clear vertical rows visualization)",
+      "border_radius_tokens": "0.25rem (4px modern precise clean structural geometric corner slices parameters)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "backlog_staffing_requirement_card:draggable", "style_mutation": "cursor swapping to 'grabbing' configuration styles profile; border outline matches color value #3B82F6 using an 80ms execution curve window" },
+      { "target": "chronological_capacity_matrix:cell:hover", "style_mutation": "background-color properties transform settings pointer map to value #334155 using an instantaneous 60ms time window framework" }
+    ],
+    "accessibility_aria_roles": {
+      "chronological_gantt_scheduling_matrix_canvas": "role='grid' utilizing internal row designations mapping resource allocation lanes directly to linear week coordinates fields columns maps",
+      "resource_unallocated_staffing_viewport": "role='complementary' accompanied by explicit accessible drag-and-drop source labels descriptions properties strings"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_managed_resources_count": 48,
+      "average_portfolio_utilization_pct": 82.4,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "unallocated_staffing_requirements_backlog": [
+        { "requirement_id": "req_staff_2026_001", "project_id": "prj_cloud_mig_2026", "project_code": "PRJ-2026-8843", "role_required": "Lead Database Engineer", "estimated_hours_count": 40, "skills_required_tags": ["PostgreSQL", "Go", "Database Migration Architectures"] }
+      ],
+      "resource_scheduling_lanes_matrix": [
+        {
+          "resource_id": "user_db_arch_04",
+          "full_name": "Marcus Vance",
+          "primary_role_title": "Senior Principal Infrastructure Architect",
+          "weekly_allocated_hours_total": 32,
+          "weekly_utilization_percentage": 80.0,
+          "chronological_allocations_blocks": [
+            { "allocation_id": "alloc_block_001", "project_id": "prj_cloud_mig_2026", "project_code": "PRJ-2026-8843", "task_code": "1.0", "hours_allocated_per_day": 8, "start_date_marker": "2026-06-22", "end_date_marker": "2026-06-25", "billable_hourly_rate_usd": 175.00 }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_resource_lane_pointer_id": "Tracks currently focused resource database identifier row used to populate bottom management panel layouts fields (string | null default pointer value)",
+      "is_allocation_editor_visible": "Boolean state toggling visible formatting layer margins for the bottom sheet micro-allocation configuration inputs worksheets form canvas",
+      "resource_matrix_skills_filter_array": "Array collection layer routing active text capabilities matching checks across resource tags list rows fields parameters instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared enterprise system global multi-tenant business scope token variable controlling schema isolation domain values cross runtime executions",
+      "hr_employee_availability_shared_cache": "Global datastore cache saving active multi-tenant corporate profiles logs and tracking calendar absence/leave states to secure planning data consistency"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document constructs built completely over layout Tailwind CSS utility classes class rules sets, running zero third-party graph compilers scripts natively inside modular asynchronous client-side ES6 engine classes utilizing the HTML5 Drag and Drop API architecture wrappers smoothly",
+    "performance_benchmarks": "Recalculating calendar capacity vectors array models across a 50-resource row Gantt canvas following drag events execution drops must compute timeline shifts fields maps updates under a target threshold limit of 12ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "backlog_staffing_requirement_card",
+        "trigger_event": "dragstart",
+        "emitted_event_topic": "prj.ui.matrix.drag_initiated",
+        "executes_backend_function": null,
+        "target_mutation_action": "Serialize active requirement object reference parameters maps variables into browser layout drag payload properties tracking streams data fields",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "chronological_capacity_matrix:cell",
+        "trigger_event": "drop",
+        "emitted_event_topic": "prj.resource.allocated",
+        "executes_backend_function": "ProjectService.allocateResourceBlock(context.requirement_id, target.resource_id, target.date_marker)",
+        "target_mutation_action": "Append successfully generated allocation data parameters vectors back inside resource_id lane blocks index inside resource_scheduling_lanes_matrix data cache array collection, then evict requirements cards matching indices out of unallocated_staffing_requirements_backlog local states stacks arrays",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_milestone_billing_hub",
+        "trigger_event": "click",
+        "emitted_event_topic": "prj.ui.navigated.milestone_billing",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/projects/billing (Advances browser web router framework context tracking coordinates ahead into final sequence Screen PRJ_SCR_003 Timesheet Audit & Milestone Revenue Dispatch Hub Viewport)"
+      }
+    ]
+  }
+}

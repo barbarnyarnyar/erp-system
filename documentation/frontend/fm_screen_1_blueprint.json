@@ -1,0 +1,214 @@
+{
+  "screen_metadata": {
+    "module_id": "FM",
+    "screen_index": 1,
+    "screen_id": "FM_SCR_001",
+    "name": "Universal Ledger & Chart of Accounts Command Center",
+    "route": "/finance/ledger"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px grid scaling down to 1024px tablet landscape)",
+    "main_layout_template": "Three-Column Split Ledger Shell (Left: Sidebar Navigation, Center-Left: Interactive COA Nested Tree, Center-Right: Multi-tenant Ledger Data Grid, Contextual Overlays: Sliding Right-Drawer for Account Configuration Details)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Full tree view alongside ledger data table grid)",
+      "tablet_landscape": "1024px - 1279px (COA structural tree collapses into an expandable slide-out left panel drawer)"
+    },
+    "key_visible_sections": [
+      {
+        "id": "global_sidebar_nav",
+        "title": "ERP System Navigation Core",
+        "type": "Fixed Static Track"
+      },
+      {
+        "id": "coa_tree_panel",
+        "title": "Chart of Accounts Hierarchical Graph View",
+        "type": "Scrollable Active Column"
+      },
+      {
+        "id": "ledger_data_grid",
+        "title": "Multi-Tenant Balanced General Ledger Viewport",
+        "type": "Dynamic Resizing High-Performance Table"
+      }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Execute auth-token validation -> Pull active multi-tenant legal_entity_id context -> Request initial payload data state from UniversalLedgerService.getChartOfAccounts()",
+      "on_account_select": "Hydrate ledger_data_grid lines with selected account_code ledger history rows asynchronously"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If legal_entity_id context is completely missing or null",
+        "action": "Hard redirect the browser router framework instantly to global workspace manager selection profile screen at route path '/onboarding/tenant-select'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_create_account_form",
+        "trigger": "User hits element 'btn_add_account'",
+        "behavior": "Pop center dialog modal layout blocking parent window pointer interactions until submission completion or manual keyboard Escape dismissal triggers"
+      },
+      {
+        "id": "drawer_account_audit_logs",
+        "trigger": "User hits element 'btn_view_audit_trail'",
+        "behavior": "Slide out 450px wide vertical panel context container tracking history lines from viewport edge right side margin"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "input_search_filter", "type": "Text Field Input Box with Clear button wrapper", "props": { "placeholder": "Search account code or classification labels..." } },
+      { "id": "btn_add_account", "type": "Solid Core Functional Button Component", "props": { "variant": "Primary Accent Call To Action", "icon": "plus-lucide-icon" } },
+      { "id": "badge_status_active", "type": "Semantic UI Pill Label Wrapper", "props": { "variant": "Success Teal Tone", "text": "Active" } },
+      { "id": "badge_status_inactive", "type": "Semantic UI Pill Label Wrapper", "props": { "variant": "Muted Ash Neutral Tone", "text": "Disabled" } }
+    ],
+    "molecules": [
+      {
+        "id": "coa_tree_node_element",
+        "composition": "Combines toggle chevron fold/unfold atom icon + account code numeric typography node + name description string label + conditional inline context status pill indicator",
+        "events": [ "onClick: sets state variable active_node_pointer_id to item entity tracking key" ]
+      },
+      {
+        "id": "ledger_table_action_row",
+        "composition": "Combines global multi-tenant filter drop-downs + text searching input block + tabular view layout configuration switcher elements"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "chart_of_accounts_structural_graph_viewport",
+        "composition": "Nested recursive iteration stack loops mapping top-level Root domains (Assets, Liabilities, Equity) down to individual operational child nodes via tree list grouping elements."
+      },
+      {
+        "id": "ledger_master_transaction_grid_container",
+        "composition": "Virtual scroll multi-column data sheet structure wrapping high-precision column alignments for ledger entries featuring header row controls supporting sort algorithms."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Engineered strictly for numeric readability)",
+      "scales": {
+        "screen_header_title": "font-size: 1.5rem (24px) | font-weight: 700 | line-height: 2.0rem",
+        "table_numeric_values": "font-size: 0.875rem (14px) | font-family: 'JetBrains Mono' or monospace tabular numerals variance | font-weight: 500"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary)",
+      "primary_brand_accent": "#3B82F6 (Corporate Finance Royal Blue)",
+      "semantic_status_success": "#10B981 (Emerald Balancing Account Line Token)",
+      "semantic_status_alert": "#EF4444 (Crimson Asset Amortization/Debit Mismatch Flag)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px spacing containers default layout margins)",
+      "table_row_height_density": "2.25rem (36px micro padding dense rows to maximize view data visualization matrix blocks)",
+      "border_radius_tokens": "0.375rem (6px geometric modern hard edges)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "coa_tree_node_element:hover", "style_mutation": "background-color: transform color change to #334155 over 150ms timing parameter using ease-out curve profiles" },
+      { "target": "btn_add_account:active", "style_mutation": "transform scale downward matching 0.98 sizing metrics to yield tangible haptic click profile context responses" }
+    ],
+    "accessibility_aria_roles": {
+      "chart_of_accounts_structural_graph_viewport": "role='tree' parsing nested child components mapped explicitly to semantic treeitem element nodes populated with valid aria-expanded boolean properties",
+      "ledger_master_transaction_grid_container": "role='grid' parsing system tracking grids accompanied by clean row column structural layout annotations"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "legal_entity_context_id": "tenant_corp_global_us_001",
+      "reporting_currency_code": "USD",
+      "chart_of_accounts_hierarchy": [
+        {
+          "node_id": "node_root_1000",
+          "account_code": "1000",
+          "account_name": "ASSETS",
+          "account_type": "Asset",
+          "is_active": true,
+          "children_nodes": [
+            {
+              "node_id": "node_child_1100",
+              "account_code": "1100",
+              "account_name": "Cash and Cash Equivalents",
+              "account_type": "Asset",
+              "is_active": true,
+              "children_nodes": [
+                {
+                  "node_id": "node_leaf_1101",
+                  "account_code": "1101",
+                  "account_name": "Operating Liquidity Holding Bank Vault (Silicon Valley Bank Profile Account)",
+                  "account_type": "Asset",
+                  "is_active": true,
+                  "balance_current_functional": 45293201.52,
+                  "children_nodes": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "node_id": "node_root_2000",
+          "account_code": "2000",
+          "account_name": "LIABILITIES",
+          "account_type": "Liability",
+          "is_active": true,
+          "children_nodes": [
+            {
+              "node_id": "node_leaf_2100",
+              "account_code": "2100",
+              "account_name": "Accounts Payable (AP Aggregate Control Line)",
+              "account_type": "Liability",
+              "is_active": true,
+              "balance_current_functional": 12849302.11,
+              "children_nodes": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_node_pointer_id": "Tracks currently selected node in the account structural tree interface stack layout (string | null default value)",
+      "is_create_modal_visible": "Boolean state toggling the display matrix overlay layer for the New Account setup interface",
+      "account_search_query_filter": "String variable binding reactive mutations to standard list key matching functions instantly on text keystroke update triggers"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application session string managing asset tenant domain tracking hooks globally across standard system runtime scopes",
+      "universal_ledger_data_buffer_cache": "Storage allocation buffer saving ledger row segments to prevent repeating network request transactions across tab navigations"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 + Tailwind CSS Framework CDN execution environments using localized ES6 JavaScript modules with zero heavy dependencies or complex compiler setups",
+    "performance_benchmarks": "Virtual tree item structures matching deep nested row lists must calculate data state updates without triggering browser paint cycle delays exceeding a strict target threshold boundary of 16ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "coa_tree_node_element",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.ledger.node_selected",
+        "executes_backend_function": "UniversalLedgerService.getLedgerTransactionsByAccountCode(context.account_code)",
+        "target_mutation_action": "Populate state tracking variable ledger_master_transaction_grid_container data arrays",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_create_account_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ledger.account_created",
+        "executes_backend_function": "UniversalLedgerService.createChartOfAccountRow(payload_form_data)",
+        "target_mutation_action": "Append return record array mapping context into chart_of_accounts_hierarchy deep structure graph and dismiss modal state visibility flag variable",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_view_journal_history_link",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.navigated.journal_entries",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/finance/journal-entries (Triggers transition flow directly to Screen 2 Viewport)"
+      }
+    ]
+  }
+}

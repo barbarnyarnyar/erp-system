@@ -1,0 +1,172 @@
+{
+  "screen_metadata": {
+    "module_id": "EAM",
+    "screen_index": 1,
+    "screen_id": "EAM_SCR_001",
+    "name": "Corporate Machinery Registry & Maintenance Work-Order Control Vault",
+    "route": "/asset-management/machinery"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px high-density machinery layout framework)",
+    "main_layout_template": "Three-Pane Operational Vault Layout (Left Section Panel: Filterable interactive factory equipment folders tree grouping structural hardware arrays; Center Main Canvas Workspace: High-density interactive Maintenance Work-Order (WO) ledger grid sheet; Right Contextual Sidebar Drawer: Real-time telemetry gauge meters, failure mode classifications codes trees, and custom repair assignment routing bars)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel tracking equipment rosters and active repair logs worksheets side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left equipment list fold-collapses into a sliding container left panel drawer tracks to optimize data row text spacing fields inside spreadsheets)"
+    },
+    "key_visible_sections": [
+      { "id": "equipment_machinery_directory", "title": "Corporate Machinery Assets Directory", "type": "Scrollable Interactive List Stack" },
+      { "id": "maintenance_workorder_spreadsheet", "title": "Maintenance Work-Orders Master Ledger Sheet", "type": "High-Performance Virtualized Spreadsheet Canvas" },
+      { "id": "machinery_telemetry_drawer_inspector", "title": "Real-Time Telemetry Monitor & Failure Mode Center", "type": "Sticky Sliding Right Panel Container" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active plant maintenance engineer or shop-floor supervisor access keys -> Inherit multi-tenant asset scopes profiles -> Execute state request payload fetch from AssetManagementService.getEquipmentRegistry()",
+      "on_machinery_row_select": "Asynchronously query internal telemetries logs streams via background hooks pipelines to re-hydrate real-time vibration charts and thermal thresholds data frames"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active hardware asset registers a critical engineering failure state token flag (e.g., machinery temperature sensor thresholds overflow safety parameters bounds)",
+        "action": "Force intercept order movement steps, transition card visual layout wraps instantly into a flashing crimson context border, toggle machine operational status tags inline to 'CRITICAL BREAKDOWN', and auto-emit an immediate cluster wide blocking signal to the MFG production queue"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_dispatch_emergency_repair",
+        "trigger": "User strikes system action control command header selector link button 'btn_trigger_emergency_breakdown'",
+        "behavior": "Pop center dialog validation overlay forcing multi-tier field inputs capturing specific down-time failure classification code keys, operator assignment identifiers rows, and material repair replacement parts selection dropdown loops matching PLM data master structures"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_machinery_nominal", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Teal Solid Fill Gloss Accent", "text": "ASSET NOMINAL RUNNING" } },
+      { "id": "badge_machinery_breakdown", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Crimson Flashing Glow Outlined", "text": "CRITICAL CRASH SUSPEND" } },
+      { "id": "input_runtime_hours_counter", "type": "Signed Whole Integer Form Input Control Component Box", "props": { "placeholder": "0", "align": "center", "font": "monospace" } },
+      { "id": "btn_trigger_emergency_breakdown", "type": "Functional Core Action Core Button Element", "props": { "variant": "Danger High-Visibility Core Security Action", "icon": "alert-octagon-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "machinery_directory_folder_item",
+        "composition": "Combines equipment tracking hardware icon + un-duplicated serial code mapping tag (e.g., eam_mach_robot_8841) + localized floor zone title label + conditional status pill indicator token element"
+      },
+      {
+        "id": "maintenance_workorder_ledger_row",
+        "composition": "Combines monospaced work order identification sequence number + repair priority type tag indicator (`PREVENTATIVE` / `CORRECTIVE_REACTIVE`) + assigned engineering team metadata string + estimated repair time duration cell + inline execution action checkboxes keys loops"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "factory_assets_feed_viewport",
+        "composition": "High-density recursive list tree layout streaming connected hardware infrastructure metrics registries, managing multi-tier searching filtering scripts parameters instantly."
+      },
+      {
+        "id": "maintenance_work_orders_calculating_spreadsheet",
+        "composition": "High-performance virtual scrolling spreadsheet grid canvas nesting rows item elements instances of maintenance_workorder_ledger_row molecules structures, complete with multi-tier sorting functions header controls."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced formatting styles stack applied strictly across equipment keys tags, failure codes, sensor thresholds, and repair timers to lock grid rows structural layouts alignments perfectly)",
+      "scales": {
+        "machinery_title_emphasis": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: tight text-transform regular",
+        "telemetry_digits_mono_alignment": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 600 | color: slate-gray-bright"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "asset_nominal_teal": "#10B981 (Emerald Green Asset Operational Cleared Anchor Focus Hue Accent)",
+      "asset_crash_crimson": "#EF4444 (Crimson Red Critical Equipment Failure Mismatch Boundary Alert Glow Fill)",
+      "telemetry_gauge_slate": "#111827 (Charcoal Dark Interface Operations Console Box Background Panel Fill)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard system-wide section partition boundary padding unit metrics parameters fields)",
+      "ledger_row_height_density": "2.375rem (38px high-density vertical row parameters layout cell bounds)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "maintenance_workorder_ledger_row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 80ms execution curves duration curve time parameter" },
+      { "target": "btn_trigger_emergency_breakdown:hover", "style_mutation": "background-color properties transition shift to #DC2626; transform visual scaling parameters to translateY(-1px) to project critical haptic look feedback context responses" }
+    ],
+    "accessibility_aria_roles": {
+      "maintenance_work_orders_calculating_spreadsheet": "role='grid' housing multi-column extensive historical industrial repair task registries database matrices spreadsheets layers",
+      "machinery_telemetry_drawer_inspector": "role='region' accompanied by explicit aria-live='assertive' configuration fields monitoring real-time sensor streams modifications metrics parameters fields"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_cataloged_machinery_assets_count": 54,
+      "active_floor_breakdowns_counter": 1,
+      "reporting_tenant_partition_id": "tenant_corp_global_us_001",
+      "equipment_machinery_roster_dataset": [
+        {
+          "machinery_asset_id": "eam_mach_robot_8841",
+          "equipment_tag_code": "EQP-ROBOT-LINE04",
+          "part_id_template_ref": "part_structural_plate_09",
+          "description": "Heavy Duty Robotic Precision Assembler Array (Line 04 Facility Bundle)",
+          "installation_timestamp": "2025-06-01T07:00:00Z",
+          "operational_lifecycle_status": "CRITICAL_BREAKDOWN",
+          "live_telemetry_snapshot": { "vibration_amplitude_g": 4.82, "thermal_core_temp_celsius": 112.50, "hydraulic_pressure_psi": 2450 },
+          "historical_maintenance_work_orders": [
+            { "workorder_id": "wo_eam_2026_994821", "priority_level": "REACTIVE_URGENT", "fault_classification_code": "ERR-MOTOR-OVERHEAT-404", "summary_notes": "Robotic arm positioning motor axis locked down following rapid thermal threshold ceiling bounds breach. Emitted downstream execution blocking signals to shift MFG work order routings.", "dispatched_engineer_id": "user_maintenance_tech_03" }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_machinery_row_pointer_id": "Tracks currently focused hardware asset directory row database identifier key string lookup fields maps tokens (string | null default pointer value)",
+      "is_emergency_wizard_visible": "Boolean state variable tracking presentation configurations parameters toggling alternative multi-step authorization emergency repair dispatch worksheet fields overlays",
+      "machinery_ledger_text_search_query": "String variable tracking character search queries running text matching filters across work order numbers data cells arrays rows instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters tracking codes configurations cross microservice runtime execution scopes",
+      "plm_material_master_shared_buffer": "Global storage context data cache allocating versioned hardware blueprints, component spare parts lists parameters, and tooling records definitions locally to prevent repeated network request delays during parts replacement mappings"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous module scripts executing zero compiler dependencies scripts or heavy external tracking modifications filters packages layers",
+    "performance_benchmarks": "Hydration timelines mapping complex stream data tracking charts inside machinery_telemetry_drawer_inspector panels layout components following equipment row switches must finalize browser grid modifications updates cycles under a target execution limit parameter of 11ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "machinery_directory_folder_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "eam.ui.vault.machinery_selected",
+        "executes_backend_function": "AssetManagementService.getEquipmentMaintenanceHistory(context.machinery_asset_id)",
+        "target_mutation_action": "Bind fetched historical work orders lines data records direct mapping fields arrays into local maintenance_work_orders_calculating_spreadsheet view collection stores, and apply lookup keys values forward into active_machinery_row_pointer_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_trigger_emergency_breakdown",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Flip state tracking variable flag configuration is_emergency_wizard_visible parameter modifier value to true to launch global emergency breakdown allocation worksheet overlays dialogue frames instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_emergency_repair_confirm_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "eam.machinery.breakdown_dispatched",
+        "executes_backend_function": "AssetManagementService.createReactiveMaintenanceWorkOrder(active_machinery_row_pointer_id, payload_emergency_wizard_form_data)",
+        "target_mutation_action": "Publish secure infrastructure state transition data command packets outward to system asynchronous message broker streams; overwrite matching row properties indices keys values inside local equipment_machinery_roster_dataset view models indicators tracking attributes to `CRITICAL_BREAKDOWN` instantly; turn off wizard overlays layer flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_preventative_maintenance_scheduler",
+        "trigger_event": "click",
+        "emitted_event_topic": "eam.ui.navigated.preventative_calendar",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/asset-management/scheduler (Advances browser web layout router framework spatial navigation coordinates parameters forward into final sequence Screen EAM_SCR_002 Preventative Maintenance Scheduler & Machine Downtime Log Viewport Frame)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "screen_metadata": {
+    "module_id": "HR",
+    "screen_index": 2,
+    "screen_id": "HR_SCR_002",
+    "name": "Payroll Distribution Worksheet & Compensation Rules Center",
+    "route": "/hr/payroll"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px analytical accounting and matrix layout)",
+    "main_layout_template": "Two-Column Split Worksheet Shell (Left Workspace Panel: Active Multi-Tenant Payroll Execution Grid tracking individual employee calculations; Right Contextual Sidebar Panel: Compensation Rule Builder & Statutory Tax Bracket Configurator; Top Action Toolbar: Global Pay-Period Matrix Selector & Outbox Bank Wire Dispatch Controls)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders concurrent calculation grids and tax multiplier configurations side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The right rule configurator switches to a sliding drawer model to preserve multi-column vertical digit row alignments inside the primary ledger spreadsheet)"
+    },
+    "key_visible_sections": [
+      { "id": "payroll_run_spreadsheet", "title": "Active Multi-Tenant Payroll Running Worksheet", "type": "High-Performance Calculating Spreadsheet Canvas" },
+      { "id": "compensation_rule_builder", "title": "Corporate Compensation Rules Configurator", "type": "Sticky Action Control Sub-Panel" },
+      { "id": "payroll_yield_ribbon", "title": "Period Gross-to-Net Outlay Analytics Ribbon", "type": "Static Top Metric Strip Grid" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active payroll supervisor or financial controller security clearance -> Inherit multi-tenant entity parameters scope -> Execute state request payload fetch from HumanResourceService.getPayrollRun()",
+      "on_rule_modifier_change": "Execute localized cell calculation script workflows loops to re-evaluate net pay balances, updating the spreadsheet matrix inline instantly"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an individual employee net payroll output results in a negative numeric modifier value (Deduction Overdraft Fault)",
+        "action": "Intercept batch compilation cycles instantly, highlight target cell block layout parameters style context inline as 'Arithmetic Calculation Exception', and lock execution wire triggers"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_finalize_payroll_run",
+        "trigger": "User strikes action toolbar command element 'btn_commit_payroll_run'",
+        "behavior": "Pop center validation wizard dialogue modal enforcing final dual-factor signing parameters configurations before flushing the outbox and emitting balancing entries downstream to the General Ledger"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_payroll_staged", "type": "Semantic Progress Pill Label Element", "props": { "variant": "Slate Muted Gray", "text": "STAGED CALCULATING" } },
+      { "id": "badge_payroll_dispatched", "type": "Semantic Progress Pill Label Element", "props": { "variant": "Teal Solid Fill Gloss", "text": "BANK WIRE RELEASES CONFIRMED" } },
+      { "id": "input_tax_deduction_override", "type": "Tabular Intercepting Numeric Input Box Form Component", "props": { "placeholder": "0.00", "align": "right", "font": "monospace" } },
+      { "id": "btn_commit_payroll_run", "type": "Functional Core Action Core Button Element", "props": { "variant": "Primary Revenue Success Emerald", "icon": "send-payment-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "payroll_employee_calculation_row",
+        "composition": "Combines employee identity serial code text link + baseline base salary label cell + variable overtime calculation value cell + statutory tax calculation cell + benefit parameters offset text node + calculated net payout display row component"
+      },
+      {
+        "id": "statutory_tax_bracket_card",
+        "composition": "Combines regional authority label text string + marginal bracket selector percentage box + maximum floor ceiling limit modifier input box"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "payroll_run_calculation_grid_canvas",
+        "composition": "Dynamic high-density calculating spreadsheet table grid tracking personnel metrics rows looping across database objects matrices, complete with interactive column filters and inline macro selection checkboxes loops."
+      },
+      {
+        "id": "corporate_compensation_rule_builder_workspace",
+        "composition": "Interactive vertical stack panel tracking fixed bonus calculation multipliers, statutory local tax guidelines schedules groupings, and local insurance rate sliders tools."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Precision monospaced fonts stack used strictly on all calculation columns fields, net pay labels, and banking fields entries to preserve strict vertical spreadsheet matrix row grid alignments perfectly)",
+      "scales": {
+        "outlay_large_monetary_analytics": "font-size: 1.625rem (26px) | font-weight: 800 | tracking: tightly packed numerical monospace metrics",
+        "worksheet_column_labels_text": "font-size: 0.8125rem (13px) | font-weight: 600 | color: slate-gray-muted"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "payroll_payout_green": "#10B981 (Emerald Green Secure Capital Outlay Success Anchor Focus Hue Accent)",
+      "calculation_exception_crimson": "#EF4444 (Crimson Red Balance Overdraft/Tax Rule Violation Highline Alert Status Glow Border)",
+      "rule_modifier_indigo": "#6366F1 (Indigo Blue Active Compensation Rule Allocation Path Accent Theme)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard component catalog dashboard layout frame margins padding unit metrics)",
+      "calculating_spreadsheet_row_height": "2.375rem (38px high-density vertical row parameters layout cell bounds)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "payroll_employee_calculation_row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 90ms execution curves duration window parameter" },
+      { "target": "input_tax_deduction_override:focus", "style_mutation": "border outline updates framework metrics instantly to color value #3B82F6 highlight tone highlighting selected box container elements layers" }
+    ],
+    "accessibility_aria_roles": {
+      "payroll_run_calculation_grid_canvas": "role='grid' housing multi-column extensive calculating workforce compensation inventory configurations records matrices",
+      "corporate_compensation_rule_builder_workspace": "role='region' accompanied by explicit aria-live='polite' configuration fields monitoring real-time benefit rules modifications parameters models"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "active_payroll_period_token": "2026-06-End",
+      "total_gross_period_outlay_functional": 13775000.00,
+      "total_net_period_payout_functional": 9642500.00,
+      "reporting_currency_code": "USD",
+      "active_payroll_calculation_spreadsheet": [
+        {
+          "payroll_row_id": "pay_run_2026_06_4921",
+          "employee_id": "emp_hr_2026_00291",
+          "full_name": "Devon Vance",
+          "base_monthly_salary": 9500.00,
+          "approved_overtime_hours": 12.5,
+          "computed_overtime_payout": 1171.88,
+          "statutory_withholding_tax": 2134.38,
+          "health_insurance_deduction": 450.00,
+          "net_calculated_pay_amount": 8087.50,
+          "calculation_lifecycle_status": "STAGED",
+          "disbursement_bank_routing_code": "XXXXXX883"
+        }
+      ],
+      "active_regulatory_tax_rules_matrix": [
+        { "bracket_id": "tax_us_federal_tier_02", "authority_label_string": "US Internal Revenue Service", "marginal_rate_pct": 22.00, "bracket_floor_amount": 44725.00 }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_payroll_row_pointer_index": "Tracks currently focused spreadsheet cell lookup row identification key string used to evaluate individual employee formulas (string | null default pointer value)",
+      "is_finalize_modal_visible": "Boolean state variable tracking presentation configurations parameters toggling the multi-step verification payroll submission confirmation modal sheet overlays",
+      "payroll_lines_collection_buffer": "Reactive array collection caching ongoing overtime offsets updates, checking tax parameter modifications, and applying custom withholding overrides filters instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared enterprise system global multi-tenant business scope token variable controlling schema isolation domain values cross microservice runtime executions",
+      "prj_validated_timesheet_shared_buffer": "Global storage context data cache allocating approved project consultant hours and timesheet records parameters locally to verify compensation calculation accuracy levels across domain boundaries"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous module scripts deploying precise calculation string abstractions to permanently discard rounding floating-point errors across large corporate payroll ledger summaries math branches",
+    "performance_benchmarks": "Recalculating macro period net payout blocks metrics over a 1,500 row workforce calculation canvas following a rule modification update trigger must execute computation cycles frames under a target threshold limit parameter of 14ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "payroll_employee_calculation_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "hr.ui.payroll.row_focused",
+        "executes_backend_function": null,
+        "target_mutation_action": "Pass active row cell metadata indices mapping parameters into local active_payroll_row_pointer_index tracker parameters flags, illuminating corresponding fields indicators matches inside sidebar sheets",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_commit_payroll_run",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local state variable flag configuration is_finalize_modal_visible tracker modifier parameter value to true to present layout system payroll close modal terminal frames instantly on screen layers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_finalize_wizard_confirm_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "hr.payroll.dispatched",
+        "executes_backend_function": "HumanResourceService.commitPayrollDistributionRun(active_payroll_period_token, payroll_lines_collection_buffer)",
+        "target_mutation_action": "Broadcast secure transaction command packets outward to system asynchronous message broker streams; overwrite matching row indicators inline tracking variables updating indicators metrics to `DISPATCHED` within local data storage cache collections arrays; close modal layout overlays windows",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_infrastructure_backbone_auth",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.ui.navigated.security_governance",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/auth/governance (Complete human asset and payroll operations tracking rotation; advance router context coordinates tracking parameters forward out of corporate operations subdomain directly into the final system core framework security and infrastructure gate: AUTH Screen AUTH_SCR_001 Viewport Layout Panel Configuration View)"
+      }
+    ]
+  }
+}

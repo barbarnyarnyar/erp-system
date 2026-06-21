@@ -1,0 +1,177 @@
+{
+  "screen_metadata": {
+    "module_id": "EAM",
+    "screen_index": 2,
+    "screen_id": "EAM_SCR_002",
+    "name": "Preventative Maintenance Scheduler & Machine Downtime Log",
+    "route": "/asset-management/scheduler"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dense operational calendar workspace layout)",
+    "main_layout_template": "Two-Column Flexible Split Canvas (Left Sidebar Panel: High-Performance Analytics Block displaying MTBF/MTTR line charts and historical plant downtime breakdown sheets; Right Main Canvas: Interactive Chronological Matrix Calendar View tracking preventative maintenance cycles by month/week/day tracks; Top Contextual Ribbon: Active Factory Uptime Metric Guages & Urgent Out-of-Spec Overdue Service Bars)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders concurrent graphical downtime charts and wide monthly scheduling grids side-by-side flawlessly)",
+      "tablet_landscape": "1024px - 1279px (The analytical chart block collapses down into a sliding lower drawer to allocate maximum screen area for wide chronological calendar columns)"
+    },
+    "key_visible_sections": [
+      { "id": "plant_reliability_analytics", "title": "Plant Infrastructure Reliability & Trend Analytics", "type": "High-Density Data Visualization Block" },
+      { "id": "chronological_maintenance_calendar", "title": "Preventative Maintenance Scheduling Calendar Matrix", "type": "Interactive Full-Width Calendar Grid" },
+      { "id": "uptime_performance_ribbon", "title": "Macro Factory Equipment Availability Ribbon", "type": "Static Metric Card Strip" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active maintenance planner or asset coordinator clearance keys -> Inherit multi-tenant facility isolation scopes -> Execute state payload request fetch from AssetManagementService.getPreventativeSchedules()",
+      "on_calendar_date_click": "Asynchronously filter and populate the analytics pane with machine logs, expected downtimes durations, and engineer assignment lists for that timeframe"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a critical factory production line's compiled preventative maintenance countdown parameter lapses past its zero tolerance bound",
+        "action": "Flash an immediate blinking orange outer glow on the calendar cell block, flag status tokens inline to 'OVERDUE - RISK BLOCK ACTIVE', and inject a priority service task entry straight into the SCM procurement track for spare parts kitting verification"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_schedule_maintenance_window",
+        "trigger": "User double-clicks an empty calendar cell coordinate or clicks action controller 'btn_create_schedule'",
+        "behavior": "Pop center dialog validation form wizard capturing machine identifier keys from PLM, required maintenance task instructions blocks, projected downtime intervals, and certified technician assignment selectors"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_schedule_planned", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Indigo Solid Fill", "text": "PLANNED MAINTENANCE" } },
+      { "id": "badge_schedule_overdue", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Amber Orange Flashing Glow", "text": "CRITICAL OVERDUE RUN" } },
+      { "id": "indicator_uptime_gauge", "type": "Micro Circular Percent Graphic Gauge SVG Element", "props": { "radius": "24", "stroke_width": "4" } },
+      { "id": "btn_create_schedule", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Brand Royal Blue Accent", "icon": "calendar-plus-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "calendar_matrix_event_capsule",
+        "composition": "Combines system asset tracking key (`eam_equipment_id`) + clear short text service instruction label + engineering priority color token sub-border lines + technician profile avatar dot variable"
+      },
+      {
+        "id": "reliability_metric_summary_block",
+        "composition": "Combines metric classification title description + high-precision numeric value string (e.g., MTBF: 720h) + conditional contextual delta percentage label"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "plant_reliability_analytics_dashboard",
+        "composition": "Analytical container layout housing visual vector chart blocks elements, historical machine availability rows matrices lists, and automated asset efficiency level calculations trackers panels."
+      },
+      {
+        "id": "preventative_scheduling_calendar_matrix_canvas",
+        "composition": "High-performance two-dimensional chronological table layout grid linking calendar date coordinates cells directly to multiple instances blocks of calendar_matrix_event_capsule elements, complete with dynamic month shift toolbars loops."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Monospaced formatting typography stacks applied strictly to hour counters, MTTR values, device keys, and dates to preserve vertical alignment frames layouts tracking data sheets flawlessly)",
+      "scales": {
+        "calendar_date_numeral_bold": "font-size: 1.0rem (16px) | font-family: monospace | font-weight: 700",
+        "analytics_large_kpi_text": "font-size: 1.5rem (24px) | font-family: 'JetBrains Mono', monospace | font-weight: 800 | tracking: tight"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "schedule_normal_indigo": "#4F46E5 (Indigo Blue Preventative Run Operational Focus Hue Accent)",
+      "schedule_breach_orange": "#D97706 (Amber Orange Overdue Milestone Exception Warning Line Indicator)",
+      "calendar_grid_borders": "#334155 (Slate Charcoal Clean Hard Geometric Framework Calendar Partitions Lines)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard component catalog dashboard layout frame margins padding unit metrics)",
+      "calendar_cell_min_height": "6.5rem (104px spatial cell bounding box ensuring room for multi-event listings stacks layouts rows)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Partition Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "calendar_matrix_event_capsule:hover", "style_mutation": "transform micro-scale translation shifts layer upward translateY(-1px); box-shadow updates properties to thin intense outer line highlight using color #3B82F6 over an 80ms execution curve window" },
+      { "target": "calendar_matrix_event_capsule:dragstart", "style_mutation": "opacity values parameters adjustments modifier scale drops to 0.60; cursor attributes modify instantly to value type 'move'" }
+    ],
+    "accessibility_aria_roles": {
+      "preventative_scheduling_calendar_matrix_canvas": "role='grid' utilizing internal row designations mapping weeks coordinates directly to day columns tracking focus criteria variables schemas maps",
+      "plant_reliability_analytics_dashboard": "role='region' accompanied by explicit aria-live='polite' configuration fields monitoring live engineering charts modifications updates fields parameters"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_scheduled_events_current_month": 114,
+      "plant_mttr_hours_average": 2.4,
+      "plant_mtbf_hours_average": 684.0,
+      "reporting_tenant_partition_id": "tenant_corp_global_us_001",
+      "plant_reliability_metrics_summary": {
+        "mean_time_between_failures_hours": 684.0,
+        "mean_time_to_repair_hours": 2.4,
+        "overall_equipment_effectiveness_pct": 94.6
+      },
+      "preventative_maintenance_schedules_collection": [
+        {
+          "schedule_event_id": "sch_event_2026_00491",
+          "machinery_asset_id": "eam_mach_robot_8841",
+          "equipment_tag_code": "EQP-ROBOT-LINE04",
+          "maintenance_task_type": "PREVENTATIVE_CALIBRATION",
+          "task_instructions_summary": "Execute precision laser sensor alignment validation tests tracking guidelines parameters, flushing metrology logs data sheets straight into QMS core databases filters.",
+          "target_scheduled_date": "2026-06-25",
+          "projected_downtime_minutes": 120,
+          "assigned_technician_user_id": "user_maintenance_tech_03",
+          "event_lifecycle_stage": "PLANNED"
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_calendar_date_coordinate_id": "Tracks currently focused calendar day target string cell index used to hydrate detailed sidebar lists profiles templates grids views (string | null default pointer value)",
+      "is_scheduling_modal_visible": "Boolean state variable tracking presentation configurations parameters toggling alternative preventative maintenance cycle creation form wizard overlays",
+      "calendar_month_focus_index": "Alphanumeric timestamp context variable tracking active active date month window views (initialized to '2026-06' default state variable tracking tracker parameter code)"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters tracking codes configurations cross microservice runtime execution scopes",
+      "mfg_active_floor_workorders_buffer": "Global storage transaction queue data bus caching active manufacturing run constraints metrics locally to allow maintenance planners to identify empty shop-floor time brackets window openings flawlessly"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous recursive loop module scripts parsing custom styling definitions without external third-party chart plugins layouts code compilation scripts dependencies layers requirements",
+    "performance_benchmarks": "Shifting calendar month scopes views grids or recalculating full trend lines elements paths charts following date switches triggers must evaluate matrix operations calculations adjustments lines under a target execution runtime threshold boundary parameter limit of 14ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "calendar_matrix_event_capsule",
+        "trigger_event": "click",
+        "emitted_event_topic": "eam.ui.scheduler.event_selected",
+        "executes_backend_function": "AssetManagementService.getScheduledEventTaskDetails(context.schedule_event_id)",
+        "target_mutation_action": "Pass selected index mapping reference directly into local active_calendar_date_coordinate_id state local tracker parameter code pointer variables to populate metrics sidebars containers sheets instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_create_schedule",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local state variable flag configuration is_scheduling_modal_visible tracker modifier parameter value to true to display layout system maintenance scheduler wizard panel overlays frames instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_schedule_confirm_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "eam.schedule.created",
+        "executes_backend_function": "AssetManagementService.createPreventativeScheduleEntry(payload_schedule_form_wizard_data)",
+        "target_mutation_action": "Broadcast workflow schedule instantiation token packets; append successfully generated record item parameters maps back inside preventative_maintenance_schedules_collection local display cache views arrays blocks; trigger system closures over wizard fields layer elements",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_complete_system_walkthrough_cycle_return_home",
+        "trigger_event": "click",
+        "emitted_event_topic": "sys.ui.navigated.universal_dashboard_root",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/logistics/suppliers (Complete absolute loop rotation cycle context; advance web layout router coordinates positions metrics all the way backward straight to initial starter blueprint anchor: SCM Screen SCM_SCR_001 Command Hub Viewport Layout Panel Frame View)"
+      }
+    ]
+  }
+}

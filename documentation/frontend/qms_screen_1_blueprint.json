@@ -1,0 +1,183 @@
+{
+  "screen_metadata": {
+    "module_id": "QMS",
+    "screen_index": 1,
+    "screen_id": "QMS_SCR_001",
+    "name": "Staged Quality Inspections & Compliance Sandbox Vault",
+    "route": "/quality/inspections"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px high-density inspection worksheet canvas)",
+    "main_layout_template": "Three-Pane Operational Console (Left Tracking Column: Scrollable material inspection queues split by origin [SCM Receipt Staged / MFG WorkOrder Complete]; Center Broad Workspace: High-density interactive Inspection Checklist Parameter Sheet & Non-Conformance Log Matrix; Right Sidebar Drawer: Dynamic AQL [Acceptable Quality Limit] Sample Calculator and QMS Compliance Outbox Telemetry Rails)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel processing lists and AQL calculator widgets side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left inspection staging queue collapses into an expandable left track panel to maximize vertical checking list dimensions)"
+    },
+    "key_visible_sections": [
+      { "id": "inspection_staged_queue", "title": "Staged Quality Inspection Queue", "type": "Scrollable Interactive List Stack" },
+      { "id": "inspection_parameter_worksheet", "title": "Interactive Quality Check Parameter Sheet", "type": "High-Density Calculating Worksheet Form" },
+      { "id": "non_conformance_matrix", "title": "Non-Conformance Defect Log Matrix", "type": "Dynamic Sortable Tabular Spreadsheet View" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active quality inspector or auditor validation keys -> Inherit multi-tenant data domain scopes -> Execute state payload request fetch from QualityManagementService.getInspections()",
+      "on_sample_mutate": "Recalculate sample size metrics using custom AQL mathematical formulas, evaluation indices limits, and trigger conditional status indicator adjustments inline"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active material sample check batch fails predefined baseline structural tolerance metrics or contains critical defects (> 0.0)",
+        "action": "Intercept release command triggers instantly, lock workflow inputs, force visual wrapper boundaries layer to 'QA Quarantine Active', and reveal structural non-conformance detail input forms fields"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_quarantine_disposition_form",
+        "trigger": "User strikes action command button link element 'btn_quarantine_fail_batch'",
+        "behavior": "Pop center dialog interactive disposition window capturing specific inventory quarantine bins coordinates, material handling holding parameters, and custom isolation routing codes"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_qa_passed", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Teal Solid Fill Gloss", "text": "QA APPROVED RELEASED" } },
+      { "id": "badge_qa_quarantine", "type": "Semantic Quality Status Pill Label", "props": { "variant": "Crimson Flashing Glow Outlined", "text": "QUARANTINED HOLD" } },
+      { "id": "input_measured_metric", "type": "Tabular Intercepting Numeric Input Box Box", "props": { "placeholder": "0.0000", "align": "right", "font": "monospace" } },
+      { "id": "btn_release_batch", "type": "Functional Core Action Core Action Button", "props": { "variant": "Success Action Accent Teal", "icon": "check-circle-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "inspection_staged_queue_item_card",
+        "composition": "Combines dynamic lot tracking code + material master part lookup text line + origin transaction link string (`scm_receipt_id` / `mfg_workorder_id`) + batch sample size indicator token"
+      },
+      {
+        "id": "inspection_checklist_parameter_row",
+        "composition": "Combines technical specification parameter label string + engineering upper/lower control threshold markers numbers + input_measured_metric box element + inline status condition dot variable"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "staged_inspections_feed_viewport",
+        "composition": "High-density vertical scrolling stack wrapping active background material inspection sandboxes rows lines, managing rapid keyword criteria filtering scripts."
+      },
+      {
+        "id": "quality_assurance_worksheet_engine_canvas",
+        "composition": "Dynamic calculating spreadsheet layout nesting multiple rows item elements instances of inspection_checklist_parameter_row molecules structures, complete with automated sample averaging rows sub-blocks."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced fonts stack used strictly on part records, lot tags, sample measurements, and tolerance figures to protect horizontal layout alignment balances)",
+      "scales": {
+        "inspection_lot_large_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: tight text-transform regular",
+        "tolerance_limit_mono_digits": "font-size: 0.8125rem (13px) | font-family: monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "qa_approved_teal": "#10B981 (Emerald Green Quality Verification Release Anchor Focus Hue Accent)",
+      "qa_failed_quarantine": "#EF4444 (Crimson Red Defect Boundary Violation Exception Flash Outline Glow)",
+      "parameter_neutral_slate": "#475569 (Slate Gray Muted Technical Attribute Metadata Typography Accent)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard component catalog dashboard layout frame margins padding unit metrics)",
+      "checklist_row_inner_gap": "0.5rem (8px compact padding layouts spacing patterns dividing technical parameters lines)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Partition Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "inspection_staged_queue_item_card:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 100ms execution curves duration curve time parameter" },
+      { "target": "btn_release_batch:active", "style_mutation": "transform micro-scale modifier adjustments scale adjustments down to scale 0.98 to yield structural physical haptic click confirmation looks feedback" }
+    ],
+    "accessibility_aria_roles": {
+      "staged_inspections_feed_viewport": "role='listbox' housing accessible individual multi-tier custom material inspection selection list elements tracking focus metrics",
+      "quality_assurance_worksheet_engine_canvas": "role='form' parsing hardware measurement metrics validation inputs templates configurations"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_pending_inspections_count": 14,
+      "global_pass_yield_rate_pct": 98.6,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "staged_material_inspections_collection": [
+        {
+          "inspection_id": "insp_qms_2026_00481",
+          "lot_number_tag": "LOT-STEEL-99482-B2",
+          "part_id": "part_structural_plate_09",
+          "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12",
+          "origin_source_type": "SCM_RECEIPT_STAGED",
+          "scm_receipt_id": "rec_scm_99482",
+          "mfg_workorder_id": null,
+          "batch_total_quantity": 200,
+          "required_sample_size_count": 32,
+          "active_inspection_status": "PENDING_EVALUATION",
+          "checklist_parameters_matrix": [
+            { "parameter_name": "Outer Boundary Structural Thickness Metric", "unit_of_measure": "mm", "lower_control_limit": 11.9500, "upper_control_limit": 12.0500, "measured_sample_value": 12.0150, "status_evaluation_dot": "PASSED" },
+            { "parameter_name": "Perimeter Bevel Calibration Angle Angle", "unit_of_measure": "deg", "lower_control_limit": 44.9500, "upper_control_limit": 45.0500, "measured_sample_value": 45.0200, "status_evaluation_dot": "PASSED" }
+          ]
+        },
+        {
+          "inspection_id": "insp_qms_2026_00484",
+          "lot_number_tag": "LOT-CHIP-33211-X1",
+          "part_id": "part_microcontroller_x9",
+          "part_name": "Embedded Logic Processing Unit SMD-X9 Core Architecture",
+          "origin_source_type": "MFG_WORKORDER_COMPLETE",
+          "scm_receipt_id": null,
+          "mfg_workorder_id": "wo_mfg_2026_77491",
+          "batch_total_quantity": 10000,
+          "required_sample_size_count": 200,
+          "active_inspection_status": "QUARANTINED",
+          "checklist_parameters_matrix": [
+            { "parameter_name": "Logic Processing Unit Input Voltage Level", "unit_of_measure": "V", "lower_control_limit": 3.2500, "upper_control_limit": 3.3500, "measured_sample_value": 2.9100, "status_evaluation_dot": "CRITICAL_DEFECT_BREACH" }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_inspection_lot_focus_id": "Tracks target active quality inspection list index folder row dataset primary lookup token string key used to inflate parameter sheet forms (string | null default pointer value)",
+      "is_quarantine_modal_visible": "Boolean state variable tracking presentation configurations parameters toggling the inventory quarantine isolation asset registration forms windows overlays",
+      "live_sample_recalculation_buffer": "Reactive object block array structure capturing intermediate calculation variance totals inside cells before transmitting database release transaction packages"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters tracking codes configurations cross microservice runtime execution scopes",
+      "asynchronous_logistics_receipt_stream_bridge": "Local background stream consumer queue triggering instant workspace floating UI alert flashes when incoming supplier shipments trigger material check stages on the loading docks mesh"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document constructs built completely over layout Tailwind CSS utility classes class rules sets scripts running zero compilation steps natively inside modular asynchronous client-side modern ES6 loop modules without complex data transformations delays or latency lags",
+    "performance_benchmarks": "Executing standard validation algorithms rollups checks over an active quality parameter sheet array collection following keystroke item mutations must map dashboard layout DOM fields modifications frameworks updates under an execution limit parameter of 7ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "inspection_staged_queue_item_card",
+        "trigger_event": "click",
+        "emitted_event_topic": "qms.ui.inspections.lot_selected",
+        "executes_backend_function": "QualityManagementService.getInspectionChecklistDetails(context.inspection_id)",
+        "target_mutation_action": "Bind fetched parameter rows lists structures data direct mapping fields into local inspection_parameter_worksheet cache arrays views, and apply lookup keys values forward into selected_inspection_lot_focus_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_release_batch",
+        "trigger_event": "click",
+        "emitted_event_topic": "qms.lot.released",
+        "executes_backend_function": "QualityManagementService.releaseInspectedMaterialLot(inspection_id)",
+        "target_mutation_action": "Perform arithmetic compliance testing checks parameters; overwrite old status tags values mappings directly inline inside local display state data array cache collections tracking indicators to value `QA_APPROVED_RELEASED` instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_calibration_audit_matrix",
+        "trigger_event": "click",
+        "emitted_event_topic": "qms.ui.navigated.calibration_logs",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/quality/calibration (Advances browser web layout router framework spatial navigation coordinates parameters forward into next sequence Screen QMS_SCR_002 Compliance Audit Matrix & Calibration Logs Center)"
+      }
+    ]
+  }
+}

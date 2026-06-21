@@ -1,0 +1,200 @@
+{
+  "screen_metadata": {
+    "module_id": "FM",
+    "screen_index": 4,
+    "screen_id": "FM_SCR_004",
+    "name": "Accounts Payable (AP) Subsidiary Ledger",
+    "route": "/finance/accounts-payable"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px viewport canvas framework with dense component properties)",
+    "main_layout_template": "Split Horizontal Partition Screen (Left Column Master View: Vendor Outlays Liabilities Data Grid & Aging Control Center Panel; Right Column Detail View: Vendor Bill Auditing Workbench & Three-Way Matching Log Checklist Container; Top Bar: Global Procurement Action Strips for Dispatching Settlements)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains multi-pane layout to simultaneously check procurement line discrepancies)",
+      "tablet_landscape": "1024px - 1279px (Collapses the vendor bill auditing pane into an explicit tab element overlay view)"
+    },
+    "key_visible_sections": [
+      {
+        "id": "ap_outstanding_kpi_cards",
+        "title": "Vendor Liabilities & Liquidity Impact Ribbon",
+        "type": "Static Metric Ribbon Matrix"
+      },
+      {
+        "id": "vendor_bill_master_grid",
+        "title": "Accounts Payable Subledger Vendor Bills Log",
+        "type": "Dynamic Filtering Data Sheet Viewport"
+      },
+      {
+        "id": "three_way_match_validator",
+        "title": "Three-Way Logistics Discrepancy Matching Workspace",
+        "type": "Sticky Contextual Sidebar Component"
+      }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active subledger routing tokens -> Hydrate open liabilities datasets -> Execute data payload fetch from ApArSubledgerService.getApVendorBills()",
+      "on_bill_click": "Populate three_way_match_validator with corresponding upstream logistics documents (PO record lines, Warehouse Receipt quantities, and incoming Invoice records)"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a transaction balance variance or a line item price mismatch flag overrides standard tolerance margins (> 2.0%)",
+        "action": "Lock user control flow inputs completely for settlement generation and toggle visual layout state wrapper elements to 'Discrepancy Exception Block Active'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_outlay_disbursement_terminal",
+        "trigger": "User hits element button context tracking identifier 'btn_dispatch_payment'",
+        "behavior": "Pop structural system check modal overlay requesting bank account authorization parameter signatures to execute money wire transfers"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_match_verified", "type": "Semantic UI Token Pill Indicator", "props": { "variant": "Teal Solid Fill", "text": "3-WAY MATCHED" } },
+      { "id": "badge_match_discrepancy", "type": "Semantic UI Token Pill Indicator", "props": { "variant": "Crimson Border Outlined Flash", "text": "PO PRICE MISMATCH" } },
+      { "id": "btn_dispatch_payment", "type": "Functional Core Action Button", "props": { "variant": "Success Action Accent Green", "icon": "credit-card-lucide" } },
+      { "id": "input_remittance_bank_selector", "type": "System Form Selection Trigger Dropdown", "props": { "placeholder": "Select corporate disbursement ledger account..." } }
+    ],
+    "molecules": [
+      {
+        "id": "three_way_matching_checklist_item",
+        "composition": "Combines document status circle indicator atom + structural tracking string label (e.g., PO-84920 Quantity Row vs Receipt-9921 Quantity Row) + inline mismatch variance deviation calculation value parameters"
+      },
+      {
+        "id": "vendor_profile_summary_strip",
+        "composition": "Combines vendor metadata avatar string label + aggregated balance liability text box rows + operational credit validation metric badges"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "vendor_liabilities_tabular_grid_viewport",
+        "composition": "Virtual row scrolling layout parsing incoming vendor bills: bill numbers sequence keys, vendor target identifiers tracking, origin logistics identifiers mapping (`purchase_order_id`, `scm_receipt_id`), currency codes parameters, tax valuation totals, and inline life-cycle tokens (`PaymentStatus` [Open, Partial, Paid])."
+      },
+      {
+        "id": "payment_disbursement_wizard_terminal",
+        "composition": "Transactional modal interface housing corporate ledger bank source selectors, payment methods arrays checkboxes, currency exchange locks, and execution triggers emitting outgoing microservice event strings."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Engineered strictly to coordinate massive transactional tabular text lines layout spaces)",
+      "scales": {
+        "discrepancy_alert_text": "font-size: 0.8125rem (13px) | font-weight: 600 | line-height: 1.15rem | color: crimson-red-palette",
+        "vendor_header_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: letter-spacing tight"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid)",
+      "disbursement_action_emerald": "#10B981 (Emerald Green Core Payment Dispatches Trigger Fill Accent)",
+      "discrepancy_exception_crimson": "#EF4444 (Crimson Red Exception Alert Highline Border Token)",
+      "logistics_document_slate": "#475569 (Slate Gray Muted Subdued Subledger Metadata Typography Accent)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px component-wide separation layout boundaries metrics)",
+      "table_row_vertical_padding": "0.5rem (8px compact dense rows optimizing multi-column spatial allocations)",
+      "border_radius_tokens": "0.375rem (6px modern industrial clean hard corner metrics layouts)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "vendor_bill_master_grid:row:selected", "style_mutation": "border-left: 4px solid #3B82F6 inline manipulation layer; background-color transformation targets value #1E293B over a 100ms timing constraint curve" },
+      { "target": "btn_dispatch_payment:disabled", "style_mutation": "opacity value shifts downward to 0.45; cursor values swap structural configurations instantly matching target 'not-allowed' style specifications" }
+    ],
+    "accessibility_aria_roles": {
+      "vendor_liabilities_tabular_grid_viewport": "role='grid' housing dynamic accessible row selection indexing rules matrices mapping rows fields directly",
+      "three_way_match_validator": "role='region' accompanied by explicit aria-live='assertive' configuration properties parameters targeting real-time document mismatch alerts monitoring blocks"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_accounts_payable_liability_functional": 28491002.34,
+      "total_staged_receipts_awaiting_billing_functional": 4920114.50,
+      "reporting_currency_code": "USD",
+      "vendor_bill_records_collection": [
+        {
+          "bill_id": "bill_ap_2026_00192",
+          "bill_number": "VND-BILL-2026-7731",
+          "vendor_id": "vendor_steel_corp_02",
+          "vendor_name": "Global Industrial Steel Logistics Supply Inc",
+          "purchase_order_id": "po_scm_55821",
+          "scm_receipt_id": "rec_scm_99482",
+          "total_amount": 89500.00,
+          "tax_amount": 4500.00,
+          "payment_status": "OPEN",
+          "three_way_match_status": "MATCHED",
+          "discrepancy_details_string": null,
+          "posting_date": "2026-06-18T10:45:00Z"
+        },
+        {
+          "bill_id": "bill_ap_2026_00195",
+          "bill_number": "VND-BILL-2026-7994",
+          "vendor_id": "vendor_micro_chip_99",
+          "vendor_name": "Advanced Silicon Processing Foundry Ltd",
+          "purchase_order_id": "po_scm_55840",
+          "scm_receipt_id": "rec_scm_99511",
+          "total_amount": 125000.00,
+          "tax_amount": 0.00,
+          "payment_status": "OPEN",
+          "three_way_match_status": "DISCREPANCY",
+          "discrepancy_details_string": "Logistics Line Match Error: Unit price on vendor invoice ($12.50) exceeds approved price limit threshold parameters on SCM Purchase Order contract ($10.00) by 25.00%.",
+          "posting_date": "2026-06-19T14:20:00Z"
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_bill_object_pointer_id": "Tracks target active vendor bill index row data identifier key used to populate matching metrics inside checklists columns (string | null default pointer value)",
+      "is_disbursement_terminal_visible": "Boolean state variable tracking rendering state boundaries for layout system modal overlays wrapping outlays disbursement triggers",
+      "ap_mismatch_override_auth_token": "Secure alphanumeric string logging supervisor authorization overrides enabling payment clearances across flagged rows (string | null)"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance tenant domain tracking code routing secure microservice requests parameters scopes across runtimes",
+      "asynchronous_scm_receipt_staged_buffer": "Local collection layer processing immediate system UI toast alerts notifications when new procurement operations drop on the Kafka mesh"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document markup combined with standard Tailwind CSS utility grid classes using modern ES6 functional JavaScript scripts structured with precision mathematical rounding wrappers (`Intl.NumberFormat` accounting configurations) ensuring clean visual financial data representations without precision losses",
+    "performance_benchmarks": "Hydration timelines mapping complex multi-document data objects inside three_way_match_validator cards layout elements must resolve processing operations within 15ms following a user click sequence event"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "vendor_bill_master_grid_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.ap.bill_selected",
+        "executes_backend_function": "ApArSubledgerService.getThreeWayMatchReport(context.purchase_order_id, context.scm_receipt_id)",
+        "target_mutation_action": "Bind return logistics tracking validation data arrays directly inside local fields arrays caches and flip state tracking variable selected_bill_object_pointer_id configuration to illuminate checklist side panels",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_dispatch_payment",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Set state variable is_disbursement_terminal_visible parameter value flag to true to present layout system payment disbursement modal terminal frames instantly on screen layers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_outlay_disbursement_confirm_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.vendor.paid",
+        "executes_backend_function": "ApArSubledgerService.disburseVendorPayment(payload_disbursal_terminal_form_data)",
+        "target_mutation_action": "Push workflow command processing packets; update matched row item parameters inline tracking variables updating indicators properties to `PAID` within local records data caches layers; turn off terminal modal flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_navigate_to_fixed_assets",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.navigated.fixed_assets",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/finance/fixed-assets (Directs router location forward into Screen 5 Capitalized Equipment Management Vault)"
+      }
+    ]
+  }
+}

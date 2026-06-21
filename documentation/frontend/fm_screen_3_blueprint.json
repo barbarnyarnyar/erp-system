@@ -1,0 +1,213 @@
+{
+  "screen_metadata": {
+    "module_id": "FM",
+    "screen_index": 3,
+    "screen_id": "FM_SCR_003",
+    "name": "Accounts Receivable (AR) Subsidiary Ledger",
+    "route": "/finance/accounts-receivable"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px workspace grid layout optimizing row space data visibility)",
+    "main_layout_template": "Two-Column Flexible Dashboard Layout (Left Main Column: Dynamic Customer Aging & AR Invoice Tracking Data Grid; Right Sidebar Column: Multi-Action Document Context Drawer & Credit Limits Rules Manager Panel; Top Header Block: Aggregated Metrics Cards Overlay Panel Tracking Total AR Outstanding, Overdue Collections, and Days Sales Outstanding [DSO])",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains visible layout spacing grid for data list matching side drawer panel operations)",
+      "tablet_landscape": "1024px - 1279px (Asynchronous side drawer transitions to a 100% full-screen depth modal module when displaying granular invoice logs)"
+    },
+    "key_visible_sections": [
+      {
+        "id": "ar_kpi_summary_ribbon",
+        "title": "Accounts Receivable Executive Aggregates Ribbon",
+        "type": "Static Metric Card Strip Grid"
+      },
+      {
+        "id": "invoice_tracking_matrix",
+        "title": "Subledger Customer Billing Tracking Matrix Table",
+        "type": "Dynamic Virtual Scrollable Filtering Data Grid"
+      },
+      {
+        "id": "invoice_action_drawer",
+        "title": "Customer Payment Processing Details Container Component",
+        "type": "Collapsible Right Sidebar Framework Container"
+      }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active tenant security clearance permissions -> Initialize listening service capturing background incoming billing data logs from Event Mesh -> Execute state fetch from ApArSubledgerService.getArInvoices()",
+      "on_row_selection": "Hydrate invoice_action_drawer dynamically with structural invoice line information and related customer credit history items data streams"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an incoming event contains an unmapped or invalid corporate customer identifier relationship mapping token",
+        "action": "Flag target invoice item components state view inline as 'Suspended - Customer ID Reconciliation Fault' and log diagnostic alerts inside tech tracing boards"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_payment_allocation_wizard",
+        "trigger": "User hits elements button tracking action 'btn_allocate_cash_receipt'",
+        "behavior": "Pop center dialog interactive wizard layout enabling the split balancing distribution of cash receipts directly against open customer invoice balances strings"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_status_paid", "type": "Status Badge Token UI Element", "props": { "variant": "Emerald Green Gloss Fill Accent", "text": "PAID" } },
+      { "id": "badge_status_open", "type": "Status Badge Token UI Element", "props": { "variant": "Amber Orange Glow Fill Accent", "text": "OPEN" } },
+      { "id": "badge_status_overdue", "type": "Status Badge Token UI Element", "props": { "variant": "Crimson Red Flash Fill Accent", "text": "OVERDUE" } },
+      { "id": "input_payment_match_amount", "type": "Tabular Decimals Numeric Input Box Control Component", "props": { "placeholder": "0.00", "align": "right" } }
+    ],
+    "molecules": [
+      {
+        "id": "kpi_metric_summary_card",
+        "composition": "Combines micro icon graphic illustration token + statistical structural metric text row title + semantic positive/negative trend vector badge text components"
+      },
+      {
+        "id": "customer_aging_bracket_selector",
+        "composition": "Combines segmented button control elements breaking filtering arrays explicitly down into calendar aging intervals components groups (Current, 1-30 Days Overdue, 31-60 Days, 61-90 Days, 90+ Days Past Due)"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "accounts_receivable_invoices_master_grid",
+        "composition": "Robust virtual layout multi-column table displaying searchable properties: invoice sequence reference number, source modules identifier pointers (CRM sales order tracking context / PRJ project contract milstone reference), unique customer identity tokens, financial aggregate values rows, due dates, and inline conditional badges."
+      },
+      {
+        "id": "cash_receipts_matching_wizard_canvas",
+        "composition": "Interactive row allocation calculator split panel parsing total incoming cash balances value arrays and tracking real-time balancing logic formulas to cross-reference amounts directly against outstanding bills."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Ensuring dense layout system interface readability standards)",
+      "scales": {
+        "kpi_giant_numeric_value": "font-size: 2.25rem (36px) | font-weight: 800 | letter-spacing: -0.05em",
+        "invoice_row_mono_id": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid)",
+      "cards_surface_elevated": "#1E293B (Slate Matrix Boundary Panel)",
+      "invoice_status_overdue_alert": "#EF4444 (Crimson Red Overdue Flag Accent)",
+      "invoice_status_paid_theme": "#10B981 (Emerald Green Fulfilled Balances Indicator Token)",
+      "invoice_status_open_warning": "#F59E0B (Amber Gold Awaiting Cash Operations Theme Accent)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px spacing boundaries surrounding functional sections components)",
+      "card_inner_padding": "1.25rem (20px breathing space allocation around statistical metric cards)",
+      "border_radius_tokens": "0.5rem (8px soft structural geometric corner cuts design parameters)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "invoice_tracking_matrix:row:hover", "style_mutation": "background-color properties transition shift to #334155 utilizing an instantaneous 100ms calculation window tracking ease-in velocity animation specifications" },
+      { "target": "kpi_metric_summary_card:hover", "style_mutation": "transform canvas elevation upward via translateY(-2px) pattern matrix scaling coupled with an added box-shadow illumination glow accent element line" }
+    ],
+    "accessibility_aria_roles": {
+      "accounts_receivable_invoices_master_grid": "role='grid' utilizing embedded row configurations mapping descriptive indices strings explicitly to columns elements tracking labels",
+      "invoice_action_drawer": "role='complementary' accompanied by clean aria-label attributes context descriptions tracking active user viewport profiles layout operations"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "aggregate_metrics_summary": {
+        "total_outstanding_ar_functional": 45892011.54,
+        "total_overdue_ar_functional": 3849200.12,
+        "days_sales_outstanding_metric": 38.4,
+        "currency_context_token": "USD"
+      },
+      "accounts_receivable_billing_records": [
+        {
+          "invoice_id": "inv_ar_2026_00492",
+          "invoice_number": "INV-2026-8849",
+          "source_module": "CRM",
+          "sales_order_id": "so_crm_84920",
+          "project_id": null,
+          "customer_id": "cust_amer_902",
+          "customer_corporate_name": "Acme North American Distribution Corp",
+          "total_amount": 150000.00,
+          "tax_amount": 12000.00,
+          "issue_date": "2026-05-14T08:00:00Z",
+          "due_date": "2026-06-14T23:59:59Z",
+          "payment_status": "OPEN",
+          "amount_remaining_unpaid": 150000.00,
+          "payment_history_lines": []
+        },
+        {
+          "invoice_id": "inv_ar_2026_00210",
+          "invoice_number": "INV-2026-3321",
+          "source_module": "PRJ",
+          "sales_order_id": null,
+          "project_id": "prj_cloud_mig_2026",
+          "customer_id": "cust_euro_411",
+          "customer_corporate_name": "EuroTech Software Group Consortium",
+          "total_amount": 75000.00,
+          "tax_amount": 0.00,
+          "issue_date": "2026-04-01T09:30:00Z",
+          "due_date": "2026-05-01T23:59:59Z",
+          "payment_status": "OVERDUE",
+          "amount_remaining_unpaid": 25000.00,
+          "payment_history_lines": [
+            {
+              "cash_receipt_id": "cr_rec_2026_9921",
+              "allocated_amount": 50000.00,
+              "allocation_timestamp": "2026-04-28T14:20:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_invoice_item_focus_id": "Tracks target active invoice object references ID string used to pull and map tracking properties inside side drawer panels data layers (string | null default pointer value)",
+      "active_aging_bracket_filter_token": "Manages string code settings driving visible rows criteria mappings based on chronological customer data ranges (default state value 'ALL')",
+      "is_cash_allocation_wizard_open": "Boolean state variable controlling layout layer visibility thresholds wrapping manual payment entry operations wizards grids"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared systems global tenant context code routing multi-tenant application operations parameters scopes (string setup validation component token)",
+      "async_event_stream_websocket_buffer": "Global network socket allocation stream catching real-time background invoice generation payloads pushed from upstream fulfillment domains"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 execution layer tied directly to standard Tailwind CSS class rules utilities scripts using structural native client-side layout rendering modules logic engines configured to intercept asynchronous streaming browser message patterns without disrupting local layout document grids hierarchies structures",
+    "performance_benchmarks": "Filtering master list rows tracking variables calculations leveraging complex calendar date calculations arrays must filter data grids instantly under a threshold parameter value of 12ms to retain fluid desktop layout performance capabilities"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "invoice_tracking_matrix_data_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.ar.invoice_selected",
+        "executes_backend_function": "ApArSubledgerService.getInvoiceDetails(context.invoice_id)",
+        "target_mutation_action": "Bind fetched details entity mapping parameters into local variables states and flip state tracking variable selected_invoice_item_focus_id property to reveal invoice_action_drawer component layers viewport structures",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_allocate_cash_receipt",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local state flag tracker is_cash_allocation_wizard_open parameter value to true to initiate application modal canvas visibility states instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_payment_wizard_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.customer.payment_allocated",
+        "executes_backend_function": "ApArSubledgerService.allocateCustomerPayment(payload_payment_wizard_data)",
+        "target_mutation_action": "Broadcast transactions state token changes out to down-stream data collections; inject calculated update values vectors straight back inside local accounts_receivable_billing_records data arrays caches layer elements; turn off wizard overlays layer flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_navigate_to_accounts_payable",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.navigated.accounts_payable",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/finance/accounts-payable (Pushes router framework view context forward into Screen 4 Operations Hub Viewport Layout)"
+      }
+    ]
+  }
+}

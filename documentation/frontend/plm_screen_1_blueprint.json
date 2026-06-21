@@ -1,0 +1,180 @@
+{
+  "screen_metadata": {
+    "module_id": "PLM",
+    "screen_index": 1,
+    "screen_id": "PLM_SCR_001",
+    "name": "Material Master Item Registry & Engineering Revision Vault",
+    "route": "/product/parts"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dense part engineering vault catalog layout)",
+    "main_layout_template": "Three-Column Splitting Shell (Left Column Tracker Panel: Filterable categorized inventory item groups and assembly type indexes; Center Main Panel: High-density MaterialMaster parts data sheet list grid; Right Contextual Sidebar Drawer: Engineering Revision History Timeline, ECO [Engineering Change Order] control states, and CAD metadata attachment tables)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders simultaneous part classification tree stacks and engineering versioning history lines side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left group categorization tree collapses down into a sliding sidebar left drawer panel tracks to preserve multi-attribute text columns layout spacing)"
+    },
+    "key_visible_sections": [
+      { "id": "part_classification_tree", "title": "Material Classifications Dynamic Category Tree", "type": "Scrollable Interactive Tree Stack" },
+      { "id": "material_master_data_grid", "title": "Material Master Parts Tabular Asset Spreadsheet", "type": "High-Performance Virtual Scrolling Data Sheet" },
+      { "id": "engineering_revision_vault_drawer", "title": "Version Control & ECO Clearance Lifecycle Panel", "type": "Sticky Sliding Right Panel Container" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active engineering or procurement validation keys -> Read global tenant multi-tenant boundary profiles -> Execute state request payload fetch from ProductManagementService.getMaterialMaster()",
+      "on_part_row_select": "Asynchronously query database models to pull precise version timelines matching chosen record pointers keys to hydrate the right sidebar details sheet"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a material item part structure has an active or pending Engineering Change Order (ECO) hold flag status engaged",
+        "action": "Flash an immediate vivid amber hazard highlight border around context fields elements blocks and swap the downstream release action triggers buttons status text variables labels locally to 'Locked - ECO Under Review'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_onboard_new_part_wizard",
+        "trigger": "User strikes action command selector link button 'btn_create_new_part'",
+        "behavior": "Pop center dialog interactive wizard tracking step inputs forcing the definition of unique standard unit metrics, weight thresholds, chemical composition tags, and standard unit inventory cost metrics profiles"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_rev_released", "type": "Semantic Revision Pill Tag Node", "props": { "variant": "Teal Solid Fill Gloss", "text": "PRODUCTION RELEASED" } },
+      { "id": "badge_rev_staged", "type": "Semantic Revision Pill Tag Node", "props": { "variant": "Amber Gold Glow Pulse", "text": "ECO STAGED IN REVISION" } },
+      { "id": "input_part_weight_kg", "type": "Tabular Numeric Precision Decimals Box Form Component", "props": { "placeholder": "0.0000", "align": "right", "font": "monospace" } },
+      { "id": "btn_add_eco_revision", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Brand Royal Blue Accent", "icon": "git-branch-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "part_category_selector_node",
+        "composition": "Combines inventory group folder icon token + category title text string label + counted total subset part numeric items badge element"
+      },
+      {
+        "id": "revision_history_timeline_node",
+        "composition": "Combines version index tag alphanumeric label (e.g., Rev-B.4) + modifier engineer user id token + date timestamp log tracking label + text change order logs message field"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "material_master_catalog_viewport",
+        "composition": "High-density tabular grid rendering master part specifications data records tracking properties: alphanumeric part numbers, titles, measurement unit codes, physical dimensions blocks, and standard base pricing columns fields."
+      },
+      {
+        "id": "engineering_lifecycle_revision_tracker_canvas",
+        "composition": "Vertical tracking stack layout wrapping sequential instances blocks of revision_history_timeline_node elements rows lines, complete with interactive CAD attachment link blocks and ECO lock override authorization tools."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Precision monospaced fonts stack used strictly on part numbers tags, dimensions labels, and revision tracking IDs to shield horizontal grid alignments layout balances)",
+      "scales": {
+        "part_id_monospace_heading": "font-size: 1.125rem (18px) | font-family: 'JetBrains Mono', monospace | font-weight: 700",
+        "dense_grid_attribute_text": "font-size: 0.8125rem (13px) | font-weight: 500"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "engineering_brand_blue": "#2563EB (Royal Blue PLM Part Engineering Anchor Focus Hue Accent)",
+      "released_production_teal": "#10B981 (Emerald Green Approved Lifecycle Target Status Pill Token Line)",
+      "eco_alert_warning_amber": "#D97706 (Amber Gold Engineering Hold Exception Warning Highlight Outer Glow)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard component catalog dashboard layout frame margins padding unit metrics)",
+      "spreadsheet_cell_inner_height": "2.25rem (36px high-density vertical row parameters layout cell bounds)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Partition Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "material_master_data_grid:row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an instantaneous 100ms layout execution curves time parameters frame" },
+      { "target": "btn_add_eco_revision:active", "style_mutation": "transform micro-scale modifier adjustments scale adjustments down to scale 0.97 to yield structural physical haptic click confirmation looks feedback" }
+    ],
+    "accessibility_aria_roles": {
+      "material_master_data_grid": "role='grid' housing multi-column extensive historical structural part inventory configurations records matrices",
+      "engineering_lifecycle_revision_tracker_canvas": "role='region' accompanied by explicit aria-live='polite' configuration fields tracking live technical engineering data revisions adjustments parameters fields"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_cataloged_parts_count": 12450,
+      "pending_active_eco_changes_count": 4,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "material_master_parts_records_dataset": [
+        {
+          "part_id": "part_structural_plate_09",
+          "part_number": "PN-1000-8849-A",
+          "title": "Hardened Grade-A Carbon Steel Base Plate 12x12",
+          "unit_of_measure": "PCS",
+          "net_weight_kg": 4.5250,
+          "material_composition_classification": "Ferrous Alloys / Carbon Steel",
+          "standard_unit_cost_functional": 300.00,
+          "active_revision_tag": "Rev-B.2",
+          "is_under_eco_hold": false,
+          "revision_history_timeline": [
+            { "revision_id": "rev_history_01", "revision_tag": "Rev-B.2", "timestamp": "2026-03-14T09:00:00Z", "change_author_user_id": "user_eng_lead_01", "engineering_change_order_id": "eco_plm_2026_991", "notes_summary": "Optimized structural perimeter bevel specs lines to lower milling calibration tolerance friction parameters inside MFG machine tools lines by 0.05mm." }
+          ]
+        },
+        {
+          "part_id": "part_microcontroller_x9",
+          "part_number": "PN-4000-3321-X",
+          "title": "Embedded Logic Processing Unit SMD-X9 Core Architecture",
+          "unit_of_measure": "PCS",
+          "net_weight_kg": 0.0125,
+          "material_composition_classification": "Semiconductor Silicon Assemblies",
+          "standard_unit_cost_functional": 8.50,
+          "active_revision_tag": "Rev-C.0-Draft",
+          "is_under_eco_hold": true,
+          "revision_history_timeline": [
+            { "revision_id": "rev_history_04", "revision_tag": "Rev-C.0-Draft", "timestamp": "2026-06-18T14:30:00Z", "change_author_user_id": "user_eng_lead_03", "engineering_change_order_id": "eco_plm_2026_1004", "notes_summary": "Staged full pinout array refactoring configuration layouts maps parameters sheets to intercept incoming hardware updates schemas pushed from logistics microcontrollers domains." }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_material_part_focus_id": "Tracks currently focused catalog row item identifier lookup string token key used to inflate version log stacks frameworks (string | null default pointer value)",
+      "is_onboarding_wizard_visible": "Boolean state variable tracking presentation configurations parameters toggling new part registration onboarding forms sheets wizard fields overlays",
+      "material_catalog_text_search_query": "String variable tracking keyword search phrases evaluating character matches across part identification strings database rows arrays instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared systems global tenant context tracking code routing database filtering permissions properties settings across runtime scopes",
+      "plm_material_master_shared_buffer": "Global datastore context allocation saving active component recipe definitions structures locally to enforce cross-screen interface rendering data values consistency parameters fields"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document constructs built completely over layout Tailwind CSS utility classes class rules sets scripts running zero compilation steps natively inside modular asynchronous client-side modern ES6 loop modules without heavy external catalog sorting plugin scripts modules frameworks layers",
+    "performance_benchmarks": "Transitioning focuses and repopulating data history curves tables rows attributes columns mapping parameters tracking files blocks fields following item row switches must execute cleanly under an execution target threshold boundary target limit of 9ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "material_master_data_grid_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "plm.ui.catalog.part_selected",
+        "executes_backend_function": "ProductManagementService.getMaterialRevisionHistory(context.part_id)",
+        "target_mutation_action": "Bind fetched structural timeline collection data arrays records directly inside local revision_history_timeline store grids caches, then pass active index lookup keys values straight forward into active_material_part_focus_id parameter flag modifiers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_onboarding_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "plm.material.created",
+        "executes_backend_function": "ProductManagementService.createMaterialMasterRow(payload_onboarding_wizard_data)",
+        "target_mutation_action": "Emit registration transaction log variables; append successfully generated record item parameters maps back inside material_master_parts_records_dataset local display cache views arrays blocks; drop onboarding modal flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_recipe_bom_canvas",
+        "trigger_event": "click",
+        "emitted_event_topic": "plm.ui.navigated.bom_recipes",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/product/recipes (Advances browser web layout router framework spatial navigation coordinates parameters forward into next sequence Screen PLM_SCR_002 Bill of Materials Multi-Level Nesting Worksheet Canvas)"
+      }
+    ]
+  }
+}

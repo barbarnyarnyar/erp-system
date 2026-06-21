@@ -1,0 +1,180 @@
+{
+  "screen_metadata": {
+    "module_id": "HR",
+    "screen_index": 1,
+    "screen_id": "HR_SCR_001",
+    "name": "Employee Master Organization Chart & Profile Command Vault",
+    "route": "/hr/org-charts"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px corporate personnel directory split grid framework)",
+    "main_layout_template": "Split Horizon Work Area (Left Pane Column: Dynamic search-optimized Employee Directory Tree and Department Node selector; Center Broad Panel Workspace: Interactive 2D SVG Node Organization Chart Canvas or structural Tiered Grid View; Right Sidebar Context Panel: Detailed Employee Personnel File, Cost-Center Allocation Sheet, and Active System Role Provisioning Console)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel organizational graph panels and secure profile tabs side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The interactive org chart canvas scales down automatically, forcing the right profile details sheet into a slide-out right drawer panel to retain form field legibility)"
+    },
+    "key_visible_sections": [
+      { "id": "personnel_directory_tree", "title": "Corporate Personnel Hierarchical Folder Roster", "type": "Scrollable Interactive List Stack" },
+      { "id": "org_chart_interactive_canvas", "title": "Interactive Organizational Chart Graph Canvas", "type": "High-Performance Vector Visualizer Workspace" },
+      { "id": "employee_profile_vault_drawer", "title": "Secure Employee Personnel Record Command Panel", "type": "Sticky Sliding Right Container Panel" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active HR administrator or supervisor security access clearance tokens -> Inherit multi-tenant corporate branch isolation profiles -> Execute state request payload fetch from HumanResourceService.getEmployees()",
+      "on_employee_node_click": "Asynchronously query background databases to pull payroll cost tracking codes, skill inventory tallies, and cross-domain system permissions metadata maps to hydrate profile workspaces"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active employee's internal security status parameter marks them as completely terminated or suspended from active system operations",
+        "action": "Deactivate inline access provisioning control triggers buttons, shade parent cell profile components layout properties to ash gray, and flag status markers to 'Access Revoked - Profile Locked'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_onboard_employee_wizard",
+        "trigger": "User strikes action command selector link button element 'btn_onboard_personnel'",
+        "behavior": "Pop center multi-step onboarding wizard dialog window capturing raw legal names strings, tax identifiers validation rules, cost center codes routing keys, and initial monthly salary distribution fields forms"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_status_active", "type": "Semantic UI Token Pill Label Indicator", "props": { "variant": "Teal Solid Fill Gloss Accent", "text": "ACTIVE WORKFORCE" } },
+      { "id": "badge_status_terminated", "type": "Semantic UI Token Pill Label Indicator", "props": { "variant": "Slate Gray Muted Outlined", "text": "TERMINATED RELEASED" } },
+      { "id": "input_base_salary_numeric", "type": "Tabular Intercepting Numeric Input Box Form Component", "props": { "placeholder": "0.00", "align": "right", "font": "monospace" } },
+      { "id": "btn_provision_role", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Brand Royal Blue Accent", "icon": "shield-user-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "directory_employee_list_card",
+        "composition": "Combines personnel thumbnail image asset + full name string title + corporate role description label + cost center allocation tag + conditional status pill indicator token element"
+      },
+      {
+        "id": "org_chart_graph_node_element",
+        "composition": "Combines vector bounding layout box frame + interactive collapse child nodes chevron emblem + text row titles lines + inner direct reporting count numerical bubble element"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "personnel_directory_list_viewport",
+        "composition": "High-density vertical scrolling stack list mapping active internal corporate resources, managing multi-tier alphanumeric search parsing queries scripts instantly."
+      },
+      {
+        "id": "employee_personnel_records_vault_canvas",
+        "composition": "Unified vertical multi-tab input worksheet housing secure fields groupings including banking wire instructions form strings, tax accounting compliance parameters cells, and a structural direct-line supervisor relationship tree picker tool."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced style applied strictly across banking account fields, tax ids numbers, and salary data grids to protect vertical layout rows balancing grids maps)",
+      "scales": {
+        "profile_header_title_emphasis": "font-size: 1.375rem (22px) | font-weight: 700 | line-height: 1.5rem | tracking: letter-spacing tight",
+        "personnel_id_mono_tag": "font-size: 0.75rem (12px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "hr_anchor_indigo": "#6366F1 (Indigo Blue HR Domain Resource Mapping Core Accent Focus Hue)",
+      "status_active_teal": "#10B981 (Emerald Green Compliant Verification Active Workforce Pill Token Line)",
+      "status_locked_gray": "#64748B (Slate Gray Subdued Personnel Metadata Typography Accent Row Labels)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard component catalog dashboard layout frame margins padding unit metrics)",
+      "org_node_tree_gap": "1.25rem (20px separation space parameter mapping boundaries separating nodes components lines within graphing layout grids)",
+      "border_radius_tokens": "0.375rem (6px modern precise clean structural geometric corner slices parameters)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "directory_employee_list_card:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 100ms execution curves duration window parameter" },
+      { "target": "org_chart_graph_node_element:selected", "style_mutation": "outline tracking boundary maps box frame border line to 2px solid #3B82F6 using an instant 80ms calculation speed timing constraint" }
+    ],
+    "accessibility_aria_roles": {
+      "org_chart_interactive_canvas": "role='tree' parsing nested personnel reporting relationships structures mapped to selectable treeitem rows filled with proper expandable booleans metrics",
+      "employee_personnel_records_vault_canvas": "role='form' processing secure personal identification attributes entries validation workflows sheets"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_active_workforce_headcount": 1450,
+      "unassigned_department_heads_count": 0,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "employee_directory_records_dataset": [
+        {
+          "employee_id": "emp_hr_2026_00291",
+          "personnel_serial_number": "EMP-2026-004921",
+          "first_name": "Devon",
+          "last_name": "Vance",
+          "corporate_email_address": "d.vance@enterprise-cluster.com",
+          "corporate_role_title": "Senior UI/UX Design Engineer - Core Systems Frontend Architecture",
+          "cost_center_id": "cc_us_eng_frontend_04",
+          "employment_status_flag": "ACTIVE",
+          "base_monthly_salary_functional": 9500.00,
+          "tax_registration_identifier_hash": "SSN-XXX-XX-8843",
+          "direct_supervisor_employee_id": "emp_hr_2026_00102"
+        }
+      ],
+      "org_chart_recursive_graph_tree": {
+        "node_id": "node_emp_00102",
+        "employee_name": "Sarah Jenkins",
+        "role_title": "Vice President of Engineering & Technology Operations",
+        "is_expanded": true,
+        "direct_reporting_sub_nodes": [
+          {
+            "node_id": "node_emp_00291",
+            "employee_name": "Devon Vance",
+            "role_title": "Senior UI/UX Design Engineer - Core Systems Frontend Architecture",
+            "is_expanded": false,
+            "direct_reporting_sub_nodes": []
+          }
+        ]
+      }
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_employee_profile_focus_id": "Tracks target captured directory list index row dataset primary lookup token code string identifier key used to inflate secure workspaces dashboards fields (string | null default pointer value)",
+      "is_onboarding_wizard_visible": "Boolean state variable tracking presentation configurations parameters toggling new personnel registration wizard form overlays dialog windows structures",
+      "directory_text_filter_query": "String variable tracking character search variables evaluating string character matches across employee names data arrays instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters tracking codes configurations cross runtime execution scopes",
+      "auth_rbac_user_clearance_level_token": "Global security context allocation monitoring user role-based access tokens parameters locally to restrict view visualization capabilities over secure salary attributes fields parameters"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous recursive loop module scripts parsing custom styling definitions without external d3 or heavy layout diagram plugins scripts libraries requirements",
+    "performance_benchmarks": "Executing full structural list calculations or processing recursive hierarchy tree node rendering operations over a deep nested 1,000 node employee graph layout matrix table must recalculate DOM fields modifications frames updates under a target threshold limit parameter of 15ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "directory_employee_list_card",
+        "trigger_event": "click",
+        "emitted_event_topic": "hr.ui.directory.employee_selected",
+        "executes_backend_function": "HumanResourceService.getEmployeePersonnelFile(context.employee_id)",
+        "target_mutation_action": "Bind fetched secure personal file data structures direct mapping fields records inside local employee_personnel_records_vault_canvas data sheet caches views arrays, and pass active index lookup keys values straight forward into active_employee_profile_focus_id parameter flag modifiers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_onboarding_wizard_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "hr.employee.onboarded",
+        "executes_backend_function": "HumanResourceService.createNewEmployeeMasterRecord(payload_onboarding_wizard_form_data)",
+        "target_mutation_action": "Emit registration transaction log variables; append successfully generated record item parameters maps back inside employee_directory_records_dataset local display cache views arrays blocks; trigger system closures over wizard fields layer elements variables flags parameters",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_compensation_worksheet_view",
+        "trigger_event": "click",
+        "emitted_event_topic": "hr.ui.navigated.payroll_worksheet",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/hr/payroll (Advances browser web layout router framework spatial navigation coordinates parameters forward into final sequence Screen HR_SCR_002 Payroll Distribution Worksheet & Compensation Rules Center Viewport Layout Panel Frame)"
+      }
+    ]
+  }
+}

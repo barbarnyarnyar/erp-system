@@ -1,0 +1,189 @@
+{
+  "screen_metadata": {
+    "module_id": "AUTH",
+    "screen_index": 2,
+    "screen_id": "AUTH_SCR_002",
+    "name": "Global Security Audit Matrix & System Session Log",
+    "route": "/auth/security-logs"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dense cybersecurity surveillance console layout)",
+    "main_layout_template": "Split Horizon Work Area (Left Pane Column: Real-time scrolling active session token cards stack; Right Main Panel Workspace: High-Density System Trace Event Logging Spreadsheet & Distributed Audit Matrix Grid; Top Section Banner: Anomaly Detection KPI Ribbon displaying brute-force alarm counters and regional velocity alert maps)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel session logs and comprehensive distributed system audit grids side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The left session token feed collapses down into a left sidebar drawer track, prioritizing full text space for long trace identification codes inside tables)"
+    },
+    "key_visible_sections": [
+      { "id": "active_sessions_stream", "title": "Real-Time User Session Token Feed", "type": "Scrollable Interactive Card Stacking Lane" },
+      { "id": "system_trace_ledger_grid", "title": "Distributed Trace Logs Spreadsheet Matrix", "type": "High-Performance Virtual Scrolling Data Sheet" },
+      { "id": "security_anomaly_indicators", "title": "Brute-Force Counter & Security Threat Ribbon", "type": "Static Alert Top Ribbon Panel" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active cybersecurity administrator super-tokens -> Inherit multi-tenant data domain scopes -> Execute state payload request fetch from SecurityGovernanceService.getSecurityAuditLogs()",
+      "on_session_click": "Asynchronously query active session tokens verification states to populate tracking metadata details sheets without blocking main canvas threads"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an individual user tracking row registers a high-risk security breach condition (e.g., simultaneous authorization signatures from conflicting geographic coordinate strings)",
+        "action": "Flash an immediate vivid blinking crimson outline wrapper box over the session node, block user inputs options, and present a high-visibility terminal kill override button trigger"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_revoke_all_sessions",
+        "trigger": "User strikes system action control header command 'btn_emergency_tenant_purge'",
+        "behavior": "Pop center dialog emergency confirmation overlay requiring secondary supervisor security tokens authentication codes to instantly append all active tenant hashes into the global token blacklist cache"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_token_active", "type": "Semantic Security Status Pill Label", "props": { "variant": "Teal Solid Fill Gloss", "text": "TOKEN COMPLIANT" } },
+      { "id": "badge_anomaly_breach", "type": "Semantic Security Status Pill Label", "props": { "variant": "Crimson Flashing Glow Outlined", "text": "CRITICAL EXCEPTION" } },
+      { "id": "btn_terminate_session", "type": "Functional Single-Action Grid Row Command Button", "props": { "variant": "Danger Micro Action Accent Crimson", "icon": "user-x-lucide" } },
+      { "id": "input_log_search_filter", "type": "Regex-Validated Text Entry Input Box Box", "props": { "placeholder": "Filter by Trace ID, User UUID, or Event Topic..." } }
+    ],
+    "molecules": [
+      {
+        "id": "active_user_token_card_item",
+        "composition": "Combines user account email label text + unique user profile UUID monospace string + localized browser agent metadata badge + tracking IP address address title + individual instant session kill button"
+      },
+      {
+        "id": "security_trace_log_row",
+        "composition": "Combines monospaced log entry timestamp + micro transaction event topic path (e.g., crm.sales.order.confirmed) + origin service domain badge + unique alphanumeric distributed trace identifier code + conditional anomaly status dot variable"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "active_tokens_surveillance_viewport",
+        "composition": "High-density vertical scrolling stack mapping live multi-tenant active sessions data models cards, handling rapid filters commands and active row selections bindings."
+      },
+      {
+        "id": "distributed_traces_spreadsheet_canvas",
+        "composition": "Virtualized column tracking layout grid parsing extensive microservice event streams rows lines database objects records registries, complete with sorting functions columns headers."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Tabular monospaced formatting styles applied strictly across timestamps fields, trace keys codes, user UUIDs, and network IPs rows to secure vertical grid lines spreadsheet rows alignment balances)",
+      "scales": {
+        "surveillance_header_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: tightly packed letters text-transform regular",
+        "trace_identifier_mono_digits": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 500 | color: slate-gray-muted"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "security_safe_teal": "#10B981 (Emerald Green Safe Token Active Surveillance Focus Hue Accent)",
+      "security_danger_crimson": "#EF4444 (Crimson Red Threat Exception Boundary Violation Flash Outline Glow)",
+      "terminal_console_dark": "#111827 (Charcoal Dark Interface Operations Console Box Background Panel Fill)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard workspace layout container segment partition padding unit metrics parameters fields)",
+      "spreadsheet_row_height_density": "2.25rem (36px high-density vertical spreadsheet row cells boundaries lines constraints)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "security_trace_log_row:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 80ms execution curves duration window parameter" },
+      { "target": "active_user_token_card_item:invalid", "style_mutation": "border-color changes to #EF4444 over an instantaneous 100ms timing constraint; trigger continuous slow flashing pulse layout look animations" }
+    ],
+    "accessibility_aria_roles": {
+      "distributed_traces_spreadsheet_canvas": "role='grid' housing multi-column extensive microservices event streams rows data lines mappings logs",
+      "active_tokens_surveillance_viewport": "role='log' accompanied by explicit aria-live='polite' configuration fields monitoring dynamic token listing additions templates properties maps"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_active_tenant_sessions_count": 412,
+      "failed_login_attempts_period_counter": 2,
+      "reporting_tenant_partition_id": "tenant_corp_global_us_001",
+      "active_tokens_surveillance_stream": [
+        {
+          "session_id": "sess_auth_2026_99421",
+          "user_uuid": "usr-uuid-9843-c004-b122",
+          "email_address": "d.vance@enterprise-cluster.com",
+          "ip_address": "192.168.1.142",
+          "browser_user_agent": "Chrome 125 / MacOS Architecture",
+          "token_compliance_status": "TOKEN_COMPLIANT",
+          "session_established_timestamp": "2026-06-21T00:05:00Z"
+        }
+      ],
+      "distributed_traces_spreadsheet_matrix": [
+        {
+          "trace_id": "trace_id_2026_9934201A",
+          "timestamp": "2026-06-21T00:10:02Z",
+          "event_topic_path": "crm.sales.order.confirmed",
+          "origin_service_domain": "CRM_PipelineService",
+          "actor_user_id": "user_sales_agent_08",
+          "trace_span_depth_index": 2,
+          "anomaly_evaluation_flag": "PASSED"
+        },
+        {
+          "trace_id": "trace_id_2026_9934188F",
+          "timestamp": "2026-06-21T00:08:14Z",
+          "event_topic_path": "auth.user.login.failed",
+          "origin_service_domain": "AUTH_IdentityGateway",
+          "actor_user_id": "UNKNOWN_GATEWAY_PROSPECT",
+          "trace_span_depth_index": 1,
+          "anomaly_evaluation_flag": "BRUTE_FORCE_SUSPECT_WARN"
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_session_card_pointer_id": "Tracks currently focused token card list row lookup alpha-numeric identification key (string | null default pointer value)",
+      "is_tenant_purge_modal_visible": "Boolean state variable tracking presentation configurations parameters toggling alternative multi-step authorization emergency wipe dialogue sheets overlays",
+      "trace_spreadsheet_regex_filter_query": "String variable tracking character search queries running regex character matching filters across database spreadsheets data cells loops rows instantly"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters tracking codes configurations cross microservice runtime execution scopes",
+      "auth_global_token_blacklist_cache": "Shared infrastructure cache array capturing revoked session hashes asynchronously across clusters networks to force immediate browser user evictions on access denials flags updates"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous recursive loop module scripts parsing custom styling definitions without external d3 or heavy layout diagram plugins scripts libraries requirements",
+    "performance_benchmarks": "Appending incoming background event traces records array items models records into distributed_traces_spreadsheet_canvas display layers must refresh interface rows maps under an execution runtime ceiling limit of 6ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "active_user_token_card_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.ui.surveillance.token_selected",
+        "executes_backend_function": "SecurityGovernanceService.getSessionTokenMetadataTrace(context.session_id)",
+        "target_mutation_action": "Pass active row metadata indices mapping parameters into local active_session_card_pointer_id tracker parameters flags, illuminating corresponding fields indicators matches inside sidebar sheets",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_terminate_session",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.session.evicted",
+        "executes_backend_function": "SecurityGovernanceService.revokeIndividualUserSessionToken(context.session_id)",
+        "target_mutation_action": "Evict targeted active context card item record parameters instantly from active_tokens_surveillance_stream display state array stacks; append signature hash into token blacklist cache arrays layers natively",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_tenant_purge_confirm_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "auth.tenant.purged",
+        "executes_backend_function": "SecurityGovernanceService.emergencyTenantWideSessionEviction()",
+        "target_mutation_action": "Flush structural live memory buffers variables caches; wipe out active_tokens_surveillance_stream display arrays clean instantly; turn off wizard overlays flags parameters",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_heavy_machinery_eam",
+        "trigger_event": "click",
+        "emitted_event_topic": "eam.ui.navigated.equipment_vault",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/asset-management/machinery (Complete identity governance, secure infrastructure tokens, and global traces logging tracking loops rotation; advance router context coordinates tracking parameters forward out of system backbone core track directly over into the final remaining macro domain module workspace: Group 2 Product Engine Heavy Equipment Maintenance Maintenance starting at EAM Screen EAM_SCR_001 Viewport Layout Panel Configuration)"
+      }
+    ]
+  }
+}

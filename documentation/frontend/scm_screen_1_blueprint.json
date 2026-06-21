@@ -1,0 +1,176 @@
+{
+  "screen_metadata": {
+    "module_id": "SCM",
+    "screen_index": 1,
+    "screen_id": "SCM_SCR_001",
+    "name": "Supplier & Procurement Command Hub",
+    "route": "/logistics/suppliers"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px multi-column catalog grid configuration)",
+    "main_layout_template": "Three-Pane Matrix Viewport (Left Panel: Filterable Global Supplier Directories Tree; Center Panel: Selected Vendor Demographics Data Sheet & Active Legal Procurement Contracts; Right Panel Drawer Contextual: Vendor Performance KPIs Summary Bar & Material Allocation Matrix)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains permanent nested data trees side-by-side with legal metadata tables)",
+      "tablet_landscape": "1024px - 1279px (Collapses the vendor tree into an expandable hamburger sliding track container layout)"
+    },
+    "key_visible_sections": [
+      { "id": "supplier_catalog_tree", "title": "Verified Vendors Global Roster", "type": "Scrollable Tree Selector Panel" },
+      { "id": "procurement_contract_grid", "title": "Active Master Service Agreements (MSA)", "type": "High-Density Relational Row Matrix" },
+      { "id": "supplier_scorecard_metric_block", "title": "Supplier Performance & Lead-Time Analytics", "type": "Contextual Summary Dashboard" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active tenant security clearances -> Extract multi-tenant regional scope tags -> Execute state request payload fetch from ProductManagementService.getSuppliers()",
+      "on_vendor_select": "Asynchronously update procurement_contract_grid data buffers with selected vendor entity contract historical rows templates"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a selected supplier entity fails global compliance background states check criteria during loading intervals",
+        "action": "Inject high-visibility alert indicator layout properties wrapper setting row boundaries inline to 'Suspended - Awaiting QMS Review' and deactivate procurement generation inputs"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_onboard_vendor_form",
+        "trigger": "User hits action element click trigger 'btn_onboard_supplier'",
+        "behavior": "Pop system modal canvas covering parent background pointer states, enforcing validation fields rules for tax identifiers, currency specifications, and operational contact forms metadata arrays"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_compliance_pass", "type": "Semantic UI Badge Element", "props": { "variant": "Teal Solid Fill Gloss", "text": "COMPLIANT APPROVED" } },
+      { "id": "badge_compliance_warn", "type": "Semantic UI Badge Element", "props": { "variant": "Amber Orange Outline Flash", "text": "AUDIT OVERDUE" } },
+      { "id": "input_tax_registration_id", "type": "Regex-Validated Text Entry Component Input Box", "props": { "placeholder": "US-EIN-XXXXXXXXX" } },
+      { "id": "btn_onboard_supplier", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Brand Royal Blue Accent", "icon": "user-plus-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "supplier_directory_card_item",
+        "composition": "Combines supplier legal string title + multi-currency preferred label token + geographic location tracking text elements + conditional inline compliance badge node elements"
+      },
+      {
+        "id": "contract_line_summary_row",
+        "composition": "Combines operational contract timeline markers string fields + legal classification text block + aggregated monetary ceiling value indicator cell"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "global_vendor_directory_viewport",
+        "composition": "Virtual row scrolling data catalog list utilizing rapid keyword filtering algorithms, handling dynamic selections indicators parameters mapping to internal context keys arrays."
+      },
+      {
+        "id": "active_contracts_auditing_grid",
+        "composition": "High-density tabular component detailing operational parameters: contract sequence mapping identifiers strings, baseline delivery terms codes, approved material categories mapping matrices, and renewal warning flags parameters."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Standardized across logistics directories dashboards to promote layout legibility properties)",
+      "scales": {
+        "vendor_title_emphasis": "font-size: 1.125rem (18px) | font-weight: 700 | line-height: 1.4rem",
+        "contract_legal_text_dense": "font-size: 0.8125rem (13px) | font-weight: 400 | font-family: system-ui"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Viewport Layer)",
+      "procurement_focus_blue": "#3B82F6 (Corporate Royal Blue SCM Subdomain Anchor Hue Accent)",
+      "compliance_emerald_glow": "#10B981 (Emerald Green Approved Status Token Accent Line Highlight)",
+      "compliance_crimson_flash": "#EF4444 (Crimson Red Breach Warning Border Alert Status Variable)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard layout box boundary margin constraints padding values)",
+      "directory_row_gap": "0.5rem (8px item separations settings within scrolling stacks canvas rows)",
+      "border_radius_tokens": "0.25rem (4px tight functional clean layout manufacturing edges)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "supplier_directory_card_item:hover", "style_mutation": "background-color properties transform to #334155 utilizing an instantaneous 100ms layout execution transition window" },
+      { "target": "btn_onboard_supplier:active", "style_mutation": "transform micro-scale modifier value drops to 0.97 to give physical haptic confirmation properties to actions" }
+    ],
+    "accessibility_aria_roles": {
+      "global_vendor_directory_viewport": "role='listbox' housing accessible individual selectable option rows structures accompanied by proper focus states tracking metrics",
+      "active_contracts_auditing_grid": "role='grid' displaying structured legal entity relationships tracking indices maps configurations"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_managed_vendors_count": 142,
+      "global_compliance_rating_percentage": 94.2,
+      "reporting_tenant_id": "tenant_corp_global_us_001",
+      "suppliers_roster_dataset": [
+        {
+          "supplier_id": "vendor_steel_corp_02",
+          "legal_name": "Global Industrial Steel Logistics Supply Inc",
+          "tax_identifier_token": "US-EIN-123456789",
+          "preferred_currency": "USD",
+          "compliance_status": "COMPLIANT",
+          "onboarding_date": "2024-01-15T08:00:00Z",
+          "performance_metrics": { "on_time_delivery_rate": 97.4, "defect_ppm_score": 120, "average_lead_time_days": 14 },
+          "contracts": [
+            { "contract_id": "msa_scm_2026_0088", "contract_title": "Master Steel Plate Fabrication Procurement Agreement", "effective_date": "2026-01-01T00:00:00Z", "expiration_date": "2027-01-01T23:59:59Z", "monetary_cap_limit": 5000000.00, "is_active": true }
+          ]
+        },
+        {
+          "supplier_id": "vendor_tint_chem_44",
+          "legal_name": "Titanium Chemical Refining Alloys Consortium",
+          "tax_identifier_token": "DE-VAT-987654321",
+          "preferred_currency": "EUR",
+          "compliance_status": "AUDIT_OVERDUE",
+          "onboarding_date": "2023-06-20T10:30:00Z",
+          "performance_metrics": { "on_time_delivery_rate": 89.1, "defect_ppm_score": 450, "average_lead_time_days": 28 },
+          "contracts": [
+            { "contract_id": "msa_scm_2024_0142", "contract_title": "Raw Catalyst Staged Materials Options Contract", "effective_date": "2024-07-01T00:00:00Z", "expiration_date": "2026-07-01T23:59:59Z", "monetary_cap_limit": 1250000.00, "is_active": true }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_vendor_entity_focus_id": "Tracks currently active supplier row identification string used to hydrate center and right data matrix profiles view containers (string | null default pointer value)",
+      "is_onboarding_modal_visible": "Boolean state variable dictating visibility boundaries layout configurations parameters for the supplier onboarding wizard panel overlays",
+      "supplier_directory_query_filter": "String variable binding text character search strings properties to simple list filtering key evaluation algorithms tracking scripts"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application core systems multi-tenant regional context tracking parameters scope variables configurations routing cross-domain microservice schemas mappings",
+      "qms_compliance_alert_broker_bridge": "Background event stream bridge listener capturing immediate real-time vendor hold status transformations emitted from quality governance networks"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 semantic structures tied directly to standard Tailwind CSS layout class frameworks utility scripts written in modern asynchronous modular modular ES6 JavaScript formats running zero compiler steps or dependency packages",
+    "performance_benchmarks": "Transitioning view focuses and repopulating data grid tables fields properties following supplier row switches must process updates cleanly under an execution target threshold boundary of 10ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "supplier_directory_card_item",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.ui.suppliers.vendor_selected",
+        "executes_backend_function": "ProductManagementService.getSupplierContracts(context.supplier_id)",
+        "target_mutation_action": "Populate active contracts datasets maps directly inside local active_contracts_auditing_grid collections cache views arrays, then assign item keys values directly to selected_vendor_entity_focus_id parameter flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_onboarding_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.supplier.onboarded",
+        "executes_backend_function": "ProductManagementService.createSupplierRecord(payload_onboarding_form_data)",
+        "target_mutation_action": "Emit registration transaction log variables; append successfully generated record item parameters maps back inside suppliers_roster_dataset local system cache arrays blocks; turn off modal visibility status flags variables parameters elements",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_switch_to_purchase_order_tracking_view",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.ui.navigated.purchase_orders",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/logistics/purchase-orders (Advances router framework view context coordinates ahead into next sequential Screen SCM_SCR_002 Operational Lifecycle Workspace Viewport)"
+      }
+    ]
+  }
+}

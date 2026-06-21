@@ -1,0 +1,178 @@
+{
+  "screen_metadata": {
+    "module_id": "SCM",
+    "screen_index": 3,
+    "screen_id": "SCM_SCR_003",
+    "name": "Warehouse Partitions & Spatial Bin Matrix",
+    "route": "/logistics/warehouse-bins"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px graphical grid rendering viewport with flexible panels)",
+    "main_layout_template": "Two-Column Visual Layout (Left Sidebar Tracking Panel: Nested Tree Hierarchy [Warehouse Complex -> Zones -> Aisles -> Shelves]; Main Content Workspace Canvas: Interactive Spatial Bin Matrix Grid displaying multi-tiered storage slots with color-coded capacity thresholds; Floating Overlay Context Panel: Selected Storage Bin Part Ledger Details Sheet)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders interactive 2D storage matrix alongside hierarchical location navigation tree panels)",
+      "tablet_landscape": "1024px - 1279px (The hierarchical location tree transitions to a top drop-down select toolbar framework, maximizing the interactive map spacing)"
+    },
+    "key_visible_sections": [
+      { "id": "warehouse_spatial_navigation_tree", "title": "Facility Location Context Tree", "type": "Scrollable Interactive Tree View" },
+      { "id": "spatial_bin_matrix_grid", "title": "Interactive 2D Spatial Bin Layout Matrix", "type": "High-Performance Variable Grid Canvas" },
+      { "id": "bin_utilization_analytics_bar", "title": "Capacity Allocations & Threshold Indicators", "type": "Static Top Metric Ribbon Bar" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active facility context constraints -> Verify location mapping structures -> Execute state payload fetch from WarehouseService.getWarehouseStructure()",
+      "on_bin_slot_click": "Populate floating details card container with specific part numbers, actual weights, serialization codes, and movement log entries arrays matching target item references"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a storage location node undergoes an un-synchronized background stock adjustment mismatch pattern",
+        "action": "Flash an active border glow overlay context on the affected bin coordinate and flag state parameters locally as 'Desynchronized - Requesting Active Count'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "drawer_stock_transfer_panel",
+        "trigger": "User hits elements control command action trigger 'btn_initiate_bin_transfer'",
+        "behavior": "Slide out explicit 450px vertical side pane layout framework enabling immediate manual re-allocation entry between storage spaces coordinates"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "indicator_bin_empty", "type": "Geometric Micro-Grid Coordinate Cell", "props": { "style": "slate-900-base-fill", "border": "gray-dashed" } },
+      { "id": "indicator_bin_optimal", "type": "Geometric Micro-Grid Coordinate Cell", "props": { "style": "indigo-600-solid-fill", "opacity": "medium-high" } },
+      { "id": "indicator_bin_critical_full", "type": "Geometric Micro-Grid Coordinate Cell", "props": { "style": "amber-500-glow-fill", "animation": "pulse-slow" } },
+      { "id": "btn_initiate_bin_transfer", "type": "Functional Layout Action Toggle Button", "props": { "variant": "Primary Outline Brand Token Accent", "icon": "move-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "spatial_bin_coordinate_block",
+        "composition": "Combines a micro-grid interactive item block cell + coordinate text label marker (e.g., Row-A-Shelf-3-Slot-12) + localized material usage metrics indicator layer lines"
+      },
+      {
+        "id": "facility_aggregate_utilization_card",
+        "composition": "Combines a logistics graphic design element + occupancy scale numeric text field + percentage tracking metric gauge bar component"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "interactive_warehouse_aisle_matrix_viewport",
+        "composition": "Two-dimensional dynamic rendering block looping across grid structures parameters rows, creating selectable layout coordinate points mapped explicitly to internal spatial identifiers collections."
+      },
+      {
+        "id": "bin_inventory_details_drawer_canvas",
+        "composition": "Collapsible side information container assembling complete localized inventory states: material tracking tables fields, physical volume weight metrics, and transactional stock transfer execution toolbars."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Monospaced alignment rules parameters applied across grid address titles to preserve interface density balances)",
+      "scales": {
+        "spatial_coordinate_labels": "font-size: 0.75rem (12px) | font-family: monospace | font-weight: 700",
+        "bin_contents_text_emphasis": "font-size: 0.9375rem (15px) | font-weight: 600 | tracking: letter-spacing tight"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Container Framework)",
+      "bin_occupancy_normal": "#312E81 (Deep Indigo Optimal Density Storage Slot Accent Tone)",
+      "bin_occupancy_critical": "#B45309 (Amber Gold Maximum Threshold Space Alert Status Accent)",
+      "bin_selection_glint": "#3B82F6 (Corporate Royal Blue Interactive Layout Focus Boundary Outline)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px component box outer margins structure layout parameters grids)",
+      "matrix_grid_cell_gap": "0.25rem (4px tight horizontal visual partitions isolating storage rows slots)",
+      "border_radius_tokens": "0.1875rem (3px micro corner radiuses to reinforce block warehouse visual representations)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "spatial_bin_coordinate_block:hover", "style_mutation": "outline modification maps border line to 2px solid #3B82F6 using an immediate 80ms execution curves duration window parameters" },
+      { "target": "spatial_bin_coordinate_block:selected", "style_mutation": "box-shadow properties trigger a glowing neon halo effect using context color value #3B82F6 continuously" }
+    ],
+    "accessibility_aria_roles": {
+      "interactive_warehouse_aisle_matrix_viewport": "role='grid' utilizing internal row designations mapping matrix points directly to specific cell layout elements",
+      "bin_inventory_details_drawer_canvas": "role='region' accompanied by explicit descriptive aria-label contexts monitoring live storage capacity adjustments updates parameters"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_facility_storage_bins_count": 1200,
+      "global_warehouse_occupancy_percentage": 76.8,
+      "reporting_warehouse_facility_id": "wh_east_complex_01",
+      "warehouse_spatial_layout_matrix": [
+        {
+          "bin_id": "bin_loc_wh1_z2_a4_s3_b12",
+          "coordinate_label_address": "ZONE2-AISLE4-SHELF3-BIN12",
+          "max_weight_capacity_kg": 500.00,
+          "current_weight_load_kg": 420.50,
+          "utilization_percentage": 84.1,
+          "stored_materials_summary_lines": [
+            { "part_number_id": "part_structural_plate_09", "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12", "quantity_staged": 84, "serial_tracking_batch": "lot_steel_99482_b2" }
+          ]
+        },
+        {
+          "bin_id": "bin_loc_wh1_z2_a4_s3_b13",
+          "coordinate_label_address": "ZONE2-AISLE4-SHELF3-BIN13",
+          "max_weight_capacity_kg": 500.00,
+          "current_weight_load_kg": 0.00,
+          "utilization_percentage": 0.0,
+          "stored_materials_summary_lines": []
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_selected_bin_coordinate_id": "Tracks currently focused grid mapping lookup string key used to feed data structures into details panel layers templates (string | null default pointer value)",
+      "is_stock_transfer_drawer_visible": "Boolean state parameters value toggling visual rendering layers for the re-allocation inventory input drawers layout interfaces",
+      "spatial_grid_occupancy_threshold_filter": "Numeric filter boundary parameter modulating visible cell status variations based on capacity brackets parameters settings (default null tracks all states)"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application session multi-tenant company context parameter regulating database filtering domains cross modules scopes setups",
+      "asynchronous_inventory_service_sync_broker": "Websocket allocation handler stream monitoring background stock transfers updates emitted directly from transport execution workflows"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 document constructs built over generic Tailwind CSS layout definitions parsing styling parameters, managing map matrices processing code natively inside client-side modern ES6 loop modules without third-party canvas or heavy layout graphing plugins libraries requirements",
+    "performance_benchmarks": "Redrawing 500-cell coordinate block layouts adjustments variations following zone changing switch triggers must achieve processing updates under an execution threshold boundary target limit of 15ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "spatial_bin_coordinate_block",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.ui.warehouse.bin_selected",
+        "executes_backend_function": "WarehouseService.getBinContentsDetails(context.bin_id)",
+        "target_mutation_action": "Map fetched array contents records maps directly inside localized dashboard storage cache variables, then flip active state parameter values for active_selected_bin_coordinate_id to populate sidebar frames",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_initiate_bin_transfer",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local state variable flag configuration is_stock_transfer_drawer_visible parameter to true to display re-allocation control sheets layers viewport modules immediately",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "drawer_stock_transfer_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.inventory.bin_transferred",
+        "executes_backend_function": "WarehouseService.transferStockInventory(payload_transfer_form_fields_data)",
+        "target_mutation_action": "Dispatch execution transaction data packet array blocks; overwrite old grid coordinates fields values indexes within warehouse_spatial_layout_matrix local cache structures; switch off inventory re-allocation sheet panel flags triggers variables",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_switch_to_inventory_movement_log_view",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.ui.navigated.inventory_logs",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/logistics/inventory-movements (Advances router context properties positioning parameters indexes forward into final SCM sequence Screen SCM_SCR_004 Stock Adjustment & Material Pick Workspace Viewport)"
+      }
+    ]
+  }
+}

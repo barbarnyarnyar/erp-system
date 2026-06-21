@@ -1,0 +1,167 @@
+{
+  "screen_metadata": {
+    "module_id": "MFG",
+    "screen_index": 2,
+    "screen_id": "MFG_SCR_002",
+    "name": "Bill of Materials Material-Staging & Pick Verification Canvas",
+    "route": "/manufacturing/kitting"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px component kitting worksheet canvas interface)",
+    "main_layout_template": "Two-Column Split Worksheet Shell (Left Workspace Panel: Active Material Allocation Checklist detailing component quantities required vs. quantities picked; Right Contextual Sidebar Panel: SCM Spatial Bin Mapping Matrix showing recommended warehouse storage coordinates; Bottom Action Bar: Hard Lock Batch Verification Trigger Console)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains parallel component checklists and spatial bin coordinates layouts side-by-side cleanly)",
+      "tablet_landscape": "1024px - 1279px (The right spatial bin map collapses down into a modal helper sheet to guarantee compact data table dimensions for multi-item components)"
+    },
+    "key_visible_sections": [
+      { "id": "material_allocation_checklist", "title": "BOM Component Picking Allocation Checklist", "type": "High-Density Calculating Spreadsheet Canvas" },
+      { "id": "scm_spatial_bin_matrix_dock", "title": "SCM Warehouse Bin Target Recommendation Dock", "type": "Sticky Contextual Sidebar Component" },
+      { "id": "batch_verification_console", "title": "Staging Clearance Execution Controls Toolbar", "type": "Fixed Full-Width Bottom Bar Panel" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Verify active warehouse material-handler or assembly lead tokens -> Extract active multi-tenant legal context -> Execute state request payload fetch from ManufacturingService.getMaterialStagingRequirements()",
+      "on_item_row_focus": "Query SCM spatial storage engines dynamically to re-hydrate recommended bin options for the highlighted component item line"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a picked material component lot sequence matches an item code with an active quality hold flag from QMS databases",
+        "action": "Intercept row updates instantly, throw visual highlighting warning style 'Component Lot Quarantined', and freeze the final batch verification trigger deactivating submissions"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_bin_deviation_override",
+        "trigger": "User inputs a source bin tracking location coordinate other than the system-recommended index cell path",
+        "behavior": "Pop structural system override window requesting alternate bin availability metrics, actual count entries verification, and a valid inventory adjustment reason log specification"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_pick_fulfilled", "type": "Semantic UI Token Pill Indicator", "props": { "variant": "Success Teal Solid", "text": "ALLOCATION STAGED" } },
+      { "id": "badge_pick_shortage", "type": "Semantic UI Token Pill Indicator", "props": { "variant": "Danger Crimson Outlined", "text": "STOCK SHORTAGE INSCA" } },
+      { "id": "input_quantity_picked", "type": "Tabular Numeric Entry Input Component Box", "props": { "placeholder": "0", "align": "right", "font": "monospace" } },
+      { "id": "btn_verify_batch_clearance", "type": "Functional Core Action Core Button", "props": { "variant": "Primary Revenue Success Emerald", "icon": "shield-check-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "material_checklist_allocation_row",
+        "composition": "Combines component part number alphanumeric tag + descriptive name text string + engineering base recipe quantity row label + input_quantity_picked field box + interactive barcode scanner emulation toggle key component"
+      },
+      {
+        "id": "recommended_bin_coordinate_capsule",
+        "composition": "Combines spatial bin address label link (e.g., ZONE1-AISLE4-BIN12) + on-hand volume numeric stock block + unit batch tracking lot identification string fields"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "bom_kitting_allocation_grid_canvas",
+        "composition": "Dynamic calculating spreadsheet table grid tracking components rows looping across nested parts recipes arrays records, creating selectable interactive rows mapped to internal data state variables collection structures."
+      },
+      {
+        "id": "scm_warehouse_bin_allocator_vault",
+        "composition": "Contextual vertical widget sub-panel displaying matching instances rows elements of recommended_bin_coordinate_capsule molecules, tracking real-time available inventory levels balances caches tiers."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Precision monospaced fonts stack used strictly on part numbers, bin coordinates addresses, lot tags, and numeric integers tracking entries to shield vertical grids spreadsheet line alignments perfectly)",
+      "scales": {
+        "kitting_header_large_title": "font-size: 1.25rem (20px) | font-weight: 700 | tracking: letter-spacing tight",
+        "grid_numeric_mono_digits": "font-size: 0.875rem (14px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "kitting_success_teal": "#10B981 (Emerald Green Balanced Picking Staging Operations Core Focus Hue Accent)",
+      "kitting_shortage_crimson": "#EF4444 (Crimson Red Mismatch Inventory Variance Highline Alert Status Glow Border)",
+      "bin_recommendation_indigo": "#312E81 (Deep Indigo Treasury Space Target Available Capacity Allocation Highlight)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px standard console panel layout section boundary padding parameters fields)",
+      "spreadsheet_row_height_density": "2.5rem (40px high-density layout configurations maximizing multi-column tracking grids text spacing fields)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "material_checklist_allocation_row:focus-within", "style_mutation": "border-color properties modify context setting map value to #3B82F6 over an immediate 90ms duration curves execution window framework" },
+      { "target": "material_checklist_allocation_row:invalid", "style_mutation": "border outline border-color updates framework parameters properties to color value #EF4444 indicating broken lot validation properties loops" }
+    ],
+    "accessibility_aria_roles": {
+      "bom_kitting_allocation_grid_canvas": "role='form' parsing accounting and inventory staging inputs validations controls elements grids matrices",
+      "scm_warehouse_bin_allocator_vault": "role='region' accompanied by explicit aria-live='polite' configuration fields monitoring real-time inventory storage suggestions updates parameters models"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "parent_work_order_id": "wo_mfg_2026_77491",
+      "parent_work_order_number": "WO-2026-004410",
+      "target_assembly_part_number": "PN-1000-8849-A",
+      "kitting_clearance_verified_status": "PENDING_PICK_VERIFICATION",
+      "kitting_components_checklist_matrix": [
+        {
+          "component_line_id": "kit_line_001",
+          "part_id": "part_microcontroller_x9",
+          "part_number": "PN-4000-3321-X",
+          "part_name": "Embedded Logic Processing Unit SMD-X9 Core Architecture",
+          "quantity_required_base": 800,
+          "quantity_picked_current": 0,
+          "picked_lot_number_reference": null,
+          "source_bin_coordinate_address": null,
+          "item_staging_status": "SHORTAGE_AWAITING_PICK",
+          "scm_recommended_bin_options": [
+            { "bin_id": "bin_loc_wh1_z1_a2_s1_b04", "bin_address_string": "ZONE1-AISLE2-SHELF1-BIN04", "available_on_hand_balance": 5000, "lot_number_tag": "LOT-CHIP-33211-X1" }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_kitting_row_cell_id": "Tracks currently focused component spreadsheet line identifier string context key lookup values (string | null default pointer value)",
+      "is_bin_deviation_override_visible": "Boolean state variable dictating presentation configurations parameters toggling alternative bin justification forms windows overlays",
+      "kitting_checklist_reactive_collection": "Reactive array collection caching ongoing picked quantities additions, scanning hardware parameters updates, and target lot codes before final staging state validation blocks actions submissions"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared systems global tenant context code parameters routing multi-tenant application domains boundaries configurations across business modules execution layers",
+      "scm_warehouse_inventory_shared_cache": "Global datastore cache saving active multi-tenant warehouse stock balance snapshots locally to preserve precise synchronization checks variables between production staging and logistics domains"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous module scripts deploying precise calculation structural functions to eliminate rounding data errors across component allocation tallies",
+    "performance_benchmarks": "Updating kitting row picked values structures following key input updates or barcode reading streams events must refresh user layout grids configurations inside a threshold execution target runtime ceiling constraint parameter of 6ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "material_checklist_allocation_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "mfg.ui.kitting.component_focused",
+        "executes_backend_function": "WarehouseService.getBinContentsDetails(context.part_id)",
+        "target_mutation_action": "Bind fetched warehouse locations details records parameters maps directly inside local scm_warehouse_bin_allocator_vault store components cache views, and assign active lookup keys into active_kitting_row_cell_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_verify_batch_clearance",
+        "trigger_event": "click",
+        "emitted_event_topic": "mfg.kitting.cleared",
+        "executes_backend_function": "ManufacturingService.verifyMaterialStagingClearance(parent_work_order_id, kitting_checklist_reactive_collection)",
+        "target_mutation_action": "Perform inventory balance checkout verification checking formulas; publish processing transaction log variables packets; update matching row indicators inline tracking variables properties updating indicators metrics to `FULFILLED`; close active workspace layouts frames",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_organizational_infrastructure_hr",
+        "trigger_event": "click",
+        "emitted_event_topic": "hr.ui.navigated.employee_org_charts",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/hr/org-charts (Complete structural assembly execution track; advance router context coordinates tracking parameter forward out of heavy product engine execution blocks directly over into standard Core Operations & Corporate Infrastructure track starting at HR Screen HR_SCR_001 Viewport Framework)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,189 @@
+{
+  "screen_metadata": {
+    "module_id": "PLM",
+    "screen_index": 2,
+    "screen_id": "PLM_SCR_002",
+    "name": "Multi-Level Bill of Materials (BOM) Recipe Canvas",
+    "route": "/product/recipes"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px dense interactive engineering canvas)",
+    "main_layout_template": "Two-Column Flexible Split Shell (Left Workspace Panel: Deep Nested Indented Tree List mapping the absolute component assembly hierarchy from sub-components to root lines; Right Contextual Workspace Panel: Selected Component Attributes Sheet, Custom Manufacturing Assembly Routing Configurator, and Mass/Weight Accumulation Calculator; Top Action Bar: Global Recipe Variant & ECO Stage Controller)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Maintains simultaneous multi-tier recipe tree structure graphs and manufacturing operations configurations panels side-by-side)",
+      "tablet_landscape": "1024px - 1279px (The right attribute/routing configurator collapses into a bottom sheet overlay drawer to preserve deep horizontal indentation spacing for nested components tree lines)"
+    },
+    "key_visible_sections": [
+      { "id": "bom_hierarchical_tree_canvas", "title": "Multi-Level Indented BOM Component Hierarchy Tree", "type": "Scrollable Interactive Tree Grid Canvas" },
+      { "id": "mfg_routing_configurator", "title": "Shop-Floor Manufacturing Operational Routing Sequence", "type": "High-Density Sortable Data Row Matrix" },
+      { "id": "recipe_mass_accumulation_dock", "title": "Total Material Cost & Mass Yield Statistics Bar", "type": "Static Metric Card Strip Grid" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active product engineering security tokens -> Read multi-tenant company data isolation parameters -> Execute state payload request fetch from ProductManagementService.getBOMStructure()",
+      "on_bom_node_select": "Asynchronously query internal child properties, calculate recursive pricing and mass roll-ups, and hydrate shop-floor manufacturing sequence layouts data streams fields"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If a multi-level child node component link loop loops back to a parent identifier key (Infinite Circular Dependency Exception)",
+        "action": "Intercept canvas rendering pipelines instantly, flash vivid blinking crimson background wrappers over the invalid component rows cells, and display high-visibility system error alert modal 'Circular Invariant Breach Detected - Save Blocked'"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_add_child_part_selector",
+        "trigger": "User strikes inline node action button link element 'btn_append_bom_leaf'",
+        "behavior": "Pop center search data grid modal enabling keyword searching filters maps query strings over the global MaterialMaster database cache to choose child parts to append dynamically into active assembly positions"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "icon_node_assembly", "type": "Graphic Structural Identity Token Vector", "props": { "variant": "Folder Box Icon Blue Tone" } },
+      { "id": "icon_node_leaf_part", "type": "Graphic Structural Identity Token Vector", "props": { "variant": "Hardware Component Cog Icon Gray Tone" } },
+      { "id": "input_quantity_per_assembly", "type": "Tabular Intercepting Numeric Input Box Form Component", "props": { "placeholder": "1.0000", "align": "right", "font": "monospace" } },
+      { "id": "btn_append_bom_leaf", "type": "Micro Action Interactive Vector Button Button Icon", "props": { "variant": "Secondary Accent Circular Outlined", "icon": "plus-circle-lucide" } }
+    ],
+    "molecules": [
+      {
+        "id": "bom_indented_tree_node",
+        "composition": "Combines deep layout tree indentation spacing unit + toggle expander chevron emblem + structural icon node identity vector + part number monospace code + title description string label + quantity per assembly input field box + cell action delete button wrapper element"
+      },
+      {
+        "id": "mfg_routing_operation_step_row",
+        "composition": "Combines step sort order handle vector + work center identity lookup dropdown selector + operational runtime duration numeric input box + scrap factor tolerance slider bar element"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "multi_level_recipe_construction_board",
+        "composition": "Recursive hierarchical grid table looping across nested component array data models blocks, mapping parent assemblies to multiple nested layers child instances elements of bom_indented_tree_node molecules structures loops."
+      },
+      {
+        "id": "manufacturing_routing_sequence_worksheet",
+        "composition": "Virtualized dragging list stacking consecutive operational step elements rows instances of mfg_routing_operation_step_row models, complete with step addition toolbars and engineering work instructions code text block forms fields."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Precision monospaced style applied strictly across quantities rows, weight totals fields, and calculation cells to preserve strict vertical bookkeeping alignment frames layout tracks)",
+      "scales": {
+        "canvas_title_emphasis": "font-size: 1.25rem (20px) | font-weight: 700 | letter-spacing: tightly packed typography grid",
+        "nested_node_mono_details": "font-size: 0.8125rem (13px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Workspace Layer Container)",
+      "assembly_node_blue": "#3B82F6 (Corporate Royal Blue Assembly Focus Core Accent)",
+      "leaf_part_neutral": "#64748B (Slate Gray Component Leaf Level Muted Row Data Line)",
+      "circular_error_crimson": "#EF4444 (Crimson Red Infinite Loop Boundary Violation Highline Alert Glow Border)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px workspace block boundary partition segment outer padding margins parameters)",
+      "indentation_step_pixel_gap": "1.25rem (20px horizontal node shifting layout offset per nesting indentation index code parameters)",
+      "border_style_token": "1px solid #334155 (Slate Matrix Border Alignment Configuration Component Framework Partition Separators Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "bom_indented_tree_node:hover", "style_mutation": "background-color properties transform settings focus pointer map value to #334155 using an immediate 80ms execution curves duration window parameter" },
+      { "target": "input_quantity_per_assembly:change", "style_mutation": "Triggers rapid recursive calculation script workflows loops recalculating up-chain total mass cost allocations parameters inline, flashing updated totals fields blocks with a brief teal layout illumination wave effect" }
+    ],
+    "accessibility_aria_roles": {
+      "multi_level_recipe_construction_board": "role='treegrid' housing deep recursive component expansion data rows matrices columns layouts accompanied by semantic aria-level indices numerical attributes",
+      "manufacturing_routing_sequence_worksheet": "role='list' parsing shop-floor step allocation list elements tracking parameters focus order structures"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "recipe_root_part_number": "PN-A100-PRECISION-ARRAY",
+      "total_accumulated_recipe_cost_functional": 4250.00,
+      "total_accumulated_mass_kg": 952.1250,
+      "reporting_currency_code": "USD",
+      "bom_hierarchical_nested_tree": [
+        {
+          "bom_line_id": "bline_root_001",
+          "part_id": "part_structural_plate_09",
+          "part_number": "PN-1000-8849-A",
+          "title": "Hardened Grade-A Carbon Steel Base Plate 12x12",
+          "quantity_required": 1.0000,
+          "unit_of_measure": "PCS",
+          "extended_cost_contribution": 300.00,
+          "extended_mass_contribution_kg": 4.5250,
+          "has_children_assemblies": true,
+          "child_components_lines": [
+            {
+              "bom_line_id": "bline_sub_001_1",
+              "part_id": "part_microcontroller_x9",
+              "part_number": "PN-4000-3321-X",
+              "title": "Embedded Logic Processing Unit SMD-X9 Core Architecture",
+              "quantity_required": 4.0000,
+              "unit_of_measure": "PCS",
+              "extended_cost_contribution": 34.00,
+              "extended_mass_contribution_kg": 0.0500,
+              "has_children_assemblies": false,
+              "child_components_lines": []
+            }
+          ]
+        }
+      ],
+      "manufacturing_routing_operations_sequence": [
+        { "operation_step_index": 10, "work_center_id": "wc_milling_floor_02", "operation_name": "Precision CNC Perimeter Bevel Cutting Operation", "setup_time_minutes": 30.00, "run_time_per_unit_minutes": 4.50, "scrap_factor_tolerance_pct": 0.50 }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "active_bom_node_pointer_id": "Tracks currently focused tree list line segment lookups entity target index key string (string | null default pointer value)",
+      "is_part_append_modal_visible": "Boolean state variable tracking rendering state boundaries for layout system modal search overlays choices templates blocks forms fields",
+      "recipe_tree_expanded_nodes_set": "Set data structure caching alpha-numeric line indices tracking states identifying which assembly folders are uncollapsed in user layout canvas view frames"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance session multi-tenant company context parameters codes configurations routing crossMicroservice runtime values boundaries profiles settings",
+      "plm_material_master_shared_buffer": "Global datastore context allocation saving versioned product item master records metrics registries templates locally to verify lookup speeds during part addition workflows mappings"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via modern ES6 client-side asynchronous recursive module scripts deploying precise calculation overrides strings to permanently evict rounding floating-point errors across recursive spreadsheet summation branches",
+    "performance_benchmarks": "Executing deep tree branch evaluation updates or recalculating total cost values aggregates following child components array mutations must finalize browser grid modifications frames updates under a target runtime ceiling constraint threshold boundary layout metric of 12ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "bom_indented_tree_node",
+        "trigger_event": "click",
+        "emitted_event_topic": "plm.ui.bom.node_selected",
+        "executes_backend_function": "ProductManagementService.getRoutingSequenceByAssemblyPartId(context.part_id)",
+        "target_mutation_action": "Bind fetched shop-floor routing sequence steps data direct mapping arrays models records into local manufacturing_routing_operations_sequence store data grids cache views, and assign active lookup keys into active_bom_node_pointer_id",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_append_bom_leaf",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Flip state tracking variable flag configuration is_part_append_modal_visible parameter status layout modifier logic value to true to present catalog part search dialogue blocks frames layout canvas overlays instantly",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_part_selector_confirm_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "plm.bom.line_appended",
+        "executes_backend_function": "ProductManagementService.appendBOMComponentLine(active_bom_node_pointer_id, context.selected_material_master_part_id)",
+        "target_mutation_action": "Transmit operational transformation processing packets; append structural child component row parameters return values data layouts directly inside targeted node nested position arrays indexes within bom_hierarchical_nested_tree local cache view stores; collapse selection choice modals flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_advance_to_quality_governance_qms",
+        "trigger_event": "click",
+        "emitted_event_topic": "qms.ui.navigated.inspection_sandboxes",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/quality/inspections (Complete engineering recipe architecture construction; advance router context coordinates tracking parameter forward out of engineering core domain directly over into Product Engine Compliance and Assurance checkpoint gate: QMS Screen QMS_SCR_001 Viewport Layout Framework Panel Frame)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "screen_metadata": {
+    "module_id": "SCM",
+    "screen_index": 2,
+    "screen_id": "SCM_SCR_002",
+    "name": "Purchase Order (PO) Tracking & Lifecycle Console",
+    "route": "/logistics/purchase-orders"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px multi-column layout split panel)",
+    "main_layout_template": "Two-Column Workspace Shell (Left Side Panel: Purchase Order Master Stream Table Grid; Right Side Panel Workspace: High-Precision Multi-Line Item Itemization Matrix & Dynamic Totals Calculator; Contextual Top Banner: Stage Progression Ribbon [Draft -> Pending Approval -> Issued -> Partially Received -> Closed])",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders simultaneous stream grid and line item worksheet panel side-by-side)",
+      "tablet_landscape": "1024px - 1279px (Line item worksheet expands to a full workspace view, collapsing the master log into a quick-toggle left drawer track)"
+    },
+    "key_visible_sections": [
+      { "id": "po_lifecycle_ribbon", "title": "Purchase Order Stage Progression Ribbon", "type": "Interactive Status Indicator Strip" },
+      { "id": "po_master_stream_grid", "title": "Purchase Orders Historic Stream Grid", "type": "Scrollable Tabular Spreadsheet View" },
+      { "id": "po_line_item_worksheet", "title": "High-Precision Order Itemization Worksheet Matrix", "type": "Dynamic Calculating Table Canvas" }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Extract global tenant configuration parameters -> Establish state buffer for currency fields -> Execute data payload request fetch from ProductManagementService.getPurchaseOrders()",
+      "on_po_row_click": "Populate po_line_item_worksheet with deep array data for individual item rows matching selected record pointers variables"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an active Purchase Order total valuation metrics exceed a user role's strict financial clearance thresholds parameters",
+        "action": "Deactivate standard issue triggers immediately, present an inline warning status banner 'Requires Executive Authorization', and lock line item rows inputs"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_create_po_wizard",
+        "trigger": "User hits actions trigger button element 'btn_create_new_po'",
+        "behavior": "Pop multi-step dialog interface modal capturing vendor lookup IDs, localized warehouse drop destinations, shipping timelines parameters, and initial line items arrays"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_stage_draft", "type": "Semantic Progress Pill Label", "props": { "variant": "Slate Gray Gray", "text": "DRAFT" } },
+      { "id": "badge_stage_pending", "type": "Semantic Progress Pill Label", "props": { "variant": "Amber Gold Flash", "text": "PENDING APPROVAL" } },
+      { "id": "badge_stage_issued", "type": "Semantic Progress Pill Label", "props": { "variant": "Royal Blue Solid", "text": "ISSUED TO VENDOR" } },
+      { "id": "input_po_item_quantity", "type": "Tabular Intercepting Numeric Input Box Component", "props": { "placeholder": "1.00", "align": "right" } }
+    ],
+    "molecules": [
+      {
+        "id": "po_stream_summary_row",
+        "composition": "Combines monospaced PO serial number sequence key + destination facility identifier label + aggregated value display block + timestamp metadata badge components"
+      },
+      {
+        "id": "po_item_line_entry_block",
+        "composition": "Combines part number catalog selector dropdown + unit price numeric input box + quantity input box + computed row total display node + remove row element button icon"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "purchase_orders_stream_viewport",
+        "composition": "High-density data matrix grouping historical rows featuring robust multi-tier column filtering mechanics, tracking states, and active selection modifiers hooks arrays."
+      },
+      {
+        "id": "po_itemization_calculation_engine_canvas",
+        "composition": "Dynamic table grid wrapping multiple instances elements of po_item_line_entry_block components, calculated tax adjustments layout sub-blocks, and a structural primary submission toolbar element."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Mono spacing applied exclusively across calculation tables to guarantee digit vertical alignment frameworks)",
+      "scales": {
+        "po_header_display_title": "font-size: 1.375rem (22px) | font-weight: 700 | letter-spacing: tight",
+        "monetary_numeric_alignment": "font-size: 0.875rem (14px) | font-family: 'JetBrains Mono', monospace | font-weight: 600"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid)",
+      "procurement_issued_blue": "#3B82F6 (Corporate Royal Blue SCM Activity Target Base Accent)",
+      "approval_pending_gold": "#F59E0B (Amber Gold Awaiting Action Theme Token Color)",
+      "validation_error_crimson": "#EF4444 (Crimson Red Price Boundary Breach Highlight Line Border)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px component layout box margins constraints structural properties)",
+      "worksheet_row_padding": "0.625rem (10px padding for ledger spreadsheet density requirements)",
+      "border_style_token": "1px solid #334155 (Slate Slate Border Grid Separator Layout Line)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "po_master_stream_grid:row:hover", "style_mutation": "background-color properties transition shift context value to #334155 utilizing an instantaneous 100ms calculation window ease curve" },
+      { "target": "input_po_item_quantity:change", "style_mutation": "Triggers background computation algorithms, updating grand aggregate values layouts blocks using a brief border-color highlight glow flash effect" }
+    ],
+    "accessibility_aria_roles": {
+      "purchase_orders_stream_viewport": "role='grid' accompanied by explicit accessible row grouping index criteria markers strings properties",
+      "po_itemization_calculation_engine_canvas": "role='form' housing internal sequential tabular form focus structures"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "active_total_po_count": 84,
+      "pending_approvals_valuation_functional": 1245900.00,
+      "reporting_currency_code": "USD",
+      "purchase_orders_historical_collection": [
+        {
+          "purchase_order_id": "po_scm_2026_55821",
+          "po_number": "PO-2026-00491",
+          "supplier_id": "vendor_steel_corp_02",
+          "supplier_name": "Global Industrial Steel Logistics Supply Inc",
+          "destination_warehouse_id": "wh_east_bin_01",
+          "total_gross_amount": 89500.00,
+          "tax_amount": 4500.00,
+          "lifecycle_stage_status": "ISSUED",
+          "issuance_date": "2026-06-18T10:45:00Z",
+          "line_items": [
+            { "line_id": "item_55821_1", "part_id": "part_structural_plate_09", "part_name": "Hardened Grade-A Carbon Steel Base Plate 12x12", "unit_price": 425.00, "quantity_ordered": 200, "total_line_cost": 85000.00 }
+          ]
+        },
+        {
+          "purchase_order_id": "po_scm_2026_55840",
+          "po_number": "PO-2026-00492",
+          "supplier_id": "vendor_micro_chip_99",
+          "supplier_name": "Advanced Silicon Processing Foundry Ltd",
+          "destination_warehouse_id": "wh_west_bin_04",
+          "total_gross_amount": 125000.00,
+          "tax_amount": 0.00,
+          "lifecycle_stage_status": "PENDING_APPROVAL",
+          "issuance_date": "2026-06-19T14:20:00Z",
+          "line_items": [
+            { "line_id": "item_55840_1", "part_id": "part_microcontroller_x9", "part_name": "Embedded Logic Processing Unit SMD-X9 Core Architecture", "unit_price": 12.50, "quantity_ordered": 10000, "total_line_cost": 125000.00 }
+          ]
+        }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_po_entity_focus_id": "Tracks currently active purchase order primary row item lookup key used to inflate spreadsheet lists (string | null default pointer value)",
+      "is_po_wizard_visible": "Boolean state flag variable dictating visibility layer boundaries for the creation interface modal overlay containers",
+      "computed_running_gross_total": "High-precision internal calculation variable evaluating accumulated values across row array properties items (numeric value initialized to 0.00)"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared enterprise system multi-tenant localization code parameter configuring runtimes domain parameters tracking fields",
+      "transactional_outbox_event_mesh": "Local message bus allocation layer capturing outbound transaction completion records before transmitting downstream payloads to event streams brokers"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid structures writing layout variables logic natively via ES6 asynchronous module classes implementing specific high-precision mathematical scaling overrides ensuring calculation properties retain bookkeeping compliance records parameters fields",
+    "performance_benchmarks": "Recalculating itemization subtotal vectors across multi-row order spreadsheets following keystroke price change triggers must refresh user layout grids configurations inside a threshold execution limit of 6ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "po_master_stream_grid_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.ui.po.order_selected",
+        "executes_backend_function": "ProductManagementService.getPurchaseOrderLines(context.purchase_order_id)",
+        "target_mutation_action": "Map fetched array entities properties fields directly inside local variables caches blocks and bind pointer reference values straight to selected_po_entity_focus_id state tracker parameters flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_po_wizard_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.po.created",
+        "executes_backend_function": "ProductManagementService.createPurchaseOrder(payload_wizard_form_data)",
+        "target_mutation_action": "Publish creation transactional sequence records packets; insert new return data array item parameters into purchase_orders_historical_collection local cache views arrays; toggle off wizard view flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_switch_to_warehouse_spatial_matrix",
+        "trigger_event": "click",
+        "emitted_event_topic": "scm.ui.navigated.warehouse_bins",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/logistics/warehouse-bins (Advances browser layout router tracking framework location parameters coordinates straight forward into next sequence viewport SCM_SCR_003)"
+      }
+    ]
+  }
+}

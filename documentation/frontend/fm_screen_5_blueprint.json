@@ -1,0 +1,183 @@
+{
+  "screen_metadata": {
+    "module_id": "FM",
+    "screen_index": 5,
+    "screen_id": "FM_SCR_005",
+    "name": "Fixed Capital Assets & Depreciation Engine",
+    "route": "/finance/fixed-assets"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px corporate asset control matrix canvas layout)",
+    "main_layout_template": "Two-Column Split Asset Panel (Left Side Panel Grid: Capital Asset Inventory Sheet & Lifetime Value Meter; Right Side Panel Grid: Asset Capitalization Workspace & Active Amortization Forecasting Schedule Table; Top Summary Header: Core Capital Metric Cards Tracking Net Book Value [NBV], Gross Asset Value, Accumulated Depreciation)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders simultaneous depreciation line curves over multiple financial intervals columns)",
+      "tablet_landscape": "1024px - 1279px (Amortization schedule sub-tables switch to a responsive accordion system underneath active selections)"
+    },
+    "key_visible_sections": [
+      {
+        "id": "fixed_asset_valuation_ribbon",
+        "title": "Corporate Capital Value Balance Aggregates",
+        "type": "Static Metric Card Ribbon Panel"
+      },
+      {
+        "id": "capital_asset_inventory_grid",
+        "title": "Capital Asset Item Master Registry",
+        "type": "Dynamic Sortable Tabular Spreadsheet View"
+      },
+      {
+        "id": "amortization_schedule_timeline",
+        "title": "Straight-Line Monthly Depreciation Breakdown",
+        "type": "Interactive Forecasting Historical Ledger Data Grid"
+      }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire active asset account classifications data mapping indexes -> Check background message brokers for un-capitalized parts arriving from procurement -> Execute state payload fetch from CapitalAssetService.getCapitalAssets()",
+      "on_asset_row_click": "Asynchronously run CapitalAssetService.getDepreciationSchedule() to fill and map individual rows data into the active amortization_schedule_timeline workspace fields"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If an asset record's internal Net Book Value reaches exact zero metrics while its state parameter marks it as fully operational",
+        "action": "Transition inline asset state markers to 'Fully Depreciated - Salvage Class Residual Hold' and block manual calculation overwrites"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_capitalize_staged_item_form",
+        "trigger": "User clicks cell context command button element 'btn_capitalize_staged_equipment'",
+        "behavior": "Pop structural overlay asset provisioning wizard form allowing manual classification modifications, asset tag numbering, and useful life allocation assignments"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_asset_active", "type": "Semantic Pill Tag Component", "props": { "style": "emerald-green-fill", "text": "ACTIVE" } },
+      { "id": "badge_asset_disposed", "type": "Semantic Pill Tag Component", "props": { "style": "slate-ash-fill", "text": "DISPOSED" } },
+      { "id": "input_useful_life_months", "type": "Numeric Value Field Form Input Component Box", "props": { "placeholder": "60", "min": "1" } },
+      { "id": "progress_bar_depreciation_ratio", "type": "Visual Balance Gauge Line Indicator Component", "props": { "track_color": "slate-gray", "fill_color": "royal-blue" } }
+    ],
+    "molecules": [
+      {
+        "id": "asset_valuation_metric_block",
+        "composition": "Combines aggregate balance text description row + high-precision monetary display block + calculated comparison percentages vector lines elements"
+      },
+      {
+        "id": "staged_procurement_notification_toast",
+        "composition": "Combines hardware graphic element token + origin SCM purchase tag reference number text link + automated initialization action button wrapper element"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "fixed_asset_registry_master_table",
+        "composition": "Virtual row streaming collection tracking capitalized machinery parameters: unique asset identification numbers, descriptive tags, hardware system references (`eam_equipment_id`), acquisition costs values, scrap valuation targets numbers, useful life parameters, and interactive asset status pills."
+      },
+      {
+        "id": "amortization_schedule_forecasting_sheet",
+        "composition": "Chronological timeline rows plotting periodic data: calendar month markers, periodic depreciation expense entries, accumulated value totals summaries, and resulting Net Book Value changes graphs columns."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, sans-serif (Engineered strictly to coordinate grid content parameters text weights)",
+      "scales": {
+        "asset_financial_large_monetary": "font-size: 1.75rem (28px) | font-weight: 700 | font-family: monospace tabular-numerals configuration parameters",
+        "schedule_row_small_details": "font-size: 0.75rem (12px) | font-weight: 500 | color: slate-slate-muted-hex-codes"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Container Viewport Frame)",
+      "capital_accent_blue": "#3B82F6 (Corporate Royal Blue Asset Management Focus Tone)",
+      "salvage_value_neutral": "#94A3B8 (Muted Gray Amortized Capital Balance Tracking Value Lines Accent)",
+      "disposal_alert_orange": "#F59E0B (Amber Orange Asset Elimination/Write-off Flag Color Metric)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1rem (16px workspace block boundary partitions padding specifications)",
+      "timeline_dense_row_gap": "0.375rem (6px dense layout formatting parameters dividing forecast lines)",
+      "border_style_token": "1px solid #334155 (Slate Charcoal Frame Outlines Mapping Layer Grids)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "fixed_asset_registry_master_table:row:hover", "style_mutation": "background-color properties shift context color to value #334155 utilizing an smooth ease-in animation curves transition constraint window of 120ms" },
+      { "target": "input_useful_life_months:change", "style_mutation": "Fires instant recalculation trigger updates flashing calculated layout metrics inline using a soft background-color illumination pulse look filter" }
+    ],
+    "accessibility_aria_roles": {
+      "fixed_asset_registry_master_table": "role='grid' housing dynamic accessible rows grouping indices specifications maps",
+      "amortization_schedule_forecasting_sheet": "role='table' displaying static calculated read-only numerical estimation rows columns maps layouts frameworks"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_gross_asset_capitalization_value": 158490200.00,
+      "total_accumulated_depreciation_value": 42910050.45,
+      "total_net_book_value_nbv_functional": 115580149.55,
+      "reporting_currency_code": "USD",
+      "capitalized_assets_registry_collection": [
+        {
+          "asset_id": "ast_cap_2026_00104",
+          "asset_tag": "EQP-FAC-2026-9932",
+          "asset_name": "Heavy Duty Robotic Precision Assembler Array (Line 04 Facility Bundle)",
+          "eam_equipment_id": "eam_mach_robot_8841",
+          "acquisition_cost": 250000.00,
+          "salvage_value": 20000.00,
+          "depreciable_base_amount": 230000.00,
+          "useful_life_months": 60,
+          "months_depreciated_elapsed": 12,
+          "asset_state": "ACTIVE",
+          "capitalization_timestamp": "2025-06-01T07:00:00Z"
+        }
+      ],
+      "active_selected_depreciation_schedule_lines": [
+        { "period_index": 1, "financial_month_period": "2025-06", "depreciation_expense_periodic": 3833.33, "accumulated_depreciation_running": 3833.33, "net_book_value_remaining": 246166.67 },
+        { "period_index": 2, "financial_month_period": "2025-07", "depreciation_expense_periodic": 3833.33, "accumulated_depreciation_running": 7666.66, "net_book_value_remaining": 242333.34 },
+        { "period_index": 12, "financial_month_period": "2026-05", "depreciation_expense_periodic": 3833.33, "accumulated_depreciation_running": 46000.00, "net_book_value_remaining": 204000.00 }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "selected_capital_asset_pointer_id": "Tracks target active asset registry row data identifier key used to request matching forecast arrays (string | null default pointer value)",
+      "is_provisioning_wizard_open": "Boolean state toggling layout matrix layer visibility boundaries wrapping new asset registration workflow forms inputs wizard fields",
+      "live_computed_forecast_buffer_cache": "Reactive object block array structure capturing immediate sandbox modifications to user parameters inside inputs forms before submissions approvals triggers"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application instance tenant context parameters mapping cross-module enterprise operations scopes configurations settings",
+      "scm_equipment_staged_receipt_bus": "Local component messaging consumer array generating floating context banner indicators when warehouse inventory workflows stage capital infrastructure machinery items"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 semantic components layouts structured using standard Tailwind CSS classes utility rules codebases run natively using structural ES6 asynchronous modules logic systems implementing rigorous mathematical fraction isolation wrappers ensuring rounding data compliance profiles parameters boundaries match general accounting metrics",
+    "performance_benchmarks": "Recalculating 60-month straight line calculations grids fields vectors inside user view spaces following change parameters events must evaluate data rows array updates under a strict execution target threshold parameter of 8ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "capital_asset_inventory_grid_row",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.assets.asset_selected",
+        "executes_backend_function": "CapitalAssetService.getDepreciationSchedule(context.asset_id)",
+        "target_mutation_action": "Bind return periodic data collections maps directly inside local state storage data collections variables tracking values, and assign active value pointer keys to selected_capital_asset_pointer_id to populate timeline components layouts",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_provisioning_submit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.asset.capitalized",
+        "executes_backend_function": "CapitalAssetService.capitalizeAssetRecord(payload_wizard_form_fields_data)",
+        "target_mutation_action": "Transmit confirmation transaction logs packages; push generated capital row data records straight inside capitalized_assets_registry_collection local caches matrices; trigger application interface closures over wizard fields layer elements variables flags",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_navigate_to_liquidity_dashboard",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.navigated.liquidity_core",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/finance/liquidity (Pushes router frame view pointer context ahead into final Screen 6 Multi-Tenant Corporate Cash & Trial Balance Reporting Hub Workspace Viewport)"
+      }
+    ]
+  }
+}

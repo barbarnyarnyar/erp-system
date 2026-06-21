@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Custom HSL Design Tokens (Deep Obsidian Cyberpunk/Enterprise Dark Theme) */
+  --bg-base: #080c14;
+  --bg-surface: #0f172a;
+  --bg-surface-elevated: #1e293b;
+  --border-color: #334155;
+  
+  /* Primary Hues per Track */
+  --color-auth: #7e22ce;        /* Purple */
+  --color-finance: #3b82f6;     /* Royal Blue */
+  --color-scm: #0b3fa0;         /* Slate/Steel Blue */
+  --color-crm: #10b981;         /* Emerald Green */
+  --color-mfg: #6366f1;         /* Indigo */
+  --color-eam: #ef4444;         /* Crimson Red */
+  
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  
+  /* Animations */
+  --transition-fast: 80ms ease;
+  --transition-normal: 200ms ease;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar for High-Density Consoles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-finance);
+}
+
+/* Micro-animations and utility classes */
+.transition-all-fast {
+  transition: all var(--transition-fast);
+}
+
+.transition-all-normal {
+  transition: all var(--transition-normal);
+}
+
+.glassmorphism {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.text-glow-green {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.text-glow-blue {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+.text-glow-crimson {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+.pulse-glow-crimson {
+  animation: pulse-crimson 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-crimson {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+    border-color: #ef4444;
+  }
+  50% {
+    opacity: .7;
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.2);
+    border-color: #7f1d1d;
+  }
+}

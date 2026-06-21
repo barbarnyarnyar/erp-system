@@ -1,0 +1,180 @@
+{
+  "screen_metadata": {
+    "module_id": "FM",
+    "screen_index": 6,
+    "screen_id": "FM_SCR_006",
+    "name": "Bank Accounts, Liquidity & Real-Time Trial Balance Hub",
+    "route": "/finance/liquidity"
+  },
+  "1_screen_definitions": {
+    "viewport_target": "Desktop Optimized (1440px corporate liquidity audit command layout)",
+    "main_layout_template": "Two-Column Executive Dashboard (Left Narrow Panel Stack: Multi-Tenant Operational Cash Holdings & Liquid Bank Accounts List Grid; Right Broad Panel Stack: Dynamic Trial Balance Compilation Sheet & Close Verification Console; Top Header Grid: Real-Time Cash Availability Indicators & Period Status Rails)",
+    "responsive_breakpoints": {
+      "desktop": "min-width: 1280px (Renders cash analytics side-by-side with full dimensional trial balance accounting rows)",
+      "tablet_landscape": "1024px - 1279px (Bank liquidity account blocks convert into a top-scrolling horizon container row above the balance sheets)"
+    },
+    "key_visible_sections": [
+      {
+        "id": "global_liquidity_aggregates_ribbon",
+        "title": "Corporate Cash Availability Summary",
+        "type": "Static Metric Card Ribbon Panel"
+      },
+      {
+        "id": "bank_accounts_holding_grid",
+        "title": "Corporate Treasury Bank Accounts Registry",
+        "type": "Dynamic Virtualized List Component"
+      },
+      {
+        "id": "trial_balance_compilation_sheet",
+        "title": "Dynamic Multi-Tenant Trial Balance Sheet",
+        "type": "High-Performance Unlocked Accounting Grid"
+      }
+    ]
+  },
+  "2_screen_flow_mapping": {
+    "user_progression_routes": {
+      "on_load": "Acquire global multi-tenant localization context -> Pull active treasury parameters configuration objects -> Execute state payload fetch from BankService.getTreasuryBalances() and real-time compile via UniversalLedgerService.generateTrialBalance()",
+      "on_run_trial_balance": "Trigger asynchronous calculations compiling debit and credit balances matching current selections; update trial_balance_compilation_sheet layout matrices rows"
+    },
+    "redirection_rules": [
+      {
+        "condition": "If total net trial balance debits sum does not equal total net credits sum down to identical floating-point precision levels",
+        "action": "Flash visual validation flags on screen, toggle interface indicator to 'Imbalanced Ledger Warn State', and block access keys executing final period-close operations workflows"
+      }
+    ],
+    "modal_and_drawer_overlays": [
+      {
+        "id": "modal_close_period_wizard",
+        "trigger": "User clicks cell command action trigger link 'btn_initiate_period_close'",
+        "behavior": "Pop structural system execution wizard modal prompting user through sequential ledger freezes, locking posting flags across subsidiary channels, and emitting final close states to the background messaging layer"
+      }
+    ]
+  },
+  "3_atomic_design_hierarchy": {
+    "atoms": [
+      { "id": "badge_ledger_balanced", "type": "Semantic UI Token Pill Indicator", "props": { "style": "emerald-green-fill-accent", "text": "BALANCED LEDGER" } },
+      { "id": "badge_ledger_out_of_bounds", "type": "Semantic UI Token Pill Indicator", "props": { "style": "crimson-red-fill-accent", "text": "IMBALANCE EXCEPTION" } },
+      { "id": "btn_initiate_period_close", "type": "Functional Core Action Trigger Button", "props": { "variant": "Danger High-Visibility Core Action", "icon": "lock-lucide" } },
+      { "id": "text_numeric_balance_mono", "type": "Tabular Layout Typography Row Node Component", "props": { "font": "JetBrains Mono", "weight": "600" } }
+    ],
+    "molecules": [
+      {
+        "id": "bank_account_liquidity_card_item",
+        "composition": "Combines clearing bank metadata graphic + unique account number token string + functional balance numerical value block + regional currency tracker pills parameters"
+      },
+      {
+        "id": "trial_balance_summary_footer_bar",
+        "composition": "Combines net debit summary totals display box + net credit summary totals display box + real-time mathematical validation differential indicator status text node"
+      }
+    ],
+    "organisms": [
+      {
+        "id": "corporate_treasury_accounts_panel",
+        "composition": "Flex container parsing a dynamic map tracking connected physical corporate banks entities, displaying liquid funds levels, handling multi-currency conversion views, and initiating bank reconciliation sweeps triggers."
+      },
+      {
+        "id": "realtime_trial_balance_auditor_canvas",
+        "composition": "Virtual data table containing sorting filters tailored for checking balances: account code codes rows, account name labels strings, initial balance properties numbers, debit movement logs, credit movement logs, and final adjusted balance properties grids."
+      }
+    ]
+  },
+  "4_design_system_specs": {
+    "typography_tokens": {
+      "font_family_stack": "Inter UI, system-ui, sans-serif (Engineered strictly to support complex operational analytics sheets data densities)",
+      "scales": {
+        "grand_total_auditing_display": "font-size: 1.5rem (24px) | font-weight: 800 | letter-spacing: -0.02em | font-family: monospace",
+        "bank_card_title_label": "font-size: 0.9375rem (15px) | font-weight: 600 | line-height: 1.35rem"
+      }
+    },
+    "color_palette_hex": {
+      "background_canvas_base": "#0B0F19 (Deep Obsidian Enterprise Tech Dark Mode Base Layout Grid Frame)",
+      "surface_panels_elevated": "#1E293B (Slate Matrix Boundary Panel Grid Viewport Layer)",
+      "treasury_liquid_green": "#10B981 (Emerald Green Liquidity/Available Cash Accent Focus Tone)",
+      "balance_match_blue": "#3B82F6 (Corporate Royal Blue Auditing/Close Balance Validation Color Metric)",
+      "critical_imbalance_crimson": "#EF4444 (Crimson Red Mismatch Danger Glow Accent Indicator)"
+    },
+    "spacing_and_borders": {
+      "standard_padding_unit": "1.25rem (20px spacious interface segment padding parameters)",
+      "table_row_height_density": "2.0rem (32px ultra-compact micro rows to capture massive subledger accounting rows views)",
+      "border_radius_tokens": "0.375rem (6px modern geometric hard corporate styling cuts lines layouts)"
+    }
+  },
+  "5_interaction_specifications": {
+    "micro_interactions": [
+      { "target": "bank_account_liquidity_card_item:hover", "style_mutation": "border-color properties swap layout color mappings to value #3B82F6 over an instantaneous 100ms calculation window tracking interactive user focuses" },
+      { "target": "btn_initiate_period_close:hover", "style_mutation": "background-color properties transition shift to #DC2626; transform visual scaling parameters to translateY(-1px) to project click responsiveness profiles" }
+    ],
+    "accessibility_aria_roles": {
+      "realtime_trial_balance_auditor_canvas": "role='treegrid' housing hierarchical ledger accounting layers maps layouts strings fields",
+      "trial_balance_summary_footer_bar": "role='status' accompanied by explicit aria-live='assertive' variables flags targeting instant balance discrepancy notifications rules"
+    }
+  },
+  "6_mock_data_schema": {
+    "initial_mock_payload_state": {
+      "total_cash_and_liquidity_functional": 68493015.42,
+      "trial_balance_verification_status": "BALANCED",
+      "trial_balance_variance_delta": 0.00,
+      "reporting_currency_code": "USD",
+      "treasury_bank_accounts_collection": [
+        { "account_id": "bnk_acc_operating_svb", "account_number": "XXXX-XXXX-9931", "bank_name": "Silicon Valley Treasury Partners", "currency": "USD", "liquid_balance_amount": 45293201.52, "last_reconciliation_timestamp": "2026-06-20T06:00:00Z" },
+        { "account_id": "bnk_acc_euro_db", "account_number": "XXXX-XXXX-4410", "bank_name": "Deutsche Bank Corporate Treasury", "currency": "EUR", "liquid_balance_amount": 21822411.20, "last_reconciliation_timestamp": "2026-06-20T04:15:00Z" }
+      ],
+      "compiled_trial_balance_rows_matrix": [
+        { "account_code": "1101", "account_name": "Operating Liquidity Holding Bank Vault", "account_type": "Asset", "opening_balance_debit": 40000000.00, "opening_balance_credit": 0.00, "period_debit_activity": 5293201.52, "period_credit_activity": 0.00, "closing_balance_debit": 45293201.52, "closing_balance_credit": 0.00 },
+        { "account_code": "2100", "account_name": "Accounts Payable (AP Aggregate Control Line)", "account_type": "Liability", "opening_balance_debit": 0.00, "opening_balance_credit": 15000000.00, "opening_balance_side": "CREDIT", "period_debit_activity": 3214902.11, "period_credit_activity": 1063904.22, "closing_balance_debit": 0.00, "closing_balance_credit": 12849302.11 },
+        { "account_code": "3001", "account_name": "Retained Earnings Balance Vector", "account_type": "Equity", "opening_balance_debit": 0.00, "opening_balance_credit": 32443899.41, "period_debit_activity": 0.00, "period_credit_activity": 0.00, "closing_balance_debit": 0.00, "closing_balance_credit": 32443899.41 }
+      ]
+    }
+  },
+  "7_state_management_plan": {
+    "local_reactive_state_variables": {
+      "trial_balance_live_filter_string": "String query driving immediate visual sorting and string matching operations over compiled trial balance table fields items grid components on key inputs updates triggers",
+      "is_close_wizard_rendered": "Boolean state variable dictating visibility boundaries layout profiles for the period validation modal wizard closing terminal interface scopes",
+      "ledger_balance_check_state": "Internal calculation tracker logging mathematical status verification states maps flags profiles (default string tracking status token code matches value 'BALANCED')"
+    },
+    "global_application_context_bindings": {
+      "active_selected_legal_entity_id": "Shared application framework multi-tenant localization context routing parameter configuration keys cross runtimes globally",
+      "global_reporting_period_token": "Global parameter specifying active accounting calendar timeline brackets string value targets filters ('2026-Q2')"
+    }
+  },
+  "8_technical_requirements": {
+    "frontend_technical_constraints": "Vanilla HTML5 presentation layers combined with standard Tailwind CSS utility grid positioning classes scriptings running natively through structural ES6 asynchronous functional modules logic modules leveraging explicit JavaScript floating point precision shielding parameters (`BigInt` scaling calculations modifiers algorithms or standard string-typed library models configurations) to prevent financial fraction drops inside calculation cells elements grids",
+    "performance_benchmarks": "Virtual grid rendering logic handlers mapping over a 5,000 row deep trial balance array grid context selection must recalculate and complete screen paints operations under a threshold runtime execution boundary value limit of 14ms"
+  },
+  "9_navigation_flow_links": {
+    "element_interaction_links": [
+      {
+        "source_element": "btn_run_trial_balance_recompile",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ledger.trial_balance_compiled",
+        "executes_backend_function": "UniversalLedgerService.generateTrialBalance(global_reporting_period_token)",
+        "target_mutation_action": "Bind fetched multi-tenant rows models structures maps directly inside local compiled_trial_balance_rows_matrix data storage cache collections layers and run delta calculations comparisons to ensure arithmetic checks sum parameters zero bounds matches completely",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_initiate_period_close",
+        "trigger_event": "click",
+        "emitted_event_topic": null,
+        "executes_backend_function": null,
+        "target_mutation_action": "Mutate local layout variable flag status is_close_wizard_rendered tracking parameter value to true to instantly trigger execution close wizard modal systems canvases displays overlays views layers",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "modal_close_wizard_commit_btn",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.period.closed",
+        "executes_backend_function": "UniversalLedgerService.executePeriodClose(global_reporting_period_token)",
+        "target_mutation_action": "Broadcast secure state transition data command packets outward to system asynchronous message broker streams; modify view state contexts to locked read-only flags layout modes; hide wizard overlays containers models",
+        "navigates_to_route": null
+      },
+      {
+        "source_element": "btn_return_to_ledger_command",
+        "trigger_event": "click",
+        "emitted_event_topic": "fm.ui.navigated.ledger_core",
+        "executes_backend_function": null,
+        "target_mutation_action": null,
+        "navigates_to_route": "/finance/ledger (Pushes router context location pointer backwards mapping loop frames directly straight inside Screen 1 Chart of Accounts Core Terminal layout view structures)"
+      }
+    ]
+  }
+}
